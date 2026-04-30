@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Loans\Schemas;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class LoanForm
@@ -13,28 +15,82 @@ class LoanForm
     {
         return $schema
             ->components([
-                Select::make('property_id')
-                    ->relationship('property', 'name')
-                    ->required(),
-                TextInput::make('bank_name'),
-                TextInput::make('amount')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('annual_rate')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('duration_months')
-                    ->required()
-                    ->numeric(),
-                DatePicker::make('start_date')
-                    ->required(),
-                TextInput::make('monthly_payment')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('insurance_monthly')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
+                Section::make('Emprunt')
+                    ->icon('heroicon-o-credit-card')
+                    ->schema([
+                        Select::make('property_id')
+                            ->label('Bien')
+                            ->relationship('property', 'name')
+                            ->required()
+                            ->preload(),
+                        TextInput::make('bank_name')
+                            ->label('Banque')
+                            ->placeholder('Ex : BNP, Crédit Agricole...'),
+                        Grid::make(2)->schema([
+                            TextInput::make('amount')
+                                ->label('Montant emprunté')
+                                ->suffix('€')
+                                ->required()
+                                ->numeric()
+                                ->step(1)
+                                ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
+                                ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                                ->hint('Capital emprunté en euros')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
+                            TextInput::make('annual_rate')
+                                ->label('Taux annuel')
+                                ->suffix('%')
+                                ->required()
+                                ->numeric()
+                                ->step(0.001)
+                                ->hint('Taux nominal annuel (ex : 1.5 pour 1,5%)')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
+                        ]),
+                        Grid::make(2)->schema([
+                            TextInput::make('duration_months')
+                                ->label('Durée')
+                                ->suffix('mois')
+                                ->required()
+                                ->numeric()
+                                ->hint('Durée totale en mois (ex : 240 = 20 ans)')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
+                            DatePicker::make('start_date')
+                                ->label('Date de début')
+                                ->required()
+                                ->displayFormat('d/m/Y')
+                                ->hint('Date de la 1ère échéance')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
+                        ]),
+                    ]),
+
+                Section::make('Mensualités')
+                    ->icon('heroicon-o-calculator')
+                    ->description('La mensualité est calculée automatiquement à la création. Vous pouvez la corriger si nécessaire.')
+                    ->collapsed()
+                    ->schema([
+                        Grid::make(2)->schema([
+                            TextInput::make('monthly_payment')
+                                ->label('Mensualité (hors assurance)')
+                                ->suffix('€')
+                                ->numeric()
+                                ->step(1)
+                                ->default(0)
+                                ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
+                                ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                                ->hint('Laissez à 0 pour un calcul automatique')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
+                            TextInput::make('insurance_monthly')
+                                ->label('Assurance emprunteur mensuelle')
+                                ->suffix('€')
+                                ->numeric()
+                                ->step(1)
+                                ->default(0)
+                                ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
+                                ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                                ->hint('L\'assurance emprunteur est déductible au prorata de la quote-part')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
+                        ]),
+                    ]),
             ]);
     }
 }
