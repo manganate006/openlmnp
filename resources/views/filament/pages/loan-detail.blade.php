@@ -85,6 +85,98 @@
             <div class="ld-bar"><div class="ld-bar-fill" style="width:{{ $data['progress_pct'] }}%;"></div></div>
         </div>
 
+        {{-- Graphiques --}}
+        <div class="ld-grid ld-grid-2">
+            <div class="ld-card">
+                <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center;">Répartition coût total</h3>
+                <canvas id="doughnutChart" style="max-height:220px;"></canvas>
+            </div>
+            <div class="ld-card">
+                <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center;">Évolution capital restant dû</h3>
+                <canvas id="capitalChart" style="max-height:220px;"></canvas>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Doughnut : Capital vs Intérêts
+                new Chart(document.getElementById('doughnutChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Capital', 'Intérêts', 'Assurance'],
+                        datasets: [{
+                            data: [{{ $loan->amount }}, {{ $data['total_interest'] }}, {{ $data['total_insurance'] }}],
+                            backgroundColor: ['#10b981', '#f59e0b', '#6366f1'],
+                            borderWidth: 0,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ctx.label + ' : ' + (ctx.raw / 100).toLocaleString('fr-FR', {minimumFractionDigits: 0}) + ' €';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Line : Capital restant par année
+                @php
+                    $capitalByYear = [];
+                    $interestByYearChart = [];
+                    foreach ($data['payments']->groupBy(fn($p) => $p->payment_date->format('Y')) as $y => $yPayments) {
+                        $last = $yPayments->last();
+                        $capitalByYear[$y] = round($last->remaining_capital / 100);
+                        $interestByYearChart[$y] = round($yPayments->sum('interest_amount') / 100);
+                    }
+                @endphp
+
+                new Chart(document.getElementById('capitalChart'), {
+                    type: 'line',
+                    data: {
+                        labels: {!! json_encode(array_keys($capitalByYear)) !!},
+                        datasets: [{
+                            label: 'Capital restant (€)',
+                            data: {!! json_encode(array_values($capitalByYear)) !!},
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16,185,129,0.1)',
+                            fill: true,
+                            tension: 0.3,
+                        }, {
+                            label: 'Intérêts annuels (€)',
+                            data: {!! json_encode(array_values($interestByYearChart)) !!},
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245,158,11,0.1)',
+                            fill: true,
+                            tension: 0.3,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ctx.dataset.label + ' : ' + ctx.raw.toLocaleString('fr-FR') + ' €';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { ticks: { callback: function(v) { return v.toLocaleString('fr-FR') + ' €'; } } }
+                        }
+                    }
+                });
+            });
+        </script>
+
         {{-- Coût total --}}
         <div class="ld-grid ld-grid-3">
             <div class="ld-card ld-stat">
