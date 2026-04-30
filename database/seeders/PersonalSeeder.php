@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Expense;
 use App\Models\Furniture;
+use App\Models\Income;
 use App\Models\Loan;
 use App\Models\Property;
 use App\Models\PropertyComponent;
@@ -128,5 +129,50 @@ class PersonalSeeder extends Seeder
         ]);
 
         app(LoanService::class)->generateSchedule($loan);
+
+        // Revenus Airbnb réels (rapports PDF Airbnb)
+        $revenues = [
+            // 2023 (début activité juin)
+            ['2023-06-15', 21600, 778, 'Airbnb 06/2023'],
+            ['2023-07-15', 107000, 3853, 'Airbnb 07/2023'],
+            ['2023-08-15', 27000, 972, 'Airbnb 08/2023'],
+            ['2023-09-15', 187000, 6732, 'Airbnb 09/2023'],
+            ['2023-10-15', 97000, 3492, 'Airbnb 10/2023'],
+            ['2023-11-15', 96000, 3456, 'Airbnb 11/2023'],
+            ['2023-12-15', 107425, 3868, 'Airbnb 12/2023'],
+            // 2024
+            ['2024-02-15', 88641, 3192, 'Airbnb 02/2024'],
+            ['2024-03-15', 74000, 2664, 'Airbnb 03/2024'],
+            ['2024-04-15', 116420, 4192, 'Airbnb 04/2024'],
+            ['2024-05-15', 194870, 7016, 'Airbnb 05/2024'],
+            ['2024-06-15', 184184, 6631, 'Airbnb 06/2024'],
+            ['2024-07-15', 352800, 12701, 'Airbnb 07/2024'],
+            ['2024-08-15', 324575, 11684, 'Airbnb 08/2024'],
+            ['2024-09-15', 219601, 7905, 'Airbnb 09/2024'],
+            ['2024-10-15', 180075, 6483, 'Airbnb 10/2024'],
+            ['2024-12-15', 111240, 10703, 'Airbnb 12/2024'],
+            // 2025
+            ['2025-01-15', 139556, 3649, 'Airbnb 01/2025'],
+            ['2025-03-15', 167860, 6044, 'Airbnb 03/2025'],
+            ['2025-05-15', 128308, 4618, 'Airbnb 05/2025'],
+            ['2025-06-15', 84295, 3035, 'Airbnb 06/2025'],
+            ['2025-07-15', 164885, 5936, 'Airbnb 07/2025'],
+            ['2025-08-15', 463400, 16683, 'Airbnb 08/2025'],
+            ['2025-09-15', 180751, 6506, 'Airbnb 09/2025'],
+            ['2025-10-15', 142247, 5120, 'Airbnb 10/2025'],
+            ['2025-11-15', 108869, 3919, 'Airbnb 11/2025'],
+        ];
+
+        foreach ($revenues as [$date, $amount, $fee, $guest]) {
+            Income::create([
+                'property_id' => $property->id,
+                'income_date' => $date,
+                'amount' => $amount,
+                'platform_fee' => $fee,
+                'tourist_tax' => 0,
+                'source' => 'airbnb',
+                'guest_name' => $guest,
+            ]);
+        }
     }
 }
