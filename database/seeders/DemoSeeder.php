@@ -67,21 +67,7 @@ class DemoSeeder extends Seeder
             ]);
         }
 
-        // Quelques recettes d'exemple
-        $months = ['01', '02', '03', '04', '05', '06'];
-        foreach ($months as $m) {
-            Income::create([
-                'property_id' => $property->id,
-                'income_date' => "2026-{$m}-15",
-                'amount' => rand(150000, 250000), // 1500-2500 €
-                'platform_fee' => rand(4500, 7500), // 45-75 €
-                'tourist_tax' => rand(1000, 3000),
-                'source' => 'airbnb',
-                'guest_name' => 'Client ' . $m,
-            ]);
-        }
-
-        // Quelques charges d'exemple
+        // Charges d'exemple (pas de recettes fictives)
         Expense::create([
             'property_id' => $property->id,
             'expense_date' => '2026-01-15',
