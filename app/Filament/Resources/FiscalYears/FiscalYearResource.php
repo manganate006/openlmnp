@@ -57,7 +57,6 @@ class FiscalYearResource extends Resource
     {
         return [
             'index' => ListFiscalYears::route('/'),
-            'create' => CreateFiscalYear::route('/create'),
             'edit' => EditFiscalYear::route('/{record}/edit'),
         ];
     }
