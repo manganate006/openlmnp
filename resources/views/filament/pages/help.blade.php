@@ -1,18 +1,18 @@
 <x-filament-panels::page>
     <style>
-        .help-section { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; margin-bottom: 16px; }
+        .help-section { background: var(--fi-body-bg, white); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
         .help-intro { background: #ecfdf5; border: 1px solid #86efac; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
         .help-intro h2 { font-size: 20px; font-weight: 700; color: #065f46; margin-bottom: 8px; }
         .help-intro p { color: #047857; font-size: 14px; }
         .help-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
         .help-section h3 svg { width: 20px; height: 20px; color: #10b981; }
-        .help-section p { font-size: 14px; color: #374151; margin-bottom: 12px; line-height: 1.6; }
-        .help-section strong { color: #111827; }
+        .help-section p { font-size: 14px; color: var(--fi-fg, #374151); margin-bottom: 12px; line-height: 1.6; }
+        .help-section strong { color: var(--fi-fg, #111827); }
         .help-step { display: flex; gap: 12px; margin-bottom: 12px; }
         .help-step-num { flex-shrink: 0; width: 28px; height: 28px; background: #d1fae5; color: #065f46; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
-        .help-step-text { font-size: 14px; color: #374151; }
-        .help-faq dt { font-weight: 500; color: #111827; margin-bottom: 4px; font-size: 14px; }
-        .help-faq dd { color: #6b7280; margin-bottom: 16px; font-size: 14px; }
+        .help-step-text { font-size: 14px; color: var(--fi-fg, #374151); }
+        .help-faq dt { font-weight: 500; color: var(--fi-fg, #111827); margin-bottom: 4px; font-size: 14px; }
+        .help-faq dd { color: var(--fi-fg-muted, #6b7280); margin-bottom: 16px; font-size: 14px; }
     </style>
 
     <div style="max-width: 800px;">

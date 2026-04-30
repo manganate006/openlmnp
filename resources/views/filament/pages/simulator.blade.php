@@ -1,10 +1,10 @@
 <x-filament-panels::page>
     <style>
-        .sim-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; margin-bottom: 16px; }
+        .sim-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
         .sim-grid { display: grid; gap: 16px; }
         .sim-grid-2 { grid-template-columns: repeat(2, 1fr); }
         .sim-grid-3 { grid-template-columns: repeat(3, 1fr); }
-        .sim-label { font-size: 14px; color: #6b7280; margin-bottom: 4px; }
+        .sim-label { font-size: 14px; color: var(--fi-fg-muted, #6b7280); margin-bottom: 4px; }
         .sim-value { font-size: 24px; font-weight: 700; }
         .sim-sub { font-size: 12px; margin-top: 4px; }
         .sim-card-amber { background: #fffbeb; border-color: #fbbf24; }
@@ -14,8 +14,8 @@
         .sim-verdict-green { background: #d1fae5; border: 2px solid #10b981; }
         .sim-verdict-amber { background: #fef3c7; border: 2px solid #f59e0b; }
         .sim-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .sim-table td, .sim-table th { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
-        .sim-table th { text-align: left; font-weight: 600; background: #f9fafb; }
+        .sim-table td, .sim-table th { padding: 8px 12px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
+        .sim-table th { text-align: left; font-weight: 600; background: var(--fi-bg-muted, #f9fafb); }
         .sim-table .text-right { text-align: right; font-family: monospace; }
         .sim-table .total { font-weight: 700; background: #ecfdf5; }
         .sim-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; width: 100%; font-size: 14px; }
@@ -47,7 +47,7 @@
 
         @if($results['empty'] ?? false)
             <div class="sim-card" style="text-align: center; padding: 48px;">
-                <p style="font-size: 18px; color: #6b7280;">Ajoutez un bien immobilier pour lancer la simulation.</p>
+                <p style="font-size: 18px; color: var(--fi-fg-muted, #6b7280);">Ajoutez un bien immobilier pour lancer la simulation.</p>
             </div>
         @else
             {{-- Comparaison principale --}}

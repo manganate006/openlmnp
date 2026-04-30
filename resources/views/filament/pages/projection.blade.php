@@ -1,19 +1,19 @@
 <x-filament-panels::page>
     <style>
         .proj-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .proj-table th, .proj-table td { padding: 8px 10px; border: 1px solid #e5e7eb; text-align: right; }
-        .proj-table th { background: #f3f4f6; font-weight: 600; text-align: center; font-size: 12px; }
+        .proj-table th, .proj-table td { padding: 8px 10px; border: 1px solid var(--fi-border-color, #e5e7eb); text-align: right; }
+        .proj-table th { background: var(--fi-bg-muted, #f3f4f6); font-weight: 600; text-align: center; font-size: 12px; }
         .proj-table td:first-child, .proj-table th:first-child { text-align: center; font-weight: 700; }
         .proj-table .real-better { background: #ecfdf5; }
         .proj-table .micro-better { background: #fffbeb; }
         .proj-table .result-cell { font-weight: 700; }
         .proj-header { display: flex; gap: 16px; align-items: end; margin-bottom: 20px; }
-        .proj-header label { font-size: 14px; color: #374151; font-weight: 500; }
+        .proj-header label { font-size: 14px; color: var(--fi-fg, #374151); font-weight: 500; }
         .proj-header select, .proj-header input { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
-        .proj-legend { display: flex; gap: 20px; margin-top: 12px; font-size: 12px; color: #6b7280; }
+        .proj-legend { display: flex; gap: 20px; margin-top: 12px; font-size: 12px; color: var(--fi-fg-muted, #6b7280); }
         .proj-legend span { display: flex; align-items: center; gap: 6px; }
         .proj-legend .dot { width: 12px; height: 12px; border-radius: 3px; }
-        .proj-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; }
+        .proj-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
     </style>
 
     <div>
