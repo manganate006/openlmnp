@@ -25,7 +25,9 @@ class PropertyForm
                             ->label('Nom du bien')
                             ->placeholder('Ex : Appartement Airbnb')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->hint('Un nom pour identifier facilement ce bien')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
                         Grid::make(2)->schema([
                             Select::make('type')
                                 ->label('Type de bien')
@@ -36,7 +38,9 @@ class PropertyForm
                                 ->label('Type de location')
                                 ->options(Property::rentalTypeLabels())
                                 ->required()
-                                ->default('seasonal'),
+                                ->default('seasonal')
+                                ->hint('Saisonnier = Airbnb/Booking. Longue durée = bail classique.')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
                         ]),
                         TextInput::make('address')
                             ->label('Adresse')
@@ -52,7 +56,7 @@ class PropertyForm
                         ]),
                         Toggle::make('is_primary_residence')
                             ->label('Fait partie de la résidence principale')
-                            ->helperText('Cochez si le bien loué est une partie de votre résidence principale (quote-part appliquée)')
+                            ->helperText('Cochez si le bien loué est une partie de votre résidence principale. La quote-part (surface louée ÷ surface totale) sera appliquée automatiquement aux charges et amortissements.')
                             ->default(false),
                     ]),
 
@@ -66,13 +70,17 @@ class PropertyForm
                                 ->suffix('m²')
                                 ->required()
                                 ->numeric()
-                                ->minValue(1),
+                                ->minValue(1)
+                                ->hint('Surface totale du logement telle que déclarée aux impôts')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
                             TextInput::make('rented_area')
                                 ->label('Surface louée')
                                 ->suffix('m²')
                                 ->required()
                                 ->numeric()
-                                ->minValue(1),
+                                ->minValue(1)
+                                ->hint('Surface de la partie effectivement louée. Quote-part = louée ÷ totale.')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
                         ]),
                     ]),
 
@@ -93,7 +101,9 @@ class PropertyForm
                                 ->minValue(0)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->helperText('Saisissez en euros (ex : 575000)'),
+                                ->helperText('Saisissez en euros (ex : 575000)')
+                                ->hint('Prix figurant sur l\'acte de vente, hors frais de notaire')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
                             TextInput::make('notary_fees')
                                 ->label('Frais de notaire')
                                 ->suffix('€')
@@ -102,7 +112,8 @@ class PropertyForm
                                 ->default(0)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : '0')
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->helperText('Saisissez en euros'),
+                                ->hint('Peuvent être amortis ou déduits en charges la 1ère année')
+                                ->hintIcon('heroicon-o-question-mark-circle'),
                         ]),
                     ]),
 
@@ -119,7 +130,9 @@ class PropertyForm
                                 ->step(1)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
                                 ->dehydrateStateUsing(fn ($state) => $state ? (int) round(((float) $state) * 100) : null)
-                                ->helperText('Saisissez en euros. Base de l\'amortissement si renseignée.'),
+                                ->hint('Valeur du bien au moment de la mise en location. Utilisée comme base d\'amortissement à la place du prix d\'achat.')
+                                ->hintIcon('heroicon-o-question-mark-circle')
+                                ->helperText('Sources : DVF, MeilleursAgents, notaire, agent immobilier'),
                             DatePicker::make('market_value_date')
                                 ->label('Date de l\'estimation')
                                 ->displayFormat('d/m/Y'),
@@ -132,7 +145,8 @@ class PropertyForm
                             ->default(15)
                             ->minValue(0)
                             ->maxValue(50)
-                            ->helperText('Le terrain n\'est pas amortissable. Généralement 15-20%.'),
+                            ->hint('Le terrain n\'est pas amortissable. Typiquement 15% en ville, 20% en zone rurale.')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
                     ]),
 
                 Section::make('Location')
@@ -142,7 +156,8 @@ class PropertyForm
                             ->label('Date de début de location')
                             ->required()
                             ->displayFormat('d/m/Y')
-                            ->helperText('Date à partir de laquelle les amortissements commencent.'),
+                            ->hint('Date de la 1ère mise en location. Les amortissements démarrent à cette date (prorata temporis la 1ère année).')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
                     ]),
 
                 Section::make('Notes')
