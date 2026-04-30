@@ -29,6 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('app')
             ->login()
             ->registration()
+            ->profile()
             ->brandName('OpenLMNP')
             ->colors([
                 'primary' => Color::Emerald,
