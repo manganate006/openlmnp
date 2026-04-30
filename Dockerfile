@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_sqlite bcmath intl gd zip opcache \
     && rm -rf /var/lib/apt/lists/*
 
+# Increase PHP memory for composer
+RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory.ini
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
@@ -15,7 +18,7 @@ COPY . .
 # Use Docker-specific env
 RUN cp .env.docker .env
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-interaction
 
 RUN mkdir -p database storage/app/data storage/logs storage/framework/{sessions,views,cache} \
     && touch database/database.sqlite \

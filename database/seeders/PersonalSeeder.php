@@ -18,11 +18,19 @@ class PersonalSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = User::create([
-            'name' => 'Jérémie Bordonaro',
-            'email' => '***REDACTED-EMAIL***',
-            'password' => Hash::make('Mbjutgo7'),
-        ]);
+        $user = User::firstOrCreate(
+            ['email' => '***REDACTED-EMAIL***'],
+            [
+                'name' => 'Jérémie Bordonaro',
+                'password' => Hash::make('Mbjutgo7'),
+                'siren' => '953353034',
+            ]
+        );
+
+        // Skip si déjà seedé (a déjà un bien)
+        if ($user->properties()->exists()) {
+            return;
+        }
 
         $property = Property::withoutGlobalScopes()->create([
             'user_id' => $user->id,
