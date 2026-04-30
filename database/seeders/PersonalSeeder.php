@@ -4,10 +4,12 @@ namespace Database\Seeders;
 
 use App\Models\Expense;
 use App\Models\Furniture;
+use App\Models\Loan;
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\PropertyWork;
 use App\Models\User;
+use App\Services\LoanService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -112,5 +114,19 @@ class PersonalSeeder extends Seeder
                 'recurring_type' => 'yearly',
             ]);
         }
+
+        // Emprunt résidence principale
+        $loan = Loan::create([
+            'property_id' => $property->id,
+            'bank_name' => 'Crédit immobilier',
+            'amount' => 52100000, // 521 000 €
+            'annual_rate' => 1.000,
+            'duration_months' => 300, // 25 ans
+            'start_date' => '2020-06-01',
+            'monthly_payment' => 0,
+            'insurance_monthly' => 0,
+        ]);
+
+        app(LoanService::class)->generateSchedule($loan);
     }
 }
