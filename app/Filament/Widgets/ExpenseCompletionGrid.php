@@ -8,7 +8,7 @@ use Filament\Widgets\Widget;
 
 class ExpenseCompletionGrid extends Widget
 {
-    protected static string $view = 'filament.widgets.expense-completion-grid';
+    protected string $view = 'filament.widgets.expense-completion-grid';
     protected int | string | array $columnSpan = 'full';
 
     public function getGrid(): array

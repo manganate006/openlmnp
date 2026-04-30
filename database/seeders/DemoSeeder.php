@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Expense;
-use App\Models\Income;
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\User;
