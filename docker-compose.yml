@@ -1,0 +1,20 @@
+services:
+  app:
+    build: .
+    container_name: openlmnp
+    ports:
+      - "8090:8000"
+    volumes:
+      - openlmnp-data:/var/www/html/database
+      - openlmnp-storage:/var/www/html/storage
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=true
+      - APP_URL=http://192.168.1.140:8090
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/html/database/database.sqlite
+    restart: unless-stopped
+
+volumes:
+  openlmnp-data:
+  openlmnp-storage:

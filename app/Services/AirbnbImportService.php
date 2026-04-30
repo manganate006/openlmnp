@@ -1,0 +1,223 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Income;
+use App\Models\Property;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
+
+/**
+ * Import des revenus depuis un fichier CSV Airbnb.
+ *
+ * Airbnb exporte un CSV avec les colonnes suivantes (format 2025-2026) :
+ * - Date, Type, Confirmation code, Start date, Nights, Guest, Listing, Details,
+ *   Reference, Currency, Amount, Paid out, Host fee, Cleaning fee, ...
+ *
+ * On importe les lignes de type "Payout" ou "Reservation" avec montant > 0.
+ */
+class AirbnbImportService
+{
+    /**
+     * Mapping des en-têtes CSV Airbnb vers nos champs.
+     * Supporte plusieurs variantes de noms de colonnes (FR / EN).
+     */
+    private const COLUMN_MAP = [
+        'date'             => ['Date', 'date', 'Date du paiement', 'Payout date'],
+        'type'             => ['Type', 'type'],
+        'confirmation'     => ['Confirmation code', 'confirmation_code', 'Code de confirmation', 'Confirmation'],
+        'start_date'       => ['Start date', 'start_date', 'Date de début', 'Début du séjour', 'Check-in'],
+        'end_date'         => ['End date', 'Date de fin', 'Fin du séjour', 'Check-out'],
+        'nights'           => ['Nights', 'nights', 'Nuits', 'Nombre de nuits'],
+        'guest'            => ['Guest', 'guest', 'Voyageur', 'Nom du voyageur'],
+        'listing'          => ['Listing', 'listing', 'Annonce', 'Nom de l\'annonce'],
+        'amount'           => ['Amount', 'amount', 'Montant', 'Montant brut', 'Gross earnings'],
+        'host_fee'         => ['Host fee', 'host_fee', 'Frais de service hôte', 'Service fee', 'Host Fee Amount'],
+        'paid_out'         => ['Paid out', 'paid_out', 'Versé', 'Montant versé', 'Host Payout'],
+        'currency'         => ['Currency', 'currency', 'Devise'],
+    ];
+
+    /**
+     * Importe un fichier CSV Airbnb pour un bien donné.
+     *
+     * @return array{imported: int, skipped: int, errors: array}
+     */
+    public function import(UploadedFile $file, Property $property): array
+    {
+        $content = file_get_contents($file->getRealPath());
+        $lines = explode("\n", $content);
+
+        if (count($lines) < 2) {
+            return ['imported' => 0, 'skipped' => 0, 'errors' => ['Fichier vide ou invalide']];
+        }
+
+        // Parser l'en-tête
+        $header = str_getcsv(array_shift($lines));
+        $columnIndexes = $this->mapColumns($header);
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+
+        foreach ($lines as $lineNum => $line) {
+            $line = trim($line);
+            if (empty($line)) {
+                continue;
+            }
+
+            $row = str_getcsv($line);
+
+            try {
+                $result = $this->processRow($row, $columnIndexes, $property);
+                if ($result) {
+                    $imported++;
+                } else {
+                    $skipped++;
+                }
+            } catch (\Exception $e) {
+                $errors[] = "Ligne " . ($lineNum + 2) . " : " . $e->getMessage();
+                $skipped++;
+            }
+        }
+
+        return ['imported' => $imported, 'skipped' => $skipped, 'errors' => $errors];
+    }
+
+    /**
+     * Map les colonnes du CSV vers nos identifiants.
+     */
+    private function mapColumns(array $header): array
+    {
+        $indexes = [];
+        $header = array_map('trim', $header);
+
+        foreach (self::COLUMN_MAP as $field => $variants) {
+            foreach ($variants as $variant) {
+                $index = array_search($variant, $header);
+                if ($index !== false) {
+                    $indexes[$field] = $index;
+                    break;
+                }
+            }
+        }
+
+        return $indexes;
+    }
+
+    /**
+     * Traite une ligne du CSV.
+     */
+    private function processRow(array $row, array $indexes, Property $property): ?Income
+    {
+        // Récupérer le montant (brut ou versé)
+        $amountRaw = $this->getField($row, $indexes, 'amount')
+            ?? $this->getField($row, $indexes, 'paid_out');
+
+        if (! $amountRaw) {
+            return null;
+        }
+
+        // Convertir le montant en centimes
+        $amount = $this->parseMoney($amountRaw);
+        if ($amount <= 0) {
+            return null; // Ignorer les remboursements et ajustements négatifs
+        }
+
+        // Date
+        $dateRaw = $this->getField($row, $indexes, 'date');
+        if (! $dateRaw) {
+            return null;
+        }
+        $date = $this->parseDate($dateRaw);
+
+        // Commission host
+        $hostFeeRaw = $this->getField($row, $indexes, 'host_fee');
+        $hostFee = $hostFeeRaw ? abs($this->parseMoney($hostFeeRaw)) : 0;
+
+        // Vérifier si déjà importé (par code de confirmation)
+        $confirmation = $this->getField($row, $indexes, 'confirmation');
+        if ($confirmation) {
+            $existing = Income::where('property_id', $property->id)
+                ->where('reservation_ref', $confirmation)
+                ->first();
+            if ($existing) {
+                return null; // Déjà importé
+            }
+        }
+
+        // Dates de séjour
+        $startDate = $this->getField($row, $indexes, 'start_date');
+        $endDate = $this->getField($row, $indexes, 'end_date');
+
+        return Income::create([
+            'property_id'     => $property->id,
+            'income_date'     => $date,
+            'amount'          => $amount,
+            'platform_fee'    => $hostFee,
+            'tourist_tax'     => 0,
+            'source'          => 'airbnb',
+            'reservation_ref' => $confirmation,
+            'guest_name'      => $this->getField($row, $indexes, 'guest'),
+            'checkin_date'    => $startDate ? $this->parseDate($startDate) : null,
+            'checkout_date'   => $endDate ? $this->parseDate($endDate) : null,
+        ]);
+    }
+
+    private function getField(array $row, array $indexes, string $field): ?string
+    {
+        if (! isset($indexes[$field])) {
+            return null;
+        }
+
+        $value = $row[$indexes[$field]] ?? null;
+
+        return $value !== null && $value !== '' ? trim($value) : null;
+    }
+
+    /**
+     * Parse un montant monétaire vers des centimes.
+     * Gère : "1,234.56", "1234.56", "1 234,56", "-56.78"
+     */
+    private function parseMoney(string $raw): int
+    {
+        $raw = trim($raw);
+        // Remove currency symbols
+        $raw = preg_replace('/[€$£]/', '', $raw);
+        $raw = trim($raw);
+
+        // Detect format: if last separator is comma and has 2 digits after → European
+        if (preg_match('/,\d{2}$/', $raw)) {
+            // European format: 1.234,56 or 1 234,56
+            $raw = str_replace(['.', ' '], '', $raw);
+            $raw = str_replace(',', '.', $raw);
+        } else {
+            // US format: 1,234.56
+            $raw = str_replace([',', ' '], '', $raw);
+        }
+
+        return (int) bcmul($raw, '100', 0);
+    }
+
+    /**
+     * Parse une date depuis divers formats.
+     */
+    private function parseDate(string $raw): string
+    {
+        $raw = trim($raw);
+
+        // Try common formats
+        foreach (['Y-m-d', 'm/d/Y', 'd/m/Y', 'Y/m/d', 'M d, Y', 'd M Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $raw);
+                if ($date) {
+                    return $date->format('Y-m-d');
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        // Fallback: let Carbon guess
+        return Carbon::parse($raw)->format('Y-m-d');
+    }
+}
