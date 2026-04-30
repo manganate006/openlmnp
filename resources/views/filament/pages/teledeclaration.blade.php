@@ -1,10 +1,10 @@
 <x-filament-panels::page>
     <style>
-        .td-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid #e5e7eb; margin-bottom: 16px; }
+        .td-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
         .td-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .td-table th, .td-table td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
-        .td-table th { background: #f9fafb; text-align: left; font-weight: 600; font-size: 12px; }
-        .td-table .form-cell { color: #6b7280; font-size: 11px; white-space: nowrap; }
+        .td-table th, .td-table td { padding: 8px 12px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
+        .td-table th { background: var(--fi-bg-muted, #f9fafb); text-align: left; font-weight: 600; font-size: 12px; }
+        .td-table .form-cell { color: var(--fi-fg-muted, #6b7280); font-size: 11px; white-space: nowrap; }
         .td-table .line-cell { font-weight: 700; color: #065f46; white-space: nowrap; }
         .td-table .value-cell { text-align: right; font-family: monospace; font-weight: 600; }
         .td-table .copy-btn { cursor: pointer; background: #ecfdf5; color: #065f46; border: 1px solid #86efac; border-radius: 4px; padding: 2px 8px; font-size: 11px; margin-left: 8px; }
@@ -13,7 +13,7 @@
         .td-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .td-export { padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
         .td-export:hover { background: #059669; }
-        .td-guide { font-size: 13px; color: #374151; line-height: 1.8; }
+        .td-guide { font-size: 13px; color: var(--fi-fg, #374151); line-height: 1.8; }
         .td-guide ol { padding-left: 20px; }
         .td-guide li { margin-bottom: 8px; }
         .td-guide strong { color: #065f46; }

@@ -4,8 +4,8 @@
         .ss-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .ss-grid-5 { grid-template-columns: repeat(5, 1fr); }
         .ss-grid-2 { grid-template-columns: repeat(2, 1fr); }
-        .ss-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid #e5e7eb; }
-        .ss-card-label { font-size: 11px; color: #6b7280; }
+        .ss-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
+        .ss-card-label { font-size: 11px; color: var(--fi-fg-muted, #6b7280); }
         .ss-card-value { font-size: 18px; font-weight: 700; }
         .ss-card-center { text-align: center; }
         .ss-card-center .ss-card-value { font-size: 24px; color: #10b981; }
@@ -17,7 +17,7 @@
         .ss-bar { width: 100%; background: #e5e7eb; border-radius: 6px; height: 12px; margin: 8px 0; }
         .ss-bar-fill { height: 12px; border-radius: 6px; }
         .ss-pre { margin-top: 12px; padding: 16px; background: #1f2937; color: #e5e7eb; border-radius: 8px; font-size: 11px; overflow-x: auto; max-height: 400px; font-family: monospace; white-space: pre-wrap; }
-        .ss-list { font-size: 12px; color: #6b7280; list-style: disc; padding-left: 20px; line-height: 2; }
+        .ss-list { font-size: 12px; color: var(--fi-fg-muted, #6b7280); list-style: disc; padding-left: 20px; line-height: 2; }
         @media (max-width: 768px) { .ss-grid-4, .ss-grid-5 { grid-template-columns: repeat(2, 1fr); } }
     </style>
 

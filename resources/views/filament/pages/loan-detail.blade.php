@@ -1,24 +1,24 @@
 <x-filament-panels::page>
     <style>
-        .ld-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid #e5e7eb; margin-bottom: 16px; }
+        .ld-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
         .ld-grid { display: grid; gap: 12px; }
         .ld-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .ld-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .ld-grid-2 { grid-template-columns: repeat(2, 1fr); }
         .ld-stat { text-align: center; }
         .ld-stat-value { font-size: 22px; font-weight: 700; }
-        .ld-stat-label { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        .ld-stat-label { font-size: 11px; color: var(--fi-fg-muted, #6b7280); margin-top: 4px; }
         .ld-stat-green .ld-stat-value { color: #065f46; }
         .ld-stat-amber .ld-stat-value { color: #92400e; }
         .ld-stat-blue .ld-stat-value { color: #1e40af; }
         .ld-bar { width: 100%; background: #e5e7eb; border-radius: 8px; height: 16px; margin: 8px 0; }
         .ld-bar-fill { height: 16px; border-radius: 8px; background: #10b981; transition: width 0.5s; }
         .ld-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .ld-table th, .ld-table td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
-        .ld-table th { background: #f9fafb; text-align: center; font-weight: 600; font-size: 11px; position: sticky; top: 0; }
+        .ld-table th, .ld-table td { padding: 6px 8px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
+        .ld-table th { background: var(--fi-bg-muted, #f9fafb); text-align: center; font-weight: 600; font-size: 11px; position: sticky; top: 0; }
         .ld-table .r { text-align: right; font-family: monospace; }
         .ld-table .c { text-align: center; }
-        .ld-table .past { color: #9ca3af; }
+        .ld-table .past { color: var(--fi-fg-muted, #9ca3af); }
         .ld-table .current { background: #ecfdf5; font-weight: 600; }
         .ld-table .future { }
         .ld-scroll { max-height: 500px; overflow-y: auto; overflow-x: auto; }

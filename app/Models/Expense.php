@@ -42,15 +42,49 @@ class Expense extends Model
     public static function categoryLabels(): array
     {
         return [
-            self::CATEGORY_PROPERTY_TAX => 'Taxe foncière',
-            self::CATEGORY_INSURANCE    => 'Assurance',
-            self::CATEGORY_ENERGY       => 'Énergie (élec, gaz, eau)',
-            self::CATEGORY_MAINTENANCE  => 'Entretien / réparations',
-            self::CATEGORY_SUPPLIES     => 'Fournitures / consommables',
-            self::CATEGORY_PLATFORM     => 'Commissions plateformes',
-            self::CATEGORY_ACCOUNTING   => 'Comptabilité / logiciel',
-            self::CATEGORY_TELECOM      => 'Internet / téléphone',
-            self::CATEGORY_TRAVEL       => 'Frais de déplacement',
+            self::CATEGORY_PROPERTY_TAX => '🏛️ Taxe foncière',
+            self::CATEGORY_INSURANCE    => '🛡️ Assurance',
+            self::CATEGORY_ENERGY       => '⚡ Énergie (élec, gaz, eau)',
+            self::CATEGORY_MAINTENANCE  => '🔧 Entretien / réparations',
+            self::CATEGORY_SUPPLIES     => '🧹 Fournitures / consommables',
+            self::CATEGORY_PLATFORM     => '💳 Commissions plateformes',
+            self::CATEGORY_ACCOUNTING   => '📊 Comptabilité / logiciel',
+            self::CATEGORY_TELECOM      => '📡 Internet / téléphone',
+            self::CATEGORY_TRAVEL       => '🚗 Frais de déplacement',
+            self::CATEGORY_CLEANING     => '🧽 Ménage',
+            self::CATEGORY_OTHER        => '📦 Divers',
+        ];
+    }
+
+    public static function categoryEmojis(): array
+    {
+        return [
+            self::CATEGORY_PROPERTY_TAX => '🏛️',
+            self::CATEGORY_INSURANCE    => '🛡️',
+            self::CATEGORY_ENERGY       => '⚡',
+            self::CATEGORY_MAINTENANCE  => '🔧',
+            self::CATEGORY_SUPPLIES     => '🧹',
+            self::CATEGORY_PLATFORM     => '💳',
+            self::CATEGORY_ACCOUNTING   => '📊',
+            self::CATEGORY_TELECOM      => '📡',
+            self::CATEGORY_TRAVEL       => '🚗',
+            self::CATEGORY_CLEANING     => '🧽',
+            self::CATEGORY_OTHER        => '📦',
+        ];
+    }
+
+    public static function categoryShortLabels(): array
+    {
+        return [
+            self::CATEGORY_PROPERTY_TAX => 'TF',
+            self::CATEGORY_INSURANCE    => 'Assur.',
+            self::CATEGORY_ENERGY       => 'Énergie',
+            self::CATEGORY_MAINTENANCE  => 'Entret.',
+            self::CATEGORY_SUPPLIES     => 'Fourn.',
+            self::CATEGORY_PLATFORM     => 'Commis.',
+            self::CATEGORY_ACCOUNTING   => 'Compta',
+            self::CATEGORY_TELECOM      => 'Télécom',
+            self::CATEGORY_TRAVEL       => 'Déplac.',
             self::CATEGORY_CLEANING     => 'Ménage',
             self::CATEGORY_OTHER        => 'Divers',
         ];
