@@ -3,8 +3,7 @@
 namespace App\Filament\Resources\FiscalYears\Schemas;
 
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class FiscalYearForm
@@ -13,47 +12,24 @@ class FiscalYearForm
     {
         return $schema
             ->components([
-                Select::make('user_id')
-                    ->relationship('user', 'name')
-                    ->required(),
-                TextInput::make('year')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('status')
-                    ->required()
-                    ->default('draft'),
-                TextInput::make('total_income')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('total_expenses')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('total_depreciation')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('capped_depreciation')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('deferred_depreciation')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('previous_deferred')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('fiscal_result')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Textarea::make('form_data')
-                    ->columnSpanFull(),
-                TextInput::make('pdf_path'),
-                TextInput::make('fec_path'),
+                Section::make('Nouvel exercice fiscal')
+                    ->icon('heroicon-o-document-text')
+                    ->description('Sélectionnez l\'année. Tous les montants seront calculés automatiquement à partir de vos recettes, charges et amortissements.')
+                    ->schema([
+                        Select::make('year')
+                            ->label('Année')
+                            ->options(function () {
+                                $years = [];
+                                for ($y = (int) date('Y') + 1; $y >= (int) date('Y') - 5; $y--) {
+                                    $years[$y] = $y;
+                                }
+                                return $years;
+                            })
+                            ->default((int) date('Y'))
+                            ->required()
+                            ->hint('L\'exercice va du 1er janvier au 31 décembre de cette année')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
+                    ]),
             ]);
     }
 }

@@ -57,6 +57,7 @@
                 <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Valeurs à déclarer — Exercice {{ $year }}</h3>
                 <p style="font-size:12px;color:#6b7280;margin-bottom:16px;">Cliquez sur « Copier » pour copier une valeur dans le presse-papier, puis collez-la dans le formulaire en ligne.</p>
 
+                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
                 <table class="td-table">
                     <thead>
                         <tr>
@@ -79,6 +80,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div>
 
             {{-- Guide EFI --}}

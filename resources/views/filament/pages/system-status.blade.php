@@ -1,149 +1,105 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
+    <style>
+        .ss-grid { display: grid; gap: 12px; }
+        .ss-grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .ss-grid-5 { grid-template-columns: repeat(5, 1fr); }
+        .ss-grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .ss-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid #e5e7eb; }
+        .ss-card-label { font-size: 11px; color: #6b7280; }
+        .ss-card-value { font-size: 18px; font-weight: 700; }
+        .ss-card-center { text-align: center; }
+        .ss-card-center .ss-card-value { font-size: 24px; color: #10b981; }
+        .ss-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .ss-btn:hover { background: #059669; }
+        .ss-btn:disabled { opacity: 0.5; cursor: wait; }
+        .ss-result-ok { background: #ecfdf5; border: 1px solid #86efac; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; }
+        .ss-result-fail { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; }
+        .ss-bar { width: 100%; background: #e5e7eb; border-radius: 6px; height: 12px; margin: 8px 0; }
+        .ss-bar-fill { height: 12px; border-radius: 6px; }
+        .ss-pre { margin-top: 12px; padding: 16px; background: #1f2937; color: #e5e7eb; border-radius: 8px; font-size: 11px; overflow-x: auto; max-height: 400px; font-family: monospace; white-space: pre-wrap; }
+        .ss-list { font-size: 12px; color: #6b7280; list-style: disc; padding-left: 20px; line-height: 2; }
+        @media (max-width: 768px) { .ss-grid-4, .ss-grid-5 { grid-template-columns: repeat(2, 1fr); } }
+    </style>
 
-        {{-- Informations système --}}
-        @php $info = $this->getSystemInfo(); @endphp
+    @php $info = $this->getSystemInfo(); @endphp
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
-                <p class="text-xs text-gray-500">PHP</p>
-                <p class="text-lg font-bold">{{ $info['php_version'] }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
-                <p class="text-xs text-gray-500">Laravel</p>
-                <p class="text-lg font-bold">{{ $info['laravel_version'] }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
-                <p class="text-xs text-gray-500">Filament</p>
-                <p class="text-lg font-bold">{{ $info['filament_version'] }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
-                <p class="text-xs text-gray-500">Uptime</p>
-                <p class="text-lg font-bold">{{ $info['uptime'] }}</p>
-            </div>
+    <div>
+        <div class="ss-grid ss-grid-4" style="margin-bottom: 16px;">
+            <div class="ss-card"><div class="ss-card-label">PHP</div><div class="ss-card-value">{{ $info['php_version'] }}</div></div>
+            <div class="ss-card"><div class="ss-card-label">Laravel</div><div class="ss-card-value">{{ $info['laravel_version'] }}</div></div>
+            <div class="ss-card"><div class="ss-card-label">Filament</div><div class="ss-card-value">{{ $info['filament_version'] }}</div></div>
+            <div class="ss-card"><div class="ss-card-label">Uptime</div><div class="ss-card-value">{{ $info['uptime'] }}</div></div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border text-center">
-                <p class="text-2xl font-bold text-emerald-600">{{ $info['users_count'] }}</p>
-                <p class="text-xs text-gray-500">Utilisateurs</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border text-center">
-                <p class="text-2xl font-bold text-emerald-600">{{ $info['properties_count'] }}</p>
-                <p class="text-xs text-gray-500">Biens</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border text-center">
-                <p class="text-2xl font-bold text-emerald-600">{{ $info['incomes_count'] }}</p>
-                <p class="text-xs text-gray-500">Recettes</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border text-center">
-                <p class="text-2xl font-bold text-emerald-600">{{ $info['expenses_count'] }}</p>
-                <p class="text-xs text-gray-500">Charges</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border text-center">
-                <p class="text-2xl font-bold text-emerald-600">{{ $info['fiscal_years_count'] }}</p>
-                <p class="text-xs text-gray-500">Exercices</p>
-            </div>
+        <div class="ss-grid ss-grid-5" style="margin-bottom: 16px;">
+            <div class="ss-card ss-card-center"><div class="ss-card-value">{{ $info['users_count'] }}</div><div class="ss-card-label">Utilisateurs</div></div>
+            <div class="ss-card ss-card-center"><div class="ss-card-value">{{ $info['properties_count'] }}</div><div class="ss-card-label">Biens</div></div>
+            <div class="ss-card ss-card-center"><div class="ss-card-value">{{ $info['incomes_count'] }}</div><div class="ss-card-label">Recettes</div></div>
+            <div class="ss-card ss-card-center"><div class="ss-card-value">{{ $info['expenses_count'] }}</div><div class="ss-card-label">Charges</div></div>
+            <div class="ss-card ss-card-center"><div class="ss-card-value">{{ $info['fiscal_years_count'] }}</div><div class="ss-card-label">Exercices</div></div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
-                <p class="text-xs text-gray-500">Base de données ({{ $info['db_driver'] }})</p>
-                <p class="text-lg font-bold">{{ $info['db_size'] }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border">
-                <p class="text-xs text-gray-500">Espace disque libre</p>
-                <p class="text-lg font-bold">{{ $info['storage_free'] }}</p>
-            </div>
+        <div class="ss-grid ss-grid-2" style="margin-bottom: 24px;">
+            <div class="ss-card"><div class="ss-card-label">Base de données ({{ $info['db_driver'] }})</div><div class="ss-card-value">{{ $info['db_size'] }}</div></div>
+            <div class="ss-card"><div class="ss-card-label">Espace disque libre</div><div class="ss-card-value">{{ $info['storage_free'] }}</div></div>
         </div>
 
-        {{-- Tests automatisés --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Tests automatisés</h3>
-                <button
-                    wire:click="runTests"
-                    wire:loading.attr="disabled"
-                    wire:target="runTests"
-                    class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 gap-2"
-                >
-                    <span wire:loading.remove wire:target="runTests">
-                        <x-heroicon-o-play class="w-4 h-4" /> Lancer les tests
-                    </span>
-                    <span wire:loading wire:target="runTests">
-                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                        Tests en cours...
-                    </span>
+        <div class="ss-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="font-size:16px;font-weight:600;">Tests automatisés</h3>
+                <button wire:click="runTests" wire:loading.attr="disabled" wire:target="runTests" class="ss-btn">
+                    <span wire:loading.remove wire:target="runTests">Lancer les tests</span>
+                    <span wire:loading wire:target="runTests">Tests en cours...</span>
                 </button>
             </div>
 
             @if($testResults)
-                {{-- Résumé --}}
-                <div class="mb-4 p-4 rounded-lg {{ $testResults['success'] ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200' : 'bg-red-50 dark:bg-red-900/20 border border-red-200' }}">
-                    <div class="flex items-center gap-3">
-                        @if($testResults['success'])
-                            <x-heroicon-o-check-circle class="w-8 h-8 text-emerald-600" />
-                            <div>
-                                <p class="text-lg font-bold text-emerald-800 dark:text-emerald-200">Tous les tests passent</p>
-                                <p class="text-sm text-emerald-600">{{ $testResults['summary']['passed'] }} tests réussis — {{ $testResults['ran_at'] }}</p>
-                            </div>
-                        @else
-                            <x-heroicon-o-x-circle class="w-8 h-8 text-red-600" />
-                            <div>
-                                <p class="text-lg font-bold text-red-800 dark:text-red-200">Des tests ont échoué</p>
-                                <p class="text-sm text-red-600">
-                                    {{ $testResults['summary']['passed'] }} réussis,
-                                    {{ $testResults['summary']['failed'] }} échoués
-                                    — {{ $testResults['ran_at'] }}
-                                </p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Barres de progression --}}
-                @if($testResults['summary']['total'] > 0)
-                    @php
-                        $total = $testResults['summary']['total'];
-                        $passedPct = round($testResults['summary']['passed'] / $total * 100);
-                    @endphp
-                    <div class="mb-4">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>{{ $testResults['summary']['passed'] }} / {{ $total }} tests</span>
-                            <span>{{ $passedPct }}%</span>
+                @if($testResults['success'])
+                    <div class="ss-result-ok">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px;color:#10b981;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                        <div>
+                            <div style="font-size:16px;font-weight:700;color:#065f46;">Tous les tests passent</div>
+                            <div style="font-size:13px;color:#047857;">{{ $testResults['summary']['passed'] }} tests réussis — {{ $testResults['ran_at'] }}</div>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-3">
-                            <div class="h-3 rounded-full {{ $testResults['success'] ? 'bg-emerald-500' : 'bg-red-500' }}" style="width: {{ $passedPct }}%"></div>
+                    </div>
+                @else
+                    <div class="ss-result-fail">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px;color:#dc2626;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                        <div>
+                            <div style="font-size:16px;font-weight:700;color:#991b1b;">Des tests ont échoué</div>
+                            <div style="font-size:13px;color:#dc2626;">{{ $testResults['summary']['passed'] }} réussis, {{ $testResults['summary']['failed'] }} échoués — {{ $testResults['ran_at'] }}</div>
                         </div>
                     </div>
                 @endif
 
-                {{-- Output détaillé --}}
-                <details class="mt-4">
-                    <summary class="cursor-pointer text-sm text-gray-500 hover:text-gray-700">Voir le détail des tests</summary>
-                    <pre class="mt-2 p-4 bg-gray-900 text-gray-100 rounded-lg text-xs overflow-x-auto max-h-96">{{ $testResults['output'] }}</pre>
+                @if($testResults['summary']['total'] > 0)
+                    @php $pct = round($testResults['summary']['passed'] / $testResults['summary']['total'] * 100); @endphp
+                    <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:12px;">
+                        <span>{{ $testResults['summary']['passed'] }} / {{ $testResults['summary']['total'] }} tests</span>
+                        <span>{{ $pct }}%</span>
+                    </div>
+                    <div class="ss-bar"><div class="ss-bar-fill" style="width:{{ $pct }}%;background:{{ $testResults['success'] ? '#10b981' : '#ef4444' }};"></div></div>
+                @endif
+
+                <details style="margin-top:12px;">
+                    <summary style="cursor:pointer;font-size:13px;color:#6b7280;">Voir le détail</summary>
+                    <pre class="ss-pre">{{ $testResults['output'] }}</pre>
                 </details>
             @else
-                <p class="text-gray-500 text-sm">Cliquez sur « Lancer les tests » pour vérifier que tout fonctionne correctement.</p>
-                <div class="mt-3 text-xs text-gray-400">
-                    <p>Les tests vérifient :</p>
-                    <ul class="list-disc pl-5 mt-1 space-y-1">
-                        <li>Calculs d'amortissement par composant</li>
-                        <li>Résultat fiscal et plafonnement</li>
-                        <li>Tableau d'amortissement emprunt</li>
-                        <li>Import CSV Airbnb (formats FR/EN)</li>
-                        <li>Fichier des Écritures Comptables (FEC)</li>
-                        <li>Accès à toutes les pages</li>
-                        <li>Isolation des données entre utilisateurs</li>
-                    </ul>
-                </div>
+                <p style="font-size:13px;color:#6b7280;">Cliquez sur « Lancer les tests » pour vérifier que tout fonctionne.</p>
+                <ul class="ss-list">
+                    <li>Calculs d'amortissement par composant</li>
+                    <li>Résultat fiscal et plafonnement</li>
+                    <li>Tableau d'amortissement emprunt</li>
+                    <li>Import CSV Airbnb (FR/EN)</li>
+                    <li>Fichier des Écritures Comptables (FEC)</li>
+                    <li>Accès à toutes les pages</li>
+                    <li>Isolation des données entre utilisateurs</li>
+                </ul>
             @endif
         </div>
 
-        <div class="text-center text-xs text-gray-400">
+        <div style="text-align:center;font-size:11px;color:#9ca3af;padding:16px;">
             OpenLMNP v0.1 — Laravel {{ $info['laravel_version'] }} — Filament {{ $info['filament_version'] }}
         </div>
     </div>
