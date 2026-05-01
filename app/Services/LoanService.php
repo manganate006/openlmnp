@@ -5,19 +5,10 @@ namespace App\Services;
 use App\Models\Loan;
 use App\Models\LoanPayment;
 
-/**
- * Service de calcul du tableau d'amortissement d'emprunt.
- *
- * Tous les montants en centimes. Calculs bcmath.
- */
 class LoanService
 {
-    /**
-     * Génère le tableau d'amortissement complet pour un emprunt.
-     */
     public function generateSchedule(Loan $loan): void
     {
-        // Supprimer les échéances existantes
         $loan->payments()->delete();
 
         $capitalCents = $loan->amount;
@@ -26,23 +17,33 @@ class LoanService
         $months = $loan->duration_months;
         $remaining = $capitalCents;
 
-        // Calcul mensualité (formule d'annuité constante) — en float pour la formule
-        if ($monthlyRate == 0) {
-            $monthlyPaymentCents = (int) round($capitalCents / $months);
+        // Respecter la mensualité si l'utilisateur en a saisi une > 0
+        if ($loan->monthly_payment > 0) {
+            $monthlyPaymentCents = $loan->monthly_payment;
         } else {
-            $monthlyPaymentFloat = ($capitalCents * $monthlyRate) / (1 - pow(1 + $monthlyRate, -$months));
-            $monthlyPaymentCents = (int) round($monthlyPaymentFloat);
+            if ($monthlyRate == 0) {
+                $monthlyPaymentCents = (int) round($capitalCents / $months);
+            } else {
+                $monthlyPaymentFloat = ($capitalCents * $monthlyRate) / (1 - pow(1 + $monthlyRate, -$months));
+                $monthlyPaymentCents = (int) round($monthlyPaymentFloat);
+            }
+            $loan->update(['monthly_payment' => $monthlyPaymentCents]);
         }
 
-        $loan->update(['monthly_payment' => $monthlyPaymentCents]);
-
         $startDate = $loan->start_date->copy();
+        $insuranceRate = (float) ($loan->insurance_rate ?? 0);
 
         for ($i = 1; $i <= $months; $i++) {
             $paymentDate = $startDate->copy()->addMonths($i);
 
+            // Assurance : fixe ou variable
+            if ($loan->insurance_type === Loan::INSURANCE_VARIABLE && $insuranceRate > 0) {
+                $monthlyInsurance = (int) round($remaining * ($insuranceRate / 12));
+            } else {
+                $monthlyInsurance = $loan->insurance_monthly;
+            }
+
             if ($i === $months) {
-                // Dernier mois : solder exactement
                 $interest = (int) round($remaining * $monthlyRate);
                 $capitalPaid = $remaining;
                 $remaining = 0;
@@ -58,31 +59,18 @@ class LoanService
                 'month_number'     => $i,
                 'capital_amount'   => $capitalPaid,
                 'interest_amount'  => $interest,
-                'insurance_amount' => $loan->insurance_monthly,
+                'insurance_amount' => $monthlyInsurance,
                 'remaining_capital' => max(0, $remaining),
             ]);
         }
     }
 
-    /**
-     * Calcule les intérêts déductibles pour une année donnée.
-     * Applique la quote-part du bien.
-     */
     public function getDeductibleInterest(Loan $loan, int $year): int
     {
-        $totalInterest = $loan->payments()
-            ->whereYear('payment_date', $year)
-            ->sum('interest_amount');
-
-        $totalInsurance = $loan->payments()
-            ->whereYear('payment_date', $year)
-            ->sum('insurance_amount');
-
-        $total = bcadd((string) $totalInterest, (string) $totalInsurance, 0);
-
-        // Appliquer la quote-part du bien
+        $totalInterest = $loan->payments()->whereYear('payment_date', $year)->sum('interest_amount');
+        $totalInsurance = $loan->payments()->whereYear('payment_date', $year)->sum('insurance_amount');
+        $total = $totalInterest + $totalInsurance;
         $quotaShare = $loan->property->quota_share;
-
-        return (int) bcmul($total, $quotaShare, 0);
+        return (int) bcmul((string) $total, $quotaShare, 0);
     }
 }

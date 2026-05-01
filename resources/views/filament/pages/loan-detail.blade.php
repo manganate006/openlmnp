@@ -23,7 +23,12 @@
         .ld-table .future { }
         .ld-scroll { max-height: 500px; overflow-y: auto; overflow-x: auto; }
         .ld-select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
-        @media (max-width: 768px) { .ld-grid-4 { grid-template-columns: repeat(2, 1fr); } .ld-grid-3 { grid-template-columns: repeat(1, 1fr); } }
+        .ld-pagination { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+        .ld-pagination button { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: var(--fi-body-bg, white); cursor: pointer; font-size: 12px; color: var(--fi-fg, #374151); }
+        .ld-pagination button:hover { background: #f3f4f6; }
+        .ld-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .ld-pagination span { padding: 6px 10px; font-size: 12px; color: var(--fi-fg-muted, #6b7280); }
+        @media (max-width: 768px) { .ld-grid-4 { grid-template-columns: repeat(2, 1fr); } .ld-grid-3, .ld-grid-2 { grid-template-columns: 1fr; } }
     </style>
 
     @php
@@ -230,31 +235,46 @@
             </div>
         </div>
 
-        {{-- Tableau d'amortissement complet --}}
-        <div class="ld-card">
-            <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Tableau d'amortissement complet ({{ $data['total_months'] }} mois)</h3>
-            <div class="ld-scroll">
+        {{-- Tableau d'amortissement complet avec pagination --}}
+        <div class="ld-card" x-data="{ page: 1, perPage: 12, total: {{ $data['total_months'] }} }">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="font-size:16px;font-weight:600;">Tableau d'amortissement ({{ $data['total_months'] }} mois)</h3>
+                <select x-model="perPage" @change="page=1" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">
+                    <option value="12">12/page</option>
+                    <option value="24">24/page</option>
+                    <option value="60">60/page</option>
+                    <option value="{{ $data['total_months'] }}">Tout</option>
+                </select>
+            </div>
+            <div style="overflow-x:auto;">
                 <table class="ld-table">
                     <thead>
-                        <tr><th>N°</th><th>Date</th><th>Capital</th><th>Intérêts</th><th>Mensualité</th><th>Capital restant</th></tr>
+                        <tr><th>N°</th><th>Date</th><th>Capital</th><th>Intérêts</th><th>Assurance</th><th>Mensualité</th><th>Restant dû</th></tr>
                     </thead>
                     <tbody>
-                        @foreach($data['payments'] as $p)
+                        @foreach($data['payments'] as $idx => $p)
                             @php
                                 $isPast = $p->payment_date->format('Y-m-d') < now()->format('Y-m-d');
                                 $isCurrent = $p->payment_date->format('Y-m') === now()->format('Y-m');
                             @endphp
-                            <tr class="{{ $isCurrent ? 'current' : ($isPast ? 'past' : '') }}">
+                            <tr class="{{ $isCurrent ? 'current' : ($isPast ? 'past' : '') }}"
+                                x-show="{{ $idx }} >= (page-1)*perPage && {{ $idx }} < page*perPage">
                                 <td class="c">{{ $p->month_number }}</td>
                                 <td class="c">{{ $p->payment_date->format('m/Y') }}</td>
                                 <td class="r">{{ $fmt($p->capital_amount) }} €</td>
                                 <td class="r">{{ $fmt($p->interest_amount) }} €</td>
-                                <td class="r">{{ $fmt($p->capital_amount + $p->interest_amount) }} €</td>
+                                <td class="r">{{ $fmt($p->insurance_amount) }} €</td>
+                                <td class="r">{{ $fmt($p->capital_amount + $p->interest_amount + $p->insurance_amount) }} €</td>
                                 <td class="r">{{ $fmtInt($p->remaining_capital) }} €</td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+            <div class="ld-pagination">
+                <button @click="page = Math.max(1, page-1)" :disabled="page <= 1">← Précédent</button>
+                <span x-text="'Page ' + page + ' / ' + Math.ceil(total/perPage)"></span>
+                <button @click="page = Math.min(Math.ceil(total/perPage), page+1)" :disabled="page >= Math.ceil(total/perPage)">Suivant →</button>
             </div>
         </div>
     @endif
