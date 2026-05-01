@@ -105,6 +105,27 @@ class PersonalSeeder extends Seeder
             'annual_depreciation' => (int) bcdiv('200000', '5', 0),
         ]);
 
+        // Équipements Airbnb (montants à renseigner par l'utilisateur)
+        $equipments = [
+            ['Télévision', '2023-06-01', 7, false],
+            ['Jacuzzi', '2023-06-01', 10, false],
+            ['Réfrigérateur', '2023-06-01', 7, false],
+            ['Lave-vaisselle', '2023-06-01', 7, false],
+            ['Bac à douche', '2023-06-01', 10, false],
+        ];
+        foreach ($equipments as [$desc, $date, $dur, $secondHand]) {
+            Furniture::create([
+                'property_id' => $property->id,
+                'description' => $desc,
+                'amount' => 100, // 1€ placeholder — à modifier par l'utilisateur
+                'purchase_date' => $date,
+                'duration_years' => $dur,
+                'is_dedicated' => true,
+                'is_second_hand' => $secondHand,
+                'annual_depreciation' => (int) bcdiv('100', (string) $dur, 0),
+            ]);
+        }
+
         $charges = [
             ['property_tax', 'Taxe foncière 2026', 240000, false],
             ['energy', 'Électricité annuelle', 200000, false],
