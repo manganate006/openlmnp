@@ -171,12 +171,12 @@ it('isolates data between users', function () {
         ->assertDontSee('Bien autre utilisateur');
 });
 
-// === EDIT PAGES WITH RELATION MANAGERS ===
+// === EDIT PAGES WITH WIZARD ===
 
-it('shows property edit page with relation manager tabs', function () {
+it('shows property edit page with wizard steps', function () {
     $property = Property::forceCreate([
         'user_id' => $this->user->id,
-        'name' => 'Test RM',
+        'name' => 'Test Wizard',
         'address' => '1 rue Test',
         'city' => 'Paris',
         'postal_code' => '75001',
@@ -195,10 +195,8 @@ it('shows property edit page with relation manager tabs', function () {
     $this->actingAs($this->user)
         ->get("/properties/{$property->id}/edit")
         ->assertOk()
-        ->assertSee('Test RM')
-        ->assertSee('Composants')
-        ->assertSee('Travaux')
-        ->assertSee('Mobilier');
+        ->assertSee('Test Wizard')
+        ->assertSee('Surfaces');
 });
 
 // === SIMULATOR WITH DATA ===
