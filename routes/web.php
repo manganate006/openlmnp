@@ -1,8 +1,3 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-// Rediriger la racine vers le dashboard Filament
-Route::get('/', function () {
-    return redirect('/login');
-});
+// Pas de route web — Filament gère tout sur /
