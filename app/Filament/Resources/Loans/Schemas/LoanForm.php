@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Loans\Schemas;
 
+use App\Models\Loan;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -61,35 +62,50 @@ class LoanForm
                                 ->hint('Date de la 1ère échéance')
                                 ->hintIcon('heroicon-o-question-mark-circle'),
                         ]),
+                        TextInput::make('monthly_payment')
+                            ->label('Mensualité (hors assurance)')
+                            ->suffix('€')
+                            ->numeric()
+                            ->step(0.01)
+                            ->default(0)
+                            ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
+                            ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                            ->hint('Laissez à 0 pour un calcul automatique. Si vous saisissez un montant, il sera utilisé tel quel.')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
                     ]),
 
-                Section::make('Mensualités')
-                    ->icon('heroicon-o-calculator')
-                    ->description('La mensualité est calculée automatiquement à la création. Vous pouvez la corriger si nécessaire.')
-                    ->collapsed()
+                Section::make('Assurance emprunteur')
+                    ->icon('heroicon-o-shield-check')
+                    ->description('L\'assurance emprunteur est déductible au prorata de la quote-part du bien loué.')
                     ->schema([
-                        Grid::make(2)->schema([
-                            TextInput::make('monthly_payment')
-                                ->label('Mensualité (hors assurance)')
-                                ->suffix('€')
-                                ->numeric()
-                                ->step(1)
-                                ->default(0)
-                                ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
-                                ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hint('Laissez à 0 pour un calcul automatique')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
-                            TextInput::make('insurance_monthly')
-                                ->label('Assurance emprunteur mensuelle')
-                                ->suffix('€')
-                                ->numeric()
-                                ->step(1)
-                                ->default(0)
-                                ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
-                                ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hint('L\'assurance emprunteur est déductible au prorata de la quote-part')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
-                        ]),
+                        Select::make('insurance_type')
+                            ->label('Type d\'assurance')
+                            ->options(Loan::insuranceTypeLabels())
+                            ->default('fixed')
+                            ->required()
+                            ->live()
+                            ->hint('Fixe = même montant chaque mois. Variable = basé sur le capital restant dû.')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
+                        TextInput::make('insurance_monthly')
+                            ->label('Montant mensuel')
+                            ->suffix('€/mois')
+                            ->numeric()
+                            ->step(0.01)
+                            ->default(0)
+                            ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
+                            ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                            ->visible(fn (callable $get) => ($get('insurance_type') ?? 'fixed') === 'fixed')
+                            ->hint('Montant fixe prélevé chaque mois (ex : 75 pour 75€/mois)')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
+                        TextInput::make('insurance_rate')
+                            ->label('Taux annuel assurance')
+                            ->suffix('%')
+                            ->numeric()
+                            ->step(0.001)
+                            ->default(0)
+                            ->visible(fn (callable $get) => ($get('insurance_type') ?? 'fixed') === 'variable')
+                            ->hint('Taux appliqué au capital restant dû (ex : 0.36 pour 0,36%/an). Le montant baisse avec le capital.')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
                     ]),
             ]);
     }

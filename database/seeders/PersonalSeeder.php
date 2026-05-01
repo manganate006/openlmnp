@@ -133,7 +133,9 @@ class PersonalSeeder extends Seeder
             'duration_months' => 300, // 25 ans
             'start_date' => '2020-06-01',
             'monthly_payment' => 0,
-            'insurance_monthly' => 0,
+            'insurance_monthly' => 7500, // 75 €/mois (2 têtes 75% : 30€ + 45€)
+            'insurance_type' => 'fixed',
+            'insurance_rate' => 0,
         ]);
 
         app(LoanService::class)->generateSchedule($loan);

@@ -24,6 +24,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Loan extends Model
 {
+    public const INSURANCE_FIXED = 'fixed';
+    public const INSURANCE_VARIABLE = 'variable';
+
     protected $fillable = [
         'property_id',
         'bank_name',
@@ -33,7 +36,17 @@ class Loan extends Model
         'start_date',
         'monthly_payment',
         'insurance_monthly',
+        'insurance_type',
+        'insurance_rate',
     ];
+
+    public static function insuranceTypeLabels(): array
+    {
+        return [
+            self::INSURANCE_FIXED => 'Montant fixe mensuel',
+            self::INSURANCE_VARIABLE => 'Taux sur capital restant dû',
+        ];
+    }
 
     protected function casts(): array
     {
