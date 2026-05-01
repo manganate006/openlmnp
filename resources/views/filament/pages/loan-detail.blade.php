@@ -135,43 +135,6 @@
                 </div>
             </div>
 
-            {{-- Intérêts déductibles par année --}}
-            <div class="ld-card" style="margin-top:12px;">
-                <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Intérêts déductibles par année (quote-part {{ number_format((float) $data['quota_share'] * 100, 1) }}%)</h3>
-                <div style="overflow-x:auto;">
-                    <table class="ld-table">
-                        <tr><th>Année</th><th>Intérêts</th><th>Assurance</th><th>Déductible (quote-part)</th></tr>
-                        @foreach($data['interest_by_year'] as $year => $yData)
-                            <tr class="{{ $year == date('Y') ? 'current' : ($year < date('Y') ? 'past' : '') }}">
-                                <td class="c">{{ $year }}</td>
-                                <td class="r">{{ $fmt($yData['interest']) }} €</td>
-                                <td class="r">{{ $fmt($yData['insurance']) }} €</td>
-                                <td class="r" style="font-weight:600;color:#065f46;">{{ $fmt($yData['deductible']) }} €</td>
-                            </tr>
-                        @endforeach
-                    </table>
-                </div>
-            </div>
-
-            {{-- Prochaines échéances --}}
-            @if($data['next_payments']->count() > 0)
-                <div class="ld-card" style="margin-top:12px;">
-                    <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Prochaines échéances</h3>
-                    <table class="ld-table">
-                        <tr><th>Date</th><th>Capital</th><th>Intérêts</th><th>Assurance</th><th>Mensualité</th><th>Restant dû</th></tr>
-                        @foreach($data['next_payments'] as $p)
-                            <tr>
-                                <td class="c">{{ $p->payment_date->format('m/Y') }}</td>
-                                <td class="r">{{ $fmt($p->capital_amount) }} €</td>
-                                <td class="r">{{ $fmt($p->interest_amount) }} €</td>
-                                <td class="r">{{ $fmt($p->insurance_amount) }} €</td>
-                                <td class="r">{{ $fmt($p->capital_amount + $p->interest_amount + $p->insurance_amount) }} €</td>
-                                <td class="r">{{ $fmtInt($p->remaining_capital) }} €</td>
-                            </tr>
-                        @endforeach
-                    </table>
-                </div>
-            @endif
         </div> {{-- fin onglet chiffres --}}
 
         {{-- === ONGLET GRAPHIQUES (utilise visibility pour que Chart.js rende) === --}}
@@ -324,6 +287,46 @@
 
         {{-- === ONGLET TABLEAUX === --}}
         <div x-show="tab === 'tables'" x-cloak>
+
+        {{-- Prochaines échéances --}}
+        @if($data['next_payments']->count() > 0)
+            <div class="ld-card">
+                <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Prochaines échéances</h3>
+                <div style="overflow-x:auto;">
+                <table class="ld-table">
+                    <tr><th>Date</th><th>Capital</th><th>Intérêts</th><th>Assurance</th><th>Mensualité</th><th>Restant dû</th></tr>
+                    @foreach($data['next_payments'] as $p)
+                        <tr>
+                            <td class="c">{{ $p->payment_date->format('m/Y') }}</td>
+                            <td class="r">{{ $fmt($p->capital_amount) }} €</td>
+                            <td class="r">{{ $fmt($p->interest_amount) }} €</td>
+                            <td class="r">{{ $fmt($p->insurance_amount) }} €</td>
+                            <td class="r">{{ $fmt($p->capital_amount + $p->interest_amount + $p->insurance_amount) }} €</td>
+                            <td class="r">{{ $fmtInt($p->remaining_capital) }} €</td>
+                        </tr>
+                    @endforeach
+                </table>
+                </div>
+            </div>
+        @endif
+
+        {{-- Intérêts déductibles par année --}}
+        <div class="ld-card">
+            <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Intérêts déductibles par année (quote-part {{ number_format((float) $data['quota_share'] * 100, 1) }}%)</h3>
+            <div style="overflow-x:auto;">
+                <table class="ld-table">
+                    <tr><th>Année</th><th>Intérêts</th><th>Assurance</th><th>Déductible (quote-part)</th></tr>
+                    @foreach($data['interest_by_year'] as $year => $yData)
+                        <tr class="{{ $year == date('Y') ? 'current' : ($year < date('Y') ? 'past' : '') }}">
+                            <td class="c">{{ $year }}</td>
+                            <td class="r">{{ $fmt($yData['interest']) }} €</td>
+                            <td class="r">{{ $fmt($yData['insurance']) }} €</td>
+                            <td class="r" style="font-weight:600;color:#065f46;">{{ $fmt($yData['deductible']) }} €</td>
+                        </tr>
+                    @endforeach
+                </table>
+            </div>
+        </div>
 
         {{-- Tableau d'amortissement complet avec pagination --}}
         <div class="ld-card" x-data="{ page: 1, perPage: 12, total: {{ $data['total_months'] }} }">
