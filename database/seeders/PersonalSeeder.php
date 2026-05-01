@@ -56,7 +56,20 @@ class PersonalSeeder extends Seeder
             'rental_start_date' => '2023-06-01',
             'rental_type' => 'seasonal',
             'is_primary_residence' => true,
+            'listing_urls' => [
+                ['label' => 'Airbnb', 'url' => 'https://go.airdazur.com/bnb'],
+            ],
         ]);
+
+        // Récupérer la photo depuis l'annonce Airbnb
+        try {
+            $imgPath = app(\App\Services\UrlImageService::class)->fetchAndSave('https://go.airdazur.com/bnb', 'properties');
+            if ($imgPath) {
+                $property->update(['photo_path' => $imgPath]);
+            }
+        } catch (\Exception $e) {
+            // Silencieux si échec (pas de réseau, etc.)
+        }
 
         $depBase = $property->depreciable_base;
         $components = [

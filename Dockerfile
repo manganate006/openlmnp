@@ -25,7 +25,8 @@ RUN mkdir -p database storage/app/data storage/logs storage/framework/{sessions,
     && chmod -R 775 storage database bootstrap/cache
 
 RUN php artisan key:generate --force
+RUN php artisan storage:link 2>/dev/null || true
 RUN php artisan migrate:fresh --seed --force
 
 EXPOSE 8000
-CMD php artisan optimize:clear 2>/dev/null; php artisan serve --host=0.0.0.0 --port=8000
+CMD php artisan optimize:clear 2>/dev/null; php artisan storage:link 2>/dev/null; php artisan serve --host=0.0.0.0 --port=8000
