@@ -24,8 +24,14 @@ class PersonalSeeder extends Seeder
                 'name' => 'Jérémie Bordonaro',
                 'password' => Hash::make('Mbjutgo7'),
                 'siren' => '953353034',
+                'is_admin' => true,
             ]
         );
+
+        // Ensure admin even if user already existed
+        if (! $user->is_admin) {
+            $user->update(['is_admin' => true]);
+        }
 
         // Skip si déjà seedé (a déjà un bien)
         if ($user->properties()->exists()) {
@@ -34,7 +40,7 @@ class PersonalSeeder extends Seeder
 
         $property = Property::withoutGlobalScopes()->create([
             'user_id' => $user->id,
-            'name' => 'Appartement Airbnb - La Roquette',
+            'name' => 'La Bastide',
             'address' => '80 allée des Jasmins',
             'city' => 'La Roquette-sur-Siagne',
             'postal_code' => '06550',
