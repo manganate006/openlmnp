@@ -26,7 +26,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('app')
+            ->path('/')
             ->login()
             ->registration()
             ->profile()
@@ -43,6 +43,7 @@ class AdminPanelProvider extends PanelProvider
                 'Comptabilité',
                 'Fiscal',
                 'Paramètres',
+                'Administration',
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
