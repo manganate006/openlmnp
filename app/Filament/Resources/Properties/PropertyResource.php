@@ -42,7 +42,11 @@ class PropertyResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            RelationManagers\ComponentsRelationManager::class,
+            RelationManagers\WorksRelationManager::class,
+            RelationManagers\FurnitureRelationManager::class,
+        ];
     }
 
     public static function getNavigationBadge(): ?string

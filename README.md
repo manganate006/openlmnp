@@ -9,7 +9,7 @@
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/Licence-AGPLv3-green)
-![Tests](https://img.shields.io/badge/Tests-48%20pass%C3%A9s-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-55%20pass%C3%A9s-brightgreen)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
 Gerez vos biens en location meublee, calculez vos amortissements,
@@ -35,10 +35,11 @@ et produisez votre liasse fiscale au regime reel.
 - **Liasse fiscale PDF** — Lignes Cerfa 2031, 2033-A/B/C/D, case 2042-C-PRO
 - **FEC conforme** — Article A.47 A-1 du LPF, 18 colonnes, format legal
 - **Ecritures comptables** — Generation automatique (plan comptable LMNP)
+- **Assistants guides (wizards)** — Onboarding, creation de bien, cloture fiscale, emprunt, import annuel
 - **Export CSV** — Recettes et charges exportables
 - **Dark mode** — Natif Filament
 - **Documentation in-app** — Guide d'utilisation complet
-- **48 tests automatises** — Pest PHP, 126 assertions
+- **55 tests automatises** — Pest PHP, 141 assertions
 
 ## Stack technique
 
@@ -62,7 +63,7 @@ docker build -t openlmnp .
 docker run -d --name openlmnp -p 8090:8000 --restart unless-stopped openlmnp
 ```
 
-Acces : `http://localhost:8090/app`
+Acces : `http://localhost:8090`
 Compte demo : `demo@openlmnp.fr` / `demo1234`
 
 ## Installation developpement
@@ -115,7 +116,8 @@ vendor/bin/pest --filter="Filament"
 | TaxReturnService | 1 | Generation PDF liasse fiscale |
 | AccountingEntryService | 3 | Ecritures equilibrees, comptes PCG, quote-part |
 | Pages Filament | 22 | Auth, CRUD, simulateur, projection, isolation donnees |
-| **Total** | **48** | **126 assertions** |
+| Wizards | 7 | Onboarding, cloture fiscale, emprunt, import annuel |
+| **Total** | **55** | **141 assertions** |
 
 ## Documentation
 
@@ -137,7 +139,8 @@ vendor/bin/pest --filter="Filament"
 - [x] FEC conforme
 - [x] Import CSV Airbnb
 - [x] Export CSV
-- [x] 48 tests automatises
+- [x] Assistants guides (wizards) pour toutes les saisies
+- [x] 55 tests automatises
 
 ### v1.0 (a venir)
 
