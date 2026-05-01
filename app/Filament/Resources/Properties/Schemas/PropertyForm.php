@@ -27,6 +27,13 @@ class PropertyForm
                         Tab::make('Général')
                             ->icon('heroicon-o-home-modern')
                             ->schema([
+                                FileUpload::make('photo_path')
+                                    ->label('Photo du bien')
+                                    ->image()
+                                    ->directory('properties')
+                                    ->maxSize(5120)
+                                    ->imagePreviewHeight('200')
+                                    ->columnSpanFull(),
                                 TextInput::make('name')
                                     ->label('Nom du bien')
                                     ->placeholder('Ex : La Bastide')
@@ -144,11 +151,6 @@ class PropertyForm
                                     ->displayFormat('d/m/Y')
                                     ->hint('Les amortissements démarrent à cette date.')
                                     ->hintIcon('heroicon-o-question-mark-circle'),
-                                FileUpload::make('photo_path')
-                                    ->label('Photo du bien')
-                                    ->image()
-                                    ->directory('properties')
-                                    ->maxSize(5120),
                                 Repeater::make('listing_urls')
                                     ->label('Liens d\'annonces')
                                     ->schema([
