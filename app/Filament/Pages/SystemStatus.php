@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\RequiresAdmin;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -12,11 +13,13 @@ use UnitEnum;
 
 class SystemStatus extends Page
 {
+    use RequiresAdmin;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedServerStack;
-    protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
+    protected static string | UnitEnum | null $navigationGroup = 'Administration';
     protected static ?string $navigationLabel = 'État du système';
     protected static ?string $title = 'État du système et tests';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 1;
     protected string $view = 'filament.pages.system-status';
 
     public ?array $testResults = null;

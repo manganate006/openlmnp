@@ -91,92 +91,144 @@
         </div>
 
         {{-- Graphiques --}}
+        @php
+            $capitalByYear = [];
+            $capitalPaidByYear = [];
+            $interestByYearChart = [];
+            $interestCumulByYear = [];
+            $insuranceByYear = [];
+            $cumulInterest = 0;
+            $currentYearStr = date('Y');
+            $todayIndex = null;
+
+            foreach ($data['payments']->groupBy(fn($p) => $p->payment_date->format('Y')) as $y => $yPayments) {
+                $last = $yPayments->last();
+                $capitalByYear[$y] = round($last->remaining_capital / 100);
+                $capitalPaidByYear[$y] = round(($loan->amount - $last->remaining_capital) / 100);
+                $yearInterest = $yPayments->sum('interest_amount');
+                $interestByYearChart[$y] = round($yearInterest / 100);
+                $cumulInterest += $yearInterest;
+                $interestCumulByYear[$y] = round($cumulInterest / 100);
+                $insuranceByYear[$y] = round($yPayments->sum('insurance_amount') / 100);
+                if ($y === $currentYearStr) $todayIndex = array_search($y, array_keys($capitalByYear));
+            }
+            $years = array_keys($capitalByYear);
+        @endphp
+
         <div class="ld-grid ld-grid-2">
+            {{-- 1. Évolution Capital et Intérêts (comme creditImmo) --}}
             <div class="ld-card">
-                <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center;">Répartition coût total</h3>
-                <canvas id="doughnutChart" style="max-height:220px;"></canvas>
+                <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center;">Évolution du Capital et des Intérêts</h3>
+                <canvas id="evolutionChart" style="max-height:250px;"></canvas>
             </div>
+
+            {{-- 2. Répartition paiements mensuels (barres empilées) --}}
             <div class="ld-card">
-                <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center;">Évolution capital restant dû</h3>
-                <canvas id="capitalChart" style="max-height:220px;"></canvas>
+                <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center;">Répartition des Paiements Annuels</h3>
+                <canvas id="stackedBarChart" style="max-height:250px;"></canvas>
+            </div>
+
+            {{-- 3. Intérêts cumulés --}}
+            <div class="ld-card">
+                <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center;">Intérêts Cumulés</h3>
+                <canvas id="cumulInterestChart" style="max-height:250px;"></canvas>
+            </div>
+
+            {{-- 4. Répartition coût total (doughnut) --}}
+            <div class="ld-card">
+                <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;text-align:center;">Répartition Coût Total</h3>
+                <canvas id="doughnutChart" style="max-height:250px;"></canvas>
             </div>
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3/dist/chartjs-plugin-annotation.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Doughnut : Capital vs Intérêts
+                const years = {!! json_encode($years) !!};
+                const fmtEur = (v) => v.toLocaleString('fr-FR') + ' €';
+                const todayIdx = {{ $todayIndex ?? 'null' }};
+                const todayAnnotation = todayIdx !== null ? {
+                    annotations: {
+                        todayLine: {
+                            type: 'line', xMin: todayIdx, xMax: todayIdx,
+                            borderColor: '#ef4444', borderWidth: 2, borderDash: [5, 3],
+                            label: { display: true, content: "Aujourd'hui", position: 'start', font: { size: 10 }, backgroundColor: '#ef4444', color: '#fff' }
+                        }
+                    }
+                } : {};
+
+                // 1. Évolution Capital (croisement solde restant / capital remboursé)
+                new Chart(document.getElementById('evolutionChart'), {
+                    type: 'line',
+                    data: {
+                        labels: years,
+                        datasets: [{
+                            label: 'Solde restant',
+                            data: {!! json_encode(array_values($capitalByYear)) !!},
+                            borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', fill: true, tension: 0.3,
+                        }, {
+                            label: 'Capital remboursé',
+                            data: {!! json_encode(array_values($capitalPaidByYear)) !!},
+                            borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.3,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: (c) => c.dataset.label + ' : ' + fmtEur(c.raw) } }, annotation: todayAnnotation },
+                        scales: { y: { ticks: { callback: (v) => Math.round(v/1000) + 'k €', font: { size: 10 } } }, x: { ticks: { font: { size: 9 }, maxRotation: 45 } } }
+                    }
+                });
+
+                // 2. Barres empilées : capital vs intérêts vs assurance par année
+                new Chart(document.getElementById('stackedBarChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: years,
+                        datasets: [{
+                            label: 'Capital', data: {!! json_encode(array_values($interestByYearChart)) !!}.map((v, i) => {!! json_encode(array_values($capitalPaidByYear)) !!}[i] - ({!! json_encode(array_values($capitalPaidByYear)) !!}[i-1] || 0)),
+                            backgroundColor: '#10b981',
+                        }, {
+                            label: 'Intérêts', data: {!! json_encode(array_values($interestByYearChart)) !!},
+                            backgroundColor: '#f59e0b',
+                        }, {
+                            label: 'Assurance', data: {!! json_encode(array_values($insuranceByYear)) !!},
+                            backgroundColor: '#6366f1',
+                        }]
+                    },
+                    options: {
+                        responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: (c) => c.dataset.label + ' : ' + fmtEur(c.raw) } }, annotation: todayAnnotation },
+                        scales: { x: { stacked: true, ticks: { font: { size: 9 }, maxRotation: 45 } }, y: { stacked: true, ticks: { callback: (v) => Math.round(v/1000) + 'k €', font: { size: 10 } } } }
+                    }
+                });
+
+                // 3. Intérêts cumulés
+                new Chart(document.getElementById('cumulInterestChart'), {
+                    type: 'line',
+                    data: {
+                        labels: years,
+                        datasets: [{
+                            label: 'Intérêts cumulés',
+                            data: {!! json_encode(array_values($interestCumulByYear)) !!},
+                            borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3, pointRadius: 0,
+                        }]
+                    },
+                    options: {
+                        responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: (c) => fmtEur(c.raw) } }, annotation: todayAnnotation },
+                        scales: { y: { ticks: { callback: (v) => Math.round(v/1000) + 'k €', font: { size: 10 } } }, x: { ticks: { font: { size: 9 }, maxRotation: 45 } } }
+                    }
+                });
+
+                // 4. Doughnut
                 new Chart(document.getElementById('doughnutChart'), {
                     type: 'doughnut',
                     data: {
                         labels: ['Capital', 'Intérêts', 'Assurance'],
-                        datasets: [{
-                            data: [{{ $loan->amount }}, {{ $data['total_interest'] }}, {{ $data['total_insurance'] }}],
-                            backgroundColor: ['#10b981', '#f59e0b', '#6366f1'],
-                            borderWidth: 0,
-                        }]
+                        datasets: [{ data: [{{ $loan->amount }}, {{ $data['total_interest'] }}, {{ $data['total_insurance'] }}], backgroundColor: ['#10b981', '#f59e0b', '#6366f1'], borderWidth: 0 }]
                     },
                     options: {
                         responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { font: { size: 11 } } },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(ctx) {
-                                        return ctx.label + ' : ' + (ctx.raw / 100).toLocaleString('fr-FR', {minimumFractionDigits: 0}) + ' €';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Line : Capital restant par année
-                @php
-                    $capitalByYear = [];
-                    $interestByYearChart = [];
-                    foreach ($data['payments']->groupBy(fn($p) => $p->payment_date->format('Y')) as $y => $yPayments) {
-                        $last = $yPayments->last();
-                        $capitalByYear[$y] = round($last->remaining_capital / 100);
-                        $interestByYearChart[$y] = round($yPayments->sum('interest_amount') / 100);
-                    }
-                @endphp
-
-                new Chart(document.getElementById('capitalChart'), {
-                    type: 'line',
-                    data: {
-                        labels: {!! json_encode(array_keys($capitalByYear)) !!},
-                        datasets: [{
-                            label: 'Capital restant (€)',
-                            data: {!! json_encode(array_values($capitalByYear)) !!},
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16,185,129,0.1)',
-                            fill: true,
-                            tension: 0.3,
-                        }, {
-                            label: 'Intérêts annuels (€)',
-                            data: {!! json_encode(array_values($interestByYearChart)) !!},
-                            borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245,158,11,0.1)',
-                            fill: true,
-                            tension: 0.3,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { font: { size: 11 } } },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(ctx) {
-                                        return ctx.dataset.label + ' : ' + ctx.raw.toLocaleString('fr-FR') + ' €';
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: { ticks: { callback: function(v) { return v.toLocaleString('fr-FR') + ' €'; } } }
-                        }
+                        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: (c) => c.label + ' : ' + fmtEur(c.raw / 100) } } }
                     }
                 });
             });
