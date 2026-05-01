@@ -22,11 +22,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Force HTTPS behind reverse proxy
-        if (str_starts_with(config('app.url'), 'https://')) {
-            URL::forceScheme('https');
-        }
-
         // First registered user automatically becomes admin
         User::creating(function (User $user) {
             if (DB::table('users')->count() === 0) {
