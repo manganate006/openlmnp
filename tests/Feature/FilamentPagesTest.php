@@ -28,7 +28,7 @@ it('allows registration', function () {
 
 it('authenticates a user', function () {
     $this->actingAs($this->user)
-        ->get('/app')
+        ->get('/')
         ->assertOk();
 });
 
@@ -36,7 +36,7 @@ it('authenticates a user', function () {
 
 it('shows dashboard with fiscal overview', function () {
     $this->actingAs($this->user)
-        ->get('/app')
+        ->get('/')
         ->assertOk()
         ->assertSee('Tableau de bord');
 });
