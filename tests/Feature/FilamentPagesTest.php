@@ -15,15 +15,15 @@ beforeEach(function () {
 // === AUTH ===
 
 it('redirects unauthenticated users to login', function () {
-    $this->get('/app/properties')->assertRedirect('/app/login');
+    $this->get('/properties')->assertRedirect('/login');
 });
 
 it('shows login page', function () {
-    $this->get('/app/login')->assertOk()->assertSee('OpenLMNP');
+    $this->get('/login')->assertOk()->assertSee('OpenLMNP');
 });
 
 it('allows registration', function () {
-    $this->get('/app/register')->assertOk()->assertSee('Register');
+    $this->get('/register')->assertOk()->assertSee('Register');
 });
 
 it('authenticates a user', function () {
@@ -45,62 +45,62 @@ it('shows dashboard with fiscal overview', function () {
 
 it('shows properties list page', function () {
     $this->actingAs($this->user)
-        ->get('/app/properties')
+        ->get('/properties')
         ->assertOk()
         ->assertSee('Biens Immobiliers');
 });
 
 it('shows property creation form', function () {
     $this->actingAs($this->user)
-        ->get('/app/properties/create')
+        ->get('/properties/create')
         ->assertOk()
         ->assertSee('Nom du bien');
 });
 
 it('shows incomes list page', function () {
     $this->actingAs($this->user)
-        ->get('/app/incomes')
+        ->get('/incomes')
         ->assertOk()
         ->assertSee('Recettes');
 });
 
 it('shows income creation form', function () {
     $this->actingAs($this->user)
-        ->get('/app/incomes/create')
+        ->get('/incomes/create')
         ->assertOk()
         ->assertSee('Montant loyer');
 });
 
 it('shows expenses list page', function () {
     $this->actingAs($this->user)
-        ->get('/app/expenses')
+        ->get('/expenses')
         ->assertOk()
         ->assertSee('Charges');
 });
 
 it('shows expense creation form with categories', function () {
     $this->actingAs($this->user)
-        ->get('/app/expenses/create')
+        ->get('/expenses/create')
         ->assertOk()
         ->assertSee('Catégorie');
 });
 
 it('shows loans list page', function () {
     $this->actingAs($this->user)
-        ->get('/app/loans')
+        ->get('/loans')
         ->assertOk()
         ->assertSee('Emprunts');
 });
 
 it('shows loan creation form', function () {
     $this->actingAs($this->user)
-        ->get('/app/loans/create')
+        ->get('/loans/create')
         ->assertOk();
 });
 
 it('shows fiscal years page', function () {
     $this->actingAs($this->user)
-        ->get('/app/fiscal-years')
+        ->get('/fiscal-years')
         ->assertOk()
         ->assertSee('Exercices Fiscaux');
 });
@@ -109,35 +109,35 @@ it('shows fiscal years page', function () {
 
 it('shows simulator page', function () {
     $this->actingAs($this->user)
-        ->get('/app/simulator')
+        ->get('/simulator')
         ->assertOk()
         ->assertSee('Simulateur');
 });
 
 it('shows projection page', function () {
     $this->actingAs($this->user)
-        ->get('/app/projection')
+        ->get('/projection')
         ->assertOk()
         ->assertSee('Projection');
 });
 
 it('shows import airbnb page', function () {
     $this->actingAs($this->user)
-        ->get('/app/import-airbnb')
+        ->get('/import-airbnb')
         ->assertOk()
         ->assertSee('Import');
 });
 
 it('shows system status page', function () {
     $this->actingAs($this->user)
-        ->get('/app/system-status')
+        ->get('/system-status')
         ->assertOk()
         ->assertSee('système');
 });
 
 it('shows help page', function () {
     $this->actingAs($this->user)
-        ->get('/app/help-page')
+        ->get('/help-page')
         ->assertOk()
         ->assertSee('Guide');
 });
@@ -166,7 +166,7 @@ it('isolates data between users', function () {
     ]);
 
     $this->actingAs($this->user)
-        ->get('/app/properties')
+        ->get('/properties')
         ->assertOk()
         ->assertDontSee('Bien autre utilisateur');
 });
@@ -193,7 +193,7 @@ it('shows property edit page with relation manager tabs', function () {
     ]);
 
     $this->actingAs($this->user)
-        ->get("/app/properties/{$property->id}/edit")
+        ->get("/properties/{$property->id}/edit")
         ->assertOk()
         ->assertSee('Test RM')
         ->assertSee('Composants')
@@ -234,7 +234,7 @@ it('simulator shows results with property data', function () {
     ]);
 
     $this->actingAs($this->user)
-        ->get('/app/simulator')
+        ->get('/simulator')
         ->assertOk()
         ->assertSee('CA brut')
         ->assertSee('Résultat');
@@ -264,7 +264,7 @@ it('projection shows table with property data', function () {
     app(DepreciationService::class)->generateDefaultComponents($property);
 
     $this->actingAs($this->user)
-        ->get('/app/projection')
+        ->get('/projection')
         ->assertOk()
         ->assertSee('Projection')
         ->assertSee('Immeuble');
