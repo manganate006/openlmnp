@@ -120,7 +120,127 @@ class Projection extends Page
             ];
         }
 
-        return ['empty' => false, 'rows' => $rows];
+        // Hypothèses de projection
+        $assumptions = $this->buildAssumptions($properties);
+
+        return ['empty' => false, 'rows' => $rows, 'assumptions' => $assumptions];
+    }
+
+    private function buildAssumptions($properties): array
+    {
+        $incomeByYear = [];
+        $totalDedicated = 0;
+        $totalShared = 0;
+        $expYears = 1;
+        $componentsDetail = [];
+        $worksDetail = [];
+        $furnitureDetail = [];
+        $propertyInfo = [];
+
+        foreach ($properties as $property) {
+            // Revenus par année
+            $incomes = $property->incomes()
+                ->selectRaw('strftime("%Y", income_date) as year, SUM(amount) as total')
+                ->groupByRaw('strftime("%Y", income_date)')
+                ->pluck('total', 'year')
+                ->toArray();
+            foreach ($incomes as $y => $amt) {
+                $incomeByYear[$y] = ($incomeByYear[$y] ?? 0) + $amt;
+            }
+
+            // Charges moyennes
+            $ded = $property->expenses()->where('is_dedicated', true)->sum('amount');
+            $sha = $property->expenses()->where('is_dedicated', false)->sum('amount');
+            $ey = $property->expenses()->selectRaw('COUNT(DISTINCT strftime("%Y", expense_date)) as y')->value('y') ?: 1;
+            $totalDedicated += (int) ($ded / $ey);
+            $totalShared += (int) ($sha / $ey);
+            $expYears = max($expYears, $ey);
+
+            // Composants immeuble
+            foreach ($property->components as $comp) {
+                $componentsDetail[] = [
+                    'name' => $comp->name,
+                    'percentage' => $comp->percentage,
+                    'duration' => $comp->duration_years,
+                    'annual' => $comp->annual_depreciation,
+                ];
+            }
+
+            // Travaux
+            foreach ($property->works as $work) {
+                $annual = $work->annual_depreciation;
+                $afterQuota = $work->is_dedicated ? $annual : (int) bcmul((string) $annual, $property->quota_share, 0);
+                $worksDetail[] = [
+                    'description' => $work->description,
+                    'amount' => $work->amount,
+                    'duration' => $work->duration_years,
+                    'annual' => $annual,
+                    'is_dedicated' => $work->is_dedicated,
+                    'after_quota' => $afterQuota,
+                ];
+            }
+
+            // Mobilier
+            foreach ($property->furniture as $item) {
+                $annual = $item->annual_depreciation;
+                $afterQuota = $item->is_dedicated ? $annual : (int) bcmul((string) $annual, $property->quota_share, 0);
+                $furnitureDetail[] = [
+                    'description' => $item->description,
+                    'amount' => $item->amount,
+                    'duration' => $item->duration_years,
+                    'annual' => $annual,
+                    'is_dedicated' => $item->is_dedicated,
+                    'after_quota' => $afterQuota,
+                ];
+            }
+
+            // Info bien
+            $propertyInfo[] = [
+                'name' => $property->name,
+                'market_value' => $property->market_value ?? $property->acquisition_price,
+                'land_percentage' => $property->land_percentage,
+                'rented_area' => $property->rented_area,
+                'total_area' => $property->total_area,
+                'quota_share' => $property->quota_share,
+                'depreciable_base' => $property->depreciable_base,
+            ];
+        }
+
+        ksort($incomeByYear);
+        $nbYears = count($incomeByYear) ?: 1;
+        $totalIncome = array_sum($incomeByYear);
+        $avgIncome = (int) ($totalIncome / $nbYears);
+
+        $quotaShare = $properties->first()?->quota_share ?? '0';
+        $sharedAfterQuota = (int) bcmul((string) $totalShared, $quotaShare, 0);
+        $totalExpenses = $totalDedicated + $sharedAfterQuota;
+
+        $depBuilding = array_sum(array_column($componentsDetail, 'annual'));
+        $depWorks = array_sum(array_column($worksDetail, 'after_quota'));
+        $depFurniture = array_sum(array_column($furnitureDetail, 'after_quota'));
+
+        return [
+            'income' => [
+                'by_year' => $incomeByYear,
+                'average' => $avgIncome,
+            ],
+            'expenses' => [
+                'dedicated' => $totalDedicated,
+                'shared' => $totalShared,
+                'shared_after_quota' => $sharedAfterQuota,
+                'total' => $totalExpenses,
+            ],
+            'depreciation' => [
+                'components' => $componentsDetail,
+                'works' => $worksDetail,
+                'furniture' => $furnitureDetail,
+                'total_building' => $depBuilding,
+                'total_works' => $depWorks,
+                'total_furniture' => $depFurniture,
+                'grand_total' => $depBuilding + $depWorks + $depFurniture,
+            ],
+            'properties' => $propertyInfo,
+        ];
     }
 
     private function fmt(int $cents): string
