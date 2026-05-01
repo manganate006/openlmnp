@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Properties\Schemas;
 
 use App\Models\Property;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
@@ -157,6 +159,37 @@ class PropertyForm
                             ->required()
                             ->displayFormat('d/m/Y')
                             ->hint('Date de la 1ère mise en location. Les amortissements démarrent à cette date (prorata temporis la 1ère année).')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
+                    ]),
+
+                Section::make('Photo & Annonces')
+                    ->icon('heroicon-o-photo')
+                    ->collapsed()
+                    ->schema([
+                        FileUpload::make('photo_path')
+                            ->label('Photo du bien')
+                            ->image()
+                            ->directory('properties')
+                            ->maxSize(5120)
+                            ->hint('Photo principale du bien (max 5 Mo)')
+                            ->hintIcon('heroicon-o-question-mark-circle'),
+                        Repeater::make('listing_urls')
+                            ->label('Liens d\'annonces')
+                            ->schema([
+                                TextInput::make('label')
+                                    ->label('Plateforme')
+                                    ->placeholder('Ex : Airbnb, Booking, Abritel...')
+                                    ->required(),
+                                TextInput::make('url')
+                                    ->label('URL')
+                                    ->url()
+                                    ->placeholder('https://...')
+                                    ->required(),
+                            ])
+                            ->columns(2)
+                            ->addActionLabel('Ajouter un lien')
+                            ->defaultItems(0)
+                            ->hint('Liens vers vos annonces sur les plateformes de location')
                             ->hintIcon('heroicon-o-question-mark-circle'),
                     ]),
 

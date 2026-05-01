@@ -68,6 +68,8 @@ class Property extends Model
         'rental_type',
         'is_primary_residence',
         'notes',
+        'photo_path',
+        'listing_urls',
     ];
 
     protected function casts(): array
@@ -77,6 +79,7 @@ class Property extends Model
             'market_value_date'   => 'date',
             'rental_start_date'   => 'date',
             'is_primary_residence' => 'boolean',
+            'listing_urls'        => 'array',
         ];
     }
 
