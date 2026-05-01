@@ -28,7 +28,11 @@
         .ld-pagination button:hover { background: #f3f4f6; }
         .ld-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
         .ld-pagination span { padding: 6px 10px; font-size: 12px; color: var(--fi-fg-muted, #6b7280); }
-        @media (max-width: 768px) { .ld-grid-4 { grid-template-columns: repeat(2, 1fr); } .ld-grid-3, .ld-grid-2 { grid-template-columns: 1fr; } }
+        .ld-tabs { display: flex; gap: 0; margin-bottom: 20px; background: var(--fi-bg-muted, #f3f4f6); border-radius: 10px; padding: 4px; width: fit-content; }
+        .ld-tab { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--fi-fg-muted, #6b7280); transition: all 0.2s; }
+        .ld-tab:hover { color: var(--fi-fg, #374151); }
+        .ld-tab-active { background: var(--fi-body-bg, white); color: #10b981; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        @media (max-width: 768px) { .ld-grid-4 { grid-template-columns: repeat(2, 1fr); } .ld-grid-3, .ld-grid-2 { grid-template-columns: 1fr; } .ld-tabs { width: 100%; } .ld-tab { flex: 1; text-align: center; padding: 8px 12px; font-size: 12px; } }
     </style>
 
     @php
@@ -89,6 +93,16 @@
             </div>
             <div class="ld-bar"><div class="ld-bar-fill" style="width:{{ $data['progress_pct'] }}%;"></div></div>
         </div>
+
+        {{-- Switch 2 onglets --}}
+        <div x-data="{ tab: 'synthese' }">
+            <div class="ld-tabs">
+                <button class="ld-tab" :class="tab === 'synthese' && 'ld-tab-active'" @click="tab = 'synthese'">📊 Synthèse & Graphiques</button>
+                <button class="ld-tab" :class="tab === 'tables' && 'ld-tab-active'" @click="tab = 'tables'">📋 Tableaux détaillés</button>
+            </div>
+
+        {{-- === ONGLET SYNTHÈSE === --}}
+        <div x-show="tab === 'synthese'">
 
         {{-- Graphiques --}}
         @php
@@ -233,6 +247,10 @@
                 });
             });
         </script>
+        </div> {{-- fin onglet synthèse --}}
+
+        {{-- === ONGLET TABLEAUX === --}}
+        <div x-show="tab === 'tables'" x-cloak>
 
         {{-- Coût total --}}
         <div class="ld-grid ld-grid-3">
@@ -329,5 +347,7 @@
                 <button @click="page = Math.min(Math.ceil(total/perPage), page+1)" :disabled="page >= Math.ceil(total/perPage)">Suivant →</button>
             </div>
         </div>
+        </div> {{-- fin onglet tableaux --}}
+        </div> {{-- fin x-data tabs --}}
     @endif
 </x-filament-panels::page>
