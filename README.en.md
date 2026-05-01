@@ -9,13 +9,13 @@
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
-![Tests](https://img.shields.io/badge/Tests-48%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-55%20passed-brightgreen)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
 Manage your rental properties, calculate depreciation,
 and generate your tax return under the French real regime.
 
-[Version francaise](README.md)
+[Version française](README.md)
 
 </div>
 
@@ -30,7 +30,7 @@ and generate your tax return under the French real regime.
 - **Multi-user** — Each owner sees only their own data
 - **Properties** — Address, surfaces, quota share for primary residence, market value
 - **Component depreciation** — Building structure, roof, plumbing, fittings (standard durations)
-- **Works & Furniture** — Dedicated or prorated depreciation
+- **Works & Furniture** — Dedicated or prorated depreciation, new/second-hand with adapted receipts
 - **Income** — Manual entry or Airbnb/Booking CSV import
 - **Expenses** — Categorized, automatic prorata, receipt uploads
 - **Loans** — Auto-generated amortization schedule, deductible interest
@@ -41,8 +41,9 @@ and generate your tax return under the French real regime.
 - **Accounting entries** — Auto-generated (French chart of accounts)
 - **CSV export** — Income and expenses
 - **Dark mode** — Native Filament support
-- **In-app documentation** — Complete user guide (French)
-- **48 automated tests** — Pest PHP, 126 assertions
+- **Guided wizards** — Onboarding, property creation, fiscal year closing, loan, annual import
+- **In-app documentation** — User guide organized in 3 phases: setup, regular tracking, annual declaration
+- **55 automated tests** — Pest PHP, 141 assertions
 
 ## Tech Stack
 
@@ -88,7 +89,7 @@ php artisan serve
 vendor/bin/pest
 ```
 
-48 tests, 126 assertions covering: depreciation calculations, fiscal result, loan amortization, Airbnb CSV import, FEC generation, accounting entries, all Filament pages, and data isolation between users.
+55 tests, 141 assertions covering: depreciation calculations, fiscal result, loan amortization, Airbnb CSV import, FEC generation, accounting entries, all Filament pages, wizards, and data isolation between users.
 
 ## French Tax Context
 
