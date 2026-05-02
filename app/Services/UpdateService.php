@@ -32,34 +32,27 @@ class UpdateService
 
     public function getCurrentVersion(): string
     {
-        $data = $this->readVersionFile();
+        // version.json (embarqué dans l'image) pour la version sémantique
+        $path = base_path('version.json');
+        if (file_exists($path)) {
+            $data = json_decode(file_get_contents($path), true);
 
-        return $data['version'] ?? '0.0.0';
+            return $data['version'] ?? '0.0.0';
+        }
+
+        return '0.0.0';
     }
 
     public function getCurrentCommit(): ?string
     {
-        $data = $this->readVersionFile();
-
-        return $data['commit'] ?? null;
+        return Setting::get('deploy_commit');
     }
 
-    private function readVersionFile(): array
+    private function saveDeployInfo(string $commit, string $branch = 'main'): void
     {
-        $path = base_path('version.json');
-        if (! file_exists($path)) {
-            return [];
-        }
-
-        return json_decode(file_get_contents($path), true) ?: [];
-    }
-
-    private function writeVersionFile(array $merge): void
-    {
-        $path = base_path('version.json');
-        $data = $this->readVersionFile();
-        $data = array_merge($data, $merge, ['updated_at' => now()->toIso8601String()]);
-        file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        Setting::set('deploy_commit', $commit);
+        Setting::set('deploy_branch', $branch);
+        Setting::set('deploy_date', now()->toIso8601String());
     }
 
     // -------------------------------------------------------------------------
@@ -171,10 +164,7 @@ class UpdateService
         $result = $this->applyFromTarball($tarballUrl);
 
         if ($result['success'] && $commitSha) {
-            $this->writeVersionFile([
-                'commit' => $commitSha,
-                'branch' => $branch,
-            ]);
+            $this->saveDeployInfo($commitSha, $branch);
         }
 
         return $result;
@@ -262,8 +252,7 @@ class UpdateService
         $result = $this->applyFromTarball($downloadUrl);
 
         if ($result['success']) {
-            // Refresh version from the newly deployed version.json
-            $this->writeVersionFile([]);
+            // Pour les releases, pas de commit spécifique à stocker
         }
 
         return $result;
@@ -330,6 +319,8 @@ class UpdateService
 
             // 5. Commandes post-déploiement
             Process::path($appDir)->timeout(120)->run('composer install --no-dev --optimize-autoloader 2>&1');
+            Process::path($appDir)->timeout(120)->run('npm install --no-audit --no-fund 2>&1');
+            Process::path($appDir)->timeout(120)->run('npm run build 2>&1');
             Process::path($appDir)->timeout(60)->run('php artisan migrate --force 2>&1');
             Process::path($appDir)->timeout(30)->run('php artisan optimize:clear 2>&1');
 
