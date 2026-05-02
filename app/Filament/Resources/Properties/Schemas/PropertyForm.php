@@ -2,11 +2,17 @@
 
 namespace App\Filament\Resources\Properties\Schemas;
 
+use App\Filament\Resources\Properties\Pages\EditProperty;
+use App\Filament\Resources\Properties\RelationManagers\ComponentsRelationManager;
+use App\Filament\Resources\Properties\RelationManagers\FurnitureRelationManager;
+use App\Filament\Resources\Properties\RelationManagers\WorksRelationManager;
 use App\Models\Property;
+use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Wizard;
@@ -70,6 +76,11 @@ class PropertyForm
 
     private static function tabsLayout(Schema $schema): Schema
     {
+        $managerData = fn ($record) => [
+            'ownerRecord' => $record,
+            'pageClass' => EditProperty::class,
+        ];
+
         return $schema
             ->components([
                 Tabs::make('Bien immobilier')
@@ -97,6 +108,27 @@ class PropertyForm
                                     ->rows(5)
                                     ->columnSpanFull(),
                             ]),
+
+                        Tab::make('Travaux')
+                            ->icon('heroicon-o-wrench-screwdriver')
+                            ->schema([
+                                Livewire::make(WorksRelationManager::class, $managerData)
+                                    ->key(WorksRelationManager::class),
+                            ]),
+
+                        Tab::make('Mobilier')
+                            ->icon('heroicon-o-shopping-bag')
+                            ->schema([
+                                Livewire::make(FurnitureRelationManager::class, $managerData)
+                                    ->key(FurnitureRelationManager::class),
+                            ]),
+
+                        Tab::make('Composants')
+                            ->icon('heroicon-o-cube')
+                            ->schema([
+                                Livewire::make(ComponentsRelationManager::class, $managerData)
+                                    ->key(ComponentsRelationManager::class),
+                            ]),
                     ])
                     ->columnSpanFull(),
             ]);
@@ -106,13 +138,19 @@ class PropertyForm
     // Champs partagés
     // -------------------------------------------------------------------------
 
-    private static function generalFields(): array
+    public static function generalFields(): array
     {
         return [
             FileUpload::make('photo_path')
                 ->label('Photo du bien')
                 ->image()
-                ->directory('properties')
+                ->directory(DocumentStorage::directory('photos-biens'))
+                ->getUploadedFileNameForStorageUsing(
+                    DocumentStorage::filename('acquisition_date', 'name')
+                )
+                ->imageResizeMode('cover')
+                ->imageResizeTargetWidth('1280')
+                ->imageResizeTargetHeight('1280')
                 ->maxSize(5120)
                 ->imagePreviewHeight('150')
                 ->columnSpanFull(),
@@ -132,8 +170,7 @@ class PropertyForm
                     ->options(Property::rentalTypeLabels())
                     ->required()
                     ->default('seasonal')
-                    ->hint('Saisonnier = Airbnb. Longue durée = bail.')
-                    ->hintIcon('heroicon-o-question-mark-circle'),
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Saisonnier = Airbnb. Longue durée = bail.'),
             ]),
             Grid::make(3)->schema([
                 TextInput::make('address')
@@ -150,7 +187,7 @@ class PropertyForm
         ];
     }
 
-    private static function surfaceFields(): array
+    public static function surfaceFields(): array
     {
         return [
             Toggle::make('is_primary_residence')
@@ -165,8 +202,7 @@ class PropertyForm
                     ->numeric()
                     ->minValue(1)
                     ->live()
-                    ->hint('Telle que déclarée aux impôts')
-                    ->hintIcon('heroicon-o-question-mark-circle'),
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Telle que déclarée aux impôts'),
                 TextInput::make('rented_area')
                     ->label('Surface louée')
                     ->suffix('m²')
@@ -174,13 +210,12 @@ class PropertyForm
                     ->numeric()
                     ->minValue(1)
                     ->live()
-                    ->hint('Quote-part = louée ÷ totale')
-                    ->hintIcon('heroicon-o-question-mark-circle'),
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Quote-part = louée ÷ totale'),
             ]),
         ];
     }
 
-    private static function acquisitionFields(): array
+    public static function acquisitionFields(): array
     {
         return [
             Grid::make(3)->schema([
@@ -192,8 +227,7 @@ class PropertyForm
                     ->step(1)
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
                     ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                    ->hint('Hors frais de notaire')
-                    ->hintIcon('heroicon-o-question-mark-circle'),
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Hors frais de notaire'),
                 TextInput::make('notary_fees')
                     ->label('Frais de notaire')
                     ->suffix('€')
@@ -215,8 +249,7 @@ class PropertyForm
                     ->step(1)
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
                     ->dehydrateStateUsing(fn ($state) => $state ? (int) round(((float) $state) * 100) : null)
-                    ->hint('Si bien déjà possédé avant la location')
-                    ->hintIcon('heroicon-o-question-mark-circle'),
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Si bien déjà possédé avant la location'),
                 DatePicker::make('market_value_date')
                     ->label('Date estimation')
                     ->displayFormat('d/m/Y'),
@@ -228,21 +261,19 @@ class PropertyForm
                     ->default(15)
                     ->minValue(0)
                     ->maxValue(50)
-                    ->hint('Généralement 15-20%')
-                    ->hintIcon('heroicon-o-question-mark-circle'),
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Généralement 15-20%'),
             ]),
         ];
     }
 
-    private static function rentalFields(): array
+    public static function rentalFields(): array
     {
         return [
             DatePicker::make('rental_start_date')
                 ->label('Date de début de location')
                 ->required()
                 ->displayFormat('d/m/Y')
-                ->hint('Les amortissements démarrent à cette date.')
-                ->hintIcon('heroicon-o-question-mark-circle'),
+                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Les amortissements démarrent à cette date.'),
             Repeater::make('listing_urls')
                 ->label('Liens d\'annonces')
                 ->schema([
