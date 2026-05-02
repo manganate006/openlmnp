@@ -27,7 +27,7 @@ RUN cp .env.docker .env
 RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-interaction
 
 # Build des assets CSS/JS
-RUN npm ci && npm run build
+RUN npm install --no-audit --no-fund && npm run build
 
 RUN mkdir -p database storage/app/public storage/app/data storage/logs storage/framework/{sessions,views,cache} \
     && chmod -R 775 storage database bootstrap/cache
