@@ -10,6 +10,11 @@ use Filament\Schemas\Schema;
 
 class EditProfile extends BaseEditProfile
 {
+    public static function isSimple(): bool
+    {
+        return false;
+    }
+
     public function form(Schema $schema): Schema
     {
         $timezones = collect(DateTimeZone::listIdentifiers())
