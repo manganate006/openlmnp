@@ -10,7 +10,7 @@
     </ul>
 
     <h3>Hypothèses</h3>
-    <p>La projection suppose que vos recettes et charges restent stables. Ajustez les paramètres si vous prévoyez des changements (hausse des loyers, fin d'un emprunt, travaux...).</p>
+    <p>La projection suppose que vos recettes et charges restent stables par défaut. Utilisez les <strong>taux de croissance</strong> pour simuler une hausse annuelle des loyers ou des charges (ex : +2%/an pour les revenus, +1%/an pour les charges).</p>
 
     <div class="ctx-tip">
         <strong>Astuce :</strong> Pensez à re-consulter cette projection après chaque changement significatif (nouvel emprunt, travaux, nouveau bien).
