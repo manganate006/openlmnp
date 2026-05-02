@@ -74,7 +74,7 @@ class AdminPanelProvider extends PanelProvider
         $mode = $user?->nav_mode ?? NavMode::Simple;
 
         return match ($mode) {
-            NavMode::Simple => ['Mon bien', 'Comptabilité', 'Fiscal', 'Outils'],
+            NavMode::Simple => ['Mon bien', 'Comptabilité', 'Fiscal', 'Outils', 'Administration'],
             NavMode::Guided => ['Mise en route', 'Au quotidien', 'Déclaration annuelle', 'Aide', 'Administration'],
             NavMode::Advanced => ['Mes biens', 'Comptabilité', 'Fiscal', 'Paramètres', 'Administration'],
         };

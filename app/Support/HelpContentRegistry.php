@@ -16,6 +16,9 @@ class HelpContentRegistry
         'filament.admin.pages.teledeclaration' => ['view' => 'teledeclaration', 'title' => 'Télédéclaration'],
         'filament.admin.pages.badges' => ['view' => 'badges', 'title' => 'Badges'],
         'filament.admin.pages.help-page' => ['view' => 'help-page', 'title' => 'Aide'],
+        'filament.admin.pages.admin-stats' => ['view' => 'admin-stats', 'title' => 'Statistiques'],
+        'filament.admin.pages.admin-update' => ['view' => 'admin-update', 'title' => 'Mises à jour'],
+        'filament.admin.pages.system-status' => ['view' => 'system-status', 'title' => 'État du système'],
     ];
 
     private static array $resources = [
