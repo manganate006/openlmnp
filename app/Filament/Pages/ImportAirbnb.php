@@ -27,7 +27,7 @@ class ImportAirbnb extends Page implements HasForms
     use InteractsWithForms, NavigationAware, WithFileUploads;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowDownTray;
-    protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
+    protected static string | UnitEnum | null $navigationGroup = 'Comptabilité';
     protected static ?string $navigationLabel = 'Import Airbnb';
     protected static ?string $title = 'Import des revenus Airbnb';
     protected static ?int $navigationSort = 1;
