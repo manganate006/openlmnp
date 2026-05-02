@@ -304,7 +304,8 @@ class AnnualImportWizard extends Page implements HasForms
             $tempFile = $data['csv_file'];
 
             if (is_string($tempFile)) {
-                $path = storage_path('app/public/' . $tempFile);
+                $disk = \Illuminate\Support\Facades\Storage::disk();
+                $path = $disk->exists($tempFile) ? $disk->path($tempFile) : storage_path('app/public/' . $tempFile);
                 if (file_exists($path)) {
                     $uploadedFile = new UploadedFile($path, basename($path));
                     $result = app(AirbnbImportService::class)->import($uploadedFile, $property);
