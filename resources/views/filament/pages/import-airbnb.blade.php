@@ -8,6 +8,10 @@
         .import-table th.num { text-align: right; }
         .import-table th.center, .import-table td.center { text-align: center; }
         .import-table tr.dup { opacity: 0.55; }
+        .import-table tr.skipped { opacity: 0.45; }
+        .import-table tr.skipped td { color: var(--fi-fg-muted, #9ca3af); }
+        .import-badge-skip { background: #f3f4f6; color: #6b7280; }
+        .import-sep td { padding: 6px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fi-fg-muted, #9ca3af); background: var(--fi-bg-muted, #f9fafb); }
         .import-table tbody tr:hover { background: var(--fi-bg-muted, #f9fafb); }
         .import-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
         .import-badge-new { background: #d1fae5; color: #065f46; }
@@ -63,15 +67,18 @@
                 <h3 style="font-size: 16px; font-weight: 700; margin: 0;">Aperçu de l'import</h3>
                 <div class="import-stats">
                     @php
-                        $importable = collect($previewData['rows'])->where('duplicate', false)->count();
-                        $duplicates = collect($previewData['rows'])->where('duplicate', true)->count();
+                        $allRows = collect($previewData['rows']);
+                        $activeRows = $allRows->where('skipped', false);
+                        $skippedRows = $allRows->where('skipped', true);
+                        $importable = $activeRows->where('duplicate', false)->count();
+                        $duplicates = $activeRows->where('duplicate', true)->count();
                     @endphp
                     <span class="import-stat import-stat-ok">{{ $importable }} à importer</span>
                     @if($duplicates > 0)
                         <span class="import-stat import-stat-dup">{{ $duplicates }} doublon(s)</span>
                     @endif
-                    @if($previewData['skipped'] > 0)
-                        <span class="import-stat import-stat-skip">{{ $previewData['skipped'] }} ignorée(s)</span>
+                    @if($skippedRows->count() > 0 || $previewData['skipped'] > 0)
+                        <span class="import-stat import-stat-skip">{{ $skippedRows->count() + $previewData['skipped'] }} ignorée(s)</span>
                     @endif
                 </div>
             </div>
@@ -102,7 +109,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($previewData['rows'] as $row)
+                            @foreach($activeRows as $row)
                                 <tr class="{{ $row['duplicate'] ? 'dup' : '' }}">
                                     <td>{{ $row['date'] }}</td>
                                     <td>{{ $row['guest'] ?? '—' }}</td>
@@ -119,6 +126,24 @@
                                     </td>
                                 </tr>
                             @endforeach
+                            @if($skippedRows->count() > 0)
+                                <tr class="import-sep">
+                                    <td colspan="7">Ignorées ({{ $skippedRows->count() }})</td>
+                                </tr>
+                                @foreach($skippedRows as $row)
+                                    <tr class="skipped">
+                                        <td>{{ $row['date'] }}</td>
+                                        <td>{{ $row['guest'] ?? '—' }}</td>
+                                        <td><span class="import-mono">{{ $row['confirmation'] ?? '—' }}</span></td>
+                                        <td>{{ $row['checkin'] ?? '—' }}</td>
+                                        <td class="num">{{ number_format($row['amount'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
+                                        <td class="num">—</td>
+                                        <td class="center">
+                                            <span class="import-badge import-badge-skip">{{ $row['skip_reason'] }}</span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @endif
                         </tbody>
                     </table>
                 </div>
