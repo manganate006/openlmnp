@@ -45,6 +45,7 @@
         .import-info li { padding: 2px 0; }
         .import-info li::before { content: "•"; margin-right: 8px; }
         .import-mono { font-family: ui-monospace, monospace; font-size: 11px; color: var(--fi-fg-muted, #6b7280); }
+        .import-warning { margin-bottom: 16px; padding: 12px 16px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; font-size: 13px; color: #92400e; }
     </style>
 
     @if(!$previewData)
@@ -82,6 +83,14 @@
                     @endif
                 </div>
             </div>
+
+            @if(!empty($previewData['warnings']))
+                <div class="import-warning">
+                    @foreach($previewData['warnings'] as $warning)
+                        <p>{{ $warning }}</p>
+                    @endforeach
+                </div>
+            @endif
 
             @if(!empty($previewData['errors']))
                 <div class="import-errors">

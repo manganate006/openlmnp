@@ -46,13 +46,19 @@ class AirbnbImportService
     {
         $parsed = $this->parseFile($file);
         if ($parsed === null) {
-            return ['rows' => [], 'skipped' => 0, 'errors' => ['Fichier vide ou invalide']];
+            return ['rows' => [], 'skipped' => 0, 'errors' => [], 'warnings' => []];
         }
 
         [$lines, $columnIndexes] = $parsed;
+        $isNetFormat = ! isset($columnIndexes['host_fee']);
         $rows = [];
         $skipped = 0;
         $errors = [];
+        $warnings = [];
+
+        if ($isNetFormat && ! $property->airbnb_commission_rate) {
+            $warnings[] = 'Ce CSV ne contient pas la commission Airbnb. Configurez le taux de commission dans les paramètres du bien pour recalculer automatiquement le montant brut et la commission.';
+        }
 
         foreach ($lines as $lineNum => $line) {
             $line = trim($line);
@@ -75,7 +81,7 @@ class AirbnbImportService
             }
         }
 
-        return ['rows' => $rows, 'skipped' => $skipped, 'errors' => $errors];
+        return ['rows' => $rows, 'skipped' => $skipped, 'errors' => $errors, 'warnings' => $warnings];
     }
 
     /**
@@ -203,6 +209,11 @@ class AirbnbImportService
         $hostFeeRaw = $this->getField($row, $indexes, 'host_fee');
         $hostFee = $hostFeeRaw ? abs($this->parseMoney($hostFeeRaw)) : 0;
 
+        // Format Réservations (pas de colonne Host fee) : recalculer brut/commission
+        if (! $hostFeeRaw && ! isset($indexes['host_fee']) && $property->airbnb_commission_rate) {
+            [$amount, $hostFee] = $this->recalculateGross($amount, (float) $property->airbnb_commission_rate);
+        }
+
         $duplicate = false;
         if ($confirmation) {
             $duplicate = Income::where('property_id', $property->id)
@@ -275,6 +286,11 @@ class AirbnbImportService
         $hostFeeRaw = $this->getField($row, $indexes, 'host_fee');
         $hostFee = $hostFeeRaw ? abs($this->parseMoney($hostFeeRaw)) : 0;
 
+        // Format Réservations (pas de colonne Host fee) : recalculer brut/commission
+        if (! $hostFeeRaw && ! isset($indexes['host_fee']) && $property->airbnb_commission_rate) {
+            [$amount, $hostFee] = $this->recalculateGross($amount, (float) $property->airbnb_commission_rate);
+        }
+
         // Vérifier si déjà importé (par code de confirmation)
         $confirmation = $this->getField($row, $indexes, 'confirmation');
         if ($confirmation) {
@@ -302,6 +318,24 @@ class AirbnbImportService
             'checkin_date'    => $startDate ? $this->parseDate($startDate) : null,
             'checkout_date'   => $endDate ? $this->parseDate($endDate) : null,
         ]);
+    }
+
+    /**
+     * Recalcule le montant brut et la commission à partir du net et du taux.
+     * net = brut × (1 - taux/100)  →  brut = net / (1 - taux/100)
+     *
+     * @param int $netCents Montant net en centimes
+     * @param float $ratePercent Taux de commission en % (ex: 3.6)
+     * @return array{0: int, 1: int} [grossCents, feeCents]
+     */
+    private function recalculateGross(int $netCents, float $ratePercent): array
+    {
+        $rate = bcdiv((string) $ratePercent, '100', 6);
+        $divisor = bcsub('1', $rate, 6);
+        $grossCents = (int) bcdiv((string) $netCents, $divisor, 0);
+        $feeCents = $grossCents - $netCents;
+
+        return [$grossCents, $feeCents];
     }
 
     private function getField(array $row, array $indexes, string $field): ?string

@@ -65,6 +65,7 @@ class Property extends Model
         'market_value_date',
         'land_percentage',
         'rental_start_date',
+        'airbnb_commission_rate',
         'rental_type',
         'is_primary_residence',
         'notes',

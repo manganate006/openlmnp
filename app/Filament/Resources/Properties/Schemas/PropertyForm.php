@@ -273,6 +273,16 @@ class PropertyForm
                 ->required()
                 ->displayFormat('d/m/Y')
                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Les amortissements démarrent à cette date.'),
+            TextInput::make('airbnb_commission_rate')
+                ->label('Taux commission Airbnb (hôte)')
+                ->suffix('%')
+                ->numeric()
+                ->step(0.01)
+                ->minValue(0)
+                ->maxValue(30)
+                ->default(3.6)
+                ->placeholder('3.6')
+                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Frais de service hôte + TVA. Modèle split fee = 3% + TVA (20%) = 3,6%. Utilisé pour recalculer le brut lors de l\'import CSV Réservations.'),
             Repeater::make('listing_urls')
                 ->label('Liens d\'annonces')
                 ->schema([
