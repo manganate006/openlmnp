@@ -26,9 +26,18 @@ class ExpenseCompletionGrid extends Widget
 
         $grid = [];
         foreach ($years as $year) {
+            $hasIncome = Income::whereYear('income_date', $year)->exists();
             $filledCategories = Expense::whereYear('expense_date', $year)->pluck('category')->unique()->toArray();
 
             $row = ['year' => $year, 'categories' => []];
+
+            // Colonne Recettes en premier
+            $row['categories'][] = [
+                'emoji' => '💰',
+                'label' => 'Recettes',
+                'filled' => $hasIncome,
+            ];
+
             foreach ($categories as $cat) {
                 $row['categories'][] = [
                     'emoji' => $emojis[$cat],

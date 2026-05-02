@@ -3,9 +3,9 @@
         .cg-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
         .cg-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--fi-fg, #374151); }
         .cg-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .cg-row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; min-width: max-content; }
+        .cg-row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
         .cg-year { font-size: 13px; font-weight: 700; color: var(--fi-fg, #374151); width: 45px; flex-shrink: 0; }
-        .cg-cell { display: flex; flex-direction: column; align-items: center; width: 48px; flex-shrink: 0; border-radius: 6px; padding: 4px 2px; cursor: pointer; position: relative; }
+        .cg-cell { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 36px; border-radius: 6px; padding: 4px 2px; cursor: pointer; position: relative; }
         .cg-filled { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); }
         .cg-missing { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); opacity: 0.6; }
         .cg-emoji { font-size: 16px; line-height: 1; }

@@ -8,10 +8,16 @@ use App\Models\Property;
 use App\Services\DepreciationService;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-
 class FiscalOverview extends StatsOverviewWidget
 {
     protected static ?int $sort = 1;
+
+    protected function getColumns(): int
+    {
+        return 4;
+    }
+
+    protected ?string $heading = null;
 
     protected function getStats(): array
     {
@@ -37,7 +43,24 @@ class FiscalOverview extends StatsOverviewWidget
             ];
         }
 
-        // KPIs fiscaux
+        $current = $this->calculateYear($properties, $year);
+        $previous = $this->calculateYear($properties, $year - 1);
+
+        $stats = [];
+
+        // Ligne N (année en cours)
+        $stats = array_merge($stats, $this->buildYearStats($current, $year, $properties->count(), true));
+
+        // Ligne N-1 (année précédente) — seulement si des données existent
+        if ($previous['totalIncome'] > 0 || $previous['totalExpenses'] > 0) {
+            $stats = array_merge($stats, $this->buildYearStats($previous, $year - 1, $properties->count(), false));
+        }
+
+        return $stats;
+    }
+
+    private function calculateYear($properties, int $year): array
+    {
         $totalIncome = 0;
         $totalExpenses = 0;
         $totalDepreciation = 0;
@@ -57,52 +80,46 @@ class FiscalOverview extends StatsOverviewWidget
             $totalDepreciation += (int) $depreciation['total'];
         }
 
-        $incomeEuros = number_format($totalIncome / 100, 0, ',', ' ');
-        $expenseEuros = number_format($totalExpenses / 100, 0, ',', ' ');
-        $depreciationEuros = number_format($totalDepreciation / 100, 0, ',', ' ');
-
         $resultBefore = $totalIncome - $totalExpenses;
         $cappedDepreciation = min($totalDepreciation, max(0, $resultBefore));
         $fiscalResult = max(0, $resultBefore - $cappedDepreciation);
-        $resultEuros = number_format($fiscalResult / 100, 0, ',', ' ');
-
         $microBicResult = (int) bcmul((string) $totalIncome, '0.50', 0);
-        $microBicEuros = number_format($microBicResult / 100, 0, ',', ' ');
 
-        $stats = [
-            Stat::make("Recettes {$year}", "{$incomeEuros} €")
-                ->description("{$incomeCount} recette(s) · {$properties->count()} bien(s)")
+        return compact(
+            'totalIncome', 'totalExpenses', 'totalDepreciation',
+            'incomeCount', 'expenseCount',
+            'fiscalResult', 'microBicResult',
+        );
+    }
+
+    private function buildYearStats(array $data, int $year, int $propertyCount, bool $isCurrent): array
+    {
+        $fmt = fn (int $cents) => number_format($cents / 100, 0, ',', ' ');
+        $color = fn (string $c) => $isCurrent ? $c : 'gray';
+
+        return [
+            Stat::make("Recettes {$year}", "{$fmt($data['totalIncome'])} €")
+                ->description("{$data['incomeCount']} recette(s) · {$propertyCount} bien(s)")
                 ->icon('heroicon-o-banknotes')
-                ->color('success')
-                ->url('/incomes'),
+                ->color($color('success'))
+                ->url($isCurrent ? '/incomes' : null),
 
-            Stat::make("Charges {$year}", "{$expenseEuros} €")
-                ->description("{$expenseCount} charge(s) · Après quote-part")
+            Stat::make("Charges {$year}", "{$fmt($data['totalExpenses'])} €")
+                ->description("{$data['expenseCount']} charge(s) · Après quote-part")
                 ->icon('heroicon-o-receipt-percent')
-                ->color('warning')
-                ->url('/expenses'),
+                ->color($color('warning'))
+                ->url($isCurrent ? '/expenses' : null),
 
-            Stat::make("Amortissements {$year}", "{$depreciationEuros} €")
+            Stat::make("Amortissements {$year}", "{$fmt($data['totalDepreciation'])} €")
                 ->description('Immeuble + travaux + mobilier')
                 ->icon('heroicon-o-building-library')
-                ->color('info'),
+                ->color($color('info')),
 
-            Stat::make("Résultat fiscal (réel)", "{$resultEuros} €")
-                ->description("Micro-BIC : {$microBicEuros} € · " . ($fiscalResult < $microBicResult ? '✓ Réel avantageux' : '⚠ Micro-BIC avantageux'))
+            Stat::make("Résultat {$year} (réel)", "{$fmt($data['fiscalResult'])} €")
+                ->description("Micro-BIC : {$fmt($data['microBicResult'])} € · " . ($data['fiscalResult'] < $data['microBicResult'] ? '✓ Réel avantageux' : '⚠ Micro-BIC avantageux'))
                 ->icon('heroicon-o-calculator')
-                ->color($fiscalResult < $microBicResult ? 'success' : 'danger')
-                ->url('/simulator'),
+                ->color($data['fiscalResult'] < $data['microBicResult'] ? ($isCurrent ? 'success' : 'gray') : ($isCurrent ? 'danger' : 'gray'))
+                ->url($isCurrent ? '/simulator' : null),
         ];
-
-        // Alerte si pas de recettes
-        if ($totalIncome === 0) {
-            $stats[] = Stat::make('Action requise', 'Ajoutez vos recettes ' . $year)
-                ->description('Saisie manuelle ou import CSV Airbnb')
-                ->icon('heroicon-o-exclamation-triangle')
-                ->color('danger')
-                ->url('/incomes/create');
-        }
-
-        return $stats;
     }
 }
