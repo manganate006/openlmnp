@@ -110,7 +110,7 @@
                         <span class="au-commit-msg">{{ $commit['message'] }}</span>
                         <span class="au-commit-date">
                             @if($commit['date'])
-                                {{ \Carbon\Carbon::parse($commit['date'])->setTimezone('Europe/Paris')->format('d/m H:i') }}
+                                {{ \Carbon\Carbon::parse($commit['date'])->setTimezone(auth()->user()->timezone ?? 'Europe/Paris')->format('d/m H:i') }}
                             @endif
                         </span>
                     </div>
