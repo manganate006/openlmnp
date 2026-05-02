@@ -43,7 +43,10 @@ class ImportAirbnb extends Page implements HasForms
     protected string $view = 'filament.pages.import-airbnb';
 
     public ?array $data = [];
+    public ?array $previewData = null;
     public ?array $lastResult = null;
+    public ?string $previewFilePath = null;
+    public ?int $previewPropertyId = null;
 
     public function mount(): void
     {
@@ -75,7 +78,23 @@ class ImportAirbnb extends Page implements HasForms
             ]);
     }
 
-    public function import(): void
+    private function resolveUploadedFile(mixed $csvFile): ?UploadedFile
+    {
+        if (is_string($csvFile)) {
+            $path = storage_path('app/public/' . $csvFile);
+            if (! file_exists($path)) {
+                return null;
+            }
+            return new UploadedFile($path, basename($path));
+        }
+
+        return new UploadedFile(
+            $csvFile->getRealPath(),
+            $csvFile->getClientOriginalName()
+        );
+    }
+
+    public function preview(): void
     {
         $data = $this->form->getState();
 
@@ -93,27 +112,54 @@ class ImportAirbnb extends Page implements HasForms
         $property = Property::where('user_id', auth()->id())
             ->findOrFail($propertyId);
 
-        if (is_string($csvFile)) {
-            $path = storage_path('app/public/' . $csvFile);
-            if (! file_exists($path)) {
-                Notification::make()
-                    ->title('Fichier introuvable')
-                    ->danger()
-                    ->send();
-                return;
-            }
-            $uploadedFile = new UploadedFile($path, basename($path));
-        } else {
-            $uploadedFile = new UploadedFile(
-                $csvFile->getRealPath(),
-                $csvFile->getClientOriginalName()
-            );
+        $uploadedFile = $this->resolveUploadedFile($csvFile);
+        if (! $uploadedFile) {
+            Notification::make()
+                ->title('Fichier introuvable')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $service = app(AirbnbImportService::class);
+        $result = $service->preview($uploadedFile, $property);
+
+        $this->previewData = $result;
+        $this->previewFilePath = is_string($csvFile) ? $csvFile : null;
+        $this->previewPropertyId = (int) $propertyId;
+        $this->lastResult = null;
+    }
+
+    public function confirmImport(): void
+    {
+        if (! $this->previewPropertyId || ! $this->previewFilePath) {
+            Notification::make()
+                ->title('Aucun aperçu en cours')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $property = Property::where('user_id', auth()->id())
+            ->findOrFail($this->previewPropertyId);
+
+        $uploadedFile = $this->resolveUploadedFile($this->previewFilePath);
+        if (! $uploadedFile) {
+            Notification::make()
+                ->title('Fichier introuvable — veuillez réimporter')
+                ->danger()
+                ->send();
+            $this->cancelPreview();
+            return;
         }
 
         $service = app(AirbnbImportService::class);
         $result = $service->import($uploadedFile, $property);
 
         $this->lastResult = $result;
+        $this->previewData = null;
+        $this->previewFilePath = null;
+        $this->previewPropertyId = null;
         $this->form->fill();
 
         if ($result['imported'] > 0) {
@@ -131,5 +177,12 @@ class ImportAirbnb extends Page implements HasForms
                 ->warning()
                 ->send();
         }
+    }
+
+    public function cancelPreview(): void
+    {
+        $this->previewData = null;
+        $this->previewFilePath = null;
+        $this->previewPropertyId = null;
     }
 }

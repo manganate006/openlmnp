@@ -38,23 +38,59 @@ class AirbnbImportService
     ];
 
     /**
+     * Parse le CSV et retourne un aperçu des lignes sans les importer.
+     *
+     * @return array{rows: array, skipped: int, errors: array}
+     */
+    public function preview(UploadedFile $file, Property $property): array
+    {
+        $parsed = $this->parseFile($file);
+        if ($parsed === null) {
+            return ['rows' => [], 'skipped' => 0, 'errors' => ['Fichier vide ou invalide']];
+        }
+
+        [$lines, $columnIndexes] = $parsed;
+        $rows = [];
+        $skipped = 0;
+        $errors = [];
+
+        foreach ($lines as $lineNum => $line) {
+            $line = trim($line);
+            if (empty($line)) {
+                continue;
+            }
+
+            $row = str_getcsv($line);
+
+            try {
+                $data = $this->extractRowData($row, $columnIndexes, $property);
+                if ($data) {
+                    $rows[] = $data;
+                } else {
+                    $skipped++;
+                }
+            } catch (\Exception $e) {
+                $errors[] = "Ligne " . ($lineNum + 2) . " : " . $e->getMessage();
+                $skipped++;
+            }
+        }
+
+        return ['rows' => $rows, 'skipped' => $skipped, 'errors' => $errors];
+    }
+
+    /**
      * Importe un fichier CSV Airbnb pour un bien donné.
      *
      * @return array{imported: int, skipped: int, errors: array}
      */
     public function import(UploadedFile $file, Property $property): array
     {
-        $content = file_get_contents($file->getRealPath());
-        $lines = explode("\n", $content);
-
-        if (count($lines) < 2) {
+        $parsed = $this->parseFile($file);
+        if ($parsed === null) {
             return ['imported' => 0, 'skipped' => 0, 'errors' => ['Fichier vide ou invalide']];
         }
 
-        // Parser l'en-tête
-        $header = str_getcsv(array_shift($lines));
-        $columnIndexes = $this->mapColumns($header);
-
+        [$lines, $columnIndexes] = $parsed;
         $imported = 0;
         $skipped = 0;
         $errors = [];
@@ -81,6 +117,74 @@ class AirbnbImportService
         }
 
         return ['imported' => $imported, 'skipped' => $skipped, 'errors' => $errors];
+    }
+
+    /**
+     * Parse le fichier CSV et retourne les lignes + index de colonnes.
+     */
+    private function parseFile(UploadedFile $file): ?array
+    {
+        $content = file_get_contents($file->getRealPath());
+        $lines = explode("\n", $content);
+
+        if (count($lines) < 2) {
+            return null;
+        }
+
+        $header = str_getcsv(array_shift($lines));
+        $columnIndexes = $this->mapColumns($header);
+
+        return [$lines, $columnIndexes];
+    }
+
+    /**
+     * Extrait les données d'une ligne CSV sans créer d'enregistrement.
+     *
+     * @return array|null Données de la ligne ou null si ignorée
+     */
+    private function extractRowData(array $row, array $indexes, Property $property): ?array
+    {
+        $amountRaw = $this->getField($row, $indexes, 'amount')
+            ?? $this->getField($row, $indexes, 'paid_out');
+
+        if (! $amountRaw) {
+            return null;
+        }
+
+        $amount = $this->parseMoney($amountRaw);
+        if ($amount <= 0) {
+            return null;
+        }
+
+        $dateRaw = $this->getField($row, $indexes, 'date');
+        if (! $dateRaw) {
+            return null;
+        }
+        $date = $this->parseDate($dateRaw);
+
+        $hostFeeRaw = $this->getField($row, $indexes, 'host_fee');
+        $hostFee = $hostFeeRaw ? abs($this->parseMoney($hostFeeRaw)) : 0;
+
+        $confirmation = $this->getField($row, $indexes, 'confirmation');
+        $duplicate = false;
+        if ($confirmation) {
+            $duplicate = Income::where('property_id', $property->id)
+                ->where('reservation_ref', $confirmation)
+                ->exists();
+        }
+
+        $startDate = $this->getField($row, $indexes, 'start_date');
+        $guest = $this->getField($row, $indexes, 'guest');
+
+        return [
+            'date' => $date,
+            'guest' => $guest,
+            'confirmation' => $confirmation,
+            'amount' => $amount,
+            'host_fee' => $hostFee,
+            'checkin' => $startDate ? $this->parseDate($startDate) : null,
+            'duplicate' => $duplicate,
+        ];
     }
 
     /**
