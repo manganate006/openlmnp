@@ -25,7 +25,7 @@ class FiscalOverview extends StatsOverviewWidget
                     ->description('Menu Mes biens → Biens immobiliers → Nouveau')
                     ->icon('heroicon-o-home-modern')
                     ->color('primary')
-                    ->url('/app/properties/create'),
+                    ->url('/properties/create'),
                 Stat::make('Étape 2', 'Saisissez vos recettes')
                     ->description('Après avoir ajouté un bien')
                     ->icon('heroicon-o-banknotes')
@@ -74,13 +74,13 @@ class FiscalOverview extends StatsOverviewWidget
                 ->description("{$incomeCount} recette(s) · {$properties->count()} bien(s)")
                 ->icon('heroicon-o-banknotes')
                 ->color('success')
-                ->url('/app/incomes'),
+                ->url('/incomes'),
 
             Stat::make("Charges {$year}", "{$expenseEuros} €")
                 ->description("{$expenseCount} charge(s) · Après quote-part")
                 ->icon('heroicon-o-receipt-percent')
                 ->color('warning')
-                ->url('/app/expenses'),
+                ->url('/expenses'),
 
             Stat::make("Amortissements {$year}", "{$depreciationEuros} €")
                 ->description('Immeuble + travaux + mobilier')
@@ -91,7 +91,7 @@ class FiscalOverview extends StatsOverviewWidget
                 ->description("Micro-BIC : {$microBicEuros} € · " . ($fiscalResult < $microBicResult ? '✓ Réel avantageux' : '⚠ Micro-BIC avantageux'))
                 ->icon('heroicon-o-calculator')
                 ->color($fiscalResult < $microBicResult ? 'success' : 'danger')
-                ->url('/app/simulator'),
+                ->url('/simulator'),
         ];
 
         // Alerte si pas de recettes
@@ -100,7 +100,7 @@ class FiscalOverview extends StatsOverviewWidget
                 ->description('Saisie manuelle ou import CSV Airbnb')
                 ->icon('heroicon-o-exclamation-triangle')
                 ->color('danger')
-                ->url('/app/incomes/create');
+                ->url('/incomes/create');
         }
 
         return $stats;

@@ -10,8 +10,13 @@ use Filament\Widgets\ChartWidget;
 class MonthlyChart extends ChartWidget
 {
     protected ?string $heading = 'Recettes vs Charges par mois';
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 99;
     protected int | string | array $columnSpan = 'full';
+
+    public static function canView(): bool
+    {
+        return false;
+    }
 
     protected function getData(): array
     {
