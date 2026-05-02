@@ -87,7 +87,13 @@ class PropertyForm
                     ->tabs([
                         Tab::make('Général')
                             ->icon('heroicon-o-home-modern')
-                            ->schema(static::generalFields()),
+                            ->schema([
+                                ...static::generalFields(),
+                                Textarea::make('notes')
+                                    ->label('Notes')
+                                    ->rows(3)
+                                    ->columnSpanFull(),
+                            ]),
 
                         Tab::make('Surfaces & Valeur')
                             ->icon('heroicon-o-square-3-stack-3d')
@@ -99,15 +105,6 @@ class PropertyForm
                         Tab::make('Location')
                             ->icon('heroicon-o-calendar')
                             ->schema(static::rentalFields()),
-
-                        Tab::make('Notes')
-                            ->icon('heroicon-o-pencil-square')
-                            ->schema([
-                                Textarea::make('notes')
-                                    ->label('Notes')
-                                    ->rows(5)
-                                    ->columnSpanFull(),
-                            ]),
 
                         Tab::make('Travaux')
                             ->icon('heroicon-o-wrench-screwdriver')
