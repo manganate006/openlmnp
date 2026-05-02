@@ -1,16 +1,7 @@
 <x-filament-panels::page>
     @if(!$previewData)
-        {{-- Étape 1 : Upload --}}
-        <form wire:submit="preview">
-            {{ $this->form }}
-
-            <div class="mt-4">
-                <x-filament::button type="submit" wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="preview">Aperçu avant import</span>
-                    <span wire:loading wire:target="preview">Analyse en cours...</span>
-                </x-filament::button>
-            </div>
-        </form>
+        {{-- Étape 1 : Upload (bouton dans footerActions de la Section) --}}
+        {{ $this->form }}
     @else
         {{-- Étape 2 : Preview --}}
         <div class="space-y-4">

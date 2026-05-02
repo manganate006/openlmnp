@@ -7,6 +7,7 @@ use App\Models\Property;
 use App\Services\AirbnbImportService;
 use App\Services\BadgeService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -17,6 +18,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\WithFileUploads;
 use UnitEnum;
 
@@ -74,6 +76,12 @@ class ImportAirbnb extends Page implements HasForms
                             ->label('Fichier CSV')
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', '.csv'])
                             ->maxSize(10240),
+                    ])
+                    ->footerActions([
+                        Action::make('preview')
+                            ->label('Aperçu avant import')
+                            ->action('preview')
+                            ->color('primary'),
                     ]),
             ]);
     }
@@ -81,11 +89,16 @@ class ImportAirbnb extends Page implements HasForms
     private function resolveUploadedFile(mixed $csvFile): ?UploadedFile
     {
         if (is_string($csvFile)) {
-            $path = storage_path('app/public/' . $csvFile);
-            if (! file_exists($path)) {
-                return null;
+            // Filament FileUpload stores to the default disk (local → storage/app/private/)
+            $disk = Storage::disk();
+            if (! $disk->exists($csvFile)) {
+                // Fallback: try public disk
+                $disk = Storage::disk('public');
+                if (! $disk->exists($csvFile)) {
+                    return null;
+                }
             }
-            return new UploadedFile($path, basename($path));
+            return new UploadedFile($disk->path($csvFile), basename($csvFile));
         }
 
         return new UploadedFile(
