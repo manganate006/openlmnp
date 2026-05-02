@@ -75,19 +75,30 @@
                             <tr>
                                 <td class="form-cell">
                                     @php
-                                        $cerfaUrls = [
+                                        $cerfaPages = [
+                                            '2031' => 'https://www.impots.gouv.fr/formulaire/2031-sd/impot-sur-le-revenu',
+                                            '2033-A' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
+                                            '2033-B' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
+                                            '2033-C' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
+                                            '2042-C-PRO' => 'https://www.impots.gouv.fr/formulaire/2042/declaration-des-revenus',
+                                        ];
+                                        $cerfaPdfs = [
                                             '2031' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2031-sd/2026/2031-sd_5396.pdf',
                                             '2033-A' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2033-sd/2026/2033-sd_5394.pdf',
                                             '2033-B' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2033-sd/2026/2033-sd_5394.pdf',
                                             '2033-C' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2033-sd/2026/2033-sd_5394.pdf',
                                             '2042-C-PRO' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2042/2026/2042_5474.pdf',
                                         ];
-                                        $url = $cerfaUrls[$line['form']] ?? null;
+                                        $pageUrl = $cerfaPages[$line['form']] ?? null;
+                                        $pdfUrl = $cerfaPdfs[$line['form']] ?? null;
                                     @endphp
-                                    @if($url)
-                                        <a href="{{ $url }}" target="_blank" title="Voir le formulaire {{ $line['form'] }} sur impots.gouv.fr">{{ $line['form'] }}</a>
+                                    @if($pageUrl)
+                                        <a href="{{ $pageUrl }}" target="_blank" title="Page formulaire {{ $line['form'] }}">{{ $line['form'] }}</a>
                                     @else
                                         {{ $line['form'] }}
+                                    @endif
+                                    @if($pdfUrl)
+                                        <a href="{{ $pdfUrl }}" target="_blank" title="PDF Cerfa {{ $line['form'] }}" style="margin-left:4px;">&#128206;</a>
                                     @endif
                                 </td>
                                 <td class="line-cell">{{ $line['line'] }}</td>
