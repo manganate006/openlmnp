@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PropertyWorks\Schemas;
 
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -35,10 +36,10 @@ class PropertyWorkForm
                                 ->required()
                                 ->numeric()
                                 ->step(0.01)
+                                ->live(onBlur: true)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hint('Coût total TTC des travaux')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Coût total TTC des travaux'),
                             DatePicker::make('work_date')
                                 ->label('Date des travaux')
                                 ->required()
@@ -51,16 +52,19 @@ class PropertyWorkForm
                                 ->required()
                                 ->numeric()
                                 ->default(10)
-                                ->hint('Standards : travaux amélioration 10-15 ans, piscine 15-20 ans')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
-                            TextInput::make('annual_depreciation')
+                                ->live(onBlur: true)
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Aménagement intérieur (peinture, sols, cloisons) → 10 ans · Salle de bain, cuisine → 10-15 ans · Piscine, terrasse, toiture → 15-20 ans · Mise aux normes électrique/plomberie → 15 ans. La durée doit refléter la durée réelle d\'utilisation du bien.'),
+                            Placeholder::make('annual_depreciation_preview')
                                 ->label('Amortissement annuel')
-                                ->suffix('€')
-                                ->numeric()
-                                ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
-                                ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hint('Calculé automatiquement si laissé vide')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->content(function (callable $get) {
+                                    $amount = (float) ($get('amount') ?? 0);
+                                    $duration = (int) ($get('duration_years') ?? 0);
+                                    if ($amount <= 0 || $duration <= 0) {
+                                        return '—';
+                                    }
+                                    $annual = $amount / $duration;
+                                    return number_format($annual, 2, ',', ' ') . ' €/an';
+                                }),
                         ]),
                         Toggle::make('is_dedicated')
                             ->label('100% dédié au bien loué')

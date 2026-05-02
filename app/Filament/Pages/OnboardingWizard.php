@@ -2,9 +2,11 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\NavMode;
 use App\Models\Property;
 use App\Services\DepreciationService;
 use App\Services\LoanService;
+use App\Support\DocumentStorage;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -36,6 +38,17 @@ class OnboardingWizard extends Page implements HasForms
     protected static ?string $navigationLabel = 'Premier lancement';
     protected static ?string $title = 'Assistant de configuration';
     protected static ?int $navigationSort = 10;
+
+    public static function getNavigationGroup(): ?string
+    {
+        $user = auth()->user();
+
+        return match ($user?->nav_mode) {
+            NavMode::Simple => 'Outils',
+            NavMode::Guided => 'Mise en route',
+            default => 'Paramètres',
+        };
+    }
     protected string $view = 'filament.pages.onboarding-wizard';
 
     public ?array $data = [];
@@ -133,9 +146,17 @@ class OnboardingWizard extends Page implements HasForms
                 FileUpload::make('photo_path')
                     ->label('Photo du bien')
                     ->image()
-                    ->directory('properties')
-                    ->maxSize(5120)
-                    ->imagePreviewHeight('150')
+                    ->directory(DocumentStorage::directory('photos-biens'))
+                    ->getUploadedFileNameForStorageUsing(
+                        DocumentStorage::filename('acquisition_date', 'name')
+                    )
+                    ->automaticallyResizeImagesMode('cover')
+                    ->automaticallyResizeImagesToWidth('1280')
+                    ->automaticallyResizeImagesToHeight('1280')
+                    ->maxSize(10240)
+                    ->imagePreviewHeight('250')
+                    ->panelLayout('integrated')
+                    ->openable()
                     ->columnSpanFull(),
                 TextInput::make('name')
                     ->label('Nom du bien')
@@ -254,8 +275,7 @@ class OnboardingWizard extends Page implements HasForms
                         ->step(1)
                         ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
                         ->dehydrateStateUsing(fn ($state) => $state ? (int) round(((float) $state) * 100) : null)
-                        ->hint('Si bien possédé avant la location')
-                        ->hintIcon('heroicon-o-question-mark-circle'),
+                        ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Si bien possédé avant la location'),
                     DatePicker::make('market_value_date')
                         ->label('Date estimation')
                         ->displayFormat('d/m/Y'),

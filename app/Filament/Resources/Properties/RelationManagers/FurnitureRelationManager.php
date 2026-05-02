@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\Properties\RelationManagers;
 
+use App\Support\DocumentStorage;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -28,12 +30,18 @@ class FurnitureRelationManager extends RelationManager
                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100)),
             DatePicker::make('purchase_date')->label('Date d\'achat')->required()->displayFormat('d/m/Y'),
-            TextInput::make('duration_years')->label('Durée amortissement')->suffix('ans')->required()->numeric()->default(5),
+            TextInput::make('duration_years')->label('Durée amortissement')->suffix('ans')->required()->numeric()->default(5)
+                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Literie, linge, petits meubles → 5 ans · TV, réfrigérateur, lave-vaisselle → 7 ans · Cuisine équipée, climatisation, jacuzzi → 10 ans · Occasion → 3 ans'),
             Toggle::make('is_dedicated')->label('100% dédié')->default(true),
             Toggle::make('is_second_hand')->label('Occasion')->default(false),
-            TextInput::make('annual_depreciation')->label('Amort. annuel (€)')->suffix('€')->numeric()
-                ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
-                ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100)),
+            FileUpload::make('invoice_path')
+                ->label('Facture d\'achat')
+                ->acceptedFileTypes(['application/pdf', 'image/*'])
+                ->directory(DocumentStorage::directory('factures-mobilier'))
+                ->getUploadedFileNameForStorageUsing(
+                    DocumentStorage::filename('purchase_date', 'description')
+                )
+                ->maxSize(5120),
         ]);
     }
 
@@ -48,6 +56,12 @@ class FurnitureRelationManager extends RelationManager
                 TextColumn::make('duration_years')->label('Durée')->suffix(' ans'),
                 IconColumn::make('is_dedicated')->label('100%')->boolean(),
                 IconColumn::make('is_second_hand')->label('Occasion')->boolean(),
+                IconColumn::make('invoice_path')
+                    ->label('Facture')
+                    ->icon(fn ($record) => filled($record->invoice_path) ? 'heroicon-o-paper-clip' : null)
+                    ->color(fn ($record) => filled($record->invoice_path) ? 'success' : null)
+                    ->url(fn ($record) => DocumentStorage::temporaryUrl($record->invoice_path))
+                    ->openUrlInNewTab(),
                 TextColumn::make('annual_depreciation')->label('Amort./an')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €'),
             ])

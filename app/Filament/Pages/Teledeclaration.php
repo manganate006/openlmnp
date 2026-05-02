@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\FiscalYear;
 use App\Models\Property;
 use App\Services\CsvExportService;
@@ -17,11 +18,23 @@ use UnitEnum;
 
 class Teledeclaration extends Page
 {
+    use NavigationAware;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPaperAirplane;
     protected static string | UnitEnum | null $navigationGroup = 'Fiscal';
     protected static ?string $navigationLabel = 'Télédéclaration';
     protected static ?string $title = 'Aide à la télédéclaration';
     protected static ?int $navigationSort = 4;
+
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Déclaration annuelle';
+    }
     protected string $view = 'filament.pages.teledeclaration';
 
     public int $year = 2026;

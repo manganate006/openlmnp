@@ -3,14 +3,13 @@
 namespace App\Filament\Resources\FiscalYears\Tables;
 
 use App\Models\FiscalYear;
+use App\Services\BadgeService;
 use App\Services\FecService;
 use App\Services\FiscalYearService;
 use App\Services\TaxReturnService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -54,56 +53,6 @@ class FiscalYearsTable
                     ->sortable(),
             ])
             ->defaultSort('year', 'desc')
-            ->headerActions([
-                Action::make('create_fiscal_year')
-                    ->label('Créer un exercice')
-                    ->icon('heroicon-o-plus-circle')
-                    ->color('primary')
-                    ->form([
-                        Select::make('year')
-                            ->label('Année de l\'exercice')
-                            ->options(function () {
-                                $years = [];
-                                for ($y = (int) date('Y') + 1; $y >= (int) date('Y') - 5; $y--) {
-                                    $years[$y] = $y;
-                                }
-                                return $years;
-                            })
-                            ->default((int) date('Y'))
-                            ->required()
-                            ->helperText('Les recettes, charges et amortissements de cette année seront calculés automatiquement.'),
-                    ])
-                    ->action(function (array $data) {
-                        $user = auth()->user();
-                        $year = (int) $data['year'];
-
-                        // Vérifier si l'exercice existe déjà
-                        $existing = FiscalYear::withoutGlobalScopes()
-                            ->where('user_id', $user->id)
-                            ->where('year', $year)
-                            ->first();
-
-                        if ($existing) {
-                            // Recalculer l'existant
-                            app(FiscalYearService::class)->calculate($existing);
-                            Notification::make()
-                                ->title("Exercice {$year} recalculé")
-                                ->body('Résultat fiscal : ' . number_format($existing->fresh()->fiscal_result / 100, 0, ',', ' ') . ' €')
-                                ->success()
-                                ->send();
-                            return;
-                        }
-
-                        // Créer et calculer
-                        $fy = app(FiscalYearService::class)->getOrCreate($user, $year);
-
-                        Notification::make()
-                            ->title("Exercice {$year} créé")
-                            ->body('Résultat fiscal : ' . number_format($fy->fiscal_result / 100, 0, ',', ' ') . ' €')
-                            ->success()
-                            ->send();
-                    }),
-            ])
             ->recordActions([
                 Action::make('calculate')
                     ->label('Calculer')
@@ -123,6 +72,11 @@ class FiscalYearsTable
                     ->color('success')
                     ->action(function (FiscalYear $record) {
                         $path = app(TaxReturnService::class)->generatePdf($record);
+
+                        app(BadgeService::class)->evaluate(auth()->user(), 'tax_return_generated', [
+                            'fiscal_year' => $record->year,
+                        ]);
+
                         return response()->streamDownload(
                             fn () => print(Storage::get($path)),
                             "liasse_fiscale_{$record->year}.pdf"
@@ -135,6 +89,11 @@ class FiscalYearsTable
                     ->action(function (FiscalYear $record) {
                         app(FiscalYearService::class)->calculate($record);
                         $path = app(FecService::class)->generate($record);
+
+                        app(BadgeService::class)->evaluate(auth()->user(), 'fec_generated', [
+                            'fiscal_year' => $record->year,
+                        ]);
+
                         return response()->streamDownload(
                             fn () => print(Storage::get($path)),
                             "FEC_{$record->year}.txt"

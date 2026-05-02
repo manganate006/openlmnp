@@ -2,7 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Property;
+use App\Services\BadgeService;
 use App\Services\DepreciationService;
 use App\Services\FiscalYearService;
 use BackedEnum;
@@ -13,11 +15,23 @@ use UnitEnum;
 
 class Projection extends Page
 {
+    use NavigationAware;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
     protected static string | UnitEnum | null $navigationGroup = 'Fiscal';
     protected static ?string $navigationLabel = 'Projection';
     protected static ?string $title = 'Projection pluriannuelle';
     protected static ?int $navigationSort = 3;
+
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Déclaration annuelle';
+    }
     protected string $view = 'filament.pages.projection';
 
     public int $startYear = 2026;
@@ -26,6 +40,8 @@ class Projection extends Page
     public function mount(): void
     {
         $this->startYear = (int) date('Y');
+
+        app(BadgeService::class)->evaluate(auth()->user(), 'projection_used');
     }
 
     #[Computed]

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Furniture\Schemas;
 use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -37,6 +38,7 @@ class FurnitureForm
                                 ->required()
                                 ->numeric()
                                 ->step(0.01)
+                                ->live(onBlur: true)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
                                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Prix d\'achat TTC sur la facture'),
@@ -52,14 +54,19 @@ class FurnitureForm
                                 ->required()
                                 ->numeric()
                                 ->default(5)
-                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Standards : mobilier 5-7 ans, électroménager 7-10 ans'),
-                            TextInput::make('annual_depreciation')
+                                ->live(onBlur: true)
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Durées usuelles : Literie, linge, petits meubles → 5 ans · TV, réfrigérateur, lave-vaisselle → 7 ans · Cuisine équipée, climatisation, jacuzzi, bac à douche → 10 ans · Mobilier d\'occasion → 3 ans. En cas de contrôle, ces durées doivent refléter la durée réelle d\'utilisation.'),
+                            Placeholder::make('annual_depreciation_preview')
                                 ->label('Amortissement annuel')
-                                ->suffix('€')
-                                ->numeric()
-                                ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
-                                ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Calculé automatiquement si laissé vide'),
+                                ->content(function (callable $get) {
+                                    $amount = (float) ($get('amount') ?? 0);
+                                    $duration = (int) ($get('duration_years') ?? 0);
+                                    if ($amount <= 0 || $duration <= 0) {
+                                        return '—';
+                                    }
+                                    $annual = $amount / $duration;
+                                    return number_format($annual, 2, ',', ' ') . ' €/an';
+                                }),
                         ]),
                         Grid::make(2)->schema([
                             Toggle::make('is_dedicated')
@@ -82,7 +89,6 @@ class FurnitureForm
                                 ? 'Justificatifs (ZIP, PDF ou photo)'
                                 : 'Facture d\'achat')
                             ->acceptedFileTypes(['application/pdf', 'image/*', 'application/zip', 'application/x-zip-compressed'])
-                            ->disk('public')
                             ->directory(DocumentStorage::directory('factures-mobilier'))
                             ->getUploadedFileNameForStorageUsing(
                                 DocumentStorage::filename('purchase_date', 'description')

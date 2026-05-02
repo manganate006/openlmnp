@@ -36,8 +36,7 @@ class IncomeForm
                                 ->options(Income::sourceLabels())
                                 ->required()
                                 ->default('airbnb')
-                                ->hint('Plateforme ou mode de location utilisé')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Plateforme ou mode de location utilisé'),
                         ]),
                         Grid::make(3)->schema([
                             TextInput::make('amount')
@@ -48,8 +47,7 @@ class IncomeForm
                                 ->step(0.01)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hint('Montant brut perçu du locataire, avant déduction de la commission')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Montant brut perçu du locataire, avant déduction de la commission'),
                             TextInput::make('platform_fee')
                                 ->label('Commission plateforme')
                                 ->suffix('€')
@@ -58,8 +56,7 @@ class IncomeForm
                                 ->default(0)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hint('Commission Airbnb/Booking (~3%). Déduite automatiquement du calcul fiscal.')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Commission Airbnb/Booking (~3%). Déduite automatiquement du calcul fiscal.'),
                             TextInput::make('tourist_tax')
                                 ->label('Taxe de séjour')
                                 ->suffix('€')
@@ -68,8 +65,7 @@ class IncomeForm
                                 ->default(0)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hint('Non imposable. Collectée pour la commune, pas incluse dans vos recettes.')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Non imposable. Collectée pour la commune, pas incluse dans vos recettes.'),
                         ]),
                     ]),
 
@@ -81,8 +77,7 @@ class IncomeForm
                             ->label('Nom du client'),
                         TextInput::make('reservation_ref')
                             ->label('Référence réservation')
-                            ->hint('Code de confirmation Airbnb. Sert à éviter les doublons lors de l\'import CSV.')
-                            ->hintIcon('heroicon-o-question-mark-circle'),
+                            ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Code de confirmation Airbnb. Sert à éviter les doublons lors de l\'import CSV.'),
                         Grid::make(2)->schema([
                             DatePicker::make('checkin_date')
                                 ->label('Arrivée')

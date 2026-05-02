@@ -2,8 +2,10 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Property;
 use App\Services\AirbnbImportService;
+use App\Services\BadgeService;
 use BackedEnum;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -17,13 +19,23 @@ use UnitEnum;
 
 class ImportAirbnb extends Page implements HasForms
 {
-    use InteractsWithForms, WithFileUploads;
+    use InteractsWithForms, NavigationAware, WithFileUploads;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowDownTray;
     protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
     protected static ?string $navigationLabel = 'Import Airbnb';
     protected static ?string $title = 'Import des revenus Airbnb';
     protected static ?int $navigationSort = 1;
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Au quotidien';
+    }
+
+    protected static function getSimpleNavigationGroup(): ?string
+    {
+        return 'Outils';
+    }
     protected string $view = 'filament.pages.import-airbnb';
 
     public ?int $property_id = null;
@@ -53,6 +65,8 @@ class ImportAirbnb extends Page implements HasForms
         $this->csv_file = null;
 
         if ($result['imported'] > 0) {
+            app(BadgeService::class)->evaluate(auth()->user(), 'csv_imported');
+
             Notification::make()
                 ->title("{$result['imported']} recette(s) importée(s)")
                 ->body($result['skipped'] > 0 ? "{$result['skipped']} ligne(s) ignorée(s)" : '')

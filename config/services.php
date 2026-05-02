@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+        'repo' => env('GITHUB_REPO', 'openlmnp/openlmnp'),
+    ],
+
 ];

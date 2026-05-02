@@ -7,6 +7,7 @@ use App\Filament\Resources\Expenses\Pages\EditExpense;
 use App\Filament\Resources\Expenses\Pages\ListExpenses;
 use App\Filament\Resources\Expenses\Schemas\ExpenseForm;
 use App\Filament\Resources\Expenses\Tables\ExpensesTable;
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Expense;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -16,6 +17,8 @@ use Filament\Tables\Table;
 
 class ExpenseResource extends Resource
 {
+    use NavigationAware;
+
     protected static ?string $model = Expense::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
@@ -29,6 +32,11 @@ class ExpenseResource extends Resource
     protected static ?string $pluralModelLabel = 'charges';
 
     protected static ?int $navigationSort = 2;
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Au quotidien';
+    }
 
     public static function form(Schema $schema): Schema
     {

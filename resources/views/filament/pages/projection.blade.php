@@ -109,6 +109,234 @@
                     <li>Quand le <strong>résultat réel dépasse le micro-BIC</strong>, envisagez de repasser en micro-BIC</li>
                 </ul>
             </div>
+
+            @php $a = $data['assumptions']; @endphp
+
+            {{-- Panel : Hypothèses de revenus --}}
+            <div class="proj-card" style="margin-top:16px;">
+                <details>
+                    <summary style="font-size:16px;font-weight:600;cursor:pointer;user-select:none;">
+                        Hypothèses de revenus
+                    </summary>
+                    <div style="margin-top:12px;font-size:13px;color:#374151;line-height:1.8;">
+                        <p style="margin-bottom:8px;">Les années sans revenus enregistrés utilisent la <strong>moyenne arithmétique</strong> des revenus historiques :</p>
+                        <table style="border-collapse:collapse;margin-bottom:12px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding:4px 12px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:12px;">Année</th>
+                                    <th style="padding:4px 12px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Revenus</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($a['income']['by_year'] as $year => $amount)
+                                    <tr>
+                                        <td style="padding:4px 12px;">{{ $year }}</td>
+                                        <td style="padding:4px 12px;text-align:right;">{{ number_format($amount / 100, 0, ',', ' ') }} &euro;</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr style="border-top:2px solid #e5e7eb;font-weight:600;">
+                                    <td style="padding:4px 12px;">Total</td>
+                                    <td style="padding:4px 12px;text-align:right;">{{ number_format(array_sum($a['income']['by_year']) / 100, 0, ',', ' ') }} &euro;</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p style="background:#f3f4f6;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;">
+                            {{ number_format(array_sum($a['income']['by_year']) / 100, 0, ',', ' ') }} &euro;
+                            &divide; {{ count($a['income']['by_year']) }} années
+                            = <strong>{{ number_format($a['income']['average'] / 100, 0, ',', ' ') }} &euro;/an</strong>
+                        </p>
+                    </div>
+                </details>
+            </div>
+
+            {{-- Panel : Hypothèses de charges --}}
+            <div class="proj-card" style="margin-top:16px;">
+                <details>
+                    <summary style="font-size:16px;font-weight:600;cursor:pointer;user-select:none;">
+                        Hypothèses de charges
+                    </summary>
+                    <div style="margin-top:12px;font-size:13px;color:#374151;line-height:1.8;">
+                        @php $prop = $a['properties'][0] ?? null; @endphp
+                        @if($prop)
+                            <p style="margin-bottom:8px;">
+                                <strong>Quote-part :</strong>
+                                {{ $prop['rented_area'] }} m&sup2; lou&eacute;s &divide; {{ $prop['total_area'] }} m&sup2; total
+                                = <strong>{{ number_format((float) $prop['quota_share'] * 100, 2, ',', ' ') }}%</strong>
+                            </p>
+                        @endif
+                        <table style="border-collapse:collapse;margin-bottom:12px;">
+                            <tbody>
+                                <tr>
+                                    <td style="padding:4px 12px;">Charges d&eacute;di&eacute;es (moyenne/an)</td>
+                                    <td style="padding:4px 12px;text-align:right;">{{ number_format($a['expenses']['dedicated'] / 100, 0, ',', ' ') }} &euro;</td>
+                                    <td style="padding:4px 12px;color:#6b7280;font-size:12px;">100% d&eacute;ductibles</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:4px 12px;">Charges partag&eacute;es (moyenne/an)</td>
+                                    <td style="padding:4px 12px;text-align:right;">{{ number_format($a['expenses']['shared'] / 100, 0, ',', ' ') }} &euro;</td>
+                                    <td style="padding:4px 12px;color:#6b7280;font-size:12px;">avant quote-part</td>
+                                </tr>
+                                <tr style="border-top:1px solid #e5e7eb;">
+                                    <td style="padding:4px 12px;">Charges partag&eacute;es apr&egrave;s quote-part</td>
+                                    <td style="padding:4px 12px;text-align:right;">{{ number_format($a['expenses']['shared_after_quota'] / 100, 0, ',', ' ') }} &euro;</td>
+                                    <td style="padding:4px 12px;color:#6b7280;font-size:12px;">
+                                        {{ number_format($a['expenses']['shared'] / 100, 0, ',', ' ') }} &times;
+                                        {{ number_format((float) ($prop['quota_share'] ?? 0) * 100, 2, ',', ' ') }}%
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr style="border-top:2px solid #e5e7eb;font-weight:600;">
+                                    <td style="padding:4px 12px;">Total projet&eacute;</td>
+                                    <td style="padding:4px 12px;text-align:right;">{{ number_format($a['expenses']['total'] / 100, 0, ',', ' ') }} &euro;/an</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </details>
+            </div>
+
+            {{-- Panel : Détail des amortissements --}}
+            <div class="proj-card" style="margin-top:16px;">
+                <details>
+                    <summary style="font-size:16px;font-weight:600;cursor:pointer;user-select:none;">
+                        D&eacute;tail des amortissements
+                    </summary>
+                    <div style="margin-top:12px;font-size:13px;color:#374151;line-height:1.8;">
+                        @if($prop)
+                            <p style="background:#f3f4f6;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;margin-bottom:16px;">
+                                <strong>Base amortissable</strong> =
+                                {{ number_format(($prop['market_value']) / 100, 0, ',', ' ') }} &euro;
+                                &times; {{ 100 - $prop['land_percentage'] }}% (hors terrain)
+                                &times; {{ number_format((float) $prop['quota_share'] * 100, 2, ',', ' ') }}% (quote-part)
+                                = <strong>{{ number_format($prop['depreciable_base'] / 100, 0, ',', ' ') }} &euro;</strong>
+                            </p>
+                        @endif
+
+                        {{-- Composants immeuble --}}
+                        @if(count($a['depreciation']['components']) > 0)
+                            <h4 style="font-weight:600;margin-bottom:6px;">Composants immeuble</h4>
+                            <table style="border-collapse:collapse;margin-bottom:16px;width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding:4px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:12px;">Composant</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">%</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Dur&eacute;e</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Annuit&eacute;</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($a['depreciation']['components'] as $comp)
+                                        <tr>
+                                            <td style="padding:4px 10px;">{{ $comp['name'] }}</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ $comp['percentage'] }}%</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ $comp['duration'] }} ans</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ number_format($comp['annual'] / 100, 0, ',', ' ') }} &euro;</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr style="border-top:2px solid #e5e7eb;font-weight:600;">
+                                        <td colspan="3" style="padding:4px 10px;">Total immeuble</td>
+                                        <td style="padding:4px 10px;text-align:right;">{{ number_format($a['depreciation']['total_building'] / 100, 0, ',', ' ') }} &euro;/an</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        @endif
+
+                        {{-- Travaux --}}
+                        @if(count($a['depreciation']['works']) > 0)
+                            <h4 style="font-weight:600;margin-bottom:6px;">Travaux</h4>
+                            <table style="border-collapse:collapse;margin-bottom:16px;width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding:4px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:12px;">Description</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Montant</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Dur&eacute;e</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Annuit&eacute;</th>
+                                        <th style="padding:4px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-size:12px;">D&eacute;di&eacute;</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Apr&egrave;s quote-part</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($a['depreciation']['works'] as $work)
+                                        <tr>
+                                            <td style="padding:4px 10px;">{{ $work['description'] }}</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ number_format($work['amount'] / 100, 0, ',', ' ') }} &euro;</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ $work['duration'] }} ans</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ number_format($work['annual'] / 100, 0, ',', ' ') }} &euro;</td>
+                                            <td style="padding:4px 10px;text-align:center;">{{ $work['is_dedicated'] ? 'Oui' : 'Non' }}</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ number_format($work['after_quota'] / 100, 0, ',', ' ') }} &euro;</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr style="border-top:2px solid #e5e7eb;font-weight:600;">
+                                        <td colspan="5" style="padding:4px 10px;">Total travaux</td>
+                                        <td style="padding:4px 10px;text-align:right;">{{ number_format($a['depreciation']['total_works'] / 100, 0, ',', ' ') }} &euro;/an</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        @endif
+
+                        {{-- Mobilier --}}
+                        @if(count($a['depreciation']['furniture']) > 0)
+                            <h4 style="font-weight:600;margin-bottom:6px;">Mobilier</h4>
+                            <table style="border-collapse:collapse;margin-bottom:16px;width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding:4px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:12px;">Description</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Montant</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Dur&eacute;e</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Annuit&eacute;</th>
+                                        <th style="padding:4px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-size:12px;">D&eacute;di&eacute;</th>
+                                        <th style="padding:4px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:12px;">Apr&egrave;s quote-part</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($a['depreciation']['furniture'] as $item)
+                                        <tr>
+                                            <td style="padding:4px 10px;">{{ $item['description'] }}</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ number_format($item['amount'] / 100, 0, ',', ' ') }} &euro;</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ $item['duration'] }} ans</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ number_format($item['annual'] / 100, 0, ',', ' ') }} &euro;</td>
+                                            <td style="padding:4px 10px;text-align:center;">{{ $item['is_dedicated'] ? 'Oui' : 'Non' }}</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ number_format($item['after_quota'] / 100, 0, ',', ' ') }} &euro;</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr style="border-top:2px solid #e5e7eb;font-weight:600;">
+                                        <td colspan="5" style="padding:4px 10px;">Total mobilier</td>
+                                        <td style="padding:4px 10px;text-align:right;">{{ number_format($a['depreciation']['total_furniture'] / 100, 0, ',', ' ') }} &euro;/an</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        @endif
+
+                        {{-- Total et formules --}}
+                        <div style="background:#ecfdf5;padding:12px;border-radius:6px;margin-bottom:12px;">
+                            <p style="font-weight:600;font-size:14px;">
+                                Total amortissements annuels :
+                                {{ number_format($a['depreciation']['total_building'] / 100, 0, ',', ' ') }}
+                                + {{ number_format($a['depreciation']['total_works'] / 100, 0, ',', ' ') }}
+                                + {{ number_format($a['depreciation']['total_furniture'] / 100, 0, ',', ' ') }}
+                                = <span style="color:#065f46;">{{ number_format($a['depreciation']['grand_total'] / 100, 0, ',', ' ') }} &euro;/an</span>
+                            </p>
+                        </div>
+
+                        <h4 style="font-weight:600;margin-bottom:6px;">Formules cl&eacute;s</h4>
+                        <ul style="font-size:12px;color:#6b7280;list-style:disc;padding-left:20px;line-height:2;">
+                            <li><strong>Plafonnement</strong> : Amort. d&eacute;duits = min(amort. disponibles, max(0, recettes &minus; charges)). L'amortissement ne peut jamais cr&eacute;er de d&eacute;ficit.</li>
+                            <li><strong>Diff&eacute;r&eacute;s</strong> : Les amortissements non d&eacute;duits sont report&eacute;s sur les ann&eacute;es suivantes, sans limite de dur&eacute;e.</li>
+                            <li><strong>Micro-BIC 50%</strong> : Recettes &times; 50% (abattement meubl&eacute; de tourisme class&eacute;).</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
         @endif
     </div>
 </x-filament-panels::page>

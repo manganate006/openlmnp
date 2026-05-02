@@ -33,6 +33,15 @@ class PropertyWork extends Model
         'annual_depreciation',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (PropertyWork $work) {
+            if ($work->amount > 0 && $work->duration_years > 0) {
+                $work->computeAnnualDepreciation();
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [

@@ -39,7 +39,17 @@ class Furniture extends Model
         'is_dedicated',
         'is_second_hand',
         'annual_depreciation',
+        'invoice_path',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Furniture $furniture) {
+            if ($furniture->amount > 0 && $furniture->duration_years > 0) {
+                $furniture->computeAnnualDepreciation();
+            }
+        });
+    }
 
     protected function casts(): array
     {

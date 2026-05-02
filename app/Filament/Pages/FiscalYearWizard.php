@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\FiscalYear;
 use App\Models\Income;
 use App\Models\Expense;
@@ -32,11 +33,19 @@ use UnitEnum;
  */
 class FiscalYearWizard extends Page
 {
+    use NavigationAware;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
     protected static string|UnitEnum|null $navigationGroup = 'Fiscal';
     protected static ?string $navigationLabel = 'Nouvel exercice';
     protected static ?string $title = 'Assistant de clôture fiscale';
     protected static ?int $navigationSort = 2;
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Déclaration annuelle';
+    }
     protected string $view = 'filament.pages.fiscal-year-wizard';
 
     // -------------------------------------------------------------------------
@@ -264,6 +273,10 @@ class FiscalYearWizard extends Page
         $fiscalYear = $service->getOrCreate(auth()->user(), $year);
 
         $fiscalYear->update(['status' => $status]);
+
+        app(\App\Services\BadgeService::class)->evaluate(auth()->user(), 'fiscal_year_created', [
+            'fiscal_year' => $year,
+        ]);
 
         Notification::make()
             ->title('Exercice fiscal créé')

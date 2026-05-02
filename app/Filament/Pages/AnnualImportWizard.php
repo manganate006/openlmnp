@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Expense;
 use App\Models\Income;
 use App\Models\Property;
@@ -31,13 +32,23 @@ use UnitEnum;
 
 class AnnualImportWizard extends Page implements HasForms
 {
-    use InteractsWithForms, WithFileUploads;
+    use InteractsWithForms, NavigationAware, WithFileUploads;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowDownTray;
     protected static string|UnitEnum|null $navigationGroup = 'Fiscal';
     protected static ?string $navigationLabel = 'Import annuel';
     protected static ?string $title = 'Assistant d\'import annuel';
     protected static ?int $navigationSort = 3;
+
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Déclaration annuelle';
+    }
     protected string $view = 'filament.pages.annual-import-wizard';
 
     public ?array $data = [];
@@ -326,6 +337,10 @@ class AnnualImportWizard extends Page implements HasForms
                 $messages[] = $count . ' charge(s) créée(s)';
             }
         }
+
+        app(\App\Services\BadgeService::class)->evaluate(auth()->user(), 'annual_import', [
+            'fiscal_year' => (int) ($data['year'] ?? date('Y')),
+        ]);
 
         Notification::make()
             ->title('Import terminé')

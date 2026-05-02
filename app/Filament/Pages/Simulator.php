@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\NavigationAware;
+use App\Services\BadgeService;
 use App\Services\DepreciationService;
 use App\Services\FiscalYearService;
 use App\Models\Property;
@@ -17,13 +19,23 @@ use UnitEnum;
 
 class Simulator extends Page implements HasForms
 {
-    use InteractsWithForms;
+    use InteractsWithForms, NavigationAware;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalculator;
     protected static string | UnitEnum | null $navigationGroup = 'Fiscal';
     protected static ?string $navigationLabel = 'Simulateur';
     protected static ?string $title = 'Simulateur micro-BIC vs régime réel';
     protected static ?int $navigationSort = 2;
+
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Déclaration annuelle';
+    }
     protected string $view = 'filament.pages.simulator';
 
     public int $year = 2026;
@@ -32,6 +44,8 @@ class Simulator extends Page implements HasForms
     public function mount(): void
     {
         $this->year = (int) date('Y');
+
+        app(BadgeService::class)->evaluate(auth()->user(), 'simulator_used');
     }
 
     #[Computed]
