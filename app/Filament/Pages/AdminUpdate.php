@@ -98,7 +98,9 @@ class AdminUpdate extends Page
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'warning';
+        $count = (int) Setting::get('update_behind_count', '0');
+
+        return $count >= 5 ? 'danger' : 'warning';
     }
 
     // -------------------------------------------------------------------------
