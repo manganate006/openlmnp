@@ -69,6 +69,7 @@ class AdminUpdate extends Page
         $service = new UpdateService();
         $this->branchInfo = $service->checkBranchUpdates();
         $this->deployResult = null;
+        $this->cacheBranchBadge();
     }
 
     public function applyBranchUpdate(): void
@@ -78,7 +79,26 @@ class AdminUpdate extends Page
 
         if ($this->deployResult['success'] ?? false) {
             $this->branchInfo = $service->checkBranchUpdates();
+            $this->cacheBranchBadge();
         }
+    }
+
+    private function cacheBranchBadge(): void
+    {
+        $count = $this->branchInfo['ahead_by'] ?? 0;
+        Setting::set('update_behind_count', (string) $count);
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = Setting::get('update_behind_count', '0');
+
+        return $count && $count !== '0' ? $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
     }
 
     // -------------------------------------------------------------------------
