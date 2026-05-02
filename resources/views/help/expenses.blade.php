@@ -17,6 +17,10 @@
         <li data-icon="&#x1F4BB;"><strong>Frais divers</strong> &mdash; Comptabilité, abonnements, déplacements</li>
     </ul>
 
+    <h3>Charge ou travaux ?</h3>
+    <p>Les <strong>petites réparations</strong> (volet roulant, serrure, robinet, prise électrique...) sont des charges directes en catégorie « Entretien ». Elles sont déduites intégralement l'année de la dépense.</p>
+    <p>En revanche, les <strong>gros travaux</strong> qui augmentent la valeur du bien (rénovation complète, isolation, nouvelle salle de bain...) doivent être enregistrés dans l'onglet <strong>Travaux</strong> du bien et sont amortis sur 10 à 15 ans.</p>
+
     <div class="ctx-warning">
         <strong>Important :</strong> Conservez tous les justificatifs pendant 6 ans minimum (10 ans recommandés). Joignez-les directement à chaque charge.
     </div>
