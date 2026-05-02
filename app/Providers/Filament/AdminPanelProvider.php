@@ -62,6 +62,7 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->renderHook('panels::sidebar.footer', fn () => view('livewire.nav-mode-toggle-hook'))
+            ->renderHook('panels::body.end', fn () => view('livewire.contextual-help-hook'))
             ->authMiddleware([
                 Authenticate::class,
             ]);
