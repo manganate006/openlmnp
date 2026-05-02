@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Property;
 use App\Services\AirbnbImportService;
 use App\Services\BadgeService;
@@ -24,23 +23,14 @@ use UnitEnum;
 
 class ImportAirbnb extends Page implements HasForms
 {
-    use InteractsWithForms, NavigationAware, WithFileUploads;
+    use InteractsWithForms, WithFileUploads;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowDownTray;
     protected static string | UnitEnum | null $navigationGroup = 'Comptabilité';
     protected static ?string $navigationLabel = 'Import Airbnb';
     protected static ?string $title = 'Import des revenus Airbnb';
     protected static ?int $navigationSort = 1;
-
-    protected static function getGuidedNavigationGroup(): string
-    {
-        return 'Au quotidien';
-    }
-
-    protected static function getSimpleNavigationGroup(): ?string
-    {
-        return 'Outils';
-    }
+    protected static bool $shouldRegisterNavigation = false;
 
     protected string $view = 'filament.pages.import-airbnb';
 
