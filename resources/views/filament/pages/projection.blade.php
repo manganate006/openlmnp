@@ -35,6 +35,14 @@
                     <option value="20">20 ans</option>
                 </select>
             </div>
+            <div>
+                <label>Croissance revenus (%/an)</label><br>
+                <input type="number" wire:model.live="incomeGrowth" step="0.5" min="-5" max="10" style="width:80px;">
+            </div>
+            <div>
+                <label>Croissance charges (%/an)</label><br>
+                <input type="number" wire:model.live="expenseGrowth" step="0.5" min="-5" max="10" style="width:80px;">
+            </div>
         </div>
 
         @php $data = $this->projectionData; @endphp
@@ -92,6 +100,26 @@
                         </tbody>
                     </table>
                 </div>
+
+                @php
+                    $tippingYear = null;
+                    foreach ($data['rows'] as $row) {
+                        if ($row['recommended'] === 'micro_bic') {
+                            $tippingYear = $row['year'];
+                            break;
+                        }
+                    }
+                @endphp
+
+                @if($tippingYear)
+                    <div style="margin-top:12px;padding:12px 16px;background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;font-size:14px;color:#92400e;">
+                        <strong>Point de bascule en {{ $tippingYear }}</strong> : à partir de cette année, le micro-BIC 50% devient plus avantageux que le régime réel.
+                    </div>
+                @else
+                    <div style="margin-top:12px;padding:12px 16px;background:#ecfdf5;border:1px solid #10b981;border-radius:8px;font-size:14px;color:#065f46;">
+                        <strong>Pas de bascule</strong> : sur toute la période projetée, le régime réel reste plus avantageux.
+                    </div>
+                @endif
 
                 <div class="proj-legend">
                     <span><span class="dot" style="background:#d1fae5;"></span> Régime réel avantageux</span>

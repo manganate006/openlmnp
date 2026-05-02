@@ -36,6 +36,8 @@ class Projection extends Page
 
     public int $startYear = 2026;
     public int $projectionYears = 10;
+    public float $incomeGrowth = 0;
+    public float $expenseGrowth = 0;
 
     public function mount(): void
     {
@@ -96,6 +98,14 @@ class Projection extends Page
                     $shared = (int) ($shared / $expYears);
                 }
                 $totalExpenses += $dedicated + (int) bcmul((string) $shared, $property->quota_share, 0);
+            }
+
+            // Croissance composée
+            if ($i > 0 && $this->incomeGrowth != 0) {
+                $totalIncome = (int) ($totalIncome * pow(1 + $this->incomeGrowth / 100, $i));
+            }
+            if ($i > 0 && $this->expenseGrowth != 0) {
+                $totalExpenses = (int) ($totalExpenses * pow(1 + $this->expenseGrowth / 100, $i));
             }
 
             // Plafonnement
