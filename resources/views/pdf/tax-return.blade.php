@@ -51,6 +51,28 @@
         </p>
     </div>
 
+    {{-- 2033-A : BILAN SIMPLIFIÉ --}}
+    <h2>Formulaire 2033-A — Bilan simplifié</h2>
+    <table>
+        <tr><th colspan="2" class="c">ACTIF</th><th colspan="2" class="c">PASSIF</th></tr>
+        <tr>
+            <td>Immob. corporelles brut (028)</td><td class="r">{{ $fmtInt($form2033A['028']) }} €</td>
+            <td>Compte exploitant (120)</td><td class="r">{{ $fmtInt($form2033A['120']) }} €</td>
+        </tr>
+        <tr>
+            <td>Amortissements (030)</td><td class="r">- {{ $fmtInt($form2033A['030']) }} €</td>
+            <td>Résultat exercice (136)</td><td class="r">{{ $fmt($form2033A['136']) }} €</td>
+        </tr>
+        <tr>
+            <td></td><td></td>
+            <td>Emprunts (156)</td><td class="r">{{ $fmtInt($form2033A['156']) }} €</td>
+        </tr>
+        <tr class="total">
+            <td><strong>Total actif (112)</strong></td><td class="r"><strong>{{ $fmtInt($form2033A['112']) }} €</strong></td>
+            <td><strong>Total passif (180)</strong></td><td class="r"><strong>{{ $fmtInt($form2033A['180']) }} €</strong></td>
+        </tr>
+    </table>
+
     {{-- 2033-B : COMPTE DE RÉSULTAT --}}
     <h2>Formulaire 2033-B — Compte de résultat simplifié</h2>
     <table>
@@ -107,28 +129,6 @@
             ✓ Cohérence vérifiée : ligne 572 = ligne 254 du 2033-B ({{ $fmtInt($form2033C['total_dotation']) }} €)
         @endif
     </p>
-
-    {{-- 2033-A : BILAN SIMPLIFIÉ --}}
-    <h2>Formulaire 2033-A — Bilan simplifié</h2>
-    <table>
-        <tr><th colspan="2" class="c">ACTIF</th><th colspan="2" class="c">PASSIF</th></tr>
-        <tr>
-            <td>Immob. corporelles brut (028)</td><td class="r">{{ $fmtInt($form2033A['028']) }} €</td>
-            <td>Compte exploitant (120)</td><td class="r">{{ $fmtInt($form2033A['120']) }} €</td>
-        </tr>
-        <tr>
-            <td>Amortissements (030)</td><td class="r">- {{ $fmtInt($form2033A['030']) }} €</td>
-            <td>Résultat exercice (136)</td><td class="r">{{ $fmt($form2033A['136']) }} €</td>
-        </tr>
-        <tr>
-            <td></td><td></td>
-            <td>Emprunts (156)</td><td class="r">{{ $fmtInt($form2033A['156']) }} €</td>
-        </tr>
-        <tr class="total">
-            <td><strong>Total actif (112)</strong></td><td class="r"><strong>{{ $fmtInt($form2033A['112']) }} €</strong></td>
-            <td><strong>Total passif (180)</strong></td><td class="r"><strong>{{ $fmtInt($form2033A['180']) }} €</strong></td>
-        </tr>
-    </table>
 
     {{-- 2033-D : DÉFICITS --}}
     <h2>Formulaire 2033-D — Déficits reportables</h2>
