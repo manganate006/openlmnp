@@ -10,6 +10,7 @@ class ExpenseCompletionGrid extends Widget
 {
     protected string $view = 'filament.widgets.expense-completion-grid';
     protected int | string | array $columnSpan = 'full';
+    protected static ?int $sort = 2;
 
     public function getGrid(): array
     {

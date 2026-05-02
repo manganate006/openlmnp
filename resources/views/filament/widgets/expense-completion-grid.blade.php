@@ -21,14 +21,14 @@
     @php $grid = $this->getGrid(); @endphp
 
     <div class="cg-card">
-        <div class="cg-title">Complétude des charges par année</div>
+        <div class="cg-title">Suivi par année</div>
         <div class="cg-scroll">
             @foreach($grid as $row)
                 <div class="cg-row">
                     <span class="cg-year">{{ $row['year'] }}</span>
                     @foreach($row['categories'] as $cat)
                         <div class="cg-cell {{ $cat['filled'] ? 'cg-filled' : 'cg-missing' }}" tabindex="0">
-                            <span class="cg-tooltip">{{ $cat['label'] }} {{ $cat['filled'] ? '✓ Renseigné' : '✗ Manquant' }}</span>
+                            <span class="cg-tooltip">{{ $cat['label'] }}</span>
                             <span class="cg-emoji">{{ $cat['emoji'] }}</span>
                             <span class="cg-label">{{ $cat['label'] }}</span>
                         </div>

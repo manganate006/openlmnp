@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Enums\NavMode;
+use App\Livewire\NavModeToggle;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -17,6 +19,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -38,13 +41,8 @@ class AdminPanelProvider extends PanelProvider
                 'success' => Color::Green,
                 'info' => Color::Sky,
             ])
-            ->navigationGroups([
-                'Mes biens',
-                'Comptabilité',
-                'Fiscal',
-                'Paramètres',
-                'Administration',
-            ])
+            ->sidebarCollapsibleOnDesktop()
+            ->navigationGroups($this->getNavigationGroups())
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -65,8 +63,21 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            ->renderHook('panels::sidebar.footer', fn () => view('livewire.nav-mode-toggle-hook'))
             ->authMiddleware([
                 Authenticate::class,
             ]);
+    }
+
+    private function getNavigationGroups(): array
+    {
+        $user = Auth::user();
+        $mode = $user?->nav_mode ?? NavMode::Simple;
+
+        return match ($mode) {
+            NavMode::Simple => ['Mon bien', 'Comptabilité', 'Fiscal', 'Outils'],
+            NavMode::Guided => ['Mise en route', 'Au quotidien', 'Déclaration annuelle', 'Aide', 'Administration'],
+            NavMode::Advanced => ['Mes biens', 'Comptabilité', 'Fiscal', 'Paramètres', 'Administration'],
+        };
     }
 }
