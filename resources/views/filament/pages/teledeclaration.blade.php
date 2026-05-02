@@ -77,6 +77,7 @@
                                     @php
                                         $cerfaPages = [
                                             '2031' => 'https://www.impots.gouv.fr/formulaire/2031-sd/impot-sur-le-revenu',
+                                            '2031-bis' => 'https://www.impots.gouv.fr/formulaire/2031-sd/impot-sur-le-revenu',
                                             '2033-A' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
                                             '2033-B' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
                                             '2033-C' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
@@ -84,6 +85,7 @@
                                         ];
                                         $cerfaPdfs = [
                                             '2031' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2031-sd/2026/2031-sd_5396.pdf',
+                                            '2031-bis' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2031-sd/2026/2031-sd_5396.pdf',
                                             '2033-A' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2033-sd/2026/2033-sd_5394.pdf',
                                             '2033-B' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2033-sd/2026/2033-sd_5394.pdf',
                                             '2033-C' => 'https://www.impots.gouv.fr/sites/default/files/formulaires/2033-sd/2026/2033-sd_5394.pdf',

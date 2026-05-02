@@ -138,9 +138,10 @@ class Teledeclaration extends Page
         $fmt = fn($v) => number_format($v / 100, 2, ',', ' ');
 
         return [
-            ['form' => '2031', 'line' => 'AB', 'desc' => 'Production vendue — Services (loyers)', 'value' => $fmt($b['loyers']), 'raw' => $b['loyers']],
-            ['form' => '2031', 'line' => 'CB/CC', 'desc' => 'Résultat fiscal (bénéfice/déficit)', 'value' => $fmt($fy->fiscal_result), 'raw' => $fy->fiscal_result],
-            ['form' => '2033-B', 'line' => '218', 'desc' => 'Production vendue — Services', 'value' => $fmt($b['loyers']), 'raw' => $b['loyers']],
+            ['form' => '2031', 'line' => 'C.1', 'desc' => 'Résultat fiscal (' . ($fy->fiscal_result >= 0 ? 'bénéfice col.1' : 'déficit col.2') . ')', 'value' => $fmt(abs($fy->fiscal_result)), 'raw' => abs($fy->fiscal_result)],
+            ['form' => '2031', 'line' => 'C.4', 'desc' => ($fy->fiscal_result >= 0 ? 'Bénéfice imposable' : 'Déficit déductible'), 'value' => $fmt(abs($fy->fiscal_result)), 'raw' => abs($fy->fiscal_result)],
+            ['form' => '2031-bis', 'line' => 'I', 'desc' => 'BIC non professionnels — ' . ($fy->fiscal_result >= 0 ? 'bénéfice' : 'déficit') . ' LMNP', 'value' => $fmt(abs($fy->fiscal_result)), 'raw' => abs($fy->fiscal_result)],
+            ['form' => '2033-B', 'line' => '218', 'desc' => 'Production vendue — Services (loyers)', 'value' => $fmt($b['loyers']), 'raw' => $b['loyers']],
             ['form' => '2033-B', 'line' => '232', 'desc' => 'Total produits exploitation (I)', 'value' => $fmt($b['line232']), 'raw' => $b['line232']],
             ['form' => '2033-B', 'line' => '242', 'desc' => 'Autres charges externes', 'value' => $fmt($b['line242']), 'raw' => $b['line242']],
             ['form' => '2033-B', 'line' => '244', 'desc' => 'Impôts, taxes (taxe foncière, CFE)', 'value' => $fmt($b['line244']), 'raw' => $b['line244']],
