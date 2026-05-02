@@ -7,6 +7,7 @@ use App\Filament\Resources\Properties\Pages\EditProperty;
 use App\Filament\Resources\Properties\Pages\ListProperties;
 use App\Filament\Resources\Properties\Schemas\PropertyForm;
 use App\Filament\Resources\Properties\Tables\PropertiesTable;
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Property;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -16,6 +17,8 @@ use Filament\Tables\Table;
 
 class PropertyResource extends Resource
 {
+    use NavigationAware;
+
     protected static ?string $model = Property::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHomeModern;
@@ -29,6 +32,16 @@ class PropertyResource extends Resource
     protected static ?string $pluralModelLabel = 'biens immobiliers';
 
     protected static ?int $navigationSort = 1;
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Mise en route';
+    }
+
+    protected static function getSimpleNavigationGroup(): ?string
+    {
+        return 'Mon bien';
+    }
 
     public static function form(Schema $schema): Schema
     {
