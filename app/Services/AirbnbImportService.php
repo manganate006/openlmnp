@@ -10,31 +10,31 @@ use Illuminate\Support\Carbon;
 /**
  * Import des revenus depuis un fichier CSV Airbnb.
  *
- * Airbnb exporte un CSV avec les colonnes suivantes (format 2025-2026) :
- * - Date, Type, Confirmation code, Start date, Nights, Guest, Listing, Details,
- *   Reference, Currency, Amount, Paid out, Host fee, Cleaning fee, ...
- *
- * On importe les lignes de type "Payout" ou "Reservation" avec montant > 0.
+ * Supporte deux formats d'export Airbnb :
+ * 1. "Historique des transactions" : Date, Type, Confirmation code, Amount, Host fee, Paid out...
+ * 2. "Réservations" : Code de confirmation, Statut, Nom du voyageur, Date de début, Revenus...
  */
 class AirbnbImportService
 {
     /**
      * Mapping des en-têtes CSV Airbnb vers nos champs.
-     * Supporte plusieurs variantes de noms de colonnes (FR / EN).
+     * Supporte plusieurs variantes (FR / EN, formats Transactions et Réservations).
      */
     private const COLUMN_MAP = [
         'date'             => ['Date', 'date', 'Date du paiement', 'Payout date'],
         'type'             => ['Type', 'type'],
+        'status'           => ['Statut', 'Status'],
         'confirmation'     => ['Confirmation code', 'confirmation_code', 'Code de confirmation', 'Confirmation'],
         'start_date'       => ['Start date', 'start_date', 'Date de début', 'Début du séjour', 'Check-in'],
         'end_date'         => ['End date', 'Date de fin', 'Fin du séjour', 'Check-out'],
-        'nights'           => ['Nights', 'nights', 'Nuits', 'Nombre de nuits'],
+        'nights'           => ['Nights', 'nights', 'Nuits', 'Nombre de nuits', '# des nuits'],
         'guest'            => ['Guest', 'guest', 'Voyageur', 'Nom du voyageur'],
         'listing'          => ['Listing', 'listing', 'Annonce', 'Nom de l\'annonce'],
-        'amount'           => ['Amount', 'amount', 'Montant', 'Montant brut', 'Gross earnings'],
+        'amount'           => ['Amount', 'amount', 'Montant', 'Montant brut', 'Gross earnings', 'Revenus'],
         'host_fee'         => ['Host fee', 'host_fee', 'Frais de service hôte', 'Service fee', 'Host Fee Amount'],
         'paid_out'         => ['Paid out', 'paid_out', 'Versé', 'Montant versé', 'Host Payout'],
         'currency'         => ['Currency', 'currency', 'Devise'],
+        'booked_date'      => ['Réservée', 'Booked'],
     ];
 
     /**
@@ -125,6 +125,13 @@ class AirbnbImportService
     private function parseFile(UploadedFile $file): ?array
     {
         $content = file_get_contents($file->getRealPath());
+
+        // Supprimer le BOM UTF-8
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+        // Normaliser les caractères Unicode spéciaux (espaces insécables, etc.)
+        $content = $this->normalizeUnicode($content);
+
         $lines = explode("\n", $content);
 
         if (count($lines) < 2) {
@@ -135,6 +142,18 @@ class AirbnbImportService
         $columnIndexes = $this->mapColumns($header);
 
         return [$lines, $columnIndexes];
+    }
+
+    /**
+     * Normalise les caractères Unicode problématiques dans le contenu CSV.
+     */
+    private function normalizeUnicode(string $content): string
+    {
+        // Remplacer les espaces insécables et variantes par des espaces normaux
+        // U+00A0 (NBSP), U+202F (NNBSP), U+2007 (Figure space), U+2009 (Thin space)
+        $content = preg_replace('/[\x{00A0}\x{202F}\x{2007}\x{2009}]/u', ' ', $content);
+
+        return $content;
     }
 
     /**
@@ -156,7 +175,9 @@ class AirbnbImportService
             return null;
         }
 
-        $dateRaw = $this->getField($row, $indexes, 'date');
+        // Date : priorité à 'date', sinon 'start_date' (format Réservations)
+        $dateRaw = $this->getField($row, $indexes, 'date')
+            ?? $this->getField($row, $indexes, 'start_date');
         if (! $dateRaw) {
             return null;
         }
@@ -227,8 +248,9 @@ class AirbnbImportService
             return null; // Ignorer les remboursements et ajustements négatifs
         }
 
-        // Date
-        $dateRaw = $this->getField($row, $indexes, 'date');
+        // Date : priorité à 'date', sinon 'start_date' (format Réservations)
+        $dateRaw = $this->getField($row, $indexes, 'date')
+            ?? $this->getField($row, $indexes, 'start_date');
         if (! $dateRaw) {
             return null;
         }
@@ -280,13 +302,13 @@ class AirbnbImportService
 
     /**
      * Parse un montant monétaire vers des centimes.
-     * Gère : "1,234.56", "1234.56", "1 234,56", "-56.78"
+     * Gère : "1,234.56", "1234.56", "1 234,56", "252,26 €", "-56.78"
      */
     private function parseMoney(string $raw): int
     {
         $raw = trim($raw);
-        // Remove currency symbols
-        $raw = preg_replace('/[€$£]/', '', $raw);
+        // Remove currency symbols and unicode spaces
+        $raw = preg_replace('/[€$£\x{00A0}\x{202F}]/u', '', $raw);
         $raw = trim($raw);
 
         // Detect format: if last separator is comma and has 2 digits after → European
