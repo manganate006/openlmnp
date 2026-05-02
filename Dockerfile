@@ -20,13 +20,16 @@ RUN cp .env.docker .env
 
 RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-interaction
 
-RUN mkdir -p database storage/app/data storage/logs storage/framework/{sessions,views,cache} \
-    && touch database/database.sqlite \
+RUN mkdir -p database storage/app/public storage/app/data storage/logs storage/framework/{sessions,views,cache} \
     && chmod -R 775 storage database bootstrap/cache
 
 RUN php artisan key:generate --force
-RUN php artisan storage:link 2>/dev/null || true
-RUN php artisan migrate:fresh --seed --force
+
+# Volumes pour persister les données entre rebuilds
+VOLUME ["/var/www/html/database", "/var/www/html/storage"]
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8000
-CMD php artisan optimize:clear 2>/dev/null; php artisan storage:link 2>/dev/null; php artisan serve --host=0.0.0.0 --port=8000
+ENTRYPOINT ["docker-entrypoint.sh"]

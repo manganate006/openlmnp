@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Expenses\Schemas;
 
 use App\Models\Expense;
+use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Components\Grid;
@@ -38,8 +39,7 @@ class ExpenseForm
                                 ->options(Expense::categoryLabels())
                                 ->required()
                                 ->searchable()
-                                ->hint('Détermine le compte comptable utilisé (plan comptable LMNP)')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Détermine le compte comptable utilisé (plan comptable LMNP)'),
                         ]),
                         TextInput::make('description')
                             ->label('Description')
@@ -54,15 +54,13 @@ class ExpenseForm
                                 ->step(0.01)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hint('Montant total de la charge. Si partagée, la quote-part sera calculée automatiquement.')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Montant total de la charge. Si partagée, la quote-part sera calculée automatiquement.'),
                             Select::make('recurring_type')
                                 ->label('Récurrence')
                                 ->options(Expense::recurringLabels())
                                 ->required()
                                 ->default('once')
-                                ->hint('Pour le suivi uniquement. Chaque occurrence doit être saisie séparément.')
-                                ->hintIcon('heroicon-o-question-mark-circle'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Pour le suivi uniquement. Chaque occurrence doit être saisie séparément.'),
                         ]),
                         Toggle::make('is_dedicated')
                             ->label('Charge 100% dédiée au bien loué')
@@ -77,10 +75,12 @@ class ExpenseForm
                         FileUpload::make('receipt_path')
                             ->label('Pièce justificative')
                             ->acceptedFileTypes(['application/pdf', 'image/*'])
-                            ->directory('receipts')
+                            ->directory(DocumentStorage::directory('justificatifs-charges'))
+                            ->getUploadedFileNameForStorageUsing(
+                                DocumentStorage::filename('expense_date', 'description')
+                            )
                             ->maxSize(5120)
-                            ->hint('Photo ou PDF de la facture. Conservation recommandée : 6 ans minimum.')
-                            ->hintIcon('heroicon-o-question-mark-circle'),
+                            ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Photo ou PDF de la facture. Conservation recommandée : 6 ans minimum.'),
                         Textarea::make('notes')
                             ->label('Notes')
                             ->rows(2)

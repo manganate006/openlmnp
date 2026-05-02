@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,5 +29,14 @@ class AppServiceProvider extends ServiceProvider
                 $user->is_admin = true;
             }
         });
+
+        // Allow private disk to generate temporary signed URLs for file previews
+        Storage::disk('local')->buildTemporaryUrlsUsing(
+            fn (string $path, \DateTimeInterface $expiration) => URL::temporarySignedRoute(
+                'documents.show',
+                $expiration,
+                ['path' => $path],
+            ),
+        );
     }
 }

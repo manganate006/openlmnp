@@ -7,6 +7,7 @@ use App\Filament\Resources\PropertyComponents\Pages\EditPropertyComponent;
 use App\Filament\Resources\PropertyComponents\Pages\ListPropertyComponents;
 use App\Filament\Resources\PropertyComponents\Schemas\PropertyComponentForm;
 use App\Filament\Resources\PropertyComponents\Tables\PropertyComponentsTable;
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\PropertyComponent;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -16,6 +17,8 @@ use Filament\Tables\Table;
 
 class PropertyComponentResource extends Resource
 {
+    use NavigationAware;
+
     protected static ?string $model = PropertyComponent::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingLibrary;
@@ -29,6 +32,16 @@ class PropertyComponentResource extends Resource
     protected static ?string $pluralModelLabel = "composants d'amortissement";
 
     protected static ?int $navigationSort = 4;
+
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Mise en route';
+    }
 
     public static function getNavigationBadge(): ?string
     {

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Loans\Pages;
 
 use App\Filament\Resources\Loans\LoanResource;
+use App\Services\BadgeService;
 use App\Services\LoanService;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -14,5 +15,7 @@ class CreateLoan extends CreateRecord
     {
         // Auto-générer le tableau d'amortissement
         app(LoanService::class)->generateSchedule($this->record);
+
+        app(BadgeService::class)->evaluate(auth()->user(), 'loan_created');
     }
 }

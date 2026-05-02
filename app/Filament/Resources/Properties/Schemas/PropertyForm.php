@@ -145,11 +145,13 @@ class PropertyForm
                 ->getUploadedFileNameForStorageUsing(
                     DocumentStorage::filename('acquisition_date', 'name')
                 )
-                ->imageResizeMode('cover')
-                ->imageResizeTargetWidth('1280')
-                ->imageResizeTargetHeight('1280')
-                ->maxSize(5120)
-                ->imagePreviewHeight('150')
+                ->automaticallyResizeImagesMode('cover')
+                ->automaticallyResizeImagesToWidth('1280')
+                ->automaticallyResizeImagesToHeight('1280')
+                ->maxSize(10240)
+                ->imagePreviewHeight('250')
+                ->panelLayout('integrated')
+                ->openable()
                 ->columnSpanFull(),
             TextInput::make('name')
                 ->label('Nom du bien')

@@ -131,6 +131,7 @@ class PersonalSeeder extends Seeder
             ['Réfrigérateur', '2023-06-01', 7, false],
             ['Lave-vaisselle', '2023-06-01', 7, false],
             ['Bac à douche', '2023-06-01', 10, false],
+            ['Climatisation', '2023-06-01', 10, false],
         ];
         foreach ($equipments as [$desc, $date, $dur, $secondHand]) {
             Furniture::create([

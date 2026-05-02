@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Loan;
 use BackedEnum;
 use Filament\Pages\Page;
@@ -11,11 +12,23 @@ use UnitEnum;
 
 class LoanDetail extends Page
 {
+    use NavigationAware;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
     protected static string | UnitEnum | null $navigationGroup = 'Comptabilité';
     protected static ?string $navigationLabel = 'Détail emprunt';
     protected static ?string $title = 'Tableau d\'amortissement emprunt';
     protected static ?int $navigationSort = 4;
+
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Mise en route';
+    }
     protected string $view = 'filament.pages.loan-detail';
 
     public ?int $loanId = null;
