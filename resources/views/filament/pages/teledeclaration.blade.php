@@ -5,6 +5,8 @@
         .td-table th, .td-table td { padding: 8px 12px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
         .td-table th { background: var(--fi-bg-muted, #f9fafb); text-align: left; font-weight: 600; font-size: 12px; }
         .td-table .form-cell { color: var(--fi-fg-muted, #6b7280); font-size: 11px; white-space: nowrap; }
+        .td-table .form-cell a { color: #6366f1; text-decoration: none; font-weight: 600; }
+        .td-table .form-cell a:hover { text-decoration: underline; color: #4f46e5; }
         .td-table .line-cell { font-weight: 700; color: #065f46; white-space: nowrap; }
         .td-table .value-cell { text-align: right; font-family: monospace; font-weight: 600; }
         .td-table .copy-btn { cursor: pointer; background: #ecfdf5; color: #065f46; border: 1px solid #86efac; border-radius: 4px; padding: 2px 8px; font-size: 11px; margin-left: 8px; }
@@ -71,7 +73,23 @@
                     <tbody>
                         @foreach($data['lines'] as $line)
                             <tr>
-                                <td class="form-cell">{{ $line['form'] }}</td>
+                                <td class="form-cell">
+                                    @php
+                                        $cerfaUrls = [
+                                            '2031' => 'https://www.impots.gouv.fr/formulaire/2031-sd/bic-compte-de-resultat-fiscal-simplifie',
+                                            '2033-A' => 'https://www.impots.gouv.fr/formulaire/2033-sd/bic-bilan-simplifie',
+                                            '2033-B' => 'https://www.impots.gouv.fr/formulaire/2033-sd/bic-bilan-simplifie',
+                                            '2033-C' => 'https://www.impots.gouv.fr/formulaire/2033-sd/bic-bilan-simplifie',
+                                            '2042-C-PRO' => 'https://www.impots.gouv.fr/formulaire/2042/declaration-des-revenus',
+                                        ];
+                                        $url = $cerfaUrls[$line['form']] ?? null;
+                                    @endphp
+                                    @if($url)
+                                        <a href="{{ $url }}" target="_blank" title="Voir le formulaire {{ $line['form'] }} sur impots.gouv.fr">{{ $line['form'] }}</a>
+                                    @else
+                                        {{ $line['form'] }}
+                                    @endif
+                                </td>
                                 <td class="line-cell">{{ $line['line'] }}</td>
                                 <td>{{ $line['desc'] }}</td>
                                 <td class="value-cell">{{ $line['value'] }} €</td>
