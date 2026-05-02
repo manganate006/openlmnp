@@ -106,13 +106,15 @@
         <p>Votre bien est décomposé en composants, chacun amorti sur sa propre durée (obligatoire au régime réel).</p>
 
         <ul>
-            <li data-icon="&#x1F3D7;"><strong>Gros &oelig;uvre</strong> &mdash; 50 ans (~40 %)</li>
+            <li data-icon="&#x1F3D7;"><strong>Gros &oelig;uvre</strong> &mdash; 50 ans (~50 %)</li>
             <li data-icon="&#x1F3E0;"><strong>Toiture</strong> &mdash; 25 ans (~10 %)</li>
             <li data-icon="&#x26A1;"><strong>Électricité</strong> &mdash; 25 ans (~10 %)</li>
-            <li data-icon="&#x1F6BF;"><strong>Plomberie</strong> &mdash; 25 ans (~10 %)</li>
-            <li data-icon="&#x1F3A8;"><strong>Agencements</strong> &mdash; 15 ans (~20 %)</li>
-            <li data-icon="&#x2600;"><strong>Étanchéité</strong> &mdash; 15 ans (~10 %)</li>
+            <li data-icon="&#x1F6BF;"><strong>Plomberie / sanitaire</strong> &mdash; 15 ans (~10 %)</li>
+            <li data-icon="&#x1F3A8;"><strong>Agencements intérieurs</strong> &mdash; 15 ans (~15 %)</li>
+            <li data-icon="&#x2600;"><strong>Étanchéité</strong> &mdash; 15 ans (~5 %)</li>
         </ul>
+
+        <p>Pour une <strong>maison individuelle</strong>, ajoutez si besoin : piscine (15-20 ans), climatisation (15 ans), cuisine équipée (10 ans), VRD/portail (25-30 ans), terrasse/clôture (15-20 ans).</p>
 
         <div class="ctx-warning">
             <strong>Attention :</strong> Le total des pourcentages doit faire 100 %. La part du terrain est déduite avant le calcul.
