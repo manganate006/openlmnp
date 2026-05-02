@@ -129,7 +129,8 @@ it('shows import airbnb page', function () {
 });
 
 it('shows system status page', function () {
-    $this->actingAs($this->user)
+    $admin = User::factory()->create(['is_admin' => true]);
+    $this->actingAs($admin)
         ->get('/system-status')
         ->assertOk()
         ->assertSee('système');
