@@ -128,10 +128,10 @@
         <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
             <h4 class="font-medium text-blue-800 dark:text-blue-200 mb-2">Formats supportés</h4>
             <ul class="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                <li>• Export Airbnb « Historique des transactions » (CSV)</li>
-                <li>• Colonnes : Date, Amount/Montant, Host fee, Confirmation code, Guest, Start date</li>
+                <li>• Export Airbnb « Réservations » (CSV) — Code de confirmation, Nom du voyageur, Revenus...</li>
+                <li>• Export Airbnb « Historique des transactions » (CSV) — Date, Amount, Host fee...</li>
                 <li>• Les doublons (même code de confirmation) sont détectés automatiquement</li>
-                <li>• Les montants négatifs (remboursements) sont ignorés</li>
+                <li>• Les annulations et montants à 0 € sont ignorés</li>
             </ul>
         </div>
     @endif
