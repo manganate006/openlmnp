@@ -1,4 +1,18 @@
-<div>
+<div
+    x-data="{ ctxTab: null }"
+    x-init="
+        // Écouter les clics sur les onglets Filament
+        document.addEventListener('click', (e) => {
+            const tabBtn = e.target.closest('[class*=fi-tabs-item]');
+            if (tabBtn) {
+                const label = tabBtn.textContent.trim();
+                ctxTab = label;
+            }
+        });
+        // Réinitialiser au changement de page (wire:navigate)
+        document.addEventListener('livewire:navigated', () => { ctxTab = null; });
+    "
+>
     <style>
         .ctx-help-btn { position: fixed; bottom: 24px; right: 24px; z-index: 40; width: 48px; height: 48px; border-radius: 50%; background: #059669; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.2s; }
         .ctx-help-btn:hover { background: #047857; transform: scale(1.1); }

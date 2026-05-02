@@ -15,6 +15,7 @@ class HelpContentRegistry
         'filament.admin.pages.loan-detail' => ['view' => 'loan-detail', 'title' => 'Détail emprunt'],
         'filament.admin.pages.teledeclaration' => ['view' => 'teledeclaration', 'title' => 'Télédéclaration'],
         'filament.admin.pages.badges' => ['view' => 'badges', 'title' => 'Badges'],
+        'filament.admin.pages.help-page' => ['view' => 'help-page', 'title' => 'Aide'],
     ];
 
     private static array $resources = [
