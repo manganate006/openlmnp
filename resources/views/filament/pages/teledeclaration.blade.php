@@ -76,10 +76,10 @@
                                 <td class="form-cell">
                                     @php
                                         $cerfaUrls = [
-                                            '2031' => 'https://www.impots.gouv.fr/formulaire/2031-sd/bic-compte-de-resultat-fiscal-simplifie',
-                                            '2033-A' => 'https://www.impots.gouv.fr/formulaire/2033-sd/bic-bilan-simplifie',
-                                            '2033-B' => 'https://www.impots.gouv.fr/formulaire/2033-sd/bic-bilan-simplifie',
-                                            '2033-C' => 'https://www.impots.gouv.fr/formulaire/2033-sd/bic-bilan-simplifie',
+                                            '2031' => 'https://www.impots.gouv.fr/formulaire/2031-sd/impot-sur-le-revenu',
+                                            '2033-A' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
+                                            '2033-B' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
+                                            '2033-C' => 'https://www.impots.gouv.fr/formulaire/2033-sd/liasse-bicsi-regime-rsi-tableaux-ndeg-2033-sd-2033-g-sd',
                                             '2042-C-PRO' => 'https://www.impots.gouv.fr/formulaire/2042/declaration-des-revenus',
                                         ];
                                         $url = $cerfaUrls[$line['form']] ?? null;
