@@ -171,9 +171,6 @@ class AirbnbImportService
         }
 
         $amount = $this->parseMoney($amountRaw);
-        if ($amount <= 0) {
-            return null;
-        }
 
         // Date : priorité à 'date', sinon 'start_date' (format Réservations)
         $dateRaw = $this->getField($row, $indexes, 'date')
@@ -183,19 +180,35 @@ class AirbnbImportService
         }
         $date = $this->parseDate($dateRaw);
 
+        $confirmation = $this->getField($row, $indexes, 'confirmation');
+        $guest = $this->getField($row, $indexes, 'guest');
+        $startDate = $this->getField($row, $indexes, 'start_date');
+        $status = $this->getField($row, $indexes, 'status');
+
+        // Lignes ignorées (annulations, montant 0) : on les retourne quand même pour l'aperçu
+        if ($amount <= 0) {
+            return [
+                'date' => $date,
+                'guest' => $guest,
+                'confirmation' => $confirmation,
+                'amount' => $amount,
+                'host_fee' => 0,
+                'checkin' => $startDate ? $this->parseDate($startDate) : null,
+                'duplicate' => false,
+                'skipped' => true,
+                'skip_reason' => $status ?? 'Montant nul ou négatif',
+            ];
+        }
+
         $hostFeeRaw = $this->getField($row, $indexes, 'host_fee');
         $hostFee = $hostFeeRaw ? abs($this->parseMoney($hostFeeRaw)) : 0;
 
-        $confirmation = $this->getField($row, $indexes, 'confirmation');
         $duplicate = false;
         if ($confirmation) {
             $duplicate = Income::where('property_id', $property->id)
                 ->where('reservation_ref', $confirmation)
                 ->exists();
         }
-
-        $startDate = $this->getField($row, $indexes, 'start_date');
-        $guest = $this->getField($row, $indexes, 'guest');
 
         return [
             'date' => $date,
@@ -205,6 +218,8 @@ class AirbnbImportService
             'host_fee' => $hostFee,
             'checkin' => $startDate ? $this->parseDate($startDate) : null,
             'duplicate' => $duplicate,
+            'skipped' => false,
+            'skip_reason' => null,
         ];
     }
 
