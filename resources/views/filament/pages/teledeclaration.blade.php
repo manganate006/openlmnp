@@ -98,7 +98,9 @@
                                         {{ $line['form'] }}
                                     @endif
                                     @if($pdfUrl)
-                                        <a href="{{ $pdfUrl }}" target="_blank" title="PDF Cerfa {{ $line['form'] }}" style="margin-left:4px;">&#128206;</a>
+                                        <a href="{{ $pdfUrl }}" target="_blank" title="Télécharger le PDF Cerfa {{ $line['form'] }}" style="margin-left:4px;color:#6366f1;vertical-align:middle;">
+                                            <x-heroicon-o-document-arrow-down style="width:16px;height:16px;display:inline;" />
+                                        </a>
                                     @endif
                                 </td>
                                 <td class="line-cell">{{ $line['line'] }}</td>
