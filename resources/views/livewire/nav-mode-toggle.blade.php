@@ -1,5 +1,8 @@
 <div style="padding: 8px 12px 12px;">
-    <div style="display: flex; align-items: center; gap: 2px; background: rgba(0,0,0,0.06); border-radius: 8px; padding: 3px;">
+    <div
+        x-data
+        style="display: flex; align-items: center; gap: 2px; background: rgba(0,0,0,0.06); border-radius: 8px; padding: 3px;"
+    >
         <button
             wire:click="setMode('simple')"
             style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 6px; padding: 5px 8px; font-size: 11px; font-weight: 500; border: none; cursor: pointer; transition: all 0.15s;
@@ -7,7 +10,7 @@
             title="L'essentiel"
         >
             <span style="font-size: 12px;">&#9638;</span>
-            Simple
+            <span x-show="$store.sidebar.isOpen" x-cloak>Simple</span>
         </button>
         <button
             wire:click="setMode('advanced')"
@@ -16,7 +19,7 @@
             title="Tout afficher"
         >
             <span style="font-size: 12px;">&#9776;</span>
-            Avanc&eacute;
+            <span x-show="$store.sidebar.isOpen" x-cloak>Avanc&eacute;</span>
         </button>
         <button
             wire:click="setMode('guided')"
@@ -25,7 +28,7 @@
             title="Par &eacute;tapes"
         >
             <span style="font-size: 12px;">&#10148;</span>
-            Guid&eacute;
+            <span x-show="$store.sidebar.isOpen" x-cloak>Guid&eacute;</span>
         </button>
     </div>
 </div>
