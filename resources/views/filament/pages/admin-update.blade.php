@@ -65,7 +65,7 @@
             </div>
         @endif
 
-        <div style="margin-top:16px;display:flex;gap:8px;align-items:center;">
+        <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             <button wire:click="checkBranch" wire:loading.attr="disabled" wire:target="checkBranch" class="au-btn au-btn-secondary">
                 <span wire:loading.remove wire:target="checkBranch">Vérifier</span>
                 <span wire:loading wire:target="checkBranch">Vérification...</span>
@@ -73,12 +73,14 @@
 
             @if($branchInfo && ($branchInfo['available'] ?? false))
                 <button wire:click="applyBranchUpdate" wire:loading.attr="disabled" wire:target="applyBranchUpdate" class="au-btn">
-                    <span wire:loading.remove wire:target="applyBranchUpdate">Lancer la mise &agrave; jour</span>
+                    <span wire:loading.remove wire:target="applyBranchUpdate">Mise &agrave; jour</span>
                     <span wire:loading wire:target="applyBranchUpdate">Mise &agrave; jour en cours...</span>
                 </button>
             @endif
+        </div>
 
-            <label style="display:inline-flex;align-items:center;gap:8px;margin-left:auto;cursor:pointer;font-size:13px;color:#374151;">
+        <div style="margin-top:12px;">
+            <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#374151;">
                 <button wire:click="toggleAutoUpdate" style="position:relative;width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;transition:background .2s;{{ $autoUpdateEnabled ? 'background:#10b981;' : 'background:#d1d5db;' }}">
                     <span style="position:absolute;top:2px;{{ $autoUpdateEnabled ? 'left:22px;' : 'left:2px;' }}width:20px;height:20px;background:white;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
                 </button>
