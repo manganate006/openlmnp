@@ -16,22 +16,12 @@ class Badges extends Page
     use NavigationAware;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
-    protected static string | UnitEnum | null $navigationGroup = 'Tableau de bord';
+    protected static string | UnitEnum | null $navigationGroup = null;
     protected static ?string $navigationLabel = 'Badges';
     protected static ?string $title = 'Mes badges';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 99;
     protected static ?string $slug = 'badges';
     protected string $view = 'filament.pages.badges';
-
-    protected static function getGuidedNavigationGroup(): string
-    {
-        return 'Tableau de bord';
-    }
-
-    protected static function getSimpleNavigationGroup(): ?string
-    {
-        return 'Tableau de bord';
-    }
 
     public static function getNavigationBadge(): ?string
     {

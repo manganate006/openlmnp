@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Enums\NavMode;
 use App\Models\Property;
 use App\Services\DepreciationService;
 use App\Services\LoanService;
@@ -34,21 +33,10 @@ class OnboardingWizard extends Page implements HasForms
     use InteractsWithForms;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRocketLaunch;
-    protected static string|UnitEnum|null $navigationGroup = 'Paramètres';
+    protected static string|UnitEnum|null $navigationGroup = 'Configuration';
     protected static ?string $navigationLabel = 'Premier lancement';
     protected static ?string $title = 'Assistant de configuration';
-    protected static ?int $navigationSort = 10;
-
-    public static function getNavigationGroup(): ?string
-    {
-        $user = auth()->user();
-
-        return match ($user?->nav_mode) {
-            NavMode::Simple => 'Outils',
-            NavMode::Guided => 'Mise en route',
-            default => 'Paramètres',
-        };
-    }
+    protected static ?int $navigationSort = 1;
     protected string $view = 'filament.pages.onboarding-wizard';
 
     public ?array $data = [];
