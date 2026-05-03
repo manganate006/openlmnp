@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\TvaHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -23,6 +24,9 @@ class Expense extends Model
         'property_id',
         'expense_date',
         'amount',
+        'tva_rate',
+        'amount_ht',
+        'amount_tva',
         'category',
         'description',
         'is_dedicated',
@@ -30,6 +34,15 @@ class Expense extends Model
         'recurring_type',
         'notes',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Expense $expense) {
+            $result = TvaHelper::fromTtc((int) $expense->amount, (int) $expense->tva_rate);
+            $expense->amount_ht = $result['ht'];
+            $expense->amount_tva = $result['tva'];
+        });
+    }
 
     protected function casts(): array
     {
@@ -116,6 +129,16 @@ class Expense extends Model
     public function getAmountEurosAttribute(): string
     {
         return bcdiv((string) $this->amount, '100', 2);
+    }
+
+    public function getAmountHtEurosAttribute(): string
+    {
+        return bcdiv((string) $this->amount_ht, '100', 2);
+    }
+
+    public function getAmountTvaEurosAttribute(): string
+    {
+        return bcdiv((string) $this->amount_tva, '100', 2);
     }
 
     public function property(): BelongsTo

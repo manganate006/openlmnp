@@ -80,42 +80,91 @@ class AccountingEntryService
     }
 
     /**
-     * Écritures de recettes : 512 débit / 706 crédit
+     * Écritures de recettes.
+     * TVA-exempt : 512 débit / 706 crédit (montant net)
+     * TVA-liable : 512 débit TTC / 706 crédit HT / 44571 crédit TVA
      */
     private function generateIncomeEntries(FiscalYear $fiscalYear, Property $property, int $pieceNum): int
     {
         $year = $fiscalYear->year;
         $incomes = $property->incomes()->whereYear('income_date', $year)->get();
+        $isTvaLiable = $property->isTvaLiable();
 
         foreach ($incomes as $income) {
-            $netAmount = $income->amount - $income->platform_fee;
             $ref = "REC-{$pieceNum}";
+            $label = 'Loyer ' . ($income->guest_name ?? 'Airbnb') . ' - ' . $income->income_date->format('d/m/Y');
 
-            // Débit banque (montant net reçu)
-            AccountingEntry::create([
-                'fiscal_year_id' => $fiscalYear->id,
-                'property_id'    => $property->id,
-                'entry_date'     => $income->income_date,
-                'account_code'   => '512',
-                'label'          => 'Loyer ' . ($income->guest_name ?? 'Airbnb') . ' - ' . $income->income_date->format('d/m/Y'),
-                'debit'          => $netAmount,
-                'credit'         => 0,
-                'piece_ref'      => $ref,
-                'journal'        => 'VE',
-            ]);
+            if ($isTvaLiable && $income->tva_collected > 0) {
+                $netTtc = $income->amount - $income->platform_fee;
+                $netHt = $income->amount_ht - $income->platform_fee;
 
-            // Crédit loyers (montant net)
-            AccountingEntry::create([
-                'fiscal_year_id' => $fiscalYear->id,
-                'property_id'    => $property->id,
-                'entry_date'     => $income->income_date,
-                'account_code'   => '706',
-                'label'          => 'Loyer ' . ($income->guest_name ?? 'Airbnb') . ' - ' . $income->income_date->format('d/m/Y'),
-                'debit'          => 0,
-                'credit'         => $netAmount,
-                'piece_ref'      => $ref,
-                'journal'        => 'VE',
-            ]);
+                // Débit banque (TTC net reçu)
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $income->income_date,
+                    'account_code'   => '512',
+                    'label'          => $label,
+                    'debit'          => $netTtc,
+                    'credit'         => 0,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'VE',
+                ]);
+
+                // Crédit loyers (HT net)
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $income->income_date,
+                    'account_code'   => '706',
+                    'label'          => $label,
+                    'debit'          => 0,
+                    'credit'         => $netHt,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'VE',
+                ]);
+
+                // Crédit TVA collectée
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $income->income_date,
+                    'account_code'   => '44571',
+                    'label'          => 'TVA collectée - ' . $label,
+                    'debit'          => 0,
+                    'credit'         => $income->tva_collected,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'VE',
+                ]);
+            } else {
+                $netAmount = $income->amount - $income->platform_fee;
+
+                // Débit banque
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $income->income_date,
+                    'account_code'   => '512',
+                    'label'          => $label,
+                    'debit'          => $netAmount,
+                    'credit'         => 0,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'VE',
+                ]);
+
+                // Crédit loyers
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $income->income_date,
+                    'account_code'   => '706',
+                    'label'          => $label,
+                    'debit'          => 0,
+                    'credit'         => $netAmount,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'VE',
+                ]);
+            }
 
             // Si commission plateforme > 0, écriture séparée
             if ($income->platform_fee > 0) {
@@ -151,46 +200,98 @@ class AccountingEntryService
     }
 
     /**
-     * Écritures de charges : 6xx débit / 512 crédit
+     * Écritures de charges.
+     * TVA-exempt : 6xx débit TTC / 512 crédit TTC
+     * TVA-liable : 6xx débit HT / 44566 débit TVA / 512 crédit TTC
      */
     private function generateExpenseEntries(FiscalYear $fiscalYear, Property $property, int $pieceNum): int
     {
         $year = $fiscalYear->year;
         $expenses = $property->expenses()->whereYear('expense_date', $year)->get();
+        $isTvaLiable = $property->isTvaLiable();
 
         foreach ($expenses as $expense) {
-            $effectiveAmount = $expense->is_dedicated
-                ? $expense->amount
-                : (int) bcmul((string) $expense->amount, $property->quota_share, 0);
-
             $accountCode = self::EXPENSE_ACCOUNT_MAP[$expense->category] ?? '65';
             $ref = "CHG-{$pieceNum}";
 
-            // Débit charge
-            AccountingEntry::create([
-                'fiscal_year_id' => $fiscalYear->id,
-                'property_id'    => $property->id,
-                'entry_date'     => $expense->expense_date,
-                'account_code'   => $accountCode,
-                'label'          => $expense->description,
-                'debit'          => $effectiveAmount,
-                'credit'         => 0,
-                'piece_ref'      => $ref,
-                'journal'        => 'HA',
-            ]);
+            if ($isTvaLiable && $expense->amount_tva > 0) {
+                $effectiveHt = $expense->is_dedicated
+                    ? $expense->amount_ht
+                    : (int) bcmul((string) $expense->amount_ht, $property->quota_share, 0);
+                $effectiveTva = $expense->is_dedicated
+                    ? $expense->amount_tva
+                    : (int) bcmul((string) $expense->amount_tva, $property->quota_share, 0);
+                $effectiveTtc = $effectiveHt + $effectiveTva;
 
-            // Crédit banque
-            AccountingEntry::create([
-                'fiscal_year_id' => $fiscalYear->id,
-                'property_id'    => $property->id,
-                'entry_date'     => $expense->expense_date,
-                'account_code'   => '512',
-                'label'          => $expense->description,
-                'debit'          => 0,
-                'credit'         => $effectiveAmount,
-                'piece_ref'      => $ref,
-                'journal'        => 'HA',
-            ]);
+                // Débit charge (HT)
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $expense->expense_date,
+                    'account_code'   => $accountCode,
+                    'label'          => $expense->description,
+                    'debit'          => $effectiveHt,
+                    'credit'         => 0,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'HA',
+                ]);
+
+                // Débit TVA déductible
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $expense->expense_date,
+                    'account_code'   => '44566',
+                    'label'          => 'TVA déductible - ' . $expense->description,
+                    'debit'          => $effectiveTva,
+                    'credit'         => 0,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'HA',
+                ]);
+
+                // Crédit banque (TTC)
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $expense->expense_date,
+                    'account_code'   => '512',
+                    'label'          => $expense->description,
+                    'debit'          => 0,
+                    'credit'         => $effectiveTtc,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'HA',
+                ]);
+            } else {
+                $effectiveAmount = $expense->is_dedicated
+                    ? $expense->amount
+                    : (int) bcmul((string) $expense->amount, $property->quota_share, 0);
+
+                // Débit charge
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $expense->expense_date,
+                    'account_code'   => $accountCode,
+                    'label'          => $expense->description,
+                    'debit'          => $effectiveAmount,
+                    'credit'         => 0,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'HA',
+                ]);
+
+                // Crédit banque
+                AccountingEntry::create([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $expense->expense_date,
+                    'account_code'   => '512',
+                    'label'          => $expense->description,
+                    'debit'          => 0,
+                    'credit'         => $effectiveAmount,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'HA',
+                ]);
+            }
 
             $pieceNum++;
         }

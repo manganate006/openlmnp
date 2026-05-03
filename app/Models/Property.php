@@ -49,6 +49,10 @@ class Property extends Model
     public const RENTAL_LONG_TERM  = 'long_term';
     public const RENTAL_MIXED      = 'mixed';
 
+    // Régimes TVA
+    public const TVA_EXEMPT  = 'exempt';
+    public const TVA_LIABLE  = 'liable';
+
     protected $fillable = [
         'user_id',
         'name',
@@ -67,6 +71,7 @@ class Property extends Model
         'rental_start_date',
         'airbnb_commission_rate',
         'rental_type',
+        'tva_regime',
         'is_primary_residence',
         'notes',
         'photo_path',
@@ -116,6 +121,19 @@ class Property extends Model
     public function getRentalTypeLabel(): string
     {
         return static::rentalTypeLabels()[$this->rental_type] ?? $this->rental_type;
+    }
+
+    public static function tvaRegimeLabels(): array
+    {
+        return [
+            self::TVA_EXEMPT => 'Franchise en base (non assujetti)',
+            self::TVA_LIABLE => 'Assujetti TVA (para-hôtelier)',
+        ];
+    }
+
+    public function isTvaLiable(): bool
+    {
+        return $this->tva_regime === self::TVA_LIABLE;
     }
 
     // -------------------------------------------------------------------------

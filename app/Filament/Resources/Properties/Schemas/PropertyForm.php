@@ -7,6 +7,7 @@ use App\Filament\Resources\Properties\RelationManagers\ComponentsRelationManager
 use App\Filament\Resources\Properties\RelationManagers\FurnitureRelationManager;
 use App\Filament\Resources\Properties\RelationManagers\WorksRelationManager;
 use App\Models\Property;
+use Filament\Forms\Components\Placeholder;
 use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -273,6 +274,12 @@ class PropertyForm
                 ->required()
                 ->displayFormat('d/m/Y')
                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Les amortissements démarrent à cette date.'),
+            Select::make('tva_regime')
+                ->label('Régime de TVA')
+                ->options(Property::tvaRegimeLabels())
+                ->required()
+                ->default(Property::TVA_EXEMPT)
+                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Sélectionnez « Assujetti TVA » si vous fournissez au moins 3 services para-hôteliers sur 4 (petit-déjeuner, linge, ménage, accueil). Vous collecterez alors la TVA à 10 % sur les loyers et pourrez déduire la TVA sur vos charges.'),
             TextInput::make('airbnb_commission_rate')
                 ->label('Taux commission Airbnb (hôte)')
                 ->suffix('%')

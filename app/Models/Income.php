@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\TvaHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +18,9 @@ class Income extends Model
         'property_id',
         'income_date',
         'amount',
+        'tva_rate',
+        'amount_ht',
+        'tva_collected',
         'platform_fee',
         'tourist_tax',
         'source',
@@ -26,6 +30,15 @@ class Income extends Model
         'checkout_date',
         'notes',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Income $income) {
+            $result = TvaHelper::fromTtc((int) $income->amount, (int) $income->tva_rate);
+            $income->amount_ht = $result['ht'];
+            $income->tva_collected = $result['tva'];
+        });
+    }
 
     protected function casts(): array
     {
@@ -55,6 +68,16 @@ class Income extends Model
     public function getAmountEurosAttribute(): string
     {
         return bcdiv((string) $this->amount, '100', 2);
+    }
+
+    public function getAmountHtEurosAttribute(): string
+    {
+        return bcdiv((string) $this->amount_ht, '100', 2);
+    }
+
+    public function getTvaCollectedEurosAttribute(): string
+    {
+        return bcdiv((string) $this->tva_collected, '100', 2);
     }
 
     public function property(): BelongsTo

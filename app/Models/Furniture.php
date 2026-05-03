@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\TvaHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -34,6 +35,9 @@ class Furniture extends Model
         'property_id',
         'description',
         'amount',
+        'tva_rate',
+        'amount_ht',
+        'amount_tva',
         'purchase_date',
         'duration_years',
         'is_dedicated',
@@ -45,6 +49,11 @@ class Furniture extends Model
     protected static function booted(): void
     {
         static::saving(function (Furniture $furniture) {
+            // Calcul TVA
+            $result = TvaHelper::fromTtc((int) $furniture->amount, (int) $furniture->tva_rate);
+            $furniture->amount_ht = $result['ht'];
+            $furniture->amount_tva = $result['tva'];
+
             if ($furniture->amount > 0 && $furniture->duration_years > 0) {
                 $furniture->computeAnnualDepreciation();
             }
@@ -69,6 +78,16 @@ class Furniture extends Model
         return bcdiv((string) $this->amount, '100', 2);
     }
 
+    public function getAmountHtEurosAttribute(): string
+    {
+        return bcdiv((string) $this->amount_ht, '100', 2);
+    }
+
+    public function getAmountTvaEurosAttribute(): string
+    {
+        return bcdiv((string) $this->amount_tva, '100', 2);
+    }
+
     public function getAnnualDepreciationEurosAttribute(): string
     {
         return bcdiv((string) $this->annual_depreciation, '100', 2);
@@ -84,7 +103,11 @@ class Furniture extends Model
     public function computeAnnualDepreciation(): void
     {
         $property = $this->property;
-        $base = (string) $this->amount;
+
+        // Si TVA-liable, amortir sur le HT (TVA récupérée)
+        $base = ($property !== null && $property->isTvaLiable())
+            ? (string) $this->amount_ht
+            : (string) $this->amount;
 
         if (! $this->is_dedicated && $property !== null) {
             $base = bcmul($base, $property->quota_share, 0);
