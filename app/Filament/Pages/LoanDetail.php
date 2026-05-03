@@ -25,11 +25,6 @@ class LoanDetail extends Page
     {
         return 'Mise en route';
     }
-
-    protected static function getSimpleNavigationGroup(): ?string
-    {
-        return 'Mon bien';
-    }
     protected string $view = 'filament.pages.loan-detail';
 
     #[Url]
