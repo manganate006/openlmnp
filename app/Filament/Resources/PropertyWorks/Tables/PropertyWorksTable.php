@@ -43,6 +43,11 @@ class PropertyWorksTable
                 IconColumn::make('is_dedicated')
                     ->label('100%')
                     ->boolean(),
+                TextColumn::make('documents_count')
+                    ->label('Docs')
+                    ->counts('documents')
+                    ->icon('heroicon-o-paper-clip')
+                    ->default(0),
                 TextColumn::make('annual_depreciation')
                     ->label('Amort./an')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €')

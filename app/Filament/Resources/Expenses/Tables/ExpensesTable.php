@@ -48,6 +48,11 @@ class ExpensesTable
                 IconColumn::make('is_dedicated')
                     ->label('100%')
                     ->boolean(),
+                TextColumn::make('documents_count')
+                    ->label('Docs')
+                    ->counts('documents')
+                    ->icon('heroicon-o-paper-clip')
+                    ->default(0),
                 TextColumn::make('recurring_type')
                     ->label('Récurrence')
                     ->formatStateUsing(fn ($state) => Expense::recurringLabels()[$state] ?? $state),

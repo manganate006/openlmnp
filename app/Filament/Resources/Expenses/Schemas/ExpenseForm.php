@@ -3,12 +3,11 @@
 namespace App\Filament\Resources\Expenses\Schemas;
 
 use App\Enums\TvaRate;
+use App\Filament\Schemas\DocumentsSection;
 use App\Helpers\TvaHelper;
 use App\Models\Expense;
 use App\Models\Property;
-use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -107,19 +106,12 @@ class ExpenseForm
                             ->default(false),
                     ]),
 
-                Section::make('Justificatif')
-                    ->icon('heroicon-o-paper-clip')
+                DocumentsSection::make(),
+
+                Section::make('Notes')
+                    ->icon('heroicon-o-chat-bubble-left')
                     ->collapsed()
                     ->schema([
-                        FileUpload::make('receipt_path')
-                            ->label('Pièce justificative')
-                            ->acceptedFileTypes(['application/pdf', 'image/*'])
-                            ->directory(DocumentStorage::directory('justificatifs-charges'))
-                            ->getUploadedFileNameForStorageUsing(
-                                DocumentStorage::filename('expense_date', 'description')
-                            )
-                            ->maxSize(5120)
-                            ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Photo ou PDF de la facture. Conservation recommandée : 6 ans minimum.'),
                         Textarea::make('notes')
                             ->label('Notes')
                             ->rows(2)

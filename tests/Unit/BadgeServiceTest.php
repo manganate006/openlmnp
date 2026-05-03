@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\BadgeDefinition;
+use App\Models\Document;
 use App\Models\Expense;
 use App\Models\FiscalYear;
 use App\Models\Income;
@@ -148,24 +149,34 @@ it('awards mois_complet badge when a month has income and expenses', function ()
 it('awards rigoureux badge when all expenses have receipts', function () {
     $property = createTestProperty($this->user);
 
-    Expense::forceCreate([
+    $expense1 = Expense::forceCreate([
         'property_id' => $property->id,
         'expense_date' => '2025-06-01',
         'amount' => 5000,
         'category' => 'insurance',
         'description' => 'Test',
         'is_dedicated' => true,
-        'receipt_path' => 'receipts/test.pdf',
+    ]);
+    Document::forceCreate([
+        'documentable_type' => Expense::class,
+        'documentable_id' => $expense1->id,
+        'label' => 'Justificatif',
+        'file_path' => 'receipts/test.pdf',
     ]);
 
-    Expense::forceCreate([
+    $expense2 = Expense::forceCreate([
         'property_id' => $property->id,
         'expense_date' => '2025-07-01',
         'amount' => 3000,
         'category' => 'cleaning',
         'description' => 'Test',
         'is_dedicated' => true,
-        'receipt_path' => 'receipts/test2.pdf',
+    ]);
+    Document::forceCreate([
+        'documentable_type' => Expense::class,
+        'documentable_id' => $expense2->id,
+        'label' => 'Justificatif',
+        'file_path' => 'receipts/test2.pdf',
     ]);
 
     $this->service->evaluate($this->user, 'expense_created', ['fiscal_year' => 2025]);
@@ -176,16 +187,22 @@ it('awards rigoureux badge when all expenses have receipts', function () {
 it('does not award rigoureux badge when some expenses lack receipts', function () {
     $property = createTestProperty($this->user);
 
-    Expense::forceCreate([
+    $expense1 = Expense::forceCreate([
         'property_id' => $property->id,
         'expense_date' => '2025-06-01',
         'amount' => 5000,
         'category' => 'insurance',
         'description' => 'Test',
         'is_dedicated' => true,
-        'receipt_path' => 'receipts/test.pdf',
+    ]);
+    Document::forceCreate([
+        'documentable_type' => Expense::class,
+        'documentable_id' => $expense1->id,
+        'label' => 'Justificatif',
+        'file_path' => 'receipts/test.pdf',
     ]);
 
+    // This expense has NO document attached
     Expense::forceCreate([
         'property_id' => $property->id,
         'expense_date' => '2025-07-01',
@@ -193,7 +210,6 @@ it('does not award rigoureux badge when some expenses lack receipts', function (
         'category' => 'cleaning',
         'description' => 'Test',
         'is_dedicated' => true,
-        'receipt_path' => null,
     ]);
 
     $this->service->evaluate($this->user, 'expense_created', ['fiscal_year' => 2025]);
@@ -312,14 +328,19 @@ it('backdates all earned badges', function () {
         'source' => 'airbnb',
     ]);
 
-    Expense::forceCreate([
+    $expense = Expense::forceCreate([
         'property_id' => $property->id,
         'expense_date' => '2025-03-20',
         'amount' => 5000,
         'category' => 'insurance',
         'description' => 'Test',
         'is_dedicated' => true,
-        'receipt_path' => 'test.pdf',
+    ]);
+    Document::forceCreate([
+        'documentable_type' => Expense::class,
+        'documentable_id' => $expense->id,
+        'label' => 'Justificatif',
+        'file_path' => 'test.pdf',
     ]);
 
     $awarded = $this->service->evaluateAll($this->user, silent: true);

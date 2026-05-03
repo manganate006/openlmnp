@@ -3,13 +3,12 @@
 namespace App\Filament\Resources\Properties\RelationManagers;
 
 use App\Enums\TvaRate;
+use App\Filament\Schemas\DocumentsSection;
 use App\Helpers\TvaHelper;
-use App\Support\DocumentStorage;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -74,14 +73,7 @@ class FurnitureRelationManager extends RelationManager
                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Literie, linge, petits meubles → 5 ans · TV, réfrigérateur, lave-vaisselle → 7 ans · Cuisine équipée, climatisation, jacuzzi → 10 ans · Occasion → 3 ans'),
             Toggle::make('is_dedicated')->label('100% dédié')->default(true),
             Toggle::make('is_second_hand')->label('Occasion')->default(false),
-            FileUpload::make('invoice_path')
-                ->label('Facture d\'achat')
-                ->acceptedFileTypes(['application/pdf', 'image/*'])
-                ->directory(DocumentStorage::directory('factures-mobilier'))
-                ->getUploadedFileNameForStorageUsing(
-                    DocumentStorage::filename('purchase_date', 'description')
-                )
-                ->maxSize(5120),
+            DocumentsSection::make(),
         ]);
     }
 
@@ -102,12 +94,11 @@ class FurnitureRelationManager extends RelationManager
                 TextColumn::make('duration_years')->label('Durée')->suffix(' ans'),
                 IconColumn::make('is_dedicated')->label('100%')->boolean(),
                 IconColumn::make('is_second_hand')->label('Occasion')->boolean(),
-                IconColumn::make('invoice_path')
-                    ->label('Facture')
-                    ->icon(fn ($record) => filled($record->invoice_path) ? 'heroicon-o-paper-clip' : null)
-                    ->color(fn ($record) => filled($record->invoice_path) ? 'success' : null)
-                    ->url(fn ($record) => DocumentStorage::temporaryUrl($record->invoice_path))
-                    ->openUrlInNewTab(),
+                TextColumn::make('documents_count')
+                    ->label('Docs')
+                    ->counts('documents')
+                    ->icon('heroicon-o-paper-clip')
+                    ->default(0),
                 TextColumn::make('annual_depreciation')->label('Amort./an')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €'),
             ])

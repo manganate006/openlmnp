@@ -3,11 +3,10 @@
 namespace App\Filament\Resources\Furniture\Schemas;
 
 use App\Enums\TvaRate;
+use App\Filament\Schemas\DocumentsSection;
 use App\Helpers\TvaHelper;
 use App\Models\Property;
-use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -117,24 +116,7 @@ class FurnitureForm
                                 ->live(),
                         ]),
                     ]),
-                Section::make(fn (callable $get) => ($get('is_second_hand') ?? false) ? 'Justificatifs' : 'Facture')
-                    ->icon('heroicon-o-paper-clip')
-                    ->collapsed()
-                    ->schema([
-                        FileUpload::make('invoice_path')
-                            ->label(fn (callable $get) => ($get('is_second_hand') ?? false)
-                                ? 'Justificatifs (ZIP, PDF ou photo)'
-                                : 'Facture d\'achat')
-                            ->acceptedFileTypes(['application/pdf', 'image/*', 'application/zip', 'application/x-zip-compressed'])
-                            ->directory(DocumentStorage::directory('factures-mobilier'))
-                            ->getUploadedFileNameForStorageUsing(
-                                DocumentStorage::filename('purchase_date', 'description')
-                            )
-                            ->maxSize(10240)
-                            ->hintIcon('heroicon-o-question-mark-circle', tooltip: fn (callable $get) => ($get('is_second_hand') ?? false)
-                                ? 'Regroupez dans un ZIP : capture de l\'annonce, preuve de paiement (virement), attestation vendeur, photo en situation. Conservation : 6 ans.'
-                                : 'PDF ou photo de la facture. Conservation obligatoire : 6 ans minimum.'),
-                    ]),
+                DocumentsSection::make(),
             ]);
     }
 }
