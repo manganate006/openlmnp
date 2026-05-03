@@ -73,8 +73,8 @@
 
             @if($branchInfo && ($branchInfo['available'] ?? false))
                 <button wire:click="applyBranchUpdate" wire:loading.attr="disabled" wire:target="applyBranchUpdate" class="au-btn">
-                    <span wire:loading.remove wire:target="applyBranchUpdate">Déployer depuis main</span>
-                    <span wire:loading wire:target="applyBranchUpdate">Déploiement en cours...</span>
+                    <span wire:loading.remove wire:target="applyBranchUpdate">Lancer la mise &agrave; jour</span>
+                    <span wire:loading wire:target="applyBranchUpdate">Mise &agrave; jour en cours...</span>
                 </button>
             @endif
 
