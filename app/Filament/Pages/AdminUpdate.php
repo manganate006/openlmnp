@@ -125,6 +125,7 @@ class AdminUpdate extends Page
 
         if ($this->updateResult['success'] ?? false) {
             $this->updateInfo['available'] = false;
+            Setting::set('update_behind_count', '0');
         }
     }
 
