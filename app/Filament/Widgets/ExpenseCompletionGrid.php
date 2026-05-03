@@ -9,7 +9,11 @@ use Filament\Widgets\Widget;
 class ExpenseCompletionGrid extends Widget
 {
     protected string $view = 'filament.widgets.expense-completion-grid';
-    protected int | string | array $columnSpan = 'full';
+    protected int | string | array $columnSpan = [
+        'default' => 1,
+        'sm' => 2,
+        'lg' => 4,
+    ];
     protected static ?int $sort = 2;
 
     public function getGrid(): array

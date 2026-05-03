@@ -12,7 +12,7 @@ class AlertBanner extends Widget
     protected string $view = 'filament.widgets.alert-banner';
 
     protected int|string|array $columnSpan = [
-        'default' => 2,
+        'default' => 1,
         'sm' => 2,
         'lg' => 4,
     ];

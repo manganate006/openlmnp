@@ -12,6 +12,12 @@ class FiscalOverview extends StatsOverviewWidget
 {
     protected static ?int $sort = 1;
 
+    protected int | string | array $columnSpan = [
+        'default' => 1,
+        'sm' => 2,
+        'lg' => 4,
+    ];
+
     protected function getColumns(): int|array
     {
         return [
