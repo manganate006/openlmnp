@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Furniture\Schemas;
 
+use App\Models\Property;
 use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -26,7 +27,8 @@ class FurnitureForm
                             ->label('Bien')
                             ->relationship('property', 'name')
                             ->required()
-                            ->preload(),
+                            ->preload()
+                            ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         TextInput::make('description')
                             ->label('Description')
                             ->required()

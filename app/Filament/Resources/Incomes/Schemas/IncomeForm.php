@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Incomes\Schemas;
 
 use App\Models\Income;
+use App\Models\Property;
 use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -24,7 +25,8 @@ class IncomeForm
                             ->label('Bien')
                             ->relationship('property', 'name')
                             ->required()
-                            ->preload(),
+                            ->preload()
+                            ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         Grid::make(2)->schema([
                             DatePicker::make('income_date')
                                 ->label('Date')

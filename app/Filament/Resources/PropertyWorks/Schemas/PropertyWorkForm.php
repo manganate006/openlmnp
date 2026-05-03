@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PropertyWorks\Schemas;
 
+use App\Models\Property;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -24,7 +25,8 @@ class PropertyWorkForm
                             ->label('Bien')
                             ->relationship('property', 'name')
                             ->required()
-                            ->preload(),
+                            ->preload()
+                            ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         TextInput::make('description')
                             ->label('Description')
                             ->required()
