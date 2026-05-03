@@ -24,5 +24,8 @@ fi
 # Permissions
 chmod -R 775 storage database bootstrap/cache 2>/dev/null || true
 
+echo "[entrypoint] Démarrage du scheduler en arrière-plan..."
+while true; do php artisan schedule:run --quiet 2>/dev/null; sleep 60; done &
+
 echo "[entrypoint] Démarrage du serveur..."
 exec php artisan serve --host=0.0.0.0 --port=8000
