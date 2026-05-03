@@ -31,34 +31,75 @@ class FiscalYearService
         $properties = Property::withoutGlobalScopes()->where('user_id', $user->id)->get();
 
         // 1. Total des recettes (loyers nets = montant - commission plateforme)
+        // Pour les biens TVA-liable, on utilise amount_ht (la TVA collectée est un pass-through)
         $totalIncome = '0';
+        $totalTvaCollected = '0';
         foreach ($properties as $property) {
+            $amountField = $property->isTvaLiable() ? 'amount_ht' : 'amount';
             $propertyIncome = $property->incomes()
                 ->whereYear('income_date', $year)
-                ->selectRaw('SUM(amount) - SUM(platform_fee) as net_income')
+                ->selectRaw("SUM({$amountField}) - SUM(platform_fee) as net_income")
                 ->value('net_income');
             $totalIncome = bcadd($totalIncome, (string) ($propertyIncome ?? 0), 0);
+
+            // TVA collectée
+            if ($property->isTvaLiable()) {
+                $tvaCollected = $property->incomes()
+                    ->whereYear('income_date', $year)
+                    ->sum('tva_collected');
+                $totalTvaCollected = bcadd($totalTvaCollected, (string) $tvaCollected, 0);
+            }
         }
 
         // 2. Total des charges (avec application quote-part)
+        // Pour les biens TVA-liable, on utilise amount_ht (la TVA est récupérée séparément)
         $totalExpenses = '0';
+        $totalTvaDeductible = '0';
         foreach ($properties as $property) {
+            $amountField = $property->isTvaLiable() ? 'amount_ht' : 'amount';
+
             // Charges 100% dédiées
             $dedicated = $property->expenses()
                 ->whereYear('expense_date', $year)
                 ->where('is_dedicated', true)
-                ->sum('amount');
+                ->sum($amountField);
             $totalExpenses = bcadd($totalExpenses, (string) $dedicated, 0);
 
             // Charges au prorata
             $shared = $property->expenses()
                 ->whereYear('expense_date', $year)
                 ->where('is_dedicated', false)
-                ->sum('amount');
+                ->sum($amountField);
             $sharedProrata = bcmul((string) $shared, $property->quota_share, 0);
             $totalExpenses = bcadd($totalExpenses, $sharedProrata, 0);
 
-            // Intérêts d'emprunt (quote-part)
+            // TVA déductible sur charges
+            if ($property->isTvaLiable()) {
+                $dedicatedTva = $property->expenses()
+                    ->whereYear('expense_date', $year)
+                    ->where('is_dedicated', true)
+                    ->sum('amount_tva');
+                $totalTvaDeductible = bcadd($totalTvaDeductible, (string) $dedicatedTva, 0);
+
+                $sharedTva = $property->expenses()
+                    ->whereYear('expense_date', $year)
+                    ->where('is_dedicated', false)
+                    ->sum('amount_tva');
+                $sharedTvaProrata = bcmul((string) $sharedTva, $property->quota_share, 0);
+                $totalTvaDeductible = bcadd($totalTvaDeductible, $sharedTvaProrata, 0);
+
+                // TVA déductible sur travaux
+                $worksTva = $property->works()
+                    ->sum('amount_tva');
+                $totalTvaDeductible = bcadd($totalTvaDeductible, (string) $worksTva, 0);
+
+                // TVA déductible sur mobilier
+                $furnitureTva = $property->furniture()
+                    ->sum('amount_tva');
+                $totalTvaDeductible = bcadd($totalTvaDeductible, (string) $furnitureTva, 0);
+            }
+
+            // Intérêts d'emprunt (quote-part) — pas de TVA sur les intérêts
             foreach ($property->loans as $loan) {
                 $yearlyInterest = $loan->payments()
                     ->whereYear('payment_date', $year)
@@ -112,6 +153,9 @@ class FiscalYearService
         // 6. Résultat fiscal
         $fiscalResult = bcsub($resultBeforeDepreciation, $cappedDepreciation, 0);
 
+        // 7. Calcul TVA
+        $tvaBalance = bcsub($totalTvaCollected, $totalTvaDeductible, 0);
+
         // Mise à jour
         $fiscalYear->update([
             'total_income'                  => (int) $totalIncome,
@@ -121,6 +165,9 @@ class FiscalYearService
             'deferred_depreciation'         => (int) $deferredDepreciation,
             'previous_deferred'             => (int) $carriedForward,
             'fiscal_result'                 => (int) $fiscalResult,
+            'total_tva_collected'           => (int) $totalTvaCollected,
+            'total_tva_deductible'          => (int) $totalTvaDeductible,
+            'tva_balance'                   => (int) $tvaBalance,
         ]);
 
         // 7. Générer les écritures comptables (pour le FEC)

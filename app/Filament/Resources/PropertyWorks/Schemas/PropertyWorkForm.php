@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\PropertyWorks\Schemas;
 
+use App\Enums\TvaRate;
+use App\Helpers\TvaHelper;
 use App\Models\Property;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
@@ -14,6 +16,15 @@ use Filament\Schemas\Schema;
 
 class PropertyWorkForm
 {
+    private static function isPropertyTvaLiable(?int $propertyId): bool
+    {
+        if (! $propertyId) {
+            return false;
+        }
+
+        return Property::find($propertyId)?->isTvaLiable() ?? false;
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -26,6 +37,7 @@ class PropertyWorkForm
                             ->relationship('property', 'name')
                             ->required()
                             ->preload()
+                            ->live()
                             ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         TextInput::make('description')
                             ->label('Description')
@@ -33,7 +45,7 @@ class PropertyWorkForm
                             ->placeholder('Ex : Travaux aménagement, Piscine...'),
                         Grid::make(2)->schema([
                             TextInput::make('amount')
-                                ->label('Montant')
+                                ->label(fn (callable $get) => static::isPropertyTvaLiable($get('property_id')) ? 'Montant TTC' : 'Montant')
                                 ->suffix('€')
                                 ->required()
                                 ->numeric()
@@ -47,6 +59,29 @@ class PropertyWorkForm
                                 ->required()
                                 ->displayFormat('d/m/Y'),
                         ]),
+                        Grid::make(2)
+                            ->schema([
+                                Select::make('tva_rate')
+                                    ->label('Taux de TVA')
+                                    ->options(TvaRate::options())
+                                    ->required()
+                                    ->default(TvaRate::Reduced10->value)
+                                    ->live(),
+                                Placeholder::make('tva_preview')
+                                    ->label('Décomposition TVA')
+                                    ->content(function (callable $get) {
+                                        $amount = (float) ($get('amount') ?? 0);
+                                        $rate = (int) ($get('tva_rate') ?? 0);
+                                        if ($amount <= 0 || $rate <= 0) {
+                                            return '—';
+                                        }
+                                        $ttcCents = (int) round($amount * 100);
+                                        $result = TvaHelper::fromTtc($ttcCents, $rate);
+
+                                        return 'HT : ' . number_format($result['ht'] / 100, 2, ',', ' ') . ' € · TVA : ' . number_format($result['tva'] / 100, 2, ',', ' ') . ' €';
+                                    }),
+                            ])
+                            ->visible(fn (callable $get) => static::isPropertyTvaLiable($get('property_id'))),
                         Grid::make(2)->schema([
                             TextInput::make('duration_years')
                                 ->label('Durée d\'amortissement')

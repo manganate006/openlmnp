@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\TvaHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -27,6 +28,9 @@ class PropertyWork extends Model
         'property_id',
         'description',
         'amount',
+        'tva_rate',
+        'amount_ht',
+        'amount_tva',
         'work_date',
         'duration_years',
         'is_dedicated',
@@ -36,6 +40,11 @@ class PropertyWork extends Model
     protected static function booted(): void
     {
         static::saving(function (PropertyWork $work) {
+            // Calcul TVA
+            $result = TvaHelper::fromTtc((int) $work->amount, (int) $work->tva_rate);
+            $work->amount_ht = $result['ht'];
+            $work->amount_tva = $result['tva'];
+
             if ($work->amount > 0 && $work->duration_years > 0) {
                 $work->computeAnnualDepreciation();
             }
@@ -59,6 +68,16 @@ class PropertyWork extends Model
         return bcdiv((string) $this->amount, '100', 2);
     }
 
+    public function getAmountHtEurosAttribute(): string
+    {
+        return bcdiv((string) $this->amount_ht, '100', 2);
+    }
+
+    public function getAmountTvaEurosAttribute(): string
+    {
+        return bcdiv((string) $this->amount_tva, '100', 2);
+    }
+
     public function getAnnualDepreciationEurosAttribute(): string
     {
         return bcdiv((string) $this->annual_depreciation, '100', 2);
@@ -77,7 +96,11 @@ class PropertyWork extends Model
     public function computeAnnualDepreciation(): void
     {
         $property = $this->property;
-        $base = (string) $this->amount;
+
+        // Si TVA-liable, amortir sur le HT (TVA récupérée)
+        $base = ($property !== null && $property->isTvaLiable())
+            ? (string) $this->amount_ht
+            : (string) $this->amount;
 
         if (! $this->is_dedicated && $property !== null) {
             $base = bcmul($base, $property->quota_share, 0);
