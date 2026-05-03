@@ -56,8 +56,11 @@ class AirbnbImportService
         $errors = [];
         $warnings = [];
 
-        if ($isNetFormat && ! $property->airbnb_commission_rate) {
-            $warnings[] = 'Ce CSV ne contient pas la commission Airbnb. Configurez le taux de commission dans les paramètres du bien pour recalculer automatiquement le montant brut et la commission.';
+        if ($isNetFormat) {
+            $warnings[] = 'Format « Réservations » détecté : la date utilisée est la date de début du séjour. Pour une comptabilité plus précise (date d\'encaissement, commission détaillée), préférez l\'export « Historique des transactions » depuis Airbnb.';
+            if (! $property->airbnb_commission_rate) {
+                $warnings[] = 'Ce CSV ne contient pas la commission Airbnb. Configurez le taux de commission dans les paramètres du bien pour recalculer automatiquement le montant brut et la commission.';
+            }
         }
 
         foreach ($lines as $lineNum => $line) {
