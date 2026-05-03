@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Auth;
 
 trait NavigationAware
 {
-    protected static function getGuidedNavigationGroup(): string
+    protected static function getGuidedNavigationGroup(): ?string
     {
-        return static::$navigationGroup ?? '';
+        return static::$navigationGroup;
     }
 
     protected static function isHiddenInSimpleMode(): bool
