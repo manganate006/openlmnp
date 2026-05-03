@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\TvaHelper;
+use App\Models\Concerns\HasDocuments;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -25,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Furniture extends Model
 {
+    use HasDocuments;
+
     // Durées d'amortissement recommandées
     public const DURATION_NEW       = 5;   // mobilier neuf standard
     public const DURATION_SECOND_HAND = 3; // mobilier d'occasion
@@ -43,7 +46,6 @@ class Furniture extends Model
         'is_dedicated',
         'is_second_hand',
         'annual_depreciation',
-        'invoice_path',
     ];
 
     protected static function booted(): void

@@ -72,7 +72,7 @@ class BadgeService
         $expenseCount = Expense::whereIn('property_id', $propertyIds)
             ->whereYear('expense_date', $year)->count();
         $withReceipt = Expense::whereIn('property_id', $propertyIds)
-            ->whereYear('expense_date', $year)->whereNotNull('receipt_path')->count();
+            ->whereYear('expense_date', $year)->has('documents')->count();
 
         $hasComponents = PropertyComponent::whereIn('property_id', $propertyIds)->exists();
 
@@ -344,7 +344,7 @@ class BadgeService
 
         $withReceipt = Expense::whereIn('property_id', $propertyIds)
             ->whereYear('expense_date', $year)
-            ->whereNotNull('receipt_path')
+            ->has('documents')
             ->count();
 
         return ($withReceipt / $total * 100) >= $minPercent;
@@ -513,7 +513,7 @@ class BadgeService
 
         $withReceipt = Expense::whereIn('property_id', $propertyIds)
             ->whereYear('expense_date', $year)
-            ->whereNotNull('receipt_path')
+            ->has('documents')
             ->count();
 
         return [

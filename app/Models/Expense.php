@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use App\Helpers\TvaHelper;
+use App\Models\Concerns\HasDocuments;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Expense extends Model
 {
+    use HasDocuments;
+
     public const CATEGORY_PROPERTY_TAX = 'property_tax';
     public const CATEGORY_INSURANCE    = 'insurance';
     public const CATEGORY_ENERGY       = 'energy';
@@ -30,7 +33,6 @@ class Expense extends Model
         'category',
         'description',
         'is_dedicated',
-        'receipt_path',
         'recurring_type',
         'notes',
     ];

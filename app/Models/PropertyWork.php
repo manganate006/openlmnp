@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\TvaHelper;
+use App\Models\Concerns\HasDocuments;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -24,6 +25,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PropertyWork extends Model
 {
+    use HasDocuments;
+
     protected $fillable = [
         'property_id',
         'description',

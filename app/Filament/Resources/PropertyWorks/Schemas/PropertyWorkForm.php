@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PropertyWorks\Schemas;
 
 use App\Enums\TvaRate;
+use App\Filament\Schemas\DocumentsSection;
 use App\Helpers\TvaHelper;
 use App\Models\Property;
 use Filament\Forms\Components\DatePicker;
@@ -108,6 +109,8 @@ class PropertyWorkForm
                             ->helperText('Cochez si les travaux concernent uniquement la partie louée. Sinon, la quote-part surface sera appliquée (ex : piscine commune).')
                             ->default(true),
                     ]),
+
+                DocumentsSection::make(),
             ]);
     }
 }
