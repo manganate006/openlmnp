@@ -64,7 +64,7 @@
             <div class="help-step"><span class="help-step-num">6</span><div class="help-step-text"><strong>Saisissez vos meubles</strong> &mdash; Les meubles d'une valeur sup&eacute;rieure &agrave; 600&nbsp;&euro; sont amortis (g&eacute;n&eacute;ralement sur 5 &agrave; 10 ans). En dessous, ils passent directement en charges.</div></div>
 
             <div class="help-tip">
-                <strong>Astuce :</strong> Si vous n'avez pas encore ajout&eacute; de bien, l'assistant <strong>Premier lancement</strong> appara&icirc;t automatiquement dans le menu Param&egrave;tres et vous guide pas &agrave; pas.
+                <strong>Astuce :</strong> Si vous n'avez pas encore ajout&eacute; de bien, l'assistant <a href="/onboarding-wizard" style="color:#2563eb;text-decoration:underline;font-weight:600;">Premier lancement</a> appara&icirc;t automatiquement dans le menu Param&egrave;tres et vous guide pas &agrave; pas.
             </div>
         </div>
 
@@ -83,7 +83,7 @@
             <p>Id&eacute;alement chaque mois, ou au minimum chaque trimestre, pour ne rien oublier :</p>
 
             <ul>
-                <li data-icon="&#x1F4B0;"><strong>Saisir les recettes</strong> &mdash; Ajoutez vos loyers manuellement ou importez un fichier CSV depuis Airbnb/Booking (menu <strong>Import Airbnb</strong>). La commission plateforme (~3&nbsp;%) est d&eacute;duite automatiquement. La taxe de s&eacute;jour n'est pas &agrave; inclure.</li>
+                <li data-icon="&#x1F4B0;"><strong>Saisir les recettes</strong> &mdash; Ajoutez vos loyers manuellement ou importez un fichier CSV depuis Airbnb/Booking (menu <a href="/import-airbnb" style="color:#2563eb;text-decoration:underline;font-weight:600;">Import Airbnb</a>). La commission plateforme (~3&nbsp;%) est d&eacute;duite automatiquement. La taxe de s&eacute;jour n'est pas &agrave; inclure.</li>
                 <li data-icon="&#x1F4C4;"><strong>Enregistrer les charges</strong> &mdash; Taxe fonci&egrave;re, assurance, &eacute;nergie, entretien, m&eacute;nage&hellip; Indiquez si la charge est 100&nbsp;% d&eacute;di&eacute;e (m&eacute;nage Airbnb) ou partag&eacute;e (la quote-part s'applique automatiquement).</li>
                 <li data-icon="&#x1F4CE;"><strong>Joindre les justificatifs</strong> &mdash; Photo ou PDF de chaque facture/re&ccedil;u. Conservation obligatoire : <strong>6 ans minimum</strong> (10 ans recommand&eacute;s).</li>
                 <li data-icon="&#x1F6CB;"><strong>Ajouter les meubles achet&eacute;s</strong> &mdash; Nouveau mobilier, &eacute;lectrom&eacute;nager, &eacute;quipements. Si &gt; 600&nbsp;&euro; TTC : amortissement. Sinon : charge directe.</li>
@@ -111,20 +111,20 @@
 
             <div class="help-step"><span class="help-step-num">1</span><div class="help-step-text"><strong>V&eacute;rifiez l'exhaustivit&eacute; des donn&eacute;es</strong> &mdash; Assurez-vous que toutes les recettes, charges et meubles de l'ann&eacute;e &eacute;coul&eacute;e sont bien saisis. Comparez avec vos relev&eacute;s bancaires.</div></div>
 
-            <div class="help-step"><span class="help-step-num">2</span><div class="help-step-text"><strong>Cr&eacute;ez l'exercice fiscal</strong> &mdash; Allez dans <strong>Fiscal &gt; Nouvel exercice</strong> et s&eacute;lectionnez l'ann&eacute;e. L'assistant v&eacute;rifie la coh&eacute;rence de vos donn&eacute;es.</div></div>
+            <div class="help-step"><span class="help-step-num">2</span><div class="help-step-text"><strong>Cr&eacute;ez l'exercice fiscal</strong> &mdash; Allez dans <a href="/fiscal-year-wizard" style="color:#2563eb;text-decoration:underline;font-weight:600;">Fiscal &gt; Nouvel exercice</a> et s&eacute;lectionnez l'ann&eacute;e. L'assistant v&eacute;rifie la coh&eacute;rence de vos donn&eacute;es.</div></div>
 
             <div class="help-step"><span class="help-step-num">3</span><div class="help-step-text"><strong>Calculez le r&eacute;sultat fiscal</strong> &mdash; Cliquez sur <strong>&laquo;&nbsp;Calculer&nbsp;&raquo;</strong> dans l'exercice. OpenLMNP calcule : recettes &minus; charges &minus; amortissements (plafonn&eacute;s pour ne pas cr&eacute;er de d&eacute;ficit). L'exc&eacute;dent d'amortissement est report&eacute; ind&eacute;finiment.</div></div>
 
-            <div class="help-step"><span class="help-step-num">4</span><div class="help-step-text"><strong>Consultez le simulateur</strong> &mdash; Comparez le r&eacute;gime r&eacute;el avec le micro-BIC pour v&eacute;rifier que le r&eacute;el reste avantageux. Micro-BIC 2026 : abattement 50&nbsp;% (class&eacute;) ou 30&nbsp;% (non class&eacute;).</div></div>
+            <div class="help-step"><span class="help-step-num">4</span><div class="help-step-text"><strong>Consultez le <a href="/simulator" style="color:#2563eb;text-decoration:underline;font-weight:600;">simulateur</a></strong> &mdash; Comparez le r&eacute;gime r&eacute;el avec le micro-BIC pour v&eacute;rifier que le r&eacute;el reste avantageux. Micro-BIC 2026 : abattement 50&nbsp;% (class&eacute;) ou 30&nbsp;% (non class&eacute;).</div></div>
 
             <div class="help-step"><span class="help-step-num">5</span><div class="help-step-text"><strong>G&eacute;n&eacute;rez la liasse fiscale PDF</strong> &mdash; Cliquez sur <strong>&laquo;&nbsp;PDF&nbsp;&raquo;</strong>. Le document contient les formulaires 2031, 2033-B et 2033-C pr&eacute;remplis.</div></div>
 
             <div class="help-step"><span class="help-step-num">6</span><div class="help-step-text"><strong>G&eacute;n&eacute;rez le FEC</strong> &mdash; Le Fichier des &Eacute;critures Comptables (18 colonnes norm&eacute;es) est obligatoire en cas de contr&ocirc;le fiscal. Conservez-le pr&eacute;cieusement.</div></div>
 
-            <div class="help-step"><span class="help-step-num">7</span><div class="help-step-text"><strong>D&eacute;clarez sur impots.gouv.fr</strong> &mdash; Reportez le r&eacute;sultat dans la <strong>2042-C-PRO</strong> : case <strong>5NA</strong> si b&eacute;n&eacute;fice, case <strong>5NK</strong> si d&eacute;ficit. Consultez la page <strong>T&eacute;l&eacute;d&eacute;claration</strong> pour un guide d&eacute;taill&eacute;.</div></div>
+            <div class="help-step"><span class="help-step-num">7</span><div class="help-step-text"><strong>D&eacute;clarez sur impots.gouv.fr</strong> &mdash; Reportez le r&eacute;sultat dans la <strong>2042-C-PRO</strong> : case <strong>5NA</strong> si b&eacute;n&eacute;fice, case <strong>5NK</strong> si d&eacute;ficit. Consultez la page <a href="/teledeclaration" style="color:#2563eb;text-decoration:underline;font-weight:600;">T&eacute;l&eacute;d&eacute;claration</a> pour un guide d&eacute;taill&eacute;.</div></div>
 
             <div class="help-tip">
-                <strong>Astuce :</strong> Utilisez la <strong>Projection pluriannuelle</strong> (menu Fiscal) pour anticiper l'&eacute;volution de votre r&eacute;sultat fiscal sur les prochaines ann&eacute;es et savoir quand le micro-BIC redeviendra plus int&eacute;ressant.
+                <strong>Astuce :</strong> Utilisez la <a href="/projection" style="color:#2563eb;text-decoration:underline;font-weight:600;">Projection pluriannuelle</a> (menu Fiscal) pour anticiper l'&eacute;volution de votre r&eacute;sultat fiscal sur les prochaines ann&eacute;es et savoir quand le micro-BIC redeviendra plus int&eacute;ressant.
             </div>
         </div>
 
