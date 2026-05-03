@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources\Loans\Tables;
 
+use App\Filament\Pages\LoanDetail;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -43,6 +46,11 @@ class LoansTable
             ])
             ->filters([])
             ->recordActions([
+                Action::make('detail')
+                    ->label('Détail')
+                    ->icon(Heroicon::OutlinedTableCells)
+                    ->color('gray')
+                    ->url(fn ($record) => LoanDetail::getUrl(['loanId' => $record->id])),
                 EditAction::make(),
             ])
             ->toolbarActions([
