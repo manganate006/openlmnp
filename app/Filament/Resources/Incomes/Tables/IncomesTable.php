@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Incomes\Tables;
 
+use App\Enums\TvaRate;
 use App\Models\Income;
+use App\Models\Property;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -30,6 +32,14 @@ class IncomesTable
                     ->label('Commission')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2, ',', ' ') . ' €')
                     ->sortable(),
+                TextColumn::make('tva_rate')
+                    ->label('TVA')
+                    ->formatStateUsing(fn ($state) => $state ? (TvaRate::tryFrom($state)?->label() ?? $state) : '—')
+                    ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
+                TextColumn::make('tva_collected')
+                    ->label('TVA collectée')
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, ',', ' ') . ' €' : '—')
+                    ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
                 TextColumn::make('source')
                     ->label('Source')
                     ->formatStateUsing(fn ($state) => Income::sourceLabels()[$state] ?? $state)

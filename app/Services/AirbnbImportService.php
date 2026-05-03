@@ -313,6 +313,7 @@ class AirbnbImportService
             'property_id'     => $property->id,
             'income_date'     => $date,
             'amount'          => $amount,
+            'tva_rate'        => $property->isTvaLiable() ? 1000 : 0,
             'platform_fee'    => $hostFee,
             'tourist_tax'     => 0,
             'source'          => 'airbnb',

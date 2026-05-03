@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Expenses\Tables;
 
+use App\Enums\TvaRate;
 use App\Models\Expense;
+use App\Models\Property;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -27,6 +29,14 @@ class ExpensesTable
                     ->label('Montant')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2, ',', ' ') . ' €')
                     ->sortable(),
+                TextColumn::make('tva_rate')
+                    ->label('TVA')
+                    ->formatStateUsing(fn ($state) => $state ? (TvaRate::tryFrom($state)?->label() ?? $state) : '—')
+                    ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
+                TextColumn::make('amount_tva')
+                    ->label('TVA déductible')
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, ',', ' ') . ' €' : '—')
+                    ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
                 TextColumn::make('category')
                     ->label('Catégorie')
                     ->formatStateUsing(fn ($state) => Expense::categoryLabels()[$state] ?? $state)
