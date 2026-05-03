@@ -2,25 +2,45 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Loan;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
+use UnitEnum;
 
 class LoanDetail extends Page
 {
+    use NavigationAware;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
+    protected static string | UnitEnum | null $navigationGroup = 'Mes biens';
+    protected static ?string $navigationLabel = 'Détail emprunt';
     protected static ?string $title = 'Tableau d\'amortissement emprunt';
-    protected static bool $shouldRegisterNavigation = false;
+    protected static ?int $navigationSort = 6;
+
+    protected static function getGuidedNavigationGroup(): string
+    {
+        return 'Mise en route';
+    }
+
+    protected static function getSimpleNavigationGroup(): ?string
+    {
+        return 'Mon bien';
+    }
     protected string $view = 'filament.pages.loan-detail';
 
+    #[Url]
     public ?int $loanId = null;
 
     public function mount(): void
     {
-        $loan = Loan::whereHas('property', fn ($q) => $q->where('user_id', auth()->id()))->first();
-        $this->loanId = $loan?->id;
+        if (! $this->loanId) {
+            $loan = Loan::whereHas('property', fn ($q) => $q->where('user_id', auth()->id()))->first();
+            $this->loanId = $loan?->id;
+        }
     }
 
     #[Computed]

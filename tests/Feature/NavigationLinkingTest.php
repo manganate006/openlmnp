@@ -99,7 +99,7 @@ function helpPageLinks(): array
 /** Pages that never appear in any menu ($shouldRegisterNavigation = false). */
 function noMenuPages(): array
 {
-    return ['ImportAirbnb', 'LoanDetail', 'FiscalYearWizard'];
+    return ['ImportAirbnb', 'FiscalYearWizard'];
 }
 
 /** Pages hidden in Simple mode via isHiddenInSimpleMode(). */
@@ -304,9 +304,9 @@ it('page link map matches actual code — source files contain expected URLs', f
     $listIncomes = file_get_contents(app_path('Filament/Resources/Incomes/Pages/ListIncomes.php'));
     expect($listIncomes)->toContain('/import-airbnb');
 
-    // ListLoans → LoanDetail
-    $listLoans = file_get_contents(app_path('Filament/Resources/Loans/Pages/ListLoans.php'));
-    expect($listLoans)->toContain('LoanDetail::getUrl()');
+    // LoansTable → LoanDetail (per-row action)
+    $loansTable = file_get_contents(app_path('Filament/Resources/Loans/Tables/LoansTable.php'));
+    expect($loansTable)->toContain('LoanDetail::getUrl(');
 
     // ListFiscalYears → FiscalYearWizard, Simulator, Projection, Teledeclaration
     $listFY = file_get_contents(app_path('Filament/Resources/FiscalYears/Pages/ListFiscalYears.php'));
