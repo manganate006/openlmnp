@@ -24,6 +24,10 @@ trait NavigationAware
 
     public static function shouldRegisterNavigation(): bool
     {
+        if (static::$shouldRegisterNavigation === false) {
+            return false;
+        }
+
         $user = Auth::user();
 
         if ($user && static::isHiddenInSimpleMode() && $user->nav_mode === NavMode::Simple) {
