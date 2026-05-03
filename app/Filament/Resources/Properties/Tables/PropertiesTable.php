@@ -44,6 +44,12 @@ class PropertiesTable
                 TextColumn::make('rental_type')
                     ->label('Location')
                     ->formatStateUsing(fn ($state) => Property::rentalTypeLabels()[$state] ?? $state),
+                TextColumn::make('tva_regime')
+                    ->label('TVA')
+                    ->formatStateUsing(fn ($state) => $state === 'liable' ? 'Assujetti' : 'Exempt')
+                    ->badge()
+                    ->color(fn ($state) => $state === 'liable' ? 'warning' : 'gray')
+                    ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
                 IconColumn::make('is_primary_residence')
                     ->label('RP')
                     ->boolean(),
