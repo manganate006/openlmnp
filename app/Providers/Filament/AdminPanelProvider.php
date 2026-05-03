@@ -2,7 +2,6 @@
 
 namespace App\Providers\Filament;
 
-use App\Enums\NavMode;
 use App\Livewire\NavModeToggle;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -19,7 +18,6 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -70,13 +68,22 @@ class AdminPanelProvider extends PanelProvider
 
     private function getNavigationGroups(): array
     {
-        $user = Auth::user();
-        $mode = $user?->nav_mode ?? NavMode::Simple;
-
-        return match ($mode) {
-            NavMode::Simple => ['Mon bien', 'Comptabilité', 'Fiscal', 'Outils', 'Administration'],
-            NavMode::Guided => ['Mise en route', 'Au quotidien', 'Déclaration annuelle', 'Aide', 'Administration'],
-            NavMode::Advanced => ['Mes biens', 'Comptabilité', 'Fiscal', 'Paramètres', 'Administration'],
-        };
+        // All groups from all modes in desired order.
+        // Filament hides empty groups automatically.
+        // Cannot use Auth::user() here — called before authentication at boot.
+        return [
+            'Mon bien',
+            'Mise en route',
+            'Mes biens',
+            'Comptabilité',
+            'Au quotidien',
+            'Fiscal',
+            'Déclaration annuelle',
+            'Outils',
+            'Aide',
+            'Paramètres',
+            'Configuration',
+            'Administration',
+        ];
     }
 }
