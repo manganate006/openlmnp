@@ -380,11 +380,11 @@ class AirbnbImportService
     {
         $raw = trim($raw);
 
-        // Try common formats
-        foreach (['Y-m-d', 'm/d/Y', 'd/m/Y', 'Y/m/d', 'M d, Y', 'd M Y'] as $format) {
+        // Try common formats (d/m/Y avant m/d/Y car CSV Airbnb FR)
+        foreach (['Y-m-d', 'd/m/Y', 'm/d/Y', 'Y/m/d', 'M d, Y', 'd M Y'] as $format) {
             try {
                 $date = Carbon::createFromFormat($format, $raw);
-                if ($date) {
+                if ($date && $date->month <= 12 && $date->day <= 31) {
                     return $date->format('Y-m-d');
                 }
             } catch (\Exception $e) {
