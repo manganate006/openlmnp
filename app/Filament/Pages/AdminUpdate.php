@@ -22,6 +22,9 @@ class AdminUpdate extends Page
     protected static ?int $navigationSort = 2;
     protected string $view = 'filament.pages.admin-update';
 
+    // Auto-update
+    public bool $autoUpdateEnabled = false;
+
     // Releases
     public ?array $updateInfo = null;
     public ?array $changelog = null;
@@ -39,7 +42,20 @@ class AdminUpdate extends Page
     {
         $this->githubToken = Setting::get('github_token', '') ?? '';
         $this->githubRepo = Setting::get('github_repo', '') ?? '';
+        $this->autoUpdateEnabled = Setting::get('auto_update_enabled') === '1';
         $this->checkBranch();
+    }
+
+    public function toggleAutoUpdate(): void
+    {
+        $this->autoUpdateEnabled = ! $this->autoUpdateEnabled;
+        Setting::set('auto_update_enabled', $this->autoUpdateEnabled ? '1' : '0');
+
+        Notification::make()
+            ->success()
+            ->title($this->autoUpdateEnabled ? 'Mise à jour automatique activée' : 'Mise à jour automatique désactivée')
+            ->body($this->autoUpdateEnabled ? 'Vérification toutes les heures via app:auto-update.' : '')
+            ->send();
     }
 
     // -------------------------------------------------------------------------
