@@ -61,7 +61,8 @@ class ImportAirbnb extends Page implements HasForms
                             )
                             ->required()
                             ->placeholder('Sélectionner un bien...')
-                            ->preload(),
+                            ->preload()
+                            ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV')
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', '.csv'])

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PropertyComponents\Schemas;
 
+use App\Models\Property;
 use App\Models\PropertyComponent;
 use Closure;
 use Filament\Forms\Components\Select;
@@ -18,7 +19,9 @@ class PropertyComponentForm
             ->components([
                 Select::make('property_id')
                     ->relationship('property', 'name')
-                    ->required(),
+                    ->required()
+                    ->preload()
+                    ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                 TextInput::make('name')
                     ->required(),
                 TextInput::make('percentage')

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Expenses\Schemas;
 
 use App\Models\Expense;
+use App\Models\Property;
 use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -27,7 +28,8 @@ class ExpenseForm
                             ->label('Bien')
                             ->relationship('property', 'name')
                             ->required()
-                            ->preload(),
+                            ->preload()
+                            ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         Grid::make(2)->schema([
                             DatePicker::make('expense_date')
                                 ->label('Date')

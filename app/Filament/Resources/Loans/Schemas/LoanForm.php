@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Loans\Schemas;
 
 use App\Models\Loan;
+use App\Models\Property;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -26,7 +27,8 @@ class LoanForm
                                 ->label('Bien')
                                 ->relationship('property', 'name')
                                 ->required()
-                                ->preload(),
+                                ->preload()
+                                ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                             TextInput::make('bank_name')
                                 ->label('Banque')
                                 ->placeholder('Ex : BNP, Crédit Agricole...'),
