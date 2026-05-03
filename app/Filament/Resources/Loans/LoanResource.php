@@ -38,6 +38,11 @@ class LoanResource extends Resource
         return 'Mise en route';
     }
 
+    protected static function getSimpleNavigationGroup(): ?string
+    {
+        return 'Mon bien';
+    }
+
     public static function form(Schema $schema): Schema
     {
         return LoanForm::configure($schema);
