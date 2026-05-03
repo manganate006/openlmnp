@@ -103,6 +103,12 @@
                 </div>
             @endif
 
+            @php
+                $isTvaLiable = $this->previewPropertyId
+                    ? \App\Models\Property::find($this->previewPropertyId)?->isTvaLiable()
+                    : false;
+                $colCount = $isTvaLiable ? 9 : 7;
+            @endphp
             @if(count($previewData['rows']) > 0)
                 <div style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--fi-border-color, #e5e7eb);">
                     <table class="import-table">
@@ -112,13 +118,20 @@
                                 <th>Voyageur</th>
                                 <th>Confirmation</th>
                                 <th>Check-in</th>
-                                <th class="num">Montant</th>
+                                <th class="num">{{ $isTvaLiable ? 'Montant TTC' : 'Montant' }}</th>
                                 <th class="num">Commission</th>
+                                @if($isTvaLiable)
+                                    <th class="num">HT</th>
+                                    <th class="num">TVA 10%</th>
+                                @endif
                                 <th class="center">Statut</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($activeRows as $row)
+                                @php
+                                    $htData = $isTvaLiable ? \App\Helpers\TvaHelper::fromTtc($row['amount'], 1000) : null;
+                                @endphp
                                 <tr class="{{ $row['duplicate'] ? 'dup' : '' }}">
                                     <td>{{ $row['date'] }}</td>
                                     <td>{{ $row['guest'] ?? '—' }}</td>
@@ -126,6 +139,10 @@
                                     <td>{{ $row['checkin'] ?? '—' }}</td>
                                     <td class="num" style="font-weight: 600;">{{ number_format($row['amount'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
                                     <td class="num">{{ number_format($row['host_fee'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
+                                    @if($isTvaLiable)
+                                        <td class="num">{{ number_format($htData['ht'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
+                                        <td class="num">{{ number_format($htData['tva'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
+                                    @endif
                                     <td class="center">
                                         @if($row['duplicate'])
                                             <span class="import-badge import-badge-dup">Doublon</span>
@@ -137,7 +154,7 @@
                             @endforeach
                             @if($skippedRows->count() > 0)
                                 <tr class="import-sep">
-                                    <td colspan="7">Ignorées ({{ $skippedRows->count() }})</td>
+                                    <td colspan="{{ $colCount }}">Ignorées ({{ $skippedRows->count() }})</td>
                                 </tr>
                                 @foreach($skippedRows as $row)
                                     <tr class="skipped">
@@ -147,6 +164,10 @@
                                         <td>{{ $row['checkin'] ?? '—' }}</td>
                                         <td class="num">{{ number_format($row['amount'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
                                         <td class="num">—</td>
+                                        @if($isTvaLiable)
+                                            <td class="num">—</td>
+                                            <td class="num">—</td>
+                                        @endif
                                         <td class="center">
                                             <span class="import-badge import-badge-skip">{{ $row['skip_reason'] }}</span>
                                         </td>

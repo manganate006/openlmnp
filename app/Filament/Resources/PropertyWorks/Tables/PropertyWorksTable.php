@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\PropertyWorks\Tables;
 
+use App\Enums\TvaRate;
+use App\Models\Property;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -30,6 +32,10 @@ class PropertyWorksTable
                     ->label('Montant')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €')
                     ->sortable(),
+                TextColumn::make('tva_rate')
+                    ->label('TVA')
+                    ->formatStateUsing(fn ($state) => $state ? (TvaRate::tryFrom($state)?->label() ?? $state) : '—')
+                    ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
                 TextColumn::make('duration_years')
                     ->label('Durée')
                     ->suffix(' ans')
