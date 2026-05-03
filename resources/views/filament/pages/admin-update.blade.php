@@ -65,7 +65,7 @@
             </div>
         @endif
 
-        <div style="margin-top:16px;display:flex;gap:8px;">
+        <div style="margin-top:16px;display:flex;gap:8px;align-items:center;">
             <button wire:click="checkBranch" wire:loading.attr="disabled" wire:target="checkBranch" class="au-btn au-btn-secondary">
                 <span wire:loading.remove wire:target="checkBranch">Vérifier</span>
                 <span wire:loading wire:target="checkBranch">Vérification...</span>
@@ -77,6 +77,13 @@
                     <span wire:loading wire:target="applyBranchUpdate">Déploiement en cours...</span>
                 </button>
             @endif
+
+            <label style="display:inline-flex;align-items:center;gap:8px;margin-left:auto;cursor:pointer;font-size:13px;color:#374151;">
+                <button wire:click="toggleAutoUpdate" style="position:relative;width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;transition:background .2s;{{ $autoUpdateEnabled ? 'background:#10b981;' : 'background:#d1d5db;' }}">
+                    <span style="position:absolute;top:2px;{{ $autoUpdateEnabled ? 'left:22px;' : 'left:2px;' }}width:20px;height:20px;background:white;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+                </button>
+                Mise &agrave; jour automatique
+            </label>
         </div>
 
         {{-- Résultat du déploiement --}}
