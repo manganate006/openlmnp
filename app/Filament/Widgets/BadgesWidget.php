@@ -8,7 +8,11 @@ use Filament\Widgets\Widget;
 class BadgesWidget extends Widget
 {
     protected string $view = 'filament.widgets.badges-widget';
-    protected int | string | array $columnSpan = 'full';
+    protected int | string | array $columnSpan = [
+        'default' => 1,
+        'sm' => 2,
+        'lg' => 4,
+    ];
     protected static ?int $sort = 3;
 
     public function getData(): array
