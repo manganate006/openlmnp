@@ -26,11 +26,6 @@ class Teledeclaration extends Page
     protected static ?string $title = 'Aide à la télédéclaration';
     protected static ?int $navigationSort = 4;
 
-    protected static function isHiddenInSimpleMode(): bool
-    {
-        return true;
-    }
-
     protected static function getGuidedNavigationGroup(): string
     {
         return 'Déclaration annuelle';

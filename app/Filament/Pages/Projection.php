@@ -23,11 +23,6 @@ class Projection extends Page
     protected static ?string $title = 'Projection pluriannuelle';
     protected static ?int $navigationSort = 3;
 
-    protected static function isHiddenInSimpleMode(): bool
-    {
-        return true;
-    }
-
     protected static function getGuidedNavigationGroup(): string
     {
         return 'Déclaration annuelle';

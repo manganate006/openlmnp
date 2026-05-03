@@ -23,7 +23,7 @@ class LoanResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCreditCard;
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Comptabilité';
+    protected static string | \UnitEnum | null $navigationGroup = 'Mes biens';
 
     protected static ?string $navigationLabel = 'Emprunts';
 
@@ -31,12 +31,7 @@ class LoanResource extends Resource
 
     protected static ?string $pluralModelLabel = 'emprunts';
 
-    protected static ?int $navigationSort = 3;
-
-    protected static function isHiddenInSimpleMode(): bool
-    {
-        return true;
-    }
+    protected static ?int $navigationSort = 5;
 
     protected static function getGuidedNavigationGroup(): string
     {
