@@ -38,11 +38,6 @@ class PropertyResource extends Resource
         return 'Mise en route';
     }
 
-    protected static function getSimpleNavigationGroup(): ?string
-    {
-        return 'Mon bien';
-    }
-
     public static function form(Schema $schema): Schema
     {
         return PropertyForm::configure($schema);

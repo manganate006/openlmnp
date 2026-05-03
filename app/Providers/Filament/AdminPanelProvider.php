@@ -72,7 +72,7 @@ class AdminPanelProvider extends PanelProvider
         // Filament hides empty groups automatically.
         // Cannot use Auth::user() here — called before authentication at boot.
         return [
-            'Mon bien',
+            'Mes biens',
             'Mise en route',
             'Mes biens',
             'Comptabilité',
