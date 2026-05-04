@@ -2,8 +2,7 @@
     <style>
         .bw-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
         .bw-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--fi-fg, #374151); display: flex; align-items: center; gap: 8px; }
-        .bw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        @media (max-width: 768px) { .bw-grid { grid-template-columns: 1fr; } }
+        .bw-grid { display: flex; flex-direction: column; gap: 16px; }
 
         /* Completeness */
         .bw-progress { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
