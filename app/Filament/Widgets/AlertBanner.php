@@ -19,6 +19,11 @@ class AlertBanner extends Widget
 
     public function getAlerts(): array
     {
+        // Pas d'alertes si la checklist onboarding est visible (évite les doublons)
+        if (! auth()->user()->onboarding_dismissed_at) {
+            return [];
+        }
+
         $alerts = [];
         $year = (int) date('Y');
 
