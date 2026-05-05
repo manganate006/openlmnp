@@ -46,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
+                \App\Filament\Widgets\OnboardingChecklist::class,
                 \App\Filament\Widgets\FiscalOverview::class,
             ])
             ->middleware([
