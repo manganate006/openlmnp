@@ -37,7 +37,7 @@
                 <x-filament::icon icon="heroicon-o-rocket-launch" class="w-5 h-5" style="color: #2563eb;" />
                 Guide de demarrage
             </div>
-            <select class="oc-year-select" wire:change="setYear(parseInt($event.target.value))">
+            <select class="oc-year-select" wire:change="setYear($event.target.value)">
                 @for($y = (int) date('Y'); $y >= (int) date('Y') - 3; $y--)
                     <option value="{{ $y }}" @selected($y === $data['year'])>{{ $y }}</option>
                 @endfor
