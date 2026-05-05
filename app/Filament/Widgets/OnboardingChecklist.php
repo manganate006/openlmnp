@@ -55,8 +55,7 @@ class OnboardingChecklist extends Widget
 
     public function dismiss(): void
     {
-        $user = auth()->user();
-        $user->update(['onboarding_dismissed_at' => now()]);
-        $this->dispatch('$refresh');
+        auth()->user()->update(['onboarding_dismissed_at' => now()]);
+        $this->redirect('/');
     }
 }
