@@ -30,7 +30,6 @@
 
     @php $data = $this->getData(); @endphp
 
-    @if($data['progress'] < 100 || !auth()->user()->onboarding_dismissed_at)
     <div class="oc-card">
         <div class="oc-header">
             <div class="oc-title">
@@ -85,5 +84,4 @@
             <button class="oc-dismiss" wire:click="dismiss">Masquer ce guide</button>
         </div>
     </div>
-    @endif
 </x-filament-widgets::widget>
