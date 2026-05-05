@@ -19,10 +19,12 @@ class OnboardingChecklistService
             ->whereYear('income_date', $year)->exists();
         $hasExpenses = $hasProperties && Expense::whereIn('property_id', $propertyIds)
             ->whereYear('expense_date', $year)->exists();
-        $hasComponents = $hasProperties && PropertyComponent::whereIn('property_id', $propertyIds)->exists();
+        $allPropertiesHaveComponents = $hasProperties && $propertyIds->every(
+            fn ($id) => PropertyComponent::where('property_id', $id)->exists()
+        );
         $fiscalYear = $user->fiscalYears()->where('year', $year)->first();
-        $hasFiscalYear = $fiscalYear !== null;
-        $hasPdf = $hasFiscalYear && $fiscalYear->pdf_path !== null;
+        $isFiscalYearClosed = $fiscalYear !== null && $fiscalYear->status === FiscalYear::STATUS_CLOSED;
+        $hasPdf = $fiscalYear !== null && $fiscalYear->pdf_path !== null;
 
         $steps = [
             [
@@ -56,7 +58,7 @@ class OnboardingChecklistService
                 'label' => 'Vérifier les amortissements',
                 'description' => 'Composants du bien, travaux et mobilier.',
                 'icon' => 'heroicon-o-building-library',
-                'done' => $hasComponents,
+                'done' => $allPropertiesHaveComponents,
                 'url' => '/property-components',
             ],
             [
@@ -64,7 +66,7 @@ class OnboardingChecklistService
                 'label' => 'Clôturer l\'exercice ' . $year,
                 'description' => 'Calculer le résultat fiscal et les amortissements plafonnés.',
                 'icon' => 'heroicon-o-calculator',
-                'done' => $hasFiscalYear,
+                'done' => $isFiscalYearClosed,
                 'url' => '/fiscal-year-wizard',
             ],
             [
