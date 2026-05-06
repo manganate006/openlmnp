@@ -18,6 +18,11 @@ class EditFiscalYear extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('back')
+                ->label('Retour')
+                ->icon('heroicon-o-arrow-left')
+                ->color('gray')
+                ->url(static::$resource::getUrl()),
             Action::make('simulator')
                 ->label('Simulateur')
                 ->icon(Heroicon::OutlinedCalculator)

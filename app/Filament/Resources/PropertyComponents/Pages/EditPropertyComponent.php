@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PropertyComponents\Pages;
 
 use App\Filament\Resources\PropertyComponents\PropertyComponentResource;
 use App\Models\PropertyComponent;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -15,6 +16,11 @@ class EditPropertyComponent extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('back')
+                ->label('Retour')
+                ->icon('heroicon-o-arrow-left')
+                ->color('gray')
+                ->url(static::$resource::getUrl()),
             DeleteAction::make(),
         ];
     }
