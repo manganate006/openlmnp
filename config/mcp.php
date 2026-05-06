@@ -1,0 +1,8 @@
+<?php
+
+return [
+    'enabled' => env('MCP_ENABLED', false),
+    'rate_limit' => env('MCP_RATE_LIMIT', 60),
+    'max_tokens_per_user' => env('MCP_MAX_TOKENS', 5),
+    'audit_retention_days' => env('MCP_AUDIT_RETENTION', 90),
+];

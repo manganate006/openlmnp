@@ -13,13 +13,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'siren', 'is_admin', 'nav_mode', 'timezone', 'onboarding_dismissed_at'])]
+#[Fillable(['name', 'email', 'password', 'siren', 'is_admin', 'nav_mode', 'timezone', 'onboarding_dismissed_at', 'mcp_enabled'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     public function canAccessPanel(Panel $panel): bool
     {
