@@ -3,10 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\NavigationAware;
-use App\Models\FiscalYear;
 use App\Models\Property;
 use App\Services\CsvExportService;
-use App\Services\DepreciationService;
 use App\Services\FiscalYearService;
 use App\Services\TaxReturnService;
 use BackedEnum;
@@ -49,105 +47,116 @@ class Teledeclaration extends Page
             return null;
         }
 
-        // Recalculer l'exercice
-        $fiscalYearService = app(FiscalYearService::class);
-        $fy = $fiscalYearService->getOrCreate($user, $this->year);
+        $fy = app(FiscalYearService::class)->getOrCreate($user, $this->year);
+        $tax = app(TaxReturnService::class);
 
-        // Récupérer les données structurées
-        $taxService = app(TaxReturnService::class);
-
-        // Utiliser la réflexion pour accéder aux méthodes privées, ou recalculer
-        $form2033B = $this->compute2033B($fy, $properties);
-        $form2033C = $this->compute2033C($properties);
-        $form2042 = $this->compute2042($fy);
+        $form2031 = $tax->compute2031($fy);
+        $form2033A = $tax->compute2033A($fy, $properties, $this->year);
+        $form2033B = $tax->compute2033B($fy, $properties, $this->year);
+        $form2033C = $tax->compute2033C($properties, $this->year);
+        $form2033D = $tax->compute2033D($fy);
+        $form2042 = $tax->compute2042($fy);
 
         return [
             'fiscal_year' => $fy,
             'siren' => $user->siren ?? 'Non renseigné',
-            'lines' => $this->buildLines($fy, $form2033B, $form2033C, $form2042),
+            'forms' => $this->buildFormSections($fy, $form2031, $form2033A, $form2033B, $form2033C, $form2033D, $form2042),
         ];
     }
 
-    private function compute2033B(FiscalYear $fy, $properties): array
-    {
-        $year = $fy->year;
-        $loyers = 0;
-        $line242 = 0;
-        $line244 = 0;
-        $line294 = 0;
-
-        foreach ($properties as $prop) {
-            $loyers += $prop->incomes()->whereYear('income_date', $year)
-                ->selectRaw('COALESCE(SUM(amount) - SUM(platform_fee), 0) as net')->value('net') ?? 0;
-
-            $expenses = $prop->expenses()->whereYear('expense_date', $year)->get();
-            foreach ($expenses as $exp) {
-                $effective = $exp->is_dedicated ? $exp->amount : (int) bcmul((string) $exp->amount, $prop->quota_share, 0);
-                if ($exp->category === 'property_tax') {
-                    $line244 += $effective;
-                } else {
-                    $line242 += $effective;
-                }
-            }
-
-            foreach ($prop->loans as $loan) {
-                $interests = $loan->getInterestsForYear($year) + $loan->getInsuranceForYear($year);
-                $line294 += (int) bcmul((string) $interests, $prop->quota_share, 0);
-            }
-        }
-
-        $line254 = 0;
-        foreach ($properties as $prop) {
-            $dep = app(DepreciationService::class)->calculateAnnualDepreciation($prop, $year);
-            $line254 += (int) $dep['total'];
-        }
-
-        $line232 = $loyers;
-        $line264 = $line242 + $line244 + $line254;
-        $line270 = $line232 - $line264;
-        $line310 = $line270 - $line294;
-
-        return compact('loyers', 'line232', 'line242', 'line244', 'line254', 'line264', 'line270', 'line294', 'line310');
-    }
-
-    private function compute2033C($properties): array
-    {
-        $totalDotation = 0;
-        foreach ($properties as $prop) {
-            $dep = app(DepreciationService::class)->calculateAnnualDepreciation($prop, $this->year);
-            $totalDotation += (int) $dep['total'];
-        }
-        return ['total_dotation' => $totalDotation];
-    }
-
-    private function compute2042(FiscalYear $fy): array
-    {
-        return [
-            'case' => $fy->fiscal_result >= 0 ? '5NA' : '5NY',
-            'montant' => abs($fy->fiscal_result),
-        ];
-    }
-
-    private function buildLines(FiscalYear $fy, array $b, array $c, array $form2042): array
+    private function buildFormSections($fy, array $f2031, array $f2033A, array $f2033B, array $f2033C, array $f2033D, array $f2042): array
     {
         $fmt = fn($v) => number_format($v / 100, 2, ',', ' ');
 
         return [
-            ['form' => '2031', 'line' => 'C.1', 'desc' => 'Résultat fiscal (' . ($fy->fiscal_result >= 0 ? 'bénéfice col.1' : 'déficit col.2') . ')', 'value' => $fmt(abs($fy->fiscal_result)), 'raw' => abs($fy->fiscal_result)],
-            ['form' => '2031', 'line' => 'C.4', 'desc' => ($fy->fiscal_result >= 0 ? 'Bénéfice imposable' : 'Déficit déductible'), 'value' => $fmt(abs($fy->fiscal_result)), 'raw' => abs($fy->fiscal_result)],
-            ['form' => '2031-bis', 'line' => 'I', 'desc' => 'BIC non professionnels — ' . ($fy->fiscal_result >= 0 ? 'bénéfice' : 'déficit') . ' LMNP', 'value' => $fmt(abs($fy->fiscal_result)), 'raw' => abs($fy->fiscal_result)],
-            ['form' => '2033-B', 'line' => '218', 'desc' => 'Production vendue — Services (loyers)', 'value' => $fmt($b['loyers']), 'raw' => $b['loyers']],
-            ['form' => '2033-B', 'line' => '232', 'desc' => 'Total produits exploitation (I)', 'value' => $fmt($b['line232']), 'raw' => $b['line232']],
-            ['form' => '2033-B', 'line' => '242', 'desc' => 'Autres charges externes', 'value' => $fmt($b['line242']), 'raw' => $b['line242']],
-            ['form' => '2033-B', 'line' => '244', 'desc' => 'Impôts, taxes (taxe foncière, CFE)', 'value' => $fmt($b['line244']), 'raw' => $b['line244']],
-            ['form' => '2033-B', 'line' => '254', 'desc' => 'Dotations aux amortissements', 'value' => $fmt($b['line254']), 'raw' => $b['line254']],
-            ['form' => '2033-B', 'line' => '264', 'desc' => 'Total charges exploitation (II)', 'value' => $fmt($b['line264']), 'raw' => $b['line264']],
-            ['form' => '2033-B', 'line' => '270', 'desc' => 'Résultat exploitation (I — II)', 'value' => $fmt($b['line270']), 'raw' => $b['line270']],
-            ['form' => '2033-B', 'line' => '294', 'desc' => 'Charges financières (intérêts emprunt)', 'value' => $fmt($b['line294']), 'raw' => $b['line294']],
-            ['form' => '2033-B', 'line' => '310', 'desc' => 'Résultat comptable', 'value' => $fmt($b['line310']), 'raw' => $b['line310']],
-            ['form' => '2033-B', 'line' => '370/372', 'desc' => 'Résultat fiscal après imputation', 'value' => $fmt($fy->fiscal_result), 'raw' => $fy->fiscal_result],
-            ['form' => '2033-C', 'line' => '572', 'desc' => 'Total dotations amortissements', 'value' => $fmt($c['total_dotation']), 'raw' => $c['total_dotation']],
-            ['form' => '2042-C-PRO', 'line' => $form2042['case'], 'desc' => ($fy->fiscal_result >= 0 ? 'Bénéfice' : 'Déficit') . ' LMNP', 'value' => $fmt($form2042['montant']), 'raw' => $form2042['montant']],
+            '2031' => [
+                'title' => '2031-SD — Déclaration de résultat',
+                'cerfa' => 'CERFA 11085',
+                'open' => true,
+                'lines' => [
+                    ['line' => 'AB', 'desc' => 'Production vendue — Services (loyers)', 'value' => $fmt($f2031['AB']), 'raw' => $f2031['AB']],
+                    ['line' => 'CB', 'desc' => 'Bénéfice fiscal', 'value' => $fmt($f2031['CB']), 'raw' => $f2031['CB']],
+                    ['line' => 'CC', 'desc' => 'Déficit fiscal', 'value' => $fmt($f2031['CC']), 'raw' => $f2031['CC']],
+                ],
+            ],
+            '2033-A' => [
+                'title' => '2033-A — Bilan simplifié',
+                'cerfa' => 'CERFA 10956',
+                'open' => false,
+                'lines' => [
+                    ['line' => '028', 'desc' => 'Immobilisations corporelles (brut)', 'value' => $fmt($f2033A['028']), 'raw' => $f2033A['028']],
+                    ['line' => '030', 'desc' => 'Amortissements cumulés', 'value' => $fmt($f2033A['030']), 'raw' => $f2033A['030']],
+                    ['line' => '112', 'desc' => 'Total actif', 'value' => $fmt($f2033A['112']), 'raw' => $f2033A['112']],
+                    ['line' => '120', 'desc' => 'Compte de l\'exploitant', 'value' => $fmt($f2033A['120']), 'raw' => $f2033A['120']],
+                    ['line' => '136', 'desc' => 'Résultat de l\'exercice', 'value' => $fmt($f2033A['136']), 'raw' => $f2033A['136']],
+                    ['line' => '156', 'desc' => 'Emprunts et dettes', 'value' => $fmt($f2033A['156']), 'raw' => $f2033A['156']],
+                    ['line' => '180', 'desc' => 'Total passif', 'value' => $fmt($f2033A['180']), 'raw' => $f2033A['180']],
+                ],
+            ],
+            '2033-B' => [
+                'title' => '2033-B — Compte de résultat simplifié',
+                'cerfa' => 'CERFA 10957',
+                'open' => true,
+                'lines' => [
+                    ['line' => '218', 'desc' => 'Production vendue — Services (loyers)', 'value' => $fmt($f2033B['218']), 'raw' => $f2033B['218']],
+                    ['line' => '232', 'desc' => 'Total produits d\'exploitation (I)', 'value' => $fmt($f2033B['232']), 'raw' => $f2033B['232']],
+                    ['line' => '242', 'desc' => 'Autres charges externes', 'value' => $fmt($f2033B['242']), 'raw' => $f2033B['242']],
+                    ['line' => '244', 'desc' => 'Impôts, taxes (taxe foncière, CFE)', 'value' => $fmt($f2033B['244']), 'raw' => $f2033B['244']],
+                    ['line' => '254', 'desc' => 'Dotations aux amortissements', 'value' => $fmt($f2033B['254']), 'raw' => $f2033B['254']],
+                    ['line' => '264', 'desc' => 'Total charges d\'exploitation (II)', 'value' => $fmt($f2033B['264']), 'raw' => $f2033B['264']],
+                    ['line' => '270', 'desc' => 'Résultat d\'exploitation (I — II)', 'value' => $fmt($f2033B['270']), 'raw' => $f2033B['270']],
+                    ['line' => '294', 'desc' => 'Charges financières (intérêts emprunt)', 'value' => $fmt($f2033B['294']), 'raw' => $f2033B['294']],
+                    ['line' => '310', 'desc' => 'Résultat comptable', 'value' => $fmt($f2033B['310']), 'raw' => $f2033B['310']],
+                    ['line' => '312', 'desc' => 'Résultat comptable — bénéfice', 'value' => $fmt($f2033B['312']), 'raw' => $f2033B['312']],
+                    ['line' => '314', 'desc' => 'Résultat comptable — déficit', 'value' => $fmt($f2033B['314']), 'raw' => $f2033B['314']],
+                    ['line' => '318', 'desc' => 'Amortissements réputés différés (art. 39C)', 'value' => $fmt($f2033B['318']), 'raw' => $f2033B['318']],
+                    ['line' => '352', 'desc' => 'Résultat fiscal — bénéfice (avant imputation)', 'value' => $fmt($f2033B['352']), 'raw' => $f2033B['352']],
+                    ['line' => '354', 'desc' => 'Résultat fiscal — déficit (avant imputation)', 'value' => $fmt($f2033B['354']), 'raw' => $f2033B['354']],
+                    ['line' => '360', 'desc' => 'Déficits antérieurs imputés', 'value' => $fmt($f2033B['360']), 'raw' => $f2033B['360']],
+                    ['line' => '370', 'desc' => 'Résultat fiscal définitif — bénéfice', 'value' => $fmt($f2033B['370']), 'raw' => $f2033B['370']],
+                    ['line' => '372', 'desc' => 'Résultat fiscal définitif — déficit', 'value' => $fmt($f2033B['372']), 'raw' => $f2033B['372']],
+                ],
+            ],
+            '2033-C' => [
+                'title' => '2033-C — Immobilisations et amortissements',
+                'cerfa' => 'CERFA 10958',
+                'open' => false,
+                'categories' => $f2033C['categories'],
+                'lines' => [
+                    ['line' => '430 / 520', 'desc' => 'Constructions', 'value' => $fmt($f2033C['categories']['constructions']['brut']), 'raw' => $f2033C['categories']['constructions']['brut'], 'dotation' => $fmt($f2033C['categories']['constructions']['dotation']), 'dotation_raw' => $f2033C['categories']['constructions']['dotation']],
+                    ['line' => '440 / 530', 'desc' => 'Installations techniques', 'value' => $fmt($f2033C['categories']['installations']['brut']), 'raw' => $f2033C['categories']['installations']['brut'], 'dotation' => $fmt($f2033C['categories']['installations']['dotation']), 'dotation_raw' => $f2033C['categories']['installations']['dotation']],
+                    ['line' => '450 / 540', 'desc' => 'Agencements, aménagements', 'value' => $fmt($f2033C['categories']['agencements']['brut']), 'raw' => $f2033C['categories']['agencements']['brut'], 'dotation' => $fmt($f2033C['categories']['agencements']['dotation']), 'dotation_raw' => $f2033C['categories']['agencements']['dotation']],
+                    ['line' => '470 / 560', 'desc' => 'Autres immobilisations (mobilier)', 'value' => $fmt($f2033C['categories']['autres']['brut']), 'raw' => $f2033C['categories']['autres']['brut'], 'dotation' => $fmt($f2033C['categories']['autres']['dotation']), 'dotation_raw' => $f2033C['categories']['autres']['dotation']],
+                    ['line' => '490', 'desc' => 'Total immobilisations (brut)', 'value' => $fmt($f2033C['total_brut']), 'raw' => $f2033C['total_brut']],
+                    ['line' => '572', 'desc' => 'Total dotations aux amortissements', 'value' => $fmt($f2033C['total_dotation']), 'raw' => $f2033C['total_dotation']],
+                ],
+                'check_572_254' => $f2033C['total_dotation'] === (int) ($f2033B['254'] ?? 0),
+            ],
+            '2033-D' => [
+                'title' => '2033-D — Déficits et amortissements différés',
+                'cerfa' => 'CERFA 10959',
+                'open' => false,
+                'lines' => [
+                    ['line' => '982', 'desc' => 'Déficits restant à reporter (N-1)', 'value' => $fmt($f2033D['982']), 'raw' => $f2033D['982']],
+                    ['line' => '983', 'desc' => 'Déficits imputés sur le résultat', 'value' => $fmt($f2033D['983']), 'raw' => $f2033D['983']],
+                    ['line' => '984', 'desc' => 'Déficits reportables restants', 'value' => $fmt($f2033D['984']), 'raw' => $f2033D['984']],
+                    ['line' => '860', 'desc' => 'Déficit de l\'exercice', 'value' => $fmt($f2033D['860']), 'raw' => $f2033D['860']],
+                    ['line' => '870', 'desc' => 'Total amortissements différés reportables', 'value' => $fmt($f2033D['870']), 'raw' => $f2033D['870']],
+                ],
+            ],
+            '2042-C-PRO' => [
+                'title' => '2042-C-PRO — Déclaration de revenus',
+                'cerfa' => 'CERFA 11222',
+                'open' => true,
+                'lines' => [
+                    [
+                        'line' => $f2042['is_benefice'] ? $f2042['case_benefice'] : $f2042['case_deficit'],
+                        'desc' => ($f2042['is_benefice'] ? 'Bénéfice' : 'Déficit') . ' LMNP',
+                        'value' => $fmt($f2042['montant']),
+                        'raw' => $f2042['montant'],
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -159,12 +168,22 @@ class Teledeclaration extends Page
             return;
         }
 
-        $lines = collect($data['lines']);
+        $allLines = collect();
+        foreach ($data['forms'] as $formKey => $form) {
+            foreach ($form['lines'] as $line) {
+                $allLines->push([
+                    'form' => $formKey,
+                    'line' => $line['line'],
+                    'desc' => $line['desc'],
+                    'raw' => $line['raw'],
+                ]);
+            }
+        }
 
         return CsvExportService::export(
             "declaration_lmnp_{$this->year}.csv",
             ['Formulaire', 'Ligne', 'Description', 'Montant (€)'],
-            $lines,
+            $allLines,
             fn ($line) => [$line['form'], $line['line'], $line['desc'], number_format($line['raw'] / 100, 2, ',', '')]
         );
     }
