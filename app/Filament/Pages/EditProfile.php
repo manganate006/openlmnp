@@ -7,6 +7,7 @@ use Filament\Actions\Action;
 use Filament\Auth\Pages\EditProfile as BaseEditProfile;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Schema;
 
@@ -56,6 +57,10 @@ class EditProfile extends BaseEditProfile
                     ->options($timezones)
                     ->searchable()
                     ->required(),
+                Toggle::make('mcp_enabled')
+                    ->label('Activer l\'API MCP')
+                    ->helperText('Permet aux assistants IA (Claude, etc.) d\'accéder à vos données comptables via le protocole MCP.')
+                    ->visible(fn () => config('mcp.enabled')),
             ]);
     }
 }

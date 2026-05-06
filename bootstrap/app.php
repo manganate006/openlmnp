@@ -10,7 +10,7 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            if (env('MCP_ENABLED', false)) {
+            if (file_exists(base_path('routes/mcp.php'))) {
                 require base_path('routes/mcp.php');
             }
         },
