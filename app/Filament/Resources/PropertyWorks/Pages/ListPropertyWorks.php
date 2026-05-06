@@ -21,6 +21,14 @@ class ListPropertyWorks extends ListRecords
 
         if ($this->propertyId) {
             $this->propertyId = (int) $this->propertyId;
+        } else {
+            $count = Property::count();
+            if ($count === 1) {
+                $this->redirect(PropertyWorkResource::getUrl('property', [
+                    'propertyId' => Property::first()->id,
+                ]));
+                return;
+            }
         }
     }
 
@@ -35,28 +43,19 @@ class ListPropertyWorks extends ListRecords
         return $query;
     }
 
-    public function getSubheading(): ?string
-    {
-        if ($this->propertyId) {
-            return Property::find($this->propertyId)?->name;
-        }
-
-        return null;
-    }
-
     public function getHeader(): ?View
     {
-        if ($this->propertyId) {
-            return view('filament.partials.list-with-tabs', [
-                'propertyId' => $this->propertyId,
-                'propertyName' => Property::find($this->propertyId)?->name,
-                'active' => 'works',
-                'heading' => 'Travaux',
-                'actions' => $this->getCachedHeaderActions(),
-            ]);
-        }
+        $propertyName = $this->propertyId ? Property::find($this->propertyId)?->name : null;
 
-        return null;
+        return view('filament.partials.list-with-tabs', [
+            'propertyId' => $this->propertyId,
+            'propertyName' => $propertyName,
+            'active' => 'works',
+            'heading' => 'Travaux',
+            'actions' => $this->getCachedHeaderActions(),
+            'properties' => $this->propertyId ? null : Property::orderBy('name')->get(['id', 'name']),
+            'currentUrl' => '/property-works',
+        ]);
     }
 
     protected function getHeaderActions(): array
