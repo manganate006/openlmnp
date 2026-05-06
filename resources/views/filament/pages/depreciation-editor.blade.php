@@ -361,27 +361,17 @@
                     toggleOptional(idx) {
                         const comp = this.components[idx];
                         comp.enabled = !comp.enabled;
-                        const go = this.findGrosOeuvre();
 
                         if (comp.enabled) {
                             const pct = comp.suggestedPercentage;
-                            if (go && go.enabled && go.percentage >= pct) {
-                                comp.percentage = pct;
-                                go.percentage -= pct;
-                            } else {
-                                comp.percentage = pct;
-                                const others = this.components.filter((c, i) => i !== idx && c.enabled && c.percentage > 0);
-                                this.distribute(others, pct, -1);
-                            }
+                            comp.percentage = pct;
+                            const others = this.components.filter((c, i) => i !== idx && c.enabled && c.percentage > 0);
+                            this.distribute(others, pct, -1);
                         } else {
                             const freed = comp.percentage;
                             comp.percentage = 0;
-                            if (go && go.enabled) {
-                                go.percentage += freed;
-                            } else {
-                                const others = this.components.filter(c => c.enabled && c.percentage > 0);
-                                this.distribute(others, freed, +1);
-                            }
+                            const others = this.components.filter(c => c.enabled && c.percentage > 0);
+                            this.distribute(others, freed, +1);
                         }
                         this._dragIdx = null;
                         this.markDirty();
