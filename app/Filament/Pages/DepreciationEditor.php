@@ -42,22 +42,30 @@ class DepreciationEditor extends Page
 
     public function mount(?int $propertyId = null): void
     {
-        $this->propertyId = $propertyId ?? Property::first()?->id;
+        if ($propertyId) {
+            $this->propertyId = $propertyId;
+        } else {
+            $count = Property::count();
+            if ($count === 1) {
+                $this->redirect('/depreciation-editor/' . Property::first()->id);
+                return;
+            }
+        }
     }
 
     public function getHeader(): ?View
     {
-        if ($this->propertyId) {
-            return view('filament.partials.list-with-tabs', [
-                'propertyId' => $this->propertyId,
-                'propertyName' => Property::find($this->propertyId)?->name,
-                'active' => 'components',
-                'heading' => 'Ventilation des composants',
-                'actions' => [],
-            ]);
-        }
+        $propertyName = $this->propertyId ? Property::find($this->propertyId)?->name : null;
 
-        return null;
+        return view('filament.partials.list-with-tabs', [
+            'propertyId' => $this->propertyId,
+            'propertyName' => $propertyName,
+            'active' => 'components',
+            'heading' => 'Ventilation des composants',
+            'actions' => [],
+            'properties' => $this->propertyId ? null : Property::orderBy('name')->get(['id', 'name']),
+            'currentUrl' => '/depreciation-editor',
+        ]);
     }
 
     #[Computed]
