@@ -49,9 +49,9 @@ class ListPropertyWorks extends ListRecords
         if ($this->propertyId) {
             return view('filament.partials.list-with-tabs', [
                 'propertyId' => $this->propertyId,
+                'propertyName' => Property::find($this->propertyId)?->name,
                 'active' => 'works',
                 'heading' => 'Travaux',
-                'subheading' => $this->getSubheading(),
                 'actions' => $this->getCachedHeaderActions(),
             ]);
         }

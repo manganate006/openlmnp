@@ -10,6 +10,7 @@ use BackedEnum;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Computed;
 use UnitEnum;
 
@@ -42,6 +43,21 @@ class DepreciationEditor extends Page
     public function mount(?int $propertyId = null): void
     {
         $this->propertyId = $propertyId ?? Property::first()?->id;
+    }
+
+    public function getHeader(): ?View
+    {
+        if ($this->propertyId) {
+            return view('filament.partials.list-with-tabs', [
+                'propertyId' => $this->propertyId,
+                'propertyName' => Property::find($this->propertyId)?->name,
+                'active' => 'components',
+                'heading' => 'Ventilation des composants',
+                'actions' => [],
+            ]);
+        }
+
+        return null;
     }
 
     #[Computed]

@@ -49,9 +49,9 @@ class ListFurniture extends ListRecords
         if ($this->propertyId) {
             return view('filament.partials.list-with-tabs', [
                 'propertyId' => $this->propertyId,
+                'propertyName' => Property::find($this->propertyId)?->name,
                 'active' => 'furniture',
                 'heading' => 'Mobilier & Équipements',
-                'subheading' => $this->getSubheading(),
                 'actions' => $this->getCachedHeaderActions(),
             ]);
         }
