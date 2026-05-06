@@ -3,10 +3,11 @@
     <p>Importez automatiquement vos revenus depuis un fichier CSV téléchargé sur Airbnb.</p>
 
     <h3>Comment obtenir le fichier</h3>
-    <div class="ctx-step"><span class="ctx-step-num">1</span><span class="ctx-step-text">Connectez-vous sur <strong>airbnb.com</strong></span></div>
-    <div class="ctx-step"><span class="ctx-step-num">2</span><span class="ctx-step-text">Allez dans <strong>Performances > Revenus</strong></span></div>
-    <div class="ctx-step"><span class="ctx-step-num">3</span><span class="ctx-step-text">Sélectionnez la période et cliquez sur <strong>Exporter</strong></span></div>
-    <div class="ctx-step"><span class="ctx-step-num">4</span><span class="ctx-step-text">Téléchargez le fichier CSV</span></div>
+    <div class="ctx-step"><span class="ctx-step-num">1</span><span class="ctx-step-text">Connectez-vous sur <strong>airbnb.fr</strong> en <strong>mode hôte</strong></span></div>
+    <div class="ctx-step"><span class="ctx-step-num">2</span><span class="ctx-step-text">Ouvrez le <strong>menu</strong> puis cliquez sur <strong>Revenus</strong><br><span style="font-size:.85em;opacity:.7">ou directement : airbnb.fr/users/transaction_history</span></span></div>
+    <div class="ctx-step"><span class="ctx-step-num">3</span><span class="ctx-step-text">Sélectionnez l'onglet <strong>Montants payés</strong></span></div>
+    <div class="ctx-step"><span class="ctx-step-num">4</span><span class="ctx-step-text">Filtrez par <strong>année</strong> (ex. : 01/01/2025 &ndash; 31/12/2025)</span></div>
+    <div class="ctx-step"><span class="ctx-step-num">5</span><span class="ctx-step-text">Cliquez sur <strong>Exporter en CSV</strong> et téléchargez le fichier</span></div>
 
     <h3>Formats supportés</h3>
     <ul>
