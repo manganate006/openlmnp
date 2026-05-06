@@ -94,16 +94,16 @@
                     <div class="de-stat-value" x-text="formatEuros(depreciableBase)"></div>
                     <div class="de-stat-label">Base amortissable</div>
                 </div>
-                <div class="de-card de-stat" :class="totalPercentage === 100 ? 'de-stat-green' : (totalPercentage < 100 ? 'de-stat-amber' : 'de-stat-red')">
-                    <div class="de-stat-value" x-text="totalPercentage + ' %'"></div>
+                <div class="de-card de-stat" :class="getTotalClass()">
+                    <div class="de-stat-value" x-text="getTotalPercentage() + ' %'"></div>
                     <div class="de-stat-label">Total alloué</div>
                 </div>
                 <div class="de-card de-stat de-stat-green">
-                    <div class="de-stat-value" x-text="formatEuros(totalAnnualDepreciation)"></div>
+                    <div class="de-stat-value" x-text="formatEuros(getTotalAnnualDepreciation())"></div>
                     <div class="de-stat-label">Amortissement annuel</div>
                 </div>
                 <div class="de-card de-stat de-stat-blue">
-                    <div class="de-stat-value" x-text="weightedDuration + ' ans'"></div>
+                    <div class="de-stat-value" x-text="getWeightedDuration() + ' ans'"></div>
                     <div class="de-stat-label">Durée moyenne pondérée</div>
                 </div>
             </div>
@@ -115,13 +115,13 @@
                     {{-- Standards --}}
                     <div class="de-card">
                         <div class="de-section-title">Composants standards</div>
-                        <template x-for="(comp, idx) in components.filter(c => !c.optional)" :key="comp.name">
-                            <div class="de-comp">
+                        <template x-for="(comp, idx) in components" :key="idx">
+                            <div x-show="!comp.optional" class="de-comp">
                                 <input
                                     type="checkbox"
                                     class="de-comp-checkbox"
-                                    x-model="comp.enabled"
-                                    @change="toggleStandard(components.indexOf(comp))"
+                                    :checked="comp.enabled"
+                                    @change="toggleStandard(idx)"
                                 >
                                 <div>
                                     <div class="de-comp-name">
@@ -134,8 +134,8 @@
                                                 type="range"
                                                 class="de-slider"
                                                 min="0" max="100" step="1"
-                                                x-model.number="comp.percentage"
-                                                @input="updatePercentage(components.indexOf(comp), parseInt($event.target.value))"
+                                                :value="comp.percentage"
+                                                @input="onSlider(idx, parseInt($event.target.value))"
                                                 :disabled="!comp.enabled"
                                             >
                                         </div>
@@ -144,11 +144,12 @@
                                             type="number"
                                             class="de-duration-input"
                                             min="1" max="100"
-                                            x-model.number="comp.duration"
+                                            :value="comp.duration"
+                                            @change="comp.duration = parseInt($event.target.value); markDirty()"
                                             :disabled="!comp.enabled"
                                         >
                                         <span class="de-duration-label">ans</span>
-                                        <span class="de-amount" x-text="formatEuros(compBaseAmount(comp)) + ' €'"></span>
+                                        <span class="de-amount" x-text="formatEuros(depreciableBase * comp.percentage / 100) + ' €'"></span>
                                     </div>
                                 </div>
                             </div>
@@ -158,13 +159,13 @@
                     {{-- Optionnels --}}
                     <div class="de-card">
                         <div class="de-section-title">Composants optionnels (maison)</div>
-                        <template x-for="(comp, idx) in components.filter(c => c.optional)" :key="comp.name">
-                            <div class="de-comp" :class="!comp.enabled && 'de-comp-disabled'">
+                        <template x-for="(comp, idx) in components" :key="idx">
+                            <div x-show="comp.optional" class="de-comp" :class="!comp.enabled && 'de-comp-disabled'">
                                 <input
                                     type="checkbox"
                                     class="de-comp-checkbox"
-                                    x-model="comp.enabled"
-                                    @change="toggleOptional(components.indexOf(comp))"
+                                    :checked="comp.enabled"
+                                    @change="toggleOptional(idx)"
                                 >
                                 <div>
                                     <div class="de-comp-name">
@@ -177,8 +178,8 @@
                                                 type="range"
                                                 class="de-slider"
                                                 min="0" max="100" step="1"
-                                                x-model.number="comp.percentage"
-                                                @input="updatePercentage(components.indexOf(comp), parseInt($event.target.value))"
+                                                :value="comp.percentage"
+                                                @input="onSlider(idx, parseInt($event.target.value))"
                                                 :disabled="!comp.enabled"
                                             >
                                         </div>
@@ -187,11 +188,12 @@
                                             type="number"
                                             class="de-duration-input"
                                             min="1" max="100"
-                                            x-model.number="comp.duration"
+                                            :value="comp.duration"
+                                            @change="comp.duration = parseInt($event.target.value); markDirty()"
                                             :disabled="!comp.enabled"
                                         >
                                         <span class="de-duration-label">ans</span>
-                                        <span class="de-amount" x-text="comp.enabled ? formatEuros(compBaseAmount(comp)) + ' €' : '—'"></span>
+                                        <span class="de-amount" x-text="comp.enabled ? formatEuros(depreciableBase * comp.percentage / 100) + ' €' : '—'"></span>
                                     </div>
                                 </div>
                             </div>
@@ -204,13 +206,11 @@
                             Réinitialiser par défaut
                         </button>
                         <div style="display:flex;align-items:center;gap:12px;">
-                            <template x-if="isDirty">
-                                <span class="de-dirty-badge">Modifications non enregistrées</span>
-                            </template>
+                            <span class="de-dirty-badge" x-show="isDirty" x-cloak>Modifications non enregistrées</span>
                             <button
                                 class="de-btn de-btn-primary"
                                 @click="save()"
-                                :disabled="totalPercentage !== 100"
+                                :disabled="getTotalPercentage() !== 100"
                             >
                                 Enregistrer
                             </button>
@@ -223,13 +223,13 @@
                     <div class="de-card de-chart-container">
                         <div class="de-section-title">Répartition</div>
                         <canvas x-ref="doughnutCanvas" style="max-height:300px;"></canvas>
-                        <div class="de-chart-legend" x-show="enabledComponents.length > 0">
-                            <template x-for="(comp, i) in enabledComponents" :key="comp.name">
+                        <div class="de-chart-legend">
+                            <template x-for="(item, i) in getEnabledComponents()" :key="item.name">
                                 <div class="de-chart-legend-item">
                                     <span class="de-chart-legend-dot" :style="'background:' + chartColors[i % chartColors.length]"></span>
-                                    <span x-text="getEmoji(comp.name)"></span>
-                                    <span x-text="comp.name"></span>
-                                    <span style="margin-left:auto;font-weight:600;font-family:monospace;" x-text="comp.percentage + ' %'"></span>
+                                    <span x-text="getEmoji(item.name)"></span>
+                                    <span x-text="item.name"></span>
+                                    <span style="margin-left:auto;font-weight:600;font-family:monospace;" x-text="item.percentage + ' %'"></span>
                                 </div>
                             </template>
                         </div>
@@ -247,6 +247,7 @@
                     chart: null,
                     isDirty: false,
                     savedState: '',
+                    _version: 0,
 
                     chartColors: [
                         '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -254,17 +255,17 @@
                     ],
 
                     emojiMap: {
-                        'Gros œuvre': '🏗️',
-                        'Toiture': '🏠',
-                        'Installations électriques': '⚡',
-                        'Étanchéité': '☀️',
-                        'Agencements intérieurs': '🎨',
-                        'Plomberie / sanitaire': '🚿',
-                        'Piscine': '🏊',
-                        'Climatisation / chauffage': '❄️',
-                        'Cuisine équipée': '🍳',
-                        'VRD (voirie, réseaux)': '🚧',
-                        'Aménagements extérieurs': '🌳',
+                        'Gros \u0153uvre': '\u{1F3D7}\uFE0F',
+                        'Toiture': '\u{1F3E0}',
+                        'Installations \u00E9lectriques': '\u26A1',
+                        '\u00C9tanch\u00E9it\u00E9': '\u2600\uFE0F',
+                        'Agencements int\u00E9rieurs': '\u{1F3A8}',
+                        'Plomberie / sanitaire': '\u{1F6BF}',
+                        'Piscine': '\u{1F3CA}',
+                        'Climatisation / chauffage': '\u2744\uFE0F',
+                        'Cuisine \u00E9quip\u00E9e': '\u{1F373}',
+                        'VRD (voirie, r\u00E9seaux)': '\u{1F6A7}',
+                        'Am\u00E9nagements ext\u00E9rieurs': '\u{1F333}',
                     },
 
                     init() {
@@ -275,7 +276,7 @@
                     reload(data) {
                         if (data && !data.empty) {
                             this.loadData(data);
-                            this.updateChart();
+                            this.$nextTick(() => this.updateChart());
                         }
                     },
 
@@ -284,30 +285,40 @@
                         this.depreciableBase = data.depreciableBase;
                         this.savedState = JSON.stringify(this.components);
                         this.isDirty = false;
+                        this._version++;
                     },
 
                     getEmoji(name) {
-                        return this.emojiMap[name] || '📦';
+                        return this.emojiMap[name] || '\u{1F4E6}';
                     },
 
-                    get enabledComponents() {
+                    getEnabledComponents() {
+                        // Force reactivity via _version
+                        void this._version;
                         return this.components.filter(c => c.enabled && c.percentage > 0);
                     },
 
-                    get totalPercentage() {
+                    getTotalPercentage() {
+                        void this._version;
                         return this.components
                             .filter(c => c.enabled)
                             .reduce((s, c) => s + c.percentage, 0);
                     },
 
-                    get totalAnnualDepreciation() {
-                        return this.enabledComponents.reduce((s, c) => {
+                    getTotalClass() {
+                        const t = this.getTotalPercentage();
+                        return t === 100 ? 'de-stat-green' : (t < 100 ? 'de-stat-amber' : 'de-stat-red');
+                    },
+
+                    getTotalAnnualDepreciation() {
+                        void this._version;
+                        return this.getEnabledComponents().reduce((s, c) => {
                             return s + (c.duration > 0 ? (this.depreciableBase * c.percentage / 100) / c.duration : 0);
                         }, 0);
                     },
 
-                    get weightedDuration() {
-                        const enabled = this.enabledComponents;
+                    getWeightedDuration() {
+                        const enabled = this.getEnabledComponents();
                         if (enabled.length === 0) return 0;
                         const totalPct = enabled.reduce((s, c) => s + c.percentage, 0);
                         if (totalPct === 0) return 0;
@@ -315,25 +326,23 @@
                         return Math.round(weighted / totalPct);
                     },
 
-                    compBaseAmount(comp) {
-                        return this.depreciableBase * comp.percentage / 100;
-                    },
-
                     formatEuros(val) {
-                        return Math.round(val).toLocaleString('fr-FR') + ' €';
+                        return Math.round(val).toLocaleString('fr-FR') + ' \u20AC';
                     },
 
                     markDirty() {
+                        this._version++;
                         this.isDirty = JSON.stringify(this.components) !== this.savedState;
                         this.updateChart();
                     },
 
                     findGrosOeuvre() {
-                        return this.components.find(c => c.name === 'Gros œuvre');
+                        return this.components.find(c => c.name === 'Gros \u0153uvre');
                     },
 
-                    toggleOptional(index) {
-                        const comp = this.components[index];
+                    toggleOptional(idx) {
+                        const comp = this.components[idx];
+                        comp.enabled = !comp.enabled;
                         const go = this.findGrosOeuvre();
 
                         if (comp.enabled) {
@@ -342,8 +351,8 @@
                                 comp.percentage = pct;
                                 go.percentage -= pct;
                             } else {
-                                comp.percentage = comp.suggestedPercentage;
-                                this.redistributeFrom(index, comp.suggestedPercentage);
+                                comp.percentage = pct;
+                                this.redistributeFrom(idx, pct);
                             }
                         } else {
                             const freed = comp.percentage;
@@ -357,8 +366,9 @@
                         this.markDirty();
                     },
 
-                    toggleStandard(index) {
-                        const comp = this.components[index];
+                    toggleStandard(idx) {
+                        const comp = this.components[idx];
+                        comp.enabled = !comp.enabled;
                         if (!comp.enabled) {
                             const freed = comp.percentage;
                             comp.percentage = 0;
@@ -400,35 +410,32 @@
                         });
                     },
 
-                    updatePercentage(changedIdx, newValue) {
-                        const comp = this.components[changedIdx];
+                    onSlider(idx, newValue) {
+                        const comp = this.components[idx];
                         const oldValue = comp.percentage;
                         const diff = newValue - oldValue;
                         if (diff === 0) return;
 
                         comp.percentage = newValue;
 
-                        const others = this.components.filter((c, i) => i !== changedIdx && c.enabled && c.percentage > 0);
+                        const others = this.components.filter((c, i) => i !== idx && c.enabled && c.percentage > 0);
                         const othersTotal = others.reduce((s, c) => s + c.percentage, 0);
 
-                        if (othersTotal === 0) {
-                            this.markDirty();
-                            return;
+                        if (othersTotal > 0) {
+                            let distributed = 0;
+                            others.forEach((c, i) => {
+                                if (i === others.length - 1) {
+                                    c.percentage -= (diff - distributed);
+                                } else {
+                                    const share = Math.round(diff * c.percentage / othersTotal);
+                                    c.percentage -= share;
+                                    distributed += share;
+                                }
+                                c.percentage = Math.max(0, c.percentage);
+                            });
+                            this.fixRounding();
                         }
 
-                        let distributed = 0;
-                        others.forEach((c, i) => {
-                            if (i === others.length - 1) {
-                                c.percentage -= (diff - distributed);
-                            } else {
-                                const share = Math.round(diff * c.percentage / othersTotal);
-                                c.percentage -= share;
-                                distributed += share;
-                            }
-                            c.percentage = Math.max(0, c.percentage);
-                        });
-
-                        this.fixRounding();
                         this.markDirty();
                     },
 
@@ -438,7 +445,6 @@
                         if (total === 100 || enabled.length === 0) return;
 
                         const diff = 100 - total;
-                        // Ajuster le composant le plus gros
                         let biggest = enabled.reduce((a, b) => a.percentage >= b.percentage ? a : b);
                         biggest.percentage += diff;
                         if (biggest.percentage < 0) biggest.percentage = 0;
@@ -448,19 +454,9 @@
                         const ctx = this.$refs.doughnutCanvas;
                         if (!ctx) return;
 
-                        const enabled = this.enabledComponents;
-                        const emojiLabels = enabled.map(c => this.getEmoji(c.name) + ' ' + c.name);
                         this.chart = new Chart(ctx, {
                             type: 'doughnut',
-                            data: {
-                                labels: emojiLabels,
-                                datasets: [{
-                                    data: enabled.map(c => c.percentage),
-                                    backgroundColor: this.chartColors.slice(0, enabled.length),
-                                    borderWidth: 2,
-                                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--fi-body-bg') || '#fff',
-                                }]
-                            },
+                            data: this.getChartData(),
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: true,
@@ -469,11 +465,12 @@
                                     legend: { display: false },
                                     tooltip: {
                                         callbacks: {
-                                            label: (ctx) => {
-                                                const comp = enabled[ctx.dataIndex];
-                                                const emoji = this.getEmoji(comp.name);
+                                            label: (context) => {
+                                                const enabled = this.getEnabledComponents();
+                                                const comp = enabled[context.dataIndex];
+                                                if (!comp) return '';
                                                 const base = Math.round(this.depreciableBase * comp.percentage / 100);
-                                                return ` ${comp.percentage} % — ${base.toLocaleString('fr-FR')} €`;
+                                                return ` ${comp.percentage} % \u2014 ${base.toLocaleString('fr-FR')} \u20AC`;
                                             }
                                         }
                                     }
@@ -482,18 +479,32 @@
                         });
                     },
 
+                    getChartData() {
+                        const enabled = this.getEnabledComponents();
+                        return {
+                            labels: enabled.map(c => this.getEmoji(c.name) + ' ' + c.name),
+                            datasets: [{
+                                data: enabled.map(c => c.percentage),
+                                backgroundColor: this.chartColors.slice(0, enabled.length),
+                                borderWidth: 2,
+                                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--fi-body-bg') || '#fff',
+                            }]
+                        };
+                    },
+
                     updateChart() {
                         if (!this.chart) return;
-                        const enabled = this.enabledComponents;
-                        this.chart.data.labels = enabled.map(c => this.getEmoji(c.name) + ' ' + c.name);
-                        this.chart.data.datasets[0].data = enabled.map(c => c.percentage);
-                        this.chart.data.datasets[0].backgroundColor = this.chartColors.slice(0, enabled.length);
+                        const data = this.getChartData();
+                        this.chart.data.labels = data.labels;
+                        this.chart.data.datasets[0].data = data.datasets[0].data;
+                        this.chart.data.datasets[0].backgroundColor = data.datasets[0].backgroundColor;
                         this.chart.update('none');
                     },
 
                     save() {
-                        if (this.totalPercentage !== 100) return;
-                        this.$wire.saveComponents(this.components).then(() => {
+                        if (this.getTotalPercentage() !== 100) return;
+                        const payload = JSON.parse(JSON.stringify(this.components));
+                        this.$wire.saveComponents(payload).then(() => {
                             this.savedState = JSON.stringify(this.components);
                             this.isDirty = false;
                         });
