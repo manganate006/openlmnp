@@ -76,7 +76,7 @@ class PropertyForm
         return $schema
             ->components([
                 Placeholder::make('property_tabs')
-                    ->label('')
+                    ->hiddenLabel()
                     ->content(fn ($record) => view('components.property-tabs', [
                         'propertyId' => $record->id,
                         'active' => 'general',
