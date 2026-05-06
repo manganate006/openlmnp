@@ -22,6 +22,6 @@ class YearFilter
                 $data['value'],
                 fn ($q, $year) => $q->whereYear($dateColumn, $year)
             ))
-            ->default((string) now()->year);
+;
     }
 }
