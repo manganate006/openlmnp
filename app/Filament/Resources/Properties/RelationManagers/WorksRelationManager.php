@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Properties\RelationManagers;
 
 use App\Enums\TvaRate;
+use App\Filament\Schemas\DocumentsSection;
 use App\Helpers\TvaHelper;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -71,6 +72,7 @@ class WorksRelationManager extends RelationManager
             TextInput::make('duration_years')->label('Durée amortissement')->suffix('ans')->required()->numeric()->default(10)
                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Aménagement intérieur → 10 ans · Salle de bain, cuisine → 10-15 ans · Piscine, terrasse, toiture → 15-20 ans · Électricité/plomberie → 15 ans'),
             Toggle::make('is_dedicated')->label('100% dédié au bien loué')->default(true),
+            DocumentsSection::make(),
         ]);
     }
 
