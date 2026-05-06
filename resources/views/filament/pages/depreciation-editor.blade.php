@@ -1,8 +1,4 @@
 <x-filament-panels::page>
-    @if($this->propertyId)
-        <x-property-tabs :propertyId="$this->propertyId" active="components" />
-    @endif
-
     <style>
         .de-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
         .de-grid { display: grid; gap: 12px; }

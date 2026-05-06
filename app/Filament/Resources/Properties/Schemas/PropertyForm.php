@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Properties\Schemas;
 
 use App\Models\Property;
-use Filament\Forms\Components\Placeholder;
 use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -18,7 +17,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
-use Illuminate\Support\HtmlString;
 
 class PropertyForm
 {
@@ -75,14 +73,6 @@ class PropertyForm
     {
         return $schema
             ->components([
-                Placeholder::make('property_tabs')
-                    ->hiddenLabel()
-                    ->content(fn ($record) => view('components.property-tabs', [
-                        'propertyId' => $record->id,
-                        'active' => 'general',
-                    ]))
-                    ->columnSpanFull(),
-
                 Tabs::make('Bien immobilier')
                     ->tabs([
                         Tab::make('Général')
