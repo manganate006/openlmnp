@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\PropertyWorks\Pages;
 
 use App\Filament\Resources\PropertyWorks\PropertyWorkResource;
-use App\Filament\Widgets\PropertyTabsWidget;
 use App\Models\Property;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 
 class ListPropertyWorks extends ListRecords
@@ -44,21 +44,19 @@ class ListPropertyWorks extends ListRecords
         return null;
     }
 
-    protected function getHeaderWidgets(): array
+    public function getHeader(): ?View
     {
         if ($this->propertyId) {
-            return [PropertyTabsWidget::class];
+            return view('filament.partials.list-with-tabs', [
+                'propertyId' => $this->propertyId,
+                'active' => 'works',
+                'heading' => 'Travaux',
+                'subheading' => $this->getSubheading(),
+                'actions' => $this->getCachedHeaderActions(),
+            ]);
         }
 
-        return [];
-    }
-
-    protected function getHeaderWidgetsData(): array
-    {
-        return [
-            'propertyId' => $this->propertyId,
-            'active' => 'works',
-        ];
+        return null;
     }
 
     protected function getHeaderActions(): array
