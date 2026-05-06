@@ -54,6 +54,7 @@ class PropertiesTable
                     ->label('RP')
                     ->boolean(),
             ])
+            ->reorderableColumns()
             ->filters([])
             ->recordActions([
                 EditAction::make(),

@@ -52,6 +52,7 @@ class FiscalYearsTable
                     ->weight('bold')
                     ->sortable(),
             ])
+            ->reorderableColumns()
             ->defaultSort('year', 'desc')
             ->recordActions([
                 Action::make('calculate')

@@ -37,6 +37,7 @@ class PropertyComponentsTable
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €')
                     ->sortable(),
             ])
+            ->reorderableColumns()
             ->defaultSort('sort_order')
             ->recordActions([EditAction::make()])
             ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
