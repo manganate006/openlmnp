@@ -75,7 +75,7 @@ class PropertyForm
             ->components([
                 Tabs::make('Bien immobilier')
                     ->tabs([
-                        Tab::make('Général')
+                        Tab::make('Identité')
                             ->icon('heroicon-o-home-modern')
                             ->schema([
                                 ...static::generalFields(),
