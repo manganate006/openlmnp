@@ -74,6 +74,7 @@ class ComponentsRelationManager extends RelationManager
                 TextColumn::make('annual_depreciation')->label('Amort./an')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €'),
             ])
+            ->reorderableColumns()
             ->defaultSort('sort_order')
             ->recordActions([
                 EditAction::make()->after(fn () => $this->warnIfUnder100()),

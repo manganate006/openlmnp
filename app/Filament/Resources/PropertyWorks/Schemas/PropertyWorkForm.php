@@ -39,7 +39,8 @@ class PropertyWorkForm
                             ->required()
                             ->preload()
                             ->live()
-                            ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
+                            ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null)
+                            ->hiddenOn(\Filament\Resources\RelationManagers\RelationManager::class),
                         TextInput::make('description')
                             ->label('Description')
                             ->required()
