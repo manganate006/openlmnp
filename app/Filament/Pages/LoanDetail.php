@@ -15,6 +15,7 @@ class LoanDetail extends Page
 {
     use NavigationAware;
 
+    protected static bool $shouldRegisterNavigation = false;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
     protected static string | UnitEnum | null $navigationGroup = 'Mes biens';
     protected static ?string $navigationLabel = 'Détail emprunt';
