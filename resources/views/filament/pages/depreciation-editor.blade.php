@@ -350,12 +350,23 @@
                         if (total === 0) {
                             const each = amount / targets.length;
                             targets.forEach(c => { c.percentage += sign * Math.round(each * 10) / 10; });
-                            return;
+                        } else {
+                            targets.forEach(c => {
+                                c.percentage += sign * Math.round(amount * c.percentage / total * 10) / 10;
+                                if (c.percentage < 0) c.percentage = 0;
+                            });
                         }
-                        targets.forEach(c => {
-                            c.percentage += sign * Math.round(amount * c.percentage / total * 10) / 10;
-                            if (c.percentage < 0) c.percentage = 0;
-                        });
+                        // Corriger le résidu d'arrondi pour maintenir 100%
+                        this.fixTotal();
+                    },
+
+                    fixTotal() {
+                        const enabled = this.components.filter(c => c.enabled);
+                        const total = Math.round(enabled.reduce((s, c) => s + c.percentage, 0) * 10) / 10;
+                        if (total === 100 || enabled.length === 0) return;
+                        const residual = Math.round((100 - total) * 10) / 10;
+                        const biggest = enabled.reduce((a, b) => a.percentage >= b.percentage ? a : b);
+                        biggest.percentage = Math.round((biggest.percentage + residual) * 10) / 10;
                     },
 
                     toggleOptional(idx) {
