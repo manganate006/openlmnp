@@ -227,6 +227,7 @@
                             <template x-for="(comp, i) in enabledComponents" :key="comp.name">
                                 <div class="de-chart-legend-item">
                                     <span class="de-chart-legend-dot" :style="'background:' + chartColors[i % chartColors.length]"></span>
+                                    <span x-text="getEmoji(comp.name)"></span>
                                     <span x-text="comp.name"></span>
                                     <span style="margin-left:auto;font-weight:600;font-family:monospace;" x-text="comp.percentage + ' %'"></span>
                                 </div>
@@ -448,10 +449,11 @@
                         if (!ctx) return;
 
                         const enabled = this.enabledComponents;
+                        const emojiLabels = enabled.map(c => this.getEmoji(c.name) + ' ' + c.name);
                         this.chart = new Chart(ctx, {
                             type: 'doughnut',
                             data: {
-                                labels: enabled.map(c => c.name),
+                                labels: emojiLabels,
                                 datasets: [{
                                     data: enabled.map(c => c.percentage),
                                     backgroundColor: this.chartColors.slice(0, enabled.length),
@@ -469,8 +471,9 @@
                                         callbacks: {
                                             label: (ctx) => {
                                                 const comp = enabled[ctx.dataIndex];
+                                                const emoji = this.getEmoji(comp.name);
                                                 const base = Math.round(this.depreciableBase * comp.percentage / 100);
-                                                return `${comp.name}: ${comp.percentage} % (${base.toLocaleString('fr-FR')} €)`;
+                                                return ` ${comp.percentage} % — ${base.toLocaleString('fr-FR')} €`;
                                             }
                                         }
                                     }
@@ -482,7 +485,7 @@
                     updateChart() {
                         if (!this.chart) return;
                         const enabled = this.enabledComponents;
-                        this.chart.data.labels = enabled.map(c => c.name);
+                        this.chart.data.labels = enabled.map(c => this.getEmoji(c.name) + ' ' + c.name);
                         this.chart.data.datasets[0].data = enabled.map(c => c.percentage);
                         this.chart.data.datasets[0].backgroundColor = this.chartColors.slice(0, enabled.length);
                         this.chart.update('none');
