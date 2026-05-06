@@ -377,37 +377,54 @@
                         this.markDirty();
                     },
 
-                    redistributeFrom(changedIdx, amount) {
-                        const others = this.components.filter((c, i) => i !== changedIdx && c.enabled && c.percentage > 0);
-                        const total = others.reduce((s, c) => s + c.percentage, 0);
-                        if (total === 0) return;
-                        let remaining = amount;
-                        others.forEach((c, i) => {
-                            if (i === others.length - 1) {
-                                c.percentage -= remaining;
-                            } else {
-                                const share = Math.round(amount * c.percentage / total);
-                                c.percentage -= share;
-                                remaining -= share;
-                            }
-                            c.percentage = Math.max(0, c.percentage);
+                    /**
+                     * Méthode des plus forts restes (Hamilton).
+                     * Distribue `amount` unités aux `targets` proportionnellement à leur %.
+                     * sign: +1 = ajouter aux targets, -1 = retirer des targets.
+                     */
+                    distribute(targets, amount, sign) {
+                        if (targets.length === 0 || amount === 0) return;
+                        const total = targets.reduce((s, c) => s + c.percentage, 0);
+                        if (total === 0) {
+                            // Répartir équitablement si tous à 0
+                            const each = Math.floor(amount / targets.length);
+                            let leftover = amount - each * targets.length;
+                            targets.forEach(c => {
+                                c.percentage += sign * each;
+                                if (leftover > 0) { c.percentage += sign; leftover--; }
+                            });
+                            return;
+                        }
+
+                        const shares = targets.map(c => {
+                            const exact = amount * c.percentage / total;
+                            return { comp: c, floor: Math.floor(exact), remainder: exact - Math.floor(exact) };
                         });
+
+                        let applied = 0;
+                        shares.forEach(s => {
+                            s.comp.percentage += sign * s.floor;
+                            applied += s.floor;
+                        });
+
+                        // Distribuer le reste aux composants avec les plus forts restes
+                        let leftover = amount - applied;
+                        shares.sort((a, b) => b.remainder - a.remainder);
+                        for (let i = 0; i < leftover && i < shares.length; i++) {
+                            shares[i].comp.percentage += sign;
+                        }
+
+                        this.components.forEach(c => { if (c.percentage < 0) c.percentage = 0; });
+                    },
+
+                    redistributeFrom(excludeIdx, amount) {
+                        const others = this.components.filter((c, i) => i !== excludeIdx && c.enabled && c.percentage > 0);
+                        this.distribute(others, amount, -1);
                     },
 
                     redistributeTo(amount) {
                         const others = this.components.filter(c => c.enabled && c.percentage > 0);
-                        if (others.length === 0) return;
-                        const total = others.reduce((s, c) => s + c.percentage, 0);
-                        let remaining = amount;
-                        others.forEach((c, i) => {
-                            if (i === others.length - 1) {
-                                c.percentage += remaining;
-                            } else {
-                                const share = Math.round(amount * c.percentage / total);
-                                c.percentage += share;
-                                remaining -= share;
-                            }
-                        });
+                        this.distribute(others, amount, +1);
                     },
 
                     onSlider(idx, newValue) {
@@ -419,35 +436,13 @@
                         comp.percentage = newValue;
 
                         const others = this.components.filter((c, i) => i !== idx && c.enabled && c.percentage > 0);
-                        const othersTotal = others.reduce((s, c) => s + c.percentage, 0);
-
-                        if (othersTotal > 0) {
-                            let distributed = 0;
-                            others.forEach((c, i) => {
-                                if (i === others.length - 1) {
-                                    c.percentage -= (diff - distributed);
-                                } else {
-                                    const share = Math.round(diff * c.percentage / othersTotal);
-                                    c.percentage -= share;
-                                    distributed += share;
-                                }
-                                c.percentage = Math.max(0, c.percentage);
-                            });
-                            this.fixRounding();
+                        if (others.length > 0) {
+                            const absDiff = Math.abs(diff);
+                            // diff > 0 → on prend aux autres (-1), diff < 0 → on donne aux autres (+1)
+                            this.distribute(others, absDiff, diff > 0 ? -1 : +1);
                         }
 
                         this.markDirty();
-                    },
-
-                    fixRounding() {
-                        const enabled = this.components.filter(c => c.enabled);
-                        const total = enabled.reduce((s, c) => s + c.percentage, 0);
-                        if (total === 100 || enabled.length === 0) return;
-
-                        const diff = 100 - total;
-                        let biggest = enabled.reduce((a, b) => a.percentage >= b.percentage ? a : b);
-                        biggest.percentage += diff;
-                        if (biggest.percentage < 0) biggest.percentage = 0;
                     },
 
                     initChart() {
