@@ -134,7 +134,7 @@
                                                 type="range"
                                                 class="de-slider"
                                                 min="0" max="100" step="1"
-                                                :value="comp.percentage"
+                                                :value="Math.round(comp.percentage)"
                                                 @pointerdown="startDrag(idx)"
                                                 @input="onSlider(idx, parseInt($event.target.value))"
                                                 :disabled="!comp.enabled"
@@ -179,7 +179,7 @@
                                                 type="range"
                                                 class="de-slider"
                                                 min="0" max="100" step="1"
-                                                :value="comp.percentage"
+                                                :value="Math.round(comp.percentage)"
                                                 @pointerdown="startDrag(idx)"
                                                 @input="onSlider(idx, parseInt($event.target.value))"
                                                 :disabled="!comp.enabled"
@@ -349,24 +349,13 @@
                         const total = targets.reduce((s, c) => s + c.percentage, 0);
                         if (total === 0) {
                             const each = amount / targets.length;
-                            targets.forEach(c => { c.percentage += sign * Math.round(each * 10) / 10; });
+                            targets.forEach(c => { c.percentage += sign * each; });
                         } else {
                             targets.forEach(c => {
-                                c.percentage += sign * Math.round(amount * c.percentage / total * 10) / 10;
+                                c.percentage += sign * (amount * c.percentage / total);
                                 if (c.percentage < 0) c.percentage = 0;
                             });
                         }
-                        // Corriger le résidu d'arrondi pour maintenir 100%
-                        this.fixTotal();
-                    },
-
-                    fixTotal() {
-                        const enabled = this.components.filter(c => c.enabled);
-                        const total = Math.round(enabled.reduce((s, c) => s + c.percentage, 0) * 10) / 10;
-                        if (total === 100 || enabled.length === 0) return;
-                        const residual = Math.round((100 - total) * 10) / 10;
-                        const biggest = enabled.reduce((a, b) => a.percentage >= b.percentage ? a : b);
-                        biggest.percentage = Math.round((biggest.percentage + residual) * 10) / 10;
                     },
 
                     toggleOptional(idx) {
@@ -438,7 +427,7 @@
                             for (let i = 0; i < this.components.length; i++) {
                                 if (i !== idx && this.components[i].enabled && this._dragOriginals[i] > 0) {
                                     const share = diff * this._dragOriginals[i] / othersOrigTotal;
-                                    this.components[i].percentage = Math.round((this._dragOriginals[i] - share) * 10) / 10;
+                                    this.components[i].percentage = this._dragOriginals[i] - share;
                                     if (this.components[i].percentage < 0) this.components[i].percentage = 0;
                                 }
                             }
