@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Expenses\Tables;
 
 use App\Enums\TvaRate;
+use App\Filament\Tables\Filters\YearFilter;
 use App\Models\Expense;
 use App\Models\Property;
 use Filament\Actions\BulkActionGroup;
@@ -18,17 +19,28 @@ class ExpensesTable
     {
         return $table
             ->columns([
-                TextColumn::make('property.name')
-                    ->label('Bien')
-                    ->searchable(),
                 TextColumn::make('expense_date')
                     ->label('Date')
                     ->date('d/m/Y')
                     ->sortable(),
+                TextColumn::make('category')
+                    ->label('Catégorie')
+                    ->formatStateUsing(fn ($state) => Expense::categoryLabels()[$state] ?? $state)
+                    ->searchable(),
+                TextColumn::make('description')
+                    ->label('Description')
+                    ->searchable()
+                    ->limit(50),
                 TextColumn::make('amount')
-                    ->label('Montant')
+                    ->label('Montant TTC')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2, ',', ' ') . ' €')
                     ->sortable(),
+                IconColumn::make('is_dedicated')
+                    ->label('100%')
+                    ->boolean(),
+                TextColumn::make('recurring_type')
+                    ->label('Récurrence')
+                    ->formatStateUsing(fn ($state) => Expense::recurringLabels()[$state] ?? $state),
                 TextColumn::make('tva_rate')
                     ->label('TVA')
                     ->formatStateUsing(fn ($state) => $state ? (TvaRate::tryFrom($state)?->label() ?? $state) : '—')
@@ -37,28 +49,21 @@ class ExpensesTable
                     ->label('TVA déductible')
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, ',', ' ') . ' €' : '—')
                     ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
-                TextColumn::make('category')
-                    ->label('Catégorie')
-                    ->formatStateUsing(fn ($state) => Expense::categoryLabels()[$state] ?? $state)
-                    ->searchable(),
-                TextColumn::make('description')
-                    ->label('Description')
+                TextColumn::make('property.name')
+                    ->label('Bien')
                     ->searchable()
-                    ->limit(40),
-                IconColumn::make('is_dedicated')
-                    ->label('100%')
-                    ->boolean(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('documents_count')
                     ->label('Docs')
                     ->counts('documents')
                     ->icon('heroicon-o-paper-clip')
-                    ->default(0),
-                TextColumn::make('recurring_type')
-                    ->label('Récurrence')
-                    ->formatStateUsing(fn ($state) => Expense::recurringLabels()[$state] ?? $state),
+                    ->default(0)
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->reorderableColumns()
             ->defaultSort('expense_date', 'desc')
-            ->filters([])
+            ->filters([YearFilter::make('expense_date', Expense::class)])
+            ->persistFiltersInSession()
             ->recordActions([
                 EditAction::make(),
             ])

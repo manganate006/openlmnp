@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Furniture\Tables;
 
 use App\Enums\TvaRate;
+use App\Filament\Tables\Filters\YearFilter;
+use App\Models\Furniture;
 use App\Models\Property;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -17,13 +19,10 @@ class FurnitureTable
     {
         return $table
             ->columns([
-                TextColumn::make('property.name')
-                    ->label('Bien')
-                    ->searchable(),
                 TextColumn::make('description')
                     ->label('Description')
                     ->searchable()
-                    ->limit(30),
+                    ->limit(50),
                 TextColumn::make('purchase_date')
                     ->label('Date')
                     ->date('d/m/Y')
@@ -32,13 +31,13 @@ class FurnitureTable
                     ->label('Montant')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €')
                     ->sortable(),
-                TextColumn::make('tva_rate')
-                    ->label('TVA')
-                    ->formatStateUsing(fn ($state) => $state ? (TvaRate::tryFrom($state)?->label() ?? $state) : '—')
-                    ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
                 TextColumn::make('duration_years')
                     ->label('Durée')
                     ->suffix(' ans')
+                    ->sortable(),
+                TextColumn::make('annual_depreciation')
+                    ->label('Amort./an')
+                    ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €')
                     ->sortable(),
                 IconColumn::make('is_dedicated')
                     ->label('100%')
@@ -46,17 +45,25 @@ class FurnitureTable
                 IconColumn::make('is_second_hand')
                     ->label('Occasion')
                     ->boolean(),
+                TextColumn::make('tva_rate')
+                    ->label('TVA')
+                    ->formatStateUsing(fn ($state) => $state ? (TvaRate::tryFrom($state)?->label() ?? $state) : '—')
+                    ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
+                TextColumn::make('property.name')
+                    ->label('Bien')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('documents_count')
                     ->label('Docs')
                     ->counts('documents')
                     ->icon('heroicon-o-paper-clip')
-                    ->default(0),
-                TextColumn::make('annual_depreciation')
-                    ->label('Amort./an')
-                    ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €')
-                    ->sortable(),
+                    ->default(0)
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->reorderableColumns()
             ->defaultSort('purchase_date', 'desc')
+            ->filters([YearFilter::make('purchase_date', Furniture::class)])
+            ->persistFiltersInSession()
             ->recordActions([EditAction::make()])
             ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }

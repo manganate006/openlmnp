@@ -44,6 +44,7 @@ class LoansTable
                     ->formatStateUsing(fn ($state) => $state > 0 ? number_format($state / 100, 2, ',', ' ') . ' €' : '—')
                     ->sortable(),
             ])
+            ->reorderableColumns()
             ->filters([])
             ->recordActions([
                 Action::make('detail')

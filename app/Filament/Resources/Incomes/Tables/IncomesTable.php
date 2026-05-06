@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Incomes\Tables;
 
 use App\Enums\TvaRate;
+use App\Filament\Tables\Filters\YearFilter;
 use App\Models\Income;
 use App\Models\Property;
 use Filament\Actions\BulkActionGroup;
@@ -17,13 +18,13 @@ class IncomesTable
     {
         return $table
             ->columns([
-                TextColumn::make('property.name')
-                    ->label('Bien')
-                    ->searchable(),
                 TextColumn::make('income_date')
                     ->label('Date')
                     ->date('d/m/Y')
                     ->sortable(),
+                TextColumn::make('guest_name')
+                    ->label('Client')
+                    ->searchable(),
                 TextColumn::make('amount')
                     ->label('Montant')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2, ',', ' ') . ' €')
@@ -31,6 +32,18 @@ class IncomesTable
                 TextColumn::make('platform_fee')
                     ->label('Commission')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2, ',', ' ') . ' €')
+                    ->sortable(),
+                TextColumn::make('source')
+                    ->label('Source')
+                    ->formatStateUsing(fn ($state) => Income::sourceLabels()[$state] ?? $state)
+                    ->searchable(),
+                TextColumn::make('checkin_date')
+                    ->label('Arrivée')
+                    ->date('d/m/Y')
+                    ->sortable(),
+                TextColumn::make('checkout_date')
+                    ->label('Départ')
+                    ->date('d/m/Y')
                     ->sortable(),
                 TextColumn::make('tva_rate')
                     ->label('TVA')
@@ -40,26 +53,15 @@ class IncomesTable
                     ->label('TVA collectée')
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, ',', ' ') . ' €' : '—')
                     ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
-                TextColumn::make('source')
-                    ->label('Source')
-                    ->formatStateUsing(fn ($state) => Income::sourceLabels()[$state] ?? $state)
-                    ->searchable(),
-                TextColumn::make('guest_name')
-                    ->label('Client')
-                    ->searchable(),
-                TextColumn::make('checkin_date')
-                    ->label('Arrivée')
-                    ->date('d/m/Y')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('checkout_date')
-                    ->label('Départ')
-                    ->date('d/m/Y')
-                    ->sortable()
+                TextColumn::make('property.name')
+                    ->label('Bien')
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->reorderableColumns()
             ->defaultSort('income_date', 'desc')
-            ->filters([])
+            ->filters([YearFilter::make('income_date', Income::class)])
+            ->persistFiltersInSession()
             ->recordActions([
                 EditAction::make(),
             ])
