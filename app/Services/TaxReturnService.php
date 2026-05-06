@@ -59,7 +59,7 @@ class TaxReturnService
     /**
      * 2031-SD — Déclaration de résultat
      */
-    private function compute2031(FiscalYear $fy): array
+    public function compute2031(FiscalYear $fy): array
     {
         return [
             'AB' => $fy->total_income, // Production vendue services (loyers)
@@ -71,7 +71,7 @@ class TaxReturnService
     /**
      * 2033-B — Compte de résultat simplifié
      */
-    private function compute2033B(FiscalYear $fy, $properties, int $year): array
+    public function compute2033B(FiscalYear $fy, $properties, int $year): array
     {
         // Produits
         $loyers = 0; // Ligne 218 : loyers bruts (montant - commission)
@@ -147,7 +147,7 @@ class TaxReturnService
     /**
      * 2033-A — Bilan simplifié
      */
-    private function compute2033A(FiscalYear $fy, $properties, int $year): array
+    public function compute2033A(FiscalYear $fy, $properties, int $year): array
     {
         $immoBrut = 0;
         $immoAmort = 0;
@@ -190,7 +190,7 @@ class TaxReturnService
     /**
      * 2033-C — Immobilisations et amortissements
      */
-    private function compute2033C($properties, int $year): array
+    public function compute2033C($properties, int $year): array
     {
         $categories = [
             'constructions' => ['lines' => ['immo' => '430', 'amort' => '520'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
@@ -256,7 +256,7 @@ class TaxReturnService
     /**
      * 2033-D — Déficits reportables
      */
-    private function compute2033D(FiscalYear $fy): array
+    public function compute2033D(FiscalYear $fy): array
     {
         return [
             '982' => $fy->previous_deferred, // Déficits N-1
@@ -270,7 +270,7 @@ class TaxReturnService
     /**
      * 2042-C-PRO — Cases pour la déclaration de revenus
      */
-    private function compute2042(FiscalYear $fy): array
+    public function compute2042(FiscalYear $fy): array
     {
         return [
             'case_benefice' => '5NA', // Bénéfice avec OGA (ou 5NK sans)
