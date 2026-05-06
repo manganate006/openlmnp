@@ -99,7 +99,7 @@ function helpPageLinks(): array
 /** Pages that never appear in any menu ($shouldRegisterNavigation = false). */
 function noMenuPages(): array
 {
-    return ['ImportAirbnb', 'FiscalYearWizard'];
+    return ['ImportAirbnb', 'FiscalYearWizard', 'LoanDetail'];
 }
 
 /** Pages hidden in Simple mode via isHiddenInSimpleMode(). */
