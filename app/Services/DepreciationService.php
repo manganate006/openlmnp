@@ -28,6 +28,35 @@ class DepreciationService
     ];
 
     /**
+     * Composants optionnels (maison individuelle).
+     * Sources : BOFiP BOI-ANNX-000115, pratique experts-comptables LMNP.
+     */
+    public const OPTIONAL_COMPONENTS = [
+        ['name' => 'Piscine',                      'percentage' =>  7, 'duration_years' => 15, 'sort_order' => 7],
+        ['name' => 'Climatisation / chauffage',     'percentage' =>  5, 'duration_years' => 20, 'sort_order' => 8],
+        ['name' => 'Cuisine équipée',               'percentage' =>  5, 'duration_years' => 10, 'sort_order' => 9],
+        ['name' => 'VRD (voirie, réseaux)',          'percentage' =>  3, 'duration_years' => 15, 'sort_order' => 10],
+        ['name' => 'Aménagements extérieurs',        'percentage' =>  5, 'duration_years' => 15, 'sort_order' => 11],
+    ];
+
+    /**
+     * Catalogue complet : standards + optionnels.
+     */
+    public const FULL_CATALOG = [
+        ['name' => 'Gros œuvre',                'percentage' => 50, 'duration_years' => 50, 'sort_order' => 1,  'optional' => false],
+        ['name' => 'Toiture',                   'percentage' => 10, 'duration_years' => 25, 'sort_order' => 2,  'optional' => false],
+        ['name' => 'Installations électriques', 'percentage' => 10, 'duration_years' => 25, 'sort_order' => 3,  'optional' => false],
+        ['name' => 'Étanchéité',                'percentage' =>  5, 'duration_years' => 15, 'sort_order' => 4,  'optional' => false],
+        ['name' => 'Agencements intérieurs',    'percentage' => 15, 'duration_years' => 15, 'sort_order' => 5,  'optional' => false],
+        ['name' => 'Plomberie / sanitaire',     'percentage' => 10, 'duration_years' => 15, 'sort_order' => 6,  'optional' => false],
+        ['name' => 'Piscine',                   'percentage' =>  7, 'duration_years' => 15, 'sort_order' => 7,  'optional' => true],
+        ['name' => 'Climatisation / chauffage',  'percentage' =>  5, 'duration_years' => 20, 'sort_order' => 8, 'optional' => true],
+        ['name' => 'Cuisine équipée',            'percentage' =>  5, 'duration_years' => 10, 'sort_order' => 9, 'optional' => true],
+        ['name' => 'VRD (voirie, réseaux)',       'percentage' =>  3, 'duration_years' => 15, 'sort_order' => 10, 'optional' => true],
+        ['name' => 'Aménagements extérieurs',     'percentage' =>  5, 'duration_years' => 15, 'sort_order' => 11, 'optional' => true],
+    ];
+
+    /**
      * Génère les composants d'amortissement par défaut pour un bien.
      */
     public function generateDefaultComponents(Property $property): void

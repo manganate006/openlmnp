@@ -12,6 +12,7 @@ use App\Enums\NavMode;
 use App\Filament\Pages\AnnualImportWizard;
 use App\Filament\Pages\Badges;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\DepreciationEditor;
 use App\Filament\Pages\FiscalYearWizard;
 use App\Filament\Pages\HelpPage;
 use App\Filament\Pages\ImportAirbnb;
@@ -30,7 +31,6 @@ use App\Filament\Resources\Furniture\FurnitureResource;
 use App\Filament\Resources\Incomes\IncomeResource;
 use App\Filament\Resources\Loans\LoanResource;
 use App\Filament\Resources\Properties\PropertyResource;
-use App\Filament\Resources\PropertyComponents\PropertyComponentResource;
 use App\Filament\Resources\PropertyWorks\PropertyWorkResource;
 use App\Models\User;
 
@@ -50,7 +50,7 @@ function allUserPages(): array
         'Loans' => LoanResource::class,
         'Furniture' => FurnitureResource::class,
         'PropertyWorks' => PropertyWorkResource::class,
-        'PropertyComponents' => PropertyComponentResource::class,
+        'DepreciationEditor' => DepreciationEditor::class,
         'FiscalYears' => FiscalYearResource::class,
         'Simulator' => Simulator::class,
         'Projection' => Projection::class,
@@ -105,7 +105,7 @@ function noMenuPages(): array
 /** Pages hidden in Simple mode via isHiddenInSimpleMode(). */
 function hiddenInSimpleMode(): array
 {
-    return ['AnnualImportWizard', 'PropertyComponents', 'PropertyWorks', 'Furniture'];
+    return ['AnnualImportWizard', 'DepreciationEditor', 'PropertyWorks', 'Furniture'];
 }
 
 /** Pages with conditional navigation (need specific data to appear). */
