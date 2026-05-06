@@ -247,7 +247,6 @@
                     chart: null,
                     isDirty: false,
                     savedState: '',
-                    _version: 0,
 
                     chartColors: [
                         '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -285,7 +284,6 @@
                         this.depreciableBase = data.depreciableBase;
                         this.savedState = JSON.stringify(this.components);
                         this.isDirty = false;
-                        this._version++;
                     },
 
                     getEmoji(name) {
@@ -293,13 +291,10 @@
                     },
 
                     getEnabledComponents() {
-                        // Force reactivity via _version
-                        void this._version;
                         return this.components.filter(c => c.enabled && c.percentage > 0);
                     },
 
                     getTotalPercentage() {
-                        void this._version;
                         return this.components
                             .filter(c => c.enabled)
                             .reduce((s, c) => s + c.percentage, 0);
@@ -311,7 +306,6 @@
                     },
 
                     getTotalAnnualDepreciation() {
-                        void this._version;
                         return this.getEnabledComponents().reduce((s, c) => {
                             return s + (c.duration > 0 ? (this.depreciableBase * c.percentage / 100) / c.duration : 0);
                         }, 0);
@@ -331,7 +325,8 @@
                     },
 
                     markDirty() {
-                        this._version++;
+                        // Recréer chaque objet pour qu'Alpine détecte les changements profonds
+                        this.components = this.components.map(c => ({...c}));
                         this.isDirty = JSON.stringify(this.components) !== this.savedState;
                         this.updateChart();
                     },
@@ -373,6 +368,11 @@
                             const freed = comp.percentage;
                             comp.percentage = 0;
                             this.redistributeTo(freed);
+                        } else {
+                            // Réactiver : restaurer le % suggéré, pris proportionnellement aux autres
+                            const pct = comp.suggestedPercentage;
+                            comp.percentage = pct;
+                            this.redistributeFrom(idx, pct);
                         }
                         this.markDirty();
                     },
