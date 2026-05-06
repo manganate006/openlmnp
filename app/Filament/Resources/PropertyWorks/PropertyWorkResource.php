@@ -70,6 +70,7 @@ class PropertyWorkResource extends Resource
     {
         return [
             'index' => ListPropertyWorks::route('/'),
+            'property' => ListPropertyWorks::route('/{propertyId}'),
             'create' => CreatePropertyWork::route('/create'),
             'edit' => EditPropertyWork::route('/{record}/edit'),
         ];

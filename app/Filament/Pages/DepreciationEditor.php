@@ -33,13 +33,15 @@ class DepreciationEditor extends Page
         return 'Mise en route';
     }
 
+    protected static ?string $slug = 'depreciation-editor/{propertyId?}';
+
     protected string $view = 'filament.pages.depreciation-editor';
 
     public ?int $propertyId = null;
 
-    public function mount(): void
+    public function mount(?int $propertyId = null): void
     {
-        $this->propertyId = Property::first()?->id;
+        $this->propertyId = $propertyId ?? Property::first()?->id;
     }
 
     #[Computed]
