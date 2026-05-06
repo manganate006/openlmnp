@@ -25,13 +25,15 @@ class PropertyComponentResource extends Resource
 
     protected static string | \UnitEnum | null $navigationGroup = 'Mes biens';
 
-    protected static ?string $navigationLabel = 'Amortissements';
+    protected static ?string $navigationLabel = 'Amortissements (tableau)';
 
     protected static ?string $modelLabel = 'composant';
 
     protected static ?string $pluralModelLabel = "composants d'amortissement";
 
     protected static ?int $navigationSort = 4;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static function isHiddenInSimpleMode(): bool
     {
