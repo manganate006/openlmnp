@@ -2,10 +2,6 @@
 
 namespace App\Filament\Resources\Properties\Schemas;
 
-use App\Filament\Resources\Properties\Pages\EditProperty;
-use App\Filament\Resources\Properties\RelationManagers\ComponentsRelationManager;
-use App\Filament\Resources\Properties\RelationManagers\FurnitureRelationManager;
-use App\Filament\Resources\Properties\RelationManagers\WorksRelationManager;
 use App\Models\Property;
 use Filament\Forms\Components\Placeholder;
 use App\Support\DocumentStorage;
@@ -13,7 +9,6 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Wizard;
@@ -23,6 +18,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 class PropertyForm
 {
@@ -77,10 +73,14 @@ class PropertyForm
 
     private static function tabsLayout(Schema $schema): Schema
     {
-        $managerData = fn ($record) => [
-            'ownerRecord' => $record,
-            'pageClass' => EditProperty::class,
-        ];
+        $link = fn (string $name, string $url, string $label) => Placeholder::make($name)
+            ->label('')
+            ->content(fn ($record) => new HtmlString(
+                '<div style="text-align:center;padding:24px;">'.
+                '<a href="'.$url.'/'.$record->id.'" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:#10b981;color:white;border-radius:8px;font-weight:600;font-size:14px;text-decoration:none;">'.
+                $label.' <span style="font-size:18px;">&rarr;</span></a></div>'
+            ))
+            ->columnSpanFull();
 
         return $schema
             ->components([
@@ -109,24 +109,15 @@ class PropertyForm
 
                         Tab::make('Travaux')
                             ->icon('heroicon-o-wrench-screwdriver')
-                            ->schema([
-                                Livewire::make(WorksRelationManager::class, $managerData)
-                                    ->key(WorksRelationManager::class),
-                            ]),
+                            ->schema([$link('link_works', '/property-works', 'Gérer les travaux')]),
 
                         Tab::make('Mobilier')
                             ->icon('heroicon-o-shopping-bag')
-                            ->schema([
-                                Livewire::make(FurnitureRelationManager::class, $managerData)
-                                    ->key(FurnitureRelationManager::class),
-                            ]),
+                            ->schema([$link('link_furniture', '/furniture', 'Gérer le mobilier')]),
 
                         Tab::make('Composants')
                             ->icon('heroicon-o-cube')
-                            ->schema([
-                                Livewire::make(ComponentsRelationManager::class, $managerData)
-                                    ->key(ComponentsRelationManager::class),
-                            ]),
+                            ->schema([$link('link_components', '/depreciation-editor', 'Ventilation des composants')]),
                     ])
                     ->columnSpanFull(),
             ]);

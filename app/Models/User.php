@@ -66,6 +66,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(BadgeProgress::class);
     }
 
+    public function mcpAuditLogs(): HasMany
+    {
+        return $this->hasMany(McpAuditLog::class);
+    }
+
     public function hasBadge(string $code, ?int $fiscalYear = null): bool
     {
         return $this->userBadges()
@@ -107,6 +112,7 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'mcp_enabled' => 'boolean',
             'nav_mode' => NavMode::class,
             'onboarding_dismissed_at' => 'datetime',
         ];
