@@ -73,17 +73,16 @@ class PropertyForm
 
     private static function tabsLayout(Schema $schema): Schema
     {
-        $link = fn (string $name, string $url, string $label) => Placeholder::make($name)
-            ->label('')
-            ->content(fn ($record) => new HtmlString(
-                '<div style="text-align:center;padding:24px;">'.
-                '<a href="'.$url.'/'.$record->id.'" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:#10b981;color:white;border-radius:8px;font-weight:600;font-size:14px;text-decoration:none;">'.
-                $label.' <span style="font-size:18px;">&rarr;</span></a></div>'
-            ))
-            ->columnSpanFull();
-
         return $schema
             ->components([
+                Placeholder::make('property_tabs')
+                    ->label('')
+                    ->content(fn ($record) => view('components.property-tabs', [
+                        'propertyId' => $record->id,
+                        'active' => 'general',
+                    ]))
+                    ->columnSpanFull(),
+
                 Tabs::make('Bien immobilier')
                     ->tabs([
                         Tab::make('Général')
@@ -106,18 +105,6 @@ class PropertyForm
                         Tab::make('Location')
                             ->icon('heroicon-o-calendar')
                             ->schema(static::rentalFields()),
-
-                        Tab::make('Travaux')
-                            ->icon('heroicon-o-wrench-screwdriver')
-                            ->schema([$link('link_works', '/property-works', 'Gérer les travaux')]),
-
-                        Tab::make('Mobilier')
-                            ->icon('heroicon-o-shopping-bag')
-                            ->schema([$link('link_furniture', '/furniture', 'Gérer le mobilier')]),
-
-                        Tab::make('Composants')
-                            ->icon('heroicon-o-cube')
-                            ->schema([$link('link_components', '/depreciation-editor', 'Ventilation des composants')]),
                     ])
                     ->columnSpanFull(),
             ]);
