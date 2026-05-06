@@ -95,7 +95,7 @@
                     <div class="de-stat-label">Base amortissable</div>
                 </div>
                 <div class="de-card de-stat" :class="getTotalClass()">
-                    <div class="de-stat-value" x-text="getTotalPercentage() + ' %'"></div>
+                    <div class="de-stat-value" x-text="formatPct(getTotalPercentage())"></div>
                     <div class="de-stat-label">Total alloué</div>
                 </div>
                 <div class="de-card de-stat de-stat-green">
@@ -135,11 +135,12 @@
                                                 class="de-slider"
                                                 min="0" max="100" step="1"
                                                 :value="comp.percentage"
+                                                @pointerdown="startDrag(idx)"
                                                 @input="onSlider(idx, parseInt($event.target.value))"
                                                 :disabled="!comp.enabled"
                                             >
                                         </div>
-                                        <span class="de-pct" x-text="comp.percentage + ' %'"></span>
+                                        <span class="de-pct" x-text="formatPct(comp.percentage)"></span>
                                         <input
                                             type="number"
                                             class="de-duration-input"
@@ -179,11 +180,12 @@
                                                 class="de-slider"
                                                 min="0" max="100" step="1"
                                                 :value="comp.percentage"
+                                                @pointerdown="startDrag(idx)"
                                                 @input="onSlider(idx, parseInt($event.target.value))"
                                                 :disabled="!comp.enabled"
                                             >
                                         </div>
-                                        <span class="de-pct" x-text="comp.percentage + ' %'"></span>
+                                        <span class="de-pct" x-text="formatPct(comp.percentage)"></span>
                                         <input
                                             type="number"
                                             class="de-duration-input"
@@ -210,7 +212,7 @@
                             <button
                                 class="de-btn de-btn-primary"
                                 @click="save()"
-                                :disabled="getTotalPercentage() !== 100"
+                                :disabled="Math.round(getTotalPercentage()) !== 100"
                             >
                                 Enregistrer
                             </button>
@@ -229,7 +231,7 @@
                                     <span class="de-chart-legend-dot" :style="'background:' + chartColors[i % chartColors.length]"></span>
                                     <span x-text="getEmoji(item.name)"></span>
                                     <span x-text="item.name"></span>
-                                    <span style="margin-left:auto;font-weight:600;font-family:monospace;" x-text="item.percentage + ' %'"></span>
+                                    <span style="margin-left:auto;font-weight:600;font-family:monospace;" x-text="formatPct(item.percentage)"></span>
                                 </div>
                             </template>
                         </div>
@@ -301,7 +303,7 @@
                     },
 
                     getTotalClass() {
-                        const t = this.getTotalPercentage();
+                        const t = Math.round(this.getTotalPercentage());
                         return t === 100 ? 'de-stat-green' : (t < 100 ? 'de-stat-amber' : 'de-stat-red');
                     },
 
@@ -324,8 +326,11 @@
                         return Math.round(val).toLocaleString('fr-FR') + ' \u20AC';
                     },
 
+                    formatPct(val) {
+                        return (val % 1 === 0 ? val : val.toFixed(1)) + ' %';
+                    },
+
                     markDirty() {
-                        // Recréer chaque objet pour qu'Alpine détecte les changements profonds
                         this.components = this.components.map(c => ({...c}));
                         this.isDirty = JSON.stringify(this.components) !== this.savedState;
                         this.updateChart();
@@ -333,6 +338,24 @@
 
                     findGrosOeuvre() {
                         return this.components.find(c => c.name === 'Gros \u0153uvre');
+                    },
+
+                    /**
+                     * Redistribue `amount` proportionnellement (en fractions).
+                     * sign: +1 = ajouter, -1 = retirer.
+                     */
+                    distribute(targets, amount, sign) {
+                        if (targets.length === 0 || amount === 0) return;
+                        const total = targets.reduce((s, c) => s + c.percentage, 0);
+                        if (total === 0) {
+                            const each = amount / targets.length;
+                            targets.forEach(c => { c.percentage += sign * Math.round(each * 10) / 10; });
+                            return;
+                        }
+                        targets.forEach(c => {
+                            c.percentage += sign * Math.round(amount * c.percentage / total * 10) / 10;
+                            if (c.percentage < 0) c.percentage = 0;
+                        });
                     },
 
                     toggleOptional(idx) {
@@ -347,7 +370,8 @@
                                 go.percentage -= pct;
                             } else {
                                 comp.percentage = pct;
-                                this.redistributeFrom(idx, pct);
+                                const others = this.components.filter((c, i) => i !== idx && c.enabled && c.percentage > 0);
+                                this.distribute(others, pct, -1);
                             }
                         } else {
                             const freed = comp.percentage;
@@ -355,9 +379,11 @@
                             if (go && go.enabled) {
                                 go.percentage += freed;
                             } else {
-                                this.redistributeTo(freed);
+                                const others = this.components.filter(c => c.enabled && c.percentage > 0);
+                                this.distribute(others, freed, +1);
                             }
                         }
+                        this._dragIdx = null;
                         this.markDirty();
                     },
 
@@ -367,79 +393,54 @@
                         if (!comp.enabled) {
                             const freed = comp.percentage;
                             comp.percentage = 0;
-                            this.redistributeTo(freed);
+                            const others = this.components.filter(c => c.enabled && c.percentage > 0);
+                            this.distribute(others, freed, +1);
                         } else {
-                            // Réactiver : restaurer le % suggéré, pris proportionnellement aux autres
                             const pct = comp.suggestedPercentage;
                             comp.percentage = pct;
-                            this.redistributeFrom(idx, pct);
+                            const others = this.components.filter((c, i) => i !== idx && c.enabled && c.percentage > 0);
+                            this.distribute(others, pct, -1);
                         }
+                        this._dragIdx = null;
                         this.markDirty();
                     },
 
-                    /**
-                     * Méthode des plus forts restes (Hamilton).
-                     * Distribue `amount` unités aux `targets` proportionnellement à leur %.
-                     * sign: +1 = ajouter aux targets, -1 = retirer des targets.
-                     */
-                    distribute(targets, amount, sign) {
-                        if (targets.length === 0 || amount === 0) return;
-                        const total = targets.reduce((s, c) => s + c.percentage, 0);
-                        if (total === 0) {
-                            // Répartir équitablement si tous à 0
-                            const each = Math.floor(amount / targets.length);
-                            let leftover = amount - each * targets.length;
-                            targets.forEach(c => {
-                                c.percentage += sign * each;
-                                if (leftover > 0) { c.percentage += sign; leftover--; }
-                            });
-                            return;
-                        }
+                    _dragIdx: null,
+                    _dragOriginals: null,
 
-                        const shares = targets.map(c => {
-                            const exact = amount * c.percentage / total;
-                            return { comp: c, floor: Math.floor(exact), remainder: exact - Math.floor(exact) };
-                        });
-
-                        let applied = 0;
-                        shares.forEach(s => {
-                            s.comp.percentage += sign * s.floor;
-                            applied += s.floor;
-                        });
-
-                        // Distribuer le reste aux composants avec les plus forts restes
-                        let leftover = amount - applied;
-                        shares.sort((a, b) => b.remainder - a.remainder);
-                        for (let i = 0; i < leftover && i < shares.length; i++) {
-                            shares[i].comp.percentage += sign;
-                        }
-
-                        this.components.forEach(c => { if (c.percentage < 0) c.percentage = 0; });
-                    },
-
-                    redistributeFrom(excludeIdx, amount) {
-                        const others = this.components.filter((c, i) => i !== excludeIdx && c.enabled && c.percentage > 0);
-                        this.distribute(others, amount, -1);
-                    },
-
-                    redistributeTo(amount) {
-                        const others = this.components.filter(c => c.enabled && c.percentage > 0);
-                        this.distribute(others, amount, +1);
+                    startDrag(idx) {
+                        this._dragIdx = idx;
+                        this._dragOriginals = this.components.map(c => c.percentage);
                     },
 
                     onSlider(idx, newValue) {
-                        const comp = this.components[idx];
-                        const oldValue = comp.percentage;
-                        const diff = newValue - oldValue;
-                        if (diff === 0) return;
+                        // Snapshot si pas encore fait (fallback)
+                        if (this._dragIdx !== idx || !this._dragOriginals) {
+                            this._dragIdx = idx;
+                            this._dragOriginals = this.components.map(c => c.percentage);
+                        }
 
-                        comp.percentage = newValue;
+                        const origValue = this._dragOriginals[idx];
+                        const diff = newValue - origValue;
 
-                        const others = this.components.filter((c, i) => i !== idx && c.enabled && c.percentage > 0);
-                        if (others.length > 0) {
-                            const absDiff = Math.abs(diff);
-                            // diff > 0 → on prend aux autres (-1), diff < 0 → on donne aux autres (+1)
-                            this.distribute(others, absDiff, diff > 0 ? -1 : +1);
+                        // Recalculer TOUS les autres depuis l'original
+                        this.components[idx].percentage = newValue;
+
+                        let othersOrigTotal = 0;
+                        for (let i = 0; i < this.components.length; i++) {
+                            if (i !== idx && this.components[i].enabled && this._dragOriginals[i] > 0) {
+                                othersOrigTotal += this._dragOriginals[i];
+                            }
+                        }
+
+                        if (othersOrigTotal > 0) {
+                            for (let i = 0; i < this.components.length; i++) {
+                                if (i !== idx && this.components[i].enabled && this._dragOriginals[i] > 0) {
+                                    const share = diff * this._dragOriginals[i] / othersOrigTotal;
+                                    this.components[i].percentage = Math.round((this._dragOriginals[i] - share) * 10) / 10;
+                                    if (this.components[i].percentage < 0) this.components[i].percentage = 0;
+                                }
+                            }
                         }
 
                         this.markDirty();
@@ -465,7 +466,8 @@
                                                 const comp = enabled[context.dataIndex];
                                                 if (!comp) return '';
                                                 const base = Math.round(this.depreciableBase * comp.percentage / 100);
-                                                return ` ${comp.percentage} % \u2014 ${base.toLocaleString('fr-FR')} \u20AC`;
+                                                const pct = comp.percentage % 1 === 0 ? comp.percentage : comp.percentage.toFixed(1);
+                                                return ` ${pct} % \u2014 ${base.toLocaleString('fr-FR')} \u20AC`;
                                             }
                                         }
                                     }
@@ -497,11 +499,32 @@
                     },
 
                     save() {
-                        if (this.getTotalPercentage() !== 100) return;
+                        const total = this.getTotalPercentage();
+                        if (Math.round(total) !== 100) return;
+
+                        // Arrondir à l'entier avec Hamilton (plus forts restes)
                         const payload = JSON.parse(JSON.stringify(this.components));
+                        const enabled = payload.filter(c => c.enabled && c.percentage > 0);
+                        const shares = enabled.map(c => ({
+                            comp: c,
+                            floor: Math.floor(c.percentage),
+                            remainder: c.percentage - Math.floor(c.percentage),
+                        }));
+                        shares.forEach(s => { s.comp.percentage = s.floor; });
+                        let leftover = 100 - shares.reduce((s, sh) => s + sh.floor, 0);
+                        shares.sort((a, b) => b.remainder - a.remainder);
+                        for (let i = 0; i < leftover && i < shares.length; i++) {
+                            shares[i].comp.percentage++;
+                        }
+
                         this.$wire.saveComponents(payload).then(() => {
+                            // Mettre à jour l'affichage avec les valeurs arrondies
+                            this.components.forEach((c, i) => { c.percentage = payload[i].percentage; });
+                            this.components = this.components.map(c => ({...c}));
                             this.savedState = JSON.stringify(this.components);
                             this.isDirty = false;
+                            this._dragIdx = null;
+                            this.updateChart();
                         });
                     },
                 }));

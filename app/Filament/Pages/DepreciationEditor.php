@@ -137,7 +137,7 @@ class DepreciationEditor extends Page
         $depreciableBase = $property->depreciable_base;
 
         $enabled = array_filter($components, fn ($c) => $c['enabled'] && $c['percentage'] > 0);
-        $total = array_sum(array_column($enabled, 'percentage'));
+        $total = (int) round(array_sum(array_column($enabled, 'percentage')));
 
         if ($total !== 100) {
             Notification::make()
