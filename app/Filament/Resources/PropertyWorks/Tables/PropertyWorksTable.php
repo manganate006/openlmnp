@@ -11,6 +11,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 
 class PropertyWorksTable
@@ -59,7 +60,12 @@ class PropertyWorksTable
             ])
             ->reorderableColumns()
             ->defaultSort('work_date', 'desc')
-            ->filters([YearFilter::make('work_date', PropertyWork::class)])
+            ->filters([
+                YearFilter::make('work_date', PropertyWork::class),
+                Filter::make('no_documents')
+                    ->label('Sans justificatif')
+                    ->query(fn ($query) => $query->whereDoesntHave('documents')),
+            ])
             ->persistFiltersInSession()
             ->recordActions([EditAction::make()])
             ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
