@@ -110,11 +110,37 @@ class FiscalYearWizard extends Page
                             ->required()
                             ->live()
                             ->afterStateUpdated(fn () => $this->resetComputedData())
-                            ->hint('L\'exercice couvre du 1er janvier au 31 décembre'),
+                            ->hint('L\'exercice couvre du 1er janvier au 31 décembre')
+                            ->rules([
+                                fn () => function (string $attribute, $value, \Closure $fail) {
+                                    $year = (int) $value;
+                                    $previous = FiscalYear::withoutGlobalScopes()
+                                        ->where('user_id', auth()->id())
+                                        ->where('year', $year - 1)
+                                        ->first();
+
+                                    if (! $previous) {
+                                        // Vérifier s'il y a des amortissements actifs
+                                        $hasDepreciation = Property::all()->contains(fn ($p) => $p->components()->exists() || $p->works()->exists() || $p->furniture()->exists());
+                                        if ($hasDepreciation) {
+                                            // Vérifier aussi qu'il ne s'agit pas de la toute première année d'activité
+                                            $firstProperty = Property::orderBy('activity_start_date')->first();
+                                            if ($firstProperty && $firstProperty->activity_start_date->year < $year) {
+                                                $fail('L\'exercice ' . ($year - 1) . ' n\'existe pas. Créez-le d\'abord pour reporter correctement les amortissements différés.');
+                                            }
+                                        }
+                                    }
+                                },
+                            ]),
 
                         \Filament\Forms\Components\Placeholder::make('year_summary')
                             ->label('Résumé de l\'année sélectionnée')
                             ->content(fn () => $this->buildYearSummaryHtml()),
+
+                        \Filament\Forms\Components\Placeholder::make('year_chain_alert')
+                            ->label('')
+                            ->content(fn () => $this->buildAlertsHtml())
+                            ->visible(fn () => $this->hasAlerts()),
                     ]),
             ]);
     }
@@ -448,7 +474,54 @@ class FiscalYearWizard extends Page
 
     private function hasAlerts(): bool
     {
-        return $this->getYearIncomeCents() === 0 || Property::count() === 0;
+        return $this->getYearIncomeCents() === 0
+            || Property::count() === 0
+            || $this->getPreviousYearStatus() === 'missing'
+            || $this->getPreviousYearStatus() === 'draft';
+    }
+
+    /**
+     * Vérifie l'état de l'exercice N-1 : 'closed', 'draft', ou 'missing'.
+     */
+    private function getPreviousYearStatus(): string
+    {
+        $year     = $this->selectedYear();
+        $previous = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', auth()->id())
+            ->where('year', $year - 1)
+            ->first();
+
+        if (! $previous) {
+            return 'missing';
+        }
+
+        return $previous->status;
+    }
+
+    /**
+     * Vérifie si la chaîne de reports est cassée (trou entre le premier exercice et N-1).
+     */
+    private function hasChainGap(): bool
+    {
+        $year     = $this->selectedYear();
+        $earliest = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', auth()->id())
+            ->orderBy('year')
+            ->first();
+
+        if (! $earliest || $earliest->year >= $year) {
+            return false;
+        }
+
+        // Vérifier s'il y a des trous entre le premier exercice et N-1
+        $expectedCount = $year - $earliest->year;
+        $actualCount   = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', auth()->id())
+            ->where('year', '>=', $earliest->year)
+            ->where('year', '<', $year)
+            ->count();
+
+        return $actualCount < $expectedCount;
     }
 
     // -------------------------------------------------------------------------
@@ -627,28 +700,54 @@ class FiscalYearWizard extends Page
 
     private function buildAlertsHtml(): HtmlString
     {
-        $alerts = [];
+        $alerts  = []; // [message, severity: 'warning'|'danger']
+        $year    = $this->selectedYear();
 
         if (Property::count() === 0) {
-            $alerts[] = 'Aucun bien immobilier enregistré. Créez au moins un bien avant de lancer la clôture.';
+            $alerts[] = ['Aucun bien immobilier enregistré. Créez au moins un bien avant de lancer la clôture.', 'danger'];
         } elseif ($this->getYearIncomeCents() === 0) {
-            $alerts[] = 'Aucune recette trouvée pour ' . $this->selectedYear() . '. L\'exercice sera créé avec un résultat nul.';
+            $alerts[] = ['Aucune recette trouvée pour ' . $year . '. L\'exercice sera créé avec un résultat nul.', 'warning'];
+        }
+
+        $prevStatus = $this->getPreviousYearStatus();
+        if ($prevStatus === 'missing') {
+            $alerts[] = [
+                'L\'exercice ' . ($year - 1) . ' n\'existe pas. Les amortissements différés de ' . ($year - 1) . ' ne seront pas reportés. '
+                . '<a href="' . route('filament.admin.pages.fiscal-year-wizard') . '" class="underline font-semibold">Créez d\'abord l\'exercice ' . ($year - 1) . '</a>.',
+                'danger',
+            ];
+        } elseif ($prevStatus === 'draft') {
+            $alerts[] = [
+                'L\'exercice ' . ($year - 1) . ' est encore en brouillon. Le montant des amortissements différés reportés pourrait changer si vous le recalculez ou le modifiez.',
+                'warning',
+            ];
+        }
+
+        if ($this->hasChainGap()) {
+            $alerts[] = [
+                'Des exercices intermédiaires manquent dans la chaîne de reports. Les amortissements différés pourraient ne pas être correctement propagés.',
+                'danger',
+            ];
         }
 
         if (empty($alerts)) {
             return new HtmlString('');
         }
 
-        $items = implode('', array_map(
-            fn ($a) => '<li class="flex items-start gap-2"><span class="mt-0.5 text-amber-500">⚠</span><span>' . $a . '</span></li>',
-            $alerts
-        ));
+        $html = '';
+        foreach ($alerts as [$message, $severity]) {
+            $icon    = $severity === 'danger' ? '🔴' : '⚠';
+            $border  = $severity === 'danger'
+                ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300'
+                : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300';
 
-        return new HtmlString(
-            '<ul class="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">'
-            . $items
-            . '</ul>'
-        );
+            $html .= '<div class="flex items-start gap-2 rounded-lg border p-4 text-sm ' . $border . '">'
+                . '<span class="mt-0.5 shrink-0">' . $icon . '</span>'
+                . '<span>' . $message . '</span>'
+                . '</div>';
+        }
+
+        return new HtmlString('<div class="flex flex-col gap-2">' . $html . '</div>');
     }
 
     private function buildConfirmationSummaryHtml(): HtmlString
