@@ -190,6 +190,171 @@ it('creates an expense via MCP', function () {
     expect($expense->amount)->toBe(25000);
 });
 
+// === ATTACH DOCUMENT ===
+
+it('attaches a document via file_base64', function () {
+    $expense = Expense::forceCreate([
+        'property_id' => $this->property->id,
+        'expense_date' => '2024-01-01',
+        'amount' => 15700,
+        'amount_ht' => 15700,
+        'amount_tva' => 0,
+        'tva_rate' => 0,
+        'category' => 'property_tax',
+        'description' => 'CFE 2024',
+        'is_dedicated' => true,
+        'recurring_type' => 'yearly',
+    ]);
+
+    $content = '%PDF-1.4 fake pdf content for testing';
+    $base64  = base64_encode($content);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'attach_document',
+                'arguments' => [
+                    'type'          => 'expense',
+                    'record_id'     => $expense->id,
+                    'label'         => 'Avis CFE 2024',
+                    'file_base64'   => $base64,
+                    'filename'      => '2024_avis-cfe_157eur.pdf',
+                    'amount'        => 157.00,
+                    'document_date' => '2024-01-01',
+                ],
+            ],
+        ]);
+
+    $response->assertOk();
+    $result = json_decode($response->json('result.content.0.text', '{}'), true);
+
+    expect($result['success'])->toBeTrue();
+    expect($result['amount_eur'])->toBe('157.00');
+    expect($expense->documents()->count())->toBe(1);
+});
+
+it('attaches a document via file_path', function () {
+    $expense = Expense::forceCreate([
+        'property_id' => $this->property->id,
+        'expense_date' => '2024-01-01',
+        'amount' => 15700,
+        'amount_ht' => 15700,
+        'amount_tva' => 0,
+        'tva_rate' => 0,
+        'category' => 'property_tax',
+        'description' => 'CFE 2024',
+        'is_dedicated' => true,
+        'recurring_type' => 'yearly',
+    ]);
+
+    // Create a temp file in the allowed prefix
+    $prefix  = sys_get_temp_dir() . '/mcp_test_prefix';
+    @mkdir($prefix, 0755, true);
+    $tmpFile = $prefix . '/test_document.pdf';
+    file_put_contents($tmpFile, '%PDF-1.4 fake pdf content');
+
+    config(['mcp.file_path_prefix' => $prefix]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'attach_document',
+                'arguments' => [
+                    'type'      => 'expense',
+                    'record_id' => $expense->id,
+                    'label'     => 'Avis CFE 2024',
+                    'file_path' => $tmpFile,
+                ],
+            ],
+        ]);
+
+    @unlink($tmpFile);
+    @rmdir($prefix);
+
+    $response->assertOk();
+    $result = json_decode($response->json('result.content.0.text', '{}'), true);
+
+    expect($result['success'])->toBeTrue();
+    expect($expense->documents()->count())->toBe(1);
+});
+
+it('blocks file_path outside the allowed prefix', function () {
+    $expense = Expense::forceCreate([
+        'property_id' => $this->property->id,
+        'expense_date' => '2024-01-01',
+        'amount' => 15700,
+        'amount_ht' => 15700,
+        'amount_tva' => 0,
+        'tva_rate' => 0,
+        'category' => 'property_tax',
+        'description' => 'CFE 2024',
+        'is_dedicated' => true,
+        'recurring_type' => 'yearly',
+    ]);
+
+    config(['mcp.file_path_prefix' => '/tmp/allowed_prefix']);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'attach_document',
+                'arguments' => [
+                    'type'      => 'expense',
+                    'record_id' => $expense->id,
+                    'label'     => 'Test traversal',
+                    'file_path' => '/etc/passwd',
+                ],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->toBeTrue();
+    expect($expense->documents()->count())->toBe(0);
+});
+
+it('rejects attach_document with no file source', function () {
+    $expense = Expense::forceCreate([
+        'property_id' => $this->property->id,
+        'expense_date' => '2024-01-01',
+        'amount' => 15700,
+        'amount_ht' => 15700,
+        'amount_tva' => 0,
+        'tva_rate' => 0,
+        'category' => 'property_tax',
+        'description' => 'CFE 2024',
+        'is_dedicated' => true,
+        'recurring_type' => 'yearly',
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'attach_document',
+                'arguments' => [
+                    'type'      => 'expense',
+                    'record_id' => $expense->id,
+                    'label'     => 'Test',
+                    'filename'  => 'test.pdf',
+                ],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->toBeTrue();
+});
+
 // === AUDIT LOGGING ===
 
 it('logs MCP tool calls to audit table', function () {
