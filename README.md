@@ -31,9 +31,9 @@ et produisez votre liasse fiscale au régime réel.
 </details>
 
 <details>
-<summary>Recettes Airbnb</summary>
+<summary>Charges</summary>
 
-![Recettes](docs/screenshots/recettes.png)
+![Charges](docs/screenshots/charges.png)
 
 </details>
 
