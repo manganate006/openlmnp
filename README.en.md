@@ -31,9 +31,9 @@ and generate your tax return under the French real regime.
 </details>
 
 <details>
-<summary>Airbnb income</summary>
+<summary>Expenses</summary>
 
-![Income](docs/screenshots/recettes.png)
+![Expenses](docs/screenshots/charges.png)
 
 </details>
 
