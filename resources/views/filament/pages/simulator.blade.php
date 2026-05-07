@@ -36,8 +36,8 @@
             <div>
                 <div class="sim-label">Abattement micro-BIC</div>
                 <select wire:model.live="abatement" class="sim-select">
-                    <option value="50">50% (meublé classé)</option>
                     <option value="30">30% (meublé non classé)</option>
+                    <option value="50">50% (meublé classé)</option>
                     <option value="71">71% (achat-revente)</option>
                 </select>
             </div>
