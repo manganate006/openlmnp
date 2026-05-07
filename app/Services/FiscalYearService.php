@@ -23,9 +23,19 @@ class FiscalYearService
 
     /**
      * Calcule et met à jour un exercice fiscal.
+     *
+     * @param  bool  $force  Forcer le recalcul même si l'exercice est clôturé (utilisé pour le recalcul en cascade)
+     *
+     * @throws \RuntimeException si l'exercice est clôturé et $force est false
      */
-    public function calculate(FiscalYear $fiscalYear): FiscalYear
+    public function calculate(FiscalYear $fiscalYear, bool $force = false): FiscalYear
     {
+        if ($fiscalYear->status === FiscalYear::STATUS_CLOSED && ! $force) {
+            throw new \RuntimeException(
+                'L\'exercice ' . $fiscalYear->year . ' est clôturé. Rouvrez-le avant de le recalculer.'
+            );
+        }
+
         $user = $fiscalYear->user;
         $year = $fiscalYear->year;
         $properties = Property::withoutGlobalScopes()->where('user_id', $user->id)->get();
@@ -173,7 +183,31 @@ class FiscalYearService
         // 7. Générer les écritures comptables (pour le FEC)
         $this->accountingEntryService->generateForFiscalYear($fiscalYear);
 
+        // 8. Recalcul en cascade : si N+1 existe et que son previous_deferred est désynchronisé
+        $this->cascadeRecalculate($fiscalYear);
+
         return $fiscalYear->refresh();
+    }
+
+    /**
+     * Recalcule en cascade les exercices N+1, N+2... si leur report est désynchronisé.
+     */
+    private function cascadeRecalculate(FiscalYear $fiscalYear): void
+    {
+        $nextYear = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', $fiscalYear->user_id)
+            ->where('year', $fiscalYear->year + 1)
+            ->first();
+
+        if (! $nextYear) {
+            return;
+        }
+
+        // Vérifier si le report N+1 est désynchronisé
+        if ((int) $nextYear->previous_deferred !== (int) $fiscalYear->deferred_depreciation) {
+            // Recalcul de N+1 avec force=true (qui déclenchera récursivement N+2, etc.)
+            $this->calculate($nextYear, force: true);
+        }
     }
 
     /**
@@ -188,6 +222,27 @@ class FiscalYearService
             );
 
         return $this->calculate($fiscalYear);
+    }
+
+    /**
+     * Recalcule tous les exercices d'un utilisateur dans l'ordre chronologique.
+     *
+     * @return int Nombre d'exercices recalculés
+     */
+    public function recalculateChain(User $user): int
+    {
+        $fiscalYears = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->orderBy('year')
+            ->get();
+
+        $count = 0;
+        foreach ($fiscalYears as $fy) {
+            $this->calculate($fy, force: true);
+            $count++;
+        }
+
+        return $count;
     }
 
     /**
