@@ -11,6 +11,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 
 class ExpensesTable
@@ -62,7 +63,12 @@ class ExpensesTable
             ])
             ->reorderableColumns()
             ->defaultSort('expense_date', 'desc')
-            ->filters([YearFilter::make('expense_date', Expense::class)])
+            ->filters([
+                YearFilter::make('expense_date', Expense::class),
+                Filter::make('no_documents')
+                    ->label('Sans justificatif')
+                    ->query(fn ($query) => $query->whereDoesntHave('documents')),
+            ])
             ->persistFiltersInSession()
             ->recordActions([
                 EditAction::make(),

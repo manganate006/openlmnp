@@ -11,6 +11,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 
 class FurnitureTable
@@ -62,7 +63,12 @@ class FurnitureTable
             ])
             ->reorderableColumns()
             ->defaultSort('purchase_date', 'desc')
-            ->filters([YearFilter::make('purchase_date', Furniture::class)])
+            ->filters([
+                YearFilter::make('purchase_date', Furniture::class),
+                Filter::make('no_documents')
+                    ->label('Sans justificatif')
+                    ->query(fn ($query) => $query->whereDoesntHave('documents')),
+            ])
             ->persistFiltersInSession()
             ->recordActions([EditAction::make()])
             ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
