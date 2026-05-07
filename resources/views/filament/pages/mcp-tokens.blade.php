@@ -103,30 +103,28 @@
             Ajoutez cette configuration dans votre fichier <code>claude_desktop_config.json</code> :
         </div>
         <div class="mt-snippet">
-            <pre><code>{{ $this->getConfigSnippet() }}</code></pre>
+            <pre id="mt-desktop-config"><code>{{ $this->getConfigSnippet() }}</code></pre>
             <button
                 type="button"
                 class="mt-snippet-copy"
-                onclick="navigator.clipboard.writeText({{ json_encode($this->getConfigSnippet()) }}).then(() => { this.innerText = 'Copié !' ; setTimeout(() => this.innerText = 'Copier', 2000) })"
+                onclick="navigator.clipboard.writeText(document.getElementById('mt-desktop-config').textContent).then(() => { this.innerText = 'Copié !' ; setTimeout(() => this.innerText = 'Copier', 2000) })"
             >Copier</button>
         </div>
     </div>
 
     {{-- Configuration Claude Code --}}
+    @php $claudeCmd = 'claude mcp add --transport http -H "Authorization: Bearer VOTRE_TOKEN" openlmnp "' . url('/mcp') . '"'; @endphp
     <div class="mt-section">
         <div class="mt-section-title">Configuration pour Claude Code</div>
         <div class="mt-snippet-desc">
             Exécutez cette commande dans votre terminal (remplacez <code>VOTRE_TOKEN</code>) :
         </div>
         <div class="mt-snippet">
-            <pre><code>claude mcp add --transport http \
-  -H "Authorization: Bearer VOTRE_TOKEN" \
-  openlmnp \
-  "{{ url('/mcp') }}"</code></pre>
+            <pre id="mt-claude-cmd"><code>{{ $claudeCmd }}</code></pre>
             <button
                 type="button"
                 class="mt-snippet-copy"
-                onclick="navigator.clipboard.writeText('claude mcp add --transport http -H \"Authorization: Bearer VOTRE_TOKEN\" openlmnp \"{{ url('/mcp') }}\"').then(() => { this.innerText = 'Copié !' ; setTimeout(() => this.innerText = 'Copier', 2000) })"
+                onclick="navigator.clipboard.writeText(document.getElementById('mt-claude-cmd').textContent).then(() => { this.innerText = 'Copié !' ; setTimeout(() => this.innerText = 'Copier', 2000) })"
             >Copier</button>
         </div>
     </div>
