@@ -62,6 +62,15 @@ class OpenLmnpServer extends Server
         Tools\ComputeTva::class,
         Tools\GenerateFec::class,
         Tools\GenerateTaxReturn::class,
+
+        // Gestion biens
+        Tools\CreateProperty::class,
+        Tools\UpdateProperty::class,
+
+        // Import & analyse
+        Tools\ImportAirbnbCsv::class,
+        Tools\GetProjection::class,
+        Tools\GetSimulation::class,
     ];
 
     protected array $resources = [];
