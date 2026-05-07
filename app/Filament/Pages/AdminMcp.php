@@ -24,6 +24,11 @@ class AdminMcp extends Page
     protected static ?int $navigationSort = 5;
     protected string $view = 'filament.pages.admin-mcp';
 
+    public function getSubheading(): ?string
+    {
+        return 'Supervision globale du serveur MCP : utilisateurs, tokens, statistiques d\'utilisation et journal d\'audit.';
+    }
+
     public static function canAccess(): bool
     {
         return \Illuminate\Support\Facades\Auth::check()

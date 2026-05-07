@@ -2,18 +2,17 @@
 
 namespace App\Filament\Pages;
 
-use BladeUI\Icons\Components\Icon;
+use App\Filament\Pages\Concerns\NavigationAware;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Support\Enums\MaxWidth;
-use Illuminate\Support\Str;
 
 class McpTokens extends Page
 {
+    use NavigationAware;
+
     protected string $view = 'filament.pages.mcp-tokens';
 
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedKey;
@@ -31,6 +30,16 @@ class McpTokens extends Page
     public static function canAccess(): bool
     {
         return config('mcp.enabled', false) && (auth()->user()?->mcp_enabled ?? false);
+    }
+
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Créez et gérez vos tokens API pour connecter Claude Desktop, Claude Code ou tout autre client MCP à votre compte OpenLMNP.';
     }
 
     protected function getHeaderActions(): array
@@ -66,7 +75,7 @@ class McpTokens extends Page
                         ->required()
                         ->maxLength(255),
                 ])
-                ->modalWidth(MaxWidth::Medium)
+                ->modalWidth('md')
                 ->action(function (array $data) {
                     $user = auth()->user();
 
