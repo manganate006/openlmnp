@@ -195,6 +195,7 @@
                         <th>Outil</th>
                         <th>Appels</th>
                         <th>Durée moyenne</th>
+                        <th>Dernière utilisation</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -203,6 +204,7 @@
                             <td class="am-mono">{{ $tool['tool_name'] }}</td>
                             <td>{{ number_format($tool['count'], 0, ',', ' ') }}</td>
                             <td class="am-muted">{{ $tool['avg_ms'] !== null ? $tool['avg_ms'] . ' ms' : '—' }}</td>
+                            <td class="am-muted">{{ $tool['last_used_at'] }}</td>
                         </tr>
                     @endforeach
                 </tbody>
