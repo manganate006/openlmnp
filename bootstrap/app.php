@@ -19,5 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('mcp') || $request->is('mcp/*')) {
+                return response()->json(['error' => 'Unauthenticated. Provide a valid Bearer token.'], 401);
+            }
+        });
     })->create();
