@@ -29,10 +29,10 @@ class Projection extends Page
     }
     protected string $view = 'filament.pages.projection';
 
-    public int $startYear = 2026;
-    public int $projectionYears = 10;
-    public float $incomeGrowth = 0;
-    public float $expenseGrowth = 0;
+    public $startYear = 2026;
+    public $projectionYears = 10;
+    public $incomeGrowth = 0;
+    public $expenseGrowth = 0;
 
     public function mount(): void
     {
@@ -54,7 +54,11 @@ class Projection extends Page
         $rows = [];
         $cumulativeDeferred = 0;
 
-        for ($i = 0; $i < $this->projectionYears; $i++) {
+        $projectionYears = max(1, min(15, (int) $this->projectionYears));
+        $incomeGrowth = (float) $this->incomeGrowth;
+        $expenseGrowth = (float) $this->expenseGrowth;
+
+        for ($i = 0; $i < $projectionYears; $i++) {
             $year = $this->startYear + $i;
 
             $totalDepreciation = 0;
@@ -96,11 +100,11 @@ class Projection extends Page
             }
 
             // Croissance composée
-            if ($i > 0 && $this->incomeGrowth != 0) {
-                $totalIncome = (int) ($totalIncome * pow(1 + $this->incomeGrowth / 100, $i));
+            if ($i > 0 && $incomeGrowth != 0) {
+                $totalIncome = (int) ($totalIncome * pow(1 + $incomeGrowth / 100, $i));
             }
-            if ($i > 0 && $this->expenseGrowth != 0) {
-                $totalExpenses = (int) ($totalExpenses * pow(1 + $this->expenseGrowth / 100, $i));
+            if ($i > 0 && $expenseGrowth != 0) {
+                $totalExpenses = (int) ($totalExpenses * pow(1 + $expenseGrowth / 100, $i));
             }
 
             // Plafonnement
