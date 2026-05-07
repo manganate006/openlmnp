@@ -24,6 +24,8 @@ Les dates sont au format ISO 8601 (YYYY-MM-DD).
 MARKDOWN)]
 class OpenLmnpServer extends Server
 {
+    public int $defaultPaginationLength = 50;
+
     protected array $tools = [
         // Lecture
         Tools\ListProperties::class,
