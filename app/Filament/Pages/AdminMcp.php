@@ -155,7 +155,7 @@ class AdminMcp extends Page
 
     public function getToolStats(): array
     {
-        return McpAuditLog::select('tool_name', DB::raw('count(*) as cnt'), DB::raw('avg(duration_ms) as avg_ms'))
+        return McpAuditLog::select('tool_name', DB::raw('count(*) as cnt'), DB::raw('avg(duration_ms) as avg_ms'), DB::raw('max(created_at) as last_used_at'))
             ->groupBy('tool_name')
             ->orderByDesc('cnt')
             ->get()
@@ -163,6 +163,7 @@ class AdminMcp extends Page
                 'tool_name' => $row->tool_name,
                 'count' => $row->cnt,
                 'avg_ms' => $row->avg_ms ? round($row->avg_ms) : null,
+                'last_used_at' => $row->last_used_at ? \Carbon\Carbon::parse($row->last_used_at)->diffForHumans() : '—',
             ])
             ->toArray();
     }
