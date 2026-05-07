@@ -9,7 +9,7 @@
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
-![Tests](https://img.shields.io/badge/Tests-55%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-102%20passed-brightgreen)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
 Manage your rental properties, calculate depreciation,
@@ -21,9 +21,32 @@ and generate your tax return under the French real regime.
 
 ---
 
+## Screenshots
+
+<details>
+<summary>Dashboard</summary>
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+</details>
+
+<details>
+<summary>Airbnb income</summary>
+
+![Income](docs/screenshots/recettes.png)
+
+</details>
+
+<details>
+<summary>Tax return helper</summary>
+
+![Tax return](docs/screenshots/teledeclaration.png)
+
+</details>
+
 ## What is LMNP?
 
-**LMNP** (Location Meublee Non Professionnelle) is the French tax regime for non-professional furnished rental property owners. OpenLMNP helps owners manage their accounting under the "regime reel" (actual expenses regime), which allows deducting real expenses and depreciation instead of a flat-rate deduction.
+**LMNP** (Location Meublée Non Professionnelle) is the French tax regime for non-professional furnished rental property owners. OpenLMNP helps owners manage their accounting under the "régime réel" (actual expenses regime), which allows deducting real expenses and depreciation instead of a flat-rate deduction.
 
 ## Features
 
@@ -36,14 +59,17 @@ and generate your tax return under the French real regime.
 - **Loans** — Auto-generated amortization schedule, deductible interest
 - **Simulator** — Micro-BIC vs real regime comparison with verdict
 - **Multi-year projection** — 5 to 20 year table
-- **Tax return PDF** — Cerfa lines 2031, 2033-A/B/C/D, 2042-C-PRO case mapping
+- **Interactive tax return** — Cerfa lines 2031, 2033-A/B/C/D, 2042-C-PRO with "Copy" buttons
+- **Tax return PDF** — Full generation
 - **FEC compliant** — Article A.47 A-1 LPF, 18 columns, legal format
 - **Accounting entries** — Auto-generated (French chart of accounts)
-- **CSV export** — Income and expenses
-- **Dark mode** — Native Filament support
+- **MCP API** — Integration with AI assistants (Claude, etc.)
+- **Auto-updates** — Notification and deployment from GitHub
 - **Guided wizards** — Onboarding, property creation, fiscal year closing, loan, annual import
+- **CSV export** — Income, expenses, tax return
+- **Dark mode** — Native Filament support
 - **In-app documentation** — User guide organized in 3 phases: setup, regular tracking, annual declaration
-- **55 automated tests** — Pest PHP, 141 assertions
+- **102 automated tests** — Pest PHP, 266 assertions
 
 ## Tech Stack
 
@@ -67,8 +93,8 @@ docker build -t openlmnp .
 docker run -d --name openlmnp -p 8090:8000 --restart unless-stopped openlmnp
 ```
 
-Access: `http://localhost:8090/app`
-Demo account: `demo@openlmnp.fr` / `demo1234`
+Access: `http://localhost:8090`
+Demo account: `demo@openlmnp.fr` / `demo2026`
 
 ## Development Setup
 
@@ -89,7 +115,7 @@ php artisan serve
 vendor/bin/pest
 ```
 
-55 tests, 141 assertions covering: depreciation calculations, fiscal result, loan amortization, Airbnb CSV import, FEC generation, accounting entries, all Filament pages, wizards, and data isolation between users.
+102 tests, 266 assertions covering: depreciation calculations, fiscal result, loan amortization, Airbnb CSV import, FEC generation, accounting entries, badges, VAT, MCP API, all Filament pages, navigation, wizards, and data isolation between users.
 
 ## French Tax Context
 
@@ -115,7 +141,6 @@ as long as you share modifications under the same license.
 - [Laravel](https://laravel.com) — PHP Framework
 - [Filament](https://filamentphp.com) — Admin panel
 - [Pest PHP](https://pestphp.com) — Testing framework
-- Built with [Claude Code](https://claude.ai/code) (Anthropic)
 
 ---
 

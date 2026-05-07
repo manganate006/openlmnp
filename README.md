@@ -9,7 +9,7 @@
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/Licence-AGPLv3-green)
-![Tests](https://img.shields.io/badge/Tests-55%20pass%C3%A9s-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-102%20pass%C3%A9s-brightgreen)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
 Gérez vos biens en location meublée, calculez vos amortissements,
@@ -21,25 +21,51 @@ et produisez votre liasse fiscale au régime réel.
 
 ---
 
+## Captures d'écran
+
+<details>
+<summary>Tableau de bord</summary>
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+</details>
+
+<details>
+<summary>Recettes Airbnb</summary>
+
+![Recettes](docs/screenshots/recettes.png)
+
+</details>
+
+<details>
+<summary>Télédéclaration</summary>
+
+![Télédéclaration](docs/screenshots/teledeclaration.png)
+
+</details>
+
 ## Fonctionnalités
 
 - **Multi-utilisateurs** — Chaque propriétaire voit uniquement ses données
 - **Biens immobiliers** — Adresse, surfaces, quote-part résidence principale, valeur vénale
 - **Amortissement par composant** — Gros œuvre, toiture, plomberie, agencements (durées standards)
-- **Travaux & Mobilier** — Amortissement dédié ou au prorata, gestion neuf/occasion avec justificatifs adaptés
+- **Travaux & Mobilier** — Amortissement dédié ou au prorata, gestion neuf/occasion avec justificatifs
 - **Recettes** — Saisie manuelle ou import CSV Airbnb/Booking
 - **Charges** — Catégorisées, prorata automatique, justificatifs uploadés
 - **Emprunts** — Tableau d'amortissement auto, intérêts déductibles
 - **Simulateur** — Comparaison micro-BIC vs régime réel avec verdict
 - **Projection pluriannuelle** — Tableau sur 5 à 20 ans
-- **Liasse fiscale PDF** — Lignes Cerfa 2031, 2033-A/B/C/D, case 2042-C-PRO
+- **Télédéclaration interactive** — Lignes Cerfa 2031, 2033-A/B/C/D, 2042-C-PRO avec boutons « Copier »
+- **Liasse fiscale PDF** — Génération complète
 - **FEC conforme** — Article A.47 A-1 du LPF, 18 colonnes, format légal
 - **Écritures comptables** — Génération automatique (plan comptable LMNP)
+- **API MCP** — Intégration avec assistants IA (Claude, etc.)
+- **Mises à jour automatiques** — Notification et déploiement depuis GitHub
 - **Assistants guidés (wizards)** — Onboarding, création de bien, clôture fiscale, emprunt, import annuel
-- **Export CSV** — Recettes et charges exportables
+- **Export CSV** — Recettes, charges, télédéclaration
 - **Dark mode** — Natif Filament
 - **Guide d'utilisation intégré** — Organisé en 3 temps : mise en route, suivi régulier, déclaration annuelle
-- **55 tests automatisés** — Pest PHP, 141 assertions
+- **102 tests automatisés** — Pest PHP, 266 assertions
 
 ## Stack technique
 
@@ -64,7 +90,7 @@ docker run -d --name openlmnp -p 8090:8000 --restart unless-stopped openlmnp
 ```
 
 Accès : `http://localhost:8090`
-Compte démo : `demo@openlmnp.fr` / `demo1234`
+Compte démo : `demo@openlmnp.fr` / `demo2026`
 
 ## Installation développement
 
@@ -115,43 +141,13 @@ vendor/bin/pest --filter="Filament"
 | FecService | 2 | 18 colonnes, format légal |
 | TaxReturnService | 1 | Génération PDF liasse fiscale |
 | AccountingEntryService | 3 | Écritures équilibrées, comptes PCG, quote-part |
+| BadgeService | 14 | Attribution, dédoublonnage, heatmap, score |
+| TvaService | 10 | TVA collectée/déductible, trimestriel, calculs HT/TTC |
+| McpServer | 10 | Auth, isolation données, CRUD, justificatifs, audit |
 | Pages Filament | 22 | Auth, CRUD, simulateur, projection, isolation données |
+| Navigation | 9 | Orphelins, liens, modes Simple/Avancé/Guidé |
 | Wizards | 7 | Onboarding, clôture fiscale, emprunt, import annuel |
-| **Total** | **55** | **141 assertions** |
-
-## Documentation
-
-- [Cahier des charges](docs/cahier-des-charges-lmnp-app.md)
-- [Fiscalité LMNP Airbnb](docs/fiscalite-lmnp-airbnb.md)
-- [Simulation Vinted](docs/synthese-projet-vinted.md)
-- [Guide UI](docs/ui-design-openlmnp.md)
-
-## Roadmap
-
-### v0.1 (actuel)
-
-- [x] Multi-utilisateurs + isolation données
-- [x] CRUD biens, recettes, charges, emprunts, exercices
-- [x] Amortissement par composant + prorata temporis
-- [x] Simulateur micro-BIC vs réel
-- [x] Projection pluriannuelle
-- [x] Liasse fiscale PDF (2031, 2033-A/B/C/D)
-- [x] FEC conforme
-- [x] Import CSV Airbnb
-- [x] Export CSV
-- [x] Assistants guidés (wizards) pour toutes les saisies
-- [x] Guide d'aide intégré (mise en route / suivi régulier / déclaration annuelle)
-- [x] Justificatifs occasion (ZIP, PDF, photos) avec tooltips contextuels
-- [x] 55 tests automatisés
-
-### v1.0 (à venir)
-
-- [ ] Télétransmission EDI-TDFC
-- [ ] Import relevés bancaires
-- [ ] Audit trail (historique modifications)
-- [ ] Backup automatique SQLite
-- [ ] PWA (Progressive Web App)
-- [ ] Repo public + CI/CD GitHub Actions
+| **Total** | **102** | **266 assertions** |
 
 ## Contribution
 
@@ -177,7 +173,6 @@ git push origin feature/ma-fonctionnalite
 - [Laravel](https://laravel.com) — Framework PHP
 - [Filament](https://filamentphp.com) — Admin panel
 - [Pest PHP](https://pestphp.com) — Framework de tests
-- Développé avec l'aide de [Claude Code](https://claude.ai/code) (Anthropic)
 
 ---
 
