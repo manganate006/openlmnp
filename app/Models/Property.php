@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon $acquisition_date
  * @property int         $acquisition_price      centimes
  * @property int         $notary_fees            centimes
+ * @property int         $agency_fees            centimes
  * @property int|null    $market_value           centimes
  * @property \Carbon\Carbon|null $market_value_date
  * @property int         $land_percentage        % terrain non amortissable
@@ -65,6 +66,7 @@ class Property extends Model
         'acquisition_date',
         'acquisition_price',
         'notary_fees',
+        'agency_fees',
         'market_value',
         'market_value_date',
         'land_percentage',
@@ -148,6 +150,11 @@ class Property extends Model
     public function getNotaryFeesEurosAttribute(): string
     {
         return bcdiv((string) $this->notary_fees, '100', 2);
+    }
+
+    public function getAgencyFeesEurosAttribute(): string
+    {
+        return bcdiv((string) $this->agency_fees, '100', 2);
     }
 
     public function getMarketValueEurosAttribute(): ?string
