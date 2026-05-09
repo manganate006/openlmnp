@@ -125,55 +125,130 @@
 
             <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
             {{-- Graphiques (wire:ignore empêche Livewire de détruire les canvas) --}}
-            <div class="sim-grid sim-grid-2" wire:ignore>
-                <div class="sim-card">
-                    <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Comparaison régimes</h3>
-                    <div style="height:240px;"><canvas id="simChartBar"></canvas></div>
+            <div wire:ignore>
+                {{-- Waterfall + Doughnut --}}
+                <div class="sim-grid sim-grid-2">
+                    <div class="sim-card">
+                        <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Cascade du résultat fiscal</h3>
+                        <div style="height:300px;"><canvas id="simChartWaterfall"></canvas></div>
+                    </div>
+                    <div class="sim-card">
+                        <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Répartition des déductions</h3>
+                        <div style="height:300px;"><canvas id="simChartDoughnut"></canvas></div>
+                    </div>
                 </div>
+                {{-- Comparaison barres horizontales --}}
                 <div class="sim-card">
-                    <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Répartition des déductions</h3>
-                    <div style="height:240px;"><canvas id="simChartDoughnut"></canvas></div>
+                    <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Comparaison micro-BIC vs régime réel</h3>
+                    <div style="height:140px;"><canvas id="simChartCompare"></canvas></div>
                 </div>
             </div>
             <script>
                 (function() {
                     if (window._simCharts) window._simCharts.forEach(c => c.destroy());
                     window._simCharts = [];
-                    const data = @json($r['chart_data']);
+                    const d = @json($r['chart_data']);
+                    const c = v => v / 100;
+                    const fmt = v => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:0}).format(v) + ' €';
 
-                    function renderCharts() {
-                        if (window._simCharts.length) window._simCharts.forEach(c => c.destroy());
+                    function render() {
+                        if (window._simCharts.length) window._simCharts.forEach(ch => ch.destroy());
                         window._simCharts = [];
 
-                        const bar = document.getElementById('simChartBar');
-                        const doughnut = document.getElementById('simChartDoughnut');
-                        if (!bar || !doughnut) return;
+                        // 1. Waterfall (floating bars)
+                        const steps = [
+                            { label: 'Recettes', value: c(d.net_income), color: '#34d399' },
+                            { label: 'Charges', value: -c(d.total_expenses), color: '#f87171' },
+                            { label: 'Amort.', value: -c(d.total_depreciation), color: '#fb923c' },
+                            { label: 'Résultat', value: c(d.fiscal_result), color: '#3b82f6' },
+                        ];
+                        let running = 0;
+                        const waterfallData = steps.map((s, i) => {
+                            if (i === steps.length - 1) return [0, s.value]; // résultat part de 0
+                            const start = running;
+                            running += s.value;
+                            return s.value >= 0 ? [start, start + s.value] : [start + s.value, start];
+                        });
 
-                        window._simCharts.push(new Chart(bar, {
+                        const wfEl = document.getElementById('simChartWaterfall');
+                        if (wfEl) window._simCharts.push(new Chart(wfEl, {
                             type: 'bar',
-                            data: { labels: ['Micro-BIC', 'Régime réel'], datasets: [{ data: [data.micro_bic/100, data.real/100], backgroundColor: ['#fbbf24','#34d399'], borderRadius: 8, barPercentage: 0.6 }] },
-                            options: { responsive: true, maintainAspectRatio: false, animation: { duration: 600 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('fr-FR')+' €' } } } }
+                            data: {
+                                labels: steps.map(s => s.label),
+                                datasets: [{
+                                    data: waterfallData,
+                                    backgroundColor: steps.map(s => s.color),
+                                    borderRadius: 4,
+                                    barPercentage: 0.7,
+                                }]
+                            },
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                animation: { duration: 600 },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: { callbacks: { label: ctx => { const v = ctx.raw; return fmt(typeof v === 'object' ? v[1] - v[0] : v); } } }
+                                },
+                                scales: {
+                                    y: { beginAtZero: true, ticks: { callback: v => fmt(v) } },
+                                    x: { grid: { display: false } }
+                                }
+                            }
                         }));
 
+                        // 2. Doughnut (légende en bas)
                         const dd = [
-                            {l:'Charges dédiées',v:data.expenses_dedicated,c:'#f87171'},
-                            {l:'Charges mixtes (QP)',v:data.expenses_shared,c:'#fb923c'},
-                            {l:'Intérêts emprunt',v:data.loan_interest,c:'#fbbf24'},
-                            {l:'Assurance emprunt',v:data.loan_insurance,c:'#facc15'},
-                            {l:'Amort. immeuble',v:data.dep_building,c:'#34d399'},
-                            {l:'Amort. mobilier',v:data.dep_furniture,c:'#22d3ee'},
-                            {l:'Amort. notaire/agence',v:data.dep_notary,c:'#818cf8'},
-                        ].filter(d => d.v > 0);
+                            {l:'Charges dédiées',v:d.expenses_dedicated,cl:'#f87171'},
+                            {l:'Charges mixtes (QP)',v:d.expenses_shared,cl:'#fb923c'},
+                            {l:'Intérêts emprunt',v:d.loan_interest,cl:'#fbbf24'},
+                            {l:'Assurance emprunt',v:d.loan_insurance,cl:'#facc15'},
+                            {l:'Amort. immeuble',v:d.dep_building,cl:'#34d399'},
+                            {l:'Amort. mobilier',v:d.dep_furniture,cl:'#22d3ee'},
+                            {l:'Amort. notaire/agence',v:d.dep_notary,cl:'#818cf8'},
+                        ].filter(x => x.v > 0);
 
-                        window._simCharts.push(new Chart(doughnut, {
+                        const dnEl = document.getElementById('simChartDoughnut');
+                        if (dnEl) window._simCharts.push(new Chart(dnEl, {
                             type: 'doughnut',
-                            data: { labels: dd.map(d=>d.l), datasets: [{ data: dd.map(d=>d.v/100), backgroundColor: dd.map(d=>d.c), borderWidth: 2, borderColor: '#fff' }] },
-                            options: { responsive: true, maintainAspectRatio: false, animation: { duration: 600 }, plugins: { legend: { position: 'right', labels: { font: {size:11}, padding: 6, usePointStyle: true } } } }
+                            data: { labels: dd.map(x=>x.l), datasets: [{ data: dd.map(x=>c(x.v)), backgroundColor: dd.map(x=>x.cl), borderWidth: 2, borderColor: '#fff' }] },
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                animation: { duration: 600 },
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { font: {size:11}, padding: 10, usePointStyle: true } },
+                                    tooltip: { callbacks: { label: ctx => ctx.label + ' : ' + fmt(ctx.raw) } }
+                                }
+                            }
+                        }));
+
+                        // 3. Barres horizontales comparaison
+                        const cmpEl = document.getElementById('simChartCompare');
+                        if (cmpEl) window._simCharts.push(new Chart(cmpEl, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Micro-BIC', 'Régime réel'],
+                                datasets: [
+                                    { label: 'Base imposable', data: [c(d.micro_bic), c(d.real)], backgroundColor: ['#fbbf24','#34d399'], borderRadius: 6, barPercentage: 0.5 }
+                                ]
+                            },
+                            options: {
+                                indexAxis: 'y',
+                                responsive: true, maintainAspectRatio: false,
+                                animation: { duration: 600 },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: { callbacks: { label: ctx => fmt(ctx.raw) } }
+                                },
+                                scales: {
+                                    x: { beginAtZero: true, ticks: { callback: v => fmt(v) } },
+                                    y: { grid: { display: false } }
+                                }
+                            }
                         }));
                     }
 
-                    if (typeof Chart !== 'undefined') renderCharts();
-                    else document.addEventListener('DOMContentLoaded', renderCharts);
+                    if (typeof Chart !== 'undefined') render();
+                    else document.addEventListener('DOMContentLoaded', render);
                 })();
             </script>
 

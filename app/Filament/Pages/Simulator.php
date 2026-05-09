@@ -201,14 +201,20 @@ class Simulator extends Page implements HasForms
             // Raw values for charts (centimes)
             'chart_data' => [
                 'micro_bic' => (int) $comparison['micro_bic_result'],
-                'real' => $fiscalResult,
+                'real' => (int) $comparison['real_result'],
+                'gross_income' => $grossIncome,
+                'net_income' => $netIncome,
+                'platform_fees' => $platformFees,
                 'expenses_dedicated' => $totalExpensesDedicated,
                 'expenses_shared' => $totalExpensesShared,
                 'loan_interest' => $loanInterest,
                 'loan_insurance' => $loanInsurance,
+                'total_expenses' => $totalExpenses,
                 'dep_building' => $depBuilding,
                 'dep_furniture' => $depFurniture,
                 'dep_notary' => $depNotary,
+                'total_depreciation' => $cappedDepreciation,
+                'fiscal_result' => $fiscalResult,
             ],
         ];
     }
