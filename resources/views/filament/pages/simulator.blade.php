@@ -126,21 +126,22 @@
             <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
             {{-- Graphiques (wire:ignore empêche Livewire de détruire les canvas) --}}
             <div wire:ignore>
-                {{-- Waterfall + Doughnut --}}
+                {{-- Waterfall --}}
+                <div class="sim-card">
+                    <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Cascade du résultat fiscal</h3>
+                    <div style="height:280px;"><canvas id="simChartWaterfall"></canvas></div>
+                </div>
                 <div class="sim-grid sim-grid-2">
+                    {{-- Barres horizontales comparaison --}}
                     <div class="sim-card">
-                        <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Cascade du résultat fiscal</h3>
-                        <div style="height:300px;"><canvas id="simChartWaterfall"></canvas></div>
+                        <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Base imposable</h3>
+                        <div style="height:120px;"><canvas id="simChartCompare"></canvas></div>
                     </div>
+                    {{-- Doughnut --}}
                     <div class="sim-card">
                         <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Répartition des déductions</h3>
-                        <div style="height:300px;"><canvas id="simChartDoughnut"></canvas></div>
+                        <div style="height:220px;"><canvas id="simChartDoughnut"></canvas></div>
                     </div>
-                </div>
-                {{-- Comparaison barres horizontales --}}
-                <div class="sim-card">
-                    <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Comparaison micro-BIC vs régime réel</h3>
-                    <div style="height:140px;"><canvas id="simChartCompare"></canvas></div>
                 </div>
             </div>
             <script>
@@ -148,7 +149,7 @@
                     if (window._simCharts) window._simCharts.forEach(c => c.destroy());
                     window._simCharts = [];
                     const d = @json($r['chart_data']);
-                    const c = v => v / 100;
+                    const eur = v => v / 100;
                     const fmt = v => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:0}).format(v) + ' €';
 
                     function render() {
@@ -156,30 +157,35 @@
                         window._simCharts = [];
 
                         // 1. Waterfall (floating bars)
-                        const steps = [
-                            { label: 'Recettes', value: c(d.net_income), color: '#34d399' },
-                            { label: 'Charges', value: -c(d.total_expenses), color: '#f87171' },
-                            { label: 'Amort.', value: -c(d.total_depreciation), color: '#fb923c' },
-                            { label: 'Résultat', value: c(d.fiscal_result), color: '#3b82f6' },
+                        const netIncome = eur(d.net_income);
+                        const expenses = eur(d.total_expenses);
+                        const depreciation = eur(d.total_depreciation);
+                        const result = eur(d.fiscal_result);
+
+                        const waterfallData = [
+                            [0, netIncome],                                      // Recettes: 0 → 14310
+                            [netIncome - expenses, netIncome],                   // Charges: tombe
+                            [netIncome - expenses - depreciation, netIncome - expenses], // Amort: tombe
+                            [0, result],                                          // Résultat: 0 → 1345
                         ];
-                        let running = 0;
-                        const waterfallData = steps.map((s, i) => {
-                            if (i === steps.length - 1) return [0, s.value]; // résultat part de 0
-                            const start = running;
-                            running += s.value;
-                            return s.value >= 0 ? [start, start + s.value] : [start + s.value, start];
-                        });
+                        const waterfallColors = ['#34d399', '#f87171', '#fb923c', '#3b82f6'];
+                        const waterfallLabels = [
+                            'Recettes\n' + fmt(netIncome),
+                            'Charges\n-' + fmt(expenses),
+                            'Amort.\n-' + fmt(depreciation),
+                            'Résultat\n' + fmt(result)
+                        ];
 
                         const wfEl = document.getElementById('simChartWaterfall');
                         if (wfEl) window._simCharts.push(new Chart(wfEl, {
                             type: 'bar',
                             data: {
-                                labels: steps.map(s => s.label),
+                                labels: ['Recettes', 'Charges', 'Amort.', 'Résultat'],
                                 datasets: [{
                                     data: waterfallData,
-                                    backgroundColor: steps.map(s => s.color),
-                                    borderRadius: 4,
-                                    barPercentage: 0.7,
+                                    backgroundColor: waterfallColors,
+                                    borderRadius: 6,
+                                    barPercentage: 0.6,
                                 }]
                             },
                             options: {
@@ -187,7 +193,9 @@
                                 animation: { duration: 600 },
                                 plugins: {
                                     legend: { display: false },
-                                    tooltip: { callbacks: { label: ctx => { const v = ctx.raw; return fmt(typeof v === 'object' ? v[1] - v[0] : v); } } }
+                                    tooltip: { callbacks: {
+                                        label: ctx => { const r = ctx.raw; return fmt(Math.abs(r[1] - r[0])); }
+                                    }}
                                 },
                                 scales: {
                                     y: { beginAtZero: true, ticks: { callback: v => fmt(v) } },
@@ -196,40 +204,18 @@
                             }
                         }));
 
-                        // 2. Doughnut (légende en bas)
-                        const dd = [
-                            {l:'Charges dédiées',v:d.expenses_dedicated,cl:'#f87171'},
-                            {l:'Charges mixtes (QP)',v:d.expenses_shared,cl:'#fb923c'},
-                            {l:'Intérêts emprunt',v:d.loan_interest,cl:'#fbbf24'},
-                            {l:'Assurance emprunt',v:d.loan_insurance,cl:'#facc15'},
-                            {l:'Amort. immeuble',v:d.dep_building,cl:'#34d399'},
-                            {l:'Amort. mobilier',v:d.dep_furniture,cl:'#22d3ee'},
-                            {l:'Amort. notaire/agence',v:d.dep_notary,cl:'#818cf8'},
-                        ].filter(x => x.v > 0);
-
-                        const dnEl = document.getElementById('simChartDoughnut');
-                        if (dnEl) window._simCharts.push(new Chart(dnEl, {
-                            type: 'doughnut',
-                            data: { labels: dd.map(x=>x.l), datasets: [{ data: dd.map(x=>c(x.v)), backgroundColor: dd.map(x=>x.cl), borderWidth: 2, borderColor: '#fff' }] },
-                            options: {
-                                responsive: true, maintainAspectRatio: false,
-                                animation: { duration: 600 },
-                                plugins: {
-                                    legend: { position: 'bottom', labels: { font: {size:11}, padding: 10, usePointStyle: true } },
-                                    tooltip: { callbacks: { label: ctx => ctx.label + ' : ' + fmt(ctx.raw) } }
-                                }
-                            }
-                        }));
-
-                        // 3. Barres horizontales comparaison
+                        // 2. Barres horizontales comparaison
                         const cmpEl = document.getElementById('simChartCompare');
                         if (cmpEl) window._simCharts.push(new Chart(cmpEl, {
                             type: 'bar',
                             data: {
                                 labels: ['Micro-BIC', 'Régime réel'],
-                                datasets: [
-                                    { label: 'Base imposable', data: [c(d.micro_bic), c(d.real)], backgroundColor: ['#fbbf24','#34d399'], borderRadius: 6, barPercentage: 0.5 }
-                                ]
+                                datasets: [{
+                                    data: [eur(d.micro_bic), eur(d.real)],
+                                    backgroundColor: ['#fbbf24', '#34d399'],
+                                    borderRadius: 6,
+                                    barPercentage: 0.5,
+                                }]
                             },
                             options: {
                                 indexAxis: 'y',
@@ -237,11 +223,38 @@
                                 animation: { duration: 600 },
                                 plugins: {
                                     legend: { display: false },
-                                    tooltip: { callbacks: { label: ctx => fmt(ctx.raw) } }
+                                    tooltip: { callbacks: { label: ctx => 'Base imposable : ' + fmt(ctx.raw) } }
                                 },
                                 scales: {
                                     x: { beginAtZero: true, ticks: { callback: v => fmt(v) } },
                                     y: { grid: { display: false } }
+                                }
+                            }
+                        }));
+
+                        // 3. Doughnut (compact, légende en bas)
+                        const dd = [
+                            {l:'Charges',v:d.expenses_dedicated+d.expenses_shared,cl:'#f87171'},
+                            {l:'Emprunt',v:d.loan_interest+d.loan_insurance,cl:'#fbbf24'},
+                            {l:'Amort. immeuble',v:d.dep_building,cl:'#34d399'},
+                            {l:'Amort. mobilier',v:d.dep_furniture,cl:'#22d3ee'},
+                            {l:'Amort. frais acq.',v:d.dep_notary,cl:'#818cf8'},
+                        ].filter(x => x.v > 0);
+
+                        const dnEl = document.getElementById('simChartDoughnut');
+                        if (dnEl) window._simCharts.push(new Chart(dnEl, {
+                            type: 'doughnut',
+                            data: {
+                                labels: dd.map(x => x.l),
+                                datasets: [{ data: dd.map(x => eur(x.v)), backgroundColor: dd.map(x => x.cl), borderWidth: 2, borderColor: '#fff' }]
+                            },
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                animation: { duration: 600 },
+                                cutout: '55%',
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { font: {size: 12}, padding: 12, usePointStyle: true, pointStyleWidth: 10 } },
+                                    tooltip: { callbacks: { label: ctx => ctx.label + ' : ' + fmt(ctx.raw) } }
                                 }
                             }
                         }));
