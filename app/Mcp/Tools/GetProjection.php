@@ -135,10 +135,10 @@ class GetProjection extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            $schema->integer('start_year')->description('Année de départ de la projection (défaut : année courante)'),
-            $schema->integer('years')->description('Nombre d\'années à projeter, entre 1 et 15 (défaut : 5)')->default(5),
-            $schema->number('income_growth')->description('Taux de croissance annuel des revenus en % (ex : 2 pour +2%/an)')->default(0),
-            $schema->number('expense_growth')->description('Taux de croissance annuel des charges en % (ex : 3 pour +3%/an)')->default(0),
+            'start_year'     => $schema->integer('Année de départ de la projection (défaut : année courante)'),
+            'years'          => $schema->integer('Nombre d\'années à projeter, entre 1 et 15 (défaut : 5)'),
+            'income_growth'  => $schema->number('Taux de croissance annuel des revenus en % (ex : 2 pour +2%/an)'),
+            'expense_growth' => $schema->number('Taux de croissance annuel des charges en % (ex : 3 pour +3%/an)'),
         ];
     }
 }

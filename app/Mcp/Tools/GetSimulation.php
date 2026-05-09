@@ -45,7 +45,6 @@ class GetSimulation extends Tool
 
         $comparison = $this->fiscalYearService->compareMicroBicVsReal($user, $year, $abatement);
 
-        // Amortissements par bien
         $depreciationDetails = [];
         foreach ($properties as $property) {
             $dep = $this->depreciationService->calculateAnnualDepreciation($property, $year);
@@ -57,7 +56,6 @@ class GetSimulation extends Tool
             ];
         }
 
-        // Charges détaillées
         $totalExpensesDedicated = 0;
         $totalExpensesShared    = 0;
         foreach ($properties as $property) {
@@ -96,8 +94,8 @@ class GetSimulation extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            $schema->integer('year')->description('Année fiscale à simuler (défaut : année courante)'),
-            $schema->string('abatement')->description('Abattement micro-BIC : "50" pour meublé classé, "30" pour non classé')->default('50'),
+            'year'      => $schema->integer('Année fiscale à simuler (défaut : année courante)'),
+            'abatement' => $schema->string('Abattement micro-BIC : "50" pour meublé classé, "30" pour non classé'),
         ];
     }
 }
