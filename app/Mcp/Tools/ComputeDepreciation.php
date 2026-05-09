@@ -45,11 +45,13 @@ class ComputeDepreciation extends Tool
             'building'  => [],
             'works'     => [],
             'furniture' => [],
+            'notary'    => [],
         ];
         foreach ($details as $detail) {
             $cat = match ($detail['type']) {
                 'work'      => 'works',
                 'furniture' => 'furniture',
+                'notary'    => 'notary',
                 default     => 'building',
             };
             $byCategory[$cat][] = $detail;
@@ -71,6 +73,10 @@ class ComputeDepreciation extends Tool
                 'furniture' => [
                     'total_eur' => bcdiv((string) $raw['furniture'], '100', 2),
                     'items'     => $byCategory['furniture'],
+                ],
+                'notary' => [
+                    'total_eur' => bcdiv((string) $raw['notary'], '100', 2),
+                    'items'     => $byCategory['notary'],
                 ],
             ],
             'total_eur' => bcdiv((string) $raw['total'], '100', 2),
