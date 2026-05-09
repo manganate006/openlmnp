@@ -123,45 +123,59 @@
                 </div>
             @endif
 
-            {{-- Graphiques --}}
-            <div class="sim-grid sim-grid-2"
-                 x-data="{ charts: [], data: {{ json_encode($r['chart_data']) }} }"
-                 x-init="$nextTick(() => {
-                     charts.forEach(c => c.destroy());
-                     charts = [];
-                     const fmt = v => new Intl.NumberFormat('fr-FR', {style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v/100);
-
-                     charts.push(new Chart($refs.cBar, {
-                         type: 'bar',
-                         data: { labels: ['Micro-BIC', 'Régime réel'], datasets: [{ data: [data.micro_bic/100, data.real/100], backgroundColor: ['#fbbf24','#34d399'], borderRadius: 8, barPercentage: 0.6 }] },
-                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('fr-FR')+' €' } } } }
-                     }));
-
-                     const dd = [
-                         {l:'Charges dédiées',v:data.expenses_dedicated,c:'#f87171'},
-                         {l:'Charges mixtes (QP)',v:data.expenses_shared,c:'#fb923c'},
-                         {l:'Intérêts emprunt',v:data.loan_interest,c:'#fbbf24'},
-                         {l:'Assurance emprunt',v:data.loan_insurance,c:'#facc15'},
-                         {l:'Amort. immeuble',v:data.dep_building,c:'#34d399'},
-                         {l:'Amort. mobilier',v:data.dep_furniture,c:'#22d3ee'},
-                         {l:'Amort. notaire/agence',v:data.dep_notary,c:'#818cf8'},
-                     ].filter(d => d.v > 0);
-
-                     charts.push(new Chart($refs.cDoughnut, {
-                         type: 'doughnut',
-                         data: { labels: dd.map(d=>d.l), datasets: [{ data: dd.map(d=>d.v/100), backgroundColor: dd.map(d=>d.c), borderWidth: 2, borderColor: '#fff' }] },
-                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: {size:11}, padding: 6, usePointStyle: true } } } }
-                     }));
-                 })">
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+            {{-- Graphiques (wire:ignore empêche Livewire de détruire les canvas) --}}
+            <div class="sim-grid sim-grid-2" wire:ignore>
                 <div class="sim-card">
                     <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Comparaison régimes</h3>
-                    <div style="height:240px;"><canvas x-ref="cBar"></canvas></div>
+                    <div style="height:240px;"><canvas id="simChartBar"></canvas></div>
                 </div>
                 <div class="sim-card">
                     <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Répartition des déductions</h3>
-                    <div style="height:240px;"><canvas x-ref="cDoughnut"></canvas></div>
+                    <div style="height:240px;"><canvas id="simChartDoughnut"></canvas></div>
                 </div>
             </div>
+            <script>
+                (function() {
+                    if (window._simCharts) window._simCharts.forEach(c => c.destroy());
+                    window._simCharts = [];
+                    const data = @json($r['chart_data']);
+
+                    function renderCharts() {
+                        if (window._simCharts.length) window._simCharts.forEach(c => c.destroy());
+                        window._simCharts = [];
+
+                        const bar = document.getElementById('simChartBar');
+                        const doughnut = document.getElementById('simChartDoughnut');
+                        if (!bar || !doughnut) return;
+
+                        window._simCharts.push(new Chart(bar, {
+                            type: 'bar',
+                            data: { labels: ['Micro-BIC', 'Régime réel'], datasets: [{ data: [data.micro_bic/100, data.real/100], backgroundColor: ['#fbbf24','#34d399'], borderRadius: 8, barPercentage: 0.6 }] },
+                            options: { responsive: true, maintainAspectRatio: false, animation: { duration: 600 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('fr-FR')+' €' } } } }
+                        }));
+
+                        const dd = [
+                            {l:'Charges dédiées',v:data.expenses_dedicated,c:'#f87171'},
+                            {l:'Charges mixtes (QP)',v:data.expenses_shared,c:'#fb923c'},
+                            {l:'Intérêts emprunt',v:data.loan_interest,c:'#fbbf24'},
+                            {l:'Assurance emprunt',v:data.loan_insurance,c:'#facc15'},
+                            {l:'Amort. immeuble',v:data.dep_building,c:'#34d399'},
+                            {l:'Amort. mobilier',v:data.dep_furniture,c:'#22d3ee'},
+                            {l:'Amort. notaire/agence',v:data.dep_notary,c:'#818cf8'},
+                        ].filter(d => d.v > 0);
+
+                        window._simCharts.push(new Chart(doughnut, {
+                            type: 'doughnut',
+                            data: { labels: dd.map(d=>d.l), datasets: [{ data: dd.map(d=>d.v/100), backgroundColor: dd.map(d=>d.c), borderWidth: 2, borderColor: '#fff' }] },
+                            options: { responsive: true, maintainAspectRatio: false, animation: { duration: 600 }, plugins: { legend: { position: 'right', labels: { font: {size:11}, padding: 6, usePointStyle: true } } } }
+                        }));
+                    }
+
+                    if (typeof Chart !== 'undefined') renderCharts();
+                    else document.addEventListener('DOMContentLoaded', renderCharts);
+                })();
+            </script>
 
             {{-- Détail du calcul (accordéon) --}}
             <div class="sim-card" x-data="{ open: false }">
@@ -233,5 +247,4 @@
         @endif
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </x-filament-panels::page>
