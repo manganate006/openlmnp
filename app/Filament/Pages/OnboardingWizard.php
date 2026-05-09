@@ -294,6 +294,7 @@ class OnboardingWizard extends Page implements HasForms
                     ->label('Date de début de location')
                     ->required()
                     ->displayFormat('d/m/Y')
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Date de démarrage du LMNP au régime réel. Sert de point de départ pour le calcul des amortissements.')
                     ->hint('Les amortissements démarrent à cette date.'),
                 Repeater::make('listing_urls')
                     ->label('Liens d\'annonces')
