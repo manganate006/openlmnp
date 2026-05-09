@@ -178,11 +178,6 @@ class DepreciationService
 
         $annual = (string) $component->annual_depreciation;
 
-        // Quote-part si résidence principale (composants = usage mixte)
-        if ($property->is_primary_residence) {
-            $annual = bcmul($annual, $property->quota_share, 0);
-        }
-
         // Prorata temporis la 1ère année
         if ($year === $startYear) {
             $daysInYear = $startDate->isLeapYear() ? 366 : 365;

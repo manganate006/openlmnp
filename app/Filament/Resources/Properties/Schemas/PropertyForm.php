@@ -242,6 +242,7 @@ class PropertyForm
                 ->label('Date de début de location')
                 ->required()
                 ->displayFormat('d/m/Y')
+                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Date de démarrage du LMNP au régime réel. Sert de point de départ pour le calcul des amortissements (prorata temporis).')
                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Les amortissements démarrent à cette date.'),
             Select::make('tva_regime')
                 ->label('Régime de TVA')
