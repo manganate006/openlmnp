@@ -8,8 +8,6 @@ use App\Services\DepreciationService;
 use App\Services\FiscalYearService;
 use App\Models\Property;
 use BackedEnum;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
@@ -39,7 +37,21 @@ class Simulator extends Page implements HasForms
     protected string $view = 'filament.pages.simulator';
 
     public int $year = 2026;
-    public string $abatement = '50'; // 50% classé, 30% non classé
+    public string $abatement = '50';
+
+    private const CATEGORY_LABELS = [
+        'property_tax' => 'Taxes (TF, CFE)',
+        'insurance'    => 'Assurance',
+        'energy'       => 'Énergie',
+        'maintenance'  => 'Entretien / réparations',
+        'telecom'      => 'Télécom / Internet',
+        'supplies'     => 'Fournitures',
+        'platform_fees' => 'Commissions plateforme',
+        'accounting'   => 'Comptabilité',
+        'cleaning'     => 'Ménage',
+        'travel'       => 'Déplacements',
+        'other'        => 'Divers',
+    ];
 
     public function mount(): void
     {
@@ -61,53 +73,149 @@ class Simulator extends Page implements HasForms
         $fiscalService = app(FiscalYearService::class);
         $comparison = $fiscalService->compareMicroBicVsReal($user, $this->year, $this->abatement);
 
-        // Détail des amortissements
         $depreciationService = app(DepreciationService::class);
-        $depreciationDetails = [];
-        foreach ($properties as $property) {
-            $dep = $depreciationService->calculateAnnualDepreciation($property, $this->year);
-            $depreciationDetails[$property->name] = $dep;
-        }
 
-        // Calcul charges détaillées
+        // Recettes détaillées
+        $grossIncome = 0;
+        $platformFees = 0;
+        foreach ($properties as $property) {
+            $amountField = $property->isTvaLiable() ? 'amount_ht' : 'amount';
+            $grossIncome += $property->incomes()->whereYear('income_date', $this->year)->sum($amountField);
+            $platformFees += $property->incomes()->whereYear('income_date', $this->year)->sum('platform_fee');
+        }
+        $netIncome = $grossIncome - $platformFees;
+
+        // Charges par catégorie
+        $expensesByCategory = [];
         $totalExpensesDedicated = 0;
         $totalExpensesShared = 0;
         foreach ($properties as $property) {
-            $totalExpensesDedicated += $property->expenses()
+            $amountField = $property->isTvaLiable() ? 'amount_ht' : 'amount';
+            $expenses = $property->expenses()
                 ->whereYear('expense_date', $this->year)
-                ->where('is_dedicated', true)
-                ->sum('amount');
-            $shared = $property->expenses()
-                ->whereYear('expense_date', $this->year)
-                ->where('is_dedicated', false)
-                ->sum('amount');
-            $totalExpensesShared += (int) bcmul((string) $shared, $property->quota_share, 0);
+                ->selectRaw("category, is_dedicated, SUM({$amountField}) as total")
+                ->groupBy('category', 'is_dedicated')
+                ->get();
+
+            foreach ($expenses as $exp) {
+                $cat = $exp->category;
+                if (! isset($expensesByCategory[$cat])) {
+                    $expensesByCategory[$cat] = ['label' => self::CATEGORY_LABELS[$cat] ?? $cat, 'dedicated' => 0, 'shared' => 0, 'effective' => 0];
+                }
+                if ($exp->is_dedicated) {
+                    $expensesByCategory[$cat]['dedicated'] += (int) $exp->total;
+                    $expensesByCategory[$cat]['effective'] += (int) $exp->total;
+                    $totalExpensesDedicated += (int) $exp->total;
+                } else {
+                    $expensesByCategory[$cat]['shared'] += (int) $exp->total;
+                    $effective = (int) bcmul((string) $exp->total, $property->quota_share, 0);
+                    $expensesByCategory[$cat]['effective'] += $effective;
+                    $totalExpensesShared += $effective;
+                }
+            }
         }
 
-        // Économie en impôt (estimation TMI 11% et 30%)
+        // Intérêts et assurance emprunt
+        $loanInterest = 0;
+        $loanInsurance = 0;
+        foreach ($properties as $property) {
+            foreach ($property->loans as $loan) {
+                $interest = $loan->payments()->whereYear('payment_date', $this->year)->sum('interest_amount');
+                $loanInterest += (int) bcmul((string) $interest, $property->quota_share, 0);
+
+                $insurance = $loan->payments()->whereYear('payment_date', $this->year)->sum('insurance_amount');
+                $loanInsurance += (int) bcmul((string) $insurance, $property->quota_share, 0);
+            }
+        }
+
+        $totalExpenses = $totalExpensesDedicated + $totalExpensesShared + $loanInterest + $loanInsurance;
+        $resultBeforeDepreciation = $netIncome - $totalExpenses;
+
+        // Amortissements détaillés
+        $depBuilding = 0;
+        $depFurniture = 0;
+        $depNotary = 0;
+        $depreciationDetails = [];
+        foreach ($properties as $property) {
+            $dep = $depreciationService->calculateAnnualDepreciation($property, $this->year);
+            $depBuilding += (int) $dep['building'];
+            $depFurniture += (int) $dep['furniture'];
+            $depNotary += (int) $dep['notary'];
+            $depreciationDetails[$property->name] = $dep;
+        }
+        $totalDepreciation = $depBuilding + $depFurniture + $depNotary;
+
+        // Plafonnement
+        $cappedDepreciation = $totalDepreciation;
+        $deferredDepreciation = 0;
+        if ($totalDepreciation > $resultBeforeDepreciation && $resultBeforeDepreciation > 0) {
+            $cappedDepreciation = $resultBeforeDepreciation;
+            $deferredDepreciation = $totalDepreciation - $resultBeforeDepreciation;
+        } elseif ($resultBeforeDepreciation <= 0) {
+            $cappedDepreciation = 0;
+            $deferredDepreciation = $totalDepreciation;
+        }
+
+        $fiscalResult = max(0, $resultBeforeDepreciation - $cappedDepreciation);
+
+        // Économie en impôt
         $advantage = (int) $comparison['advantage'];
         $taxSaving11 = (int) bcmul((string) $advantage, '0.11', 0);
         $taxSaving30 = (int) bcmul((string) $advantage, '0.30', 0);
-
-        // PS savings (18.6%)
         $psSaving = (int) bcmul((string) $advantage, '0.186', 0);
 
         return [
             'empty' => false,
             'year' => $this->year,
             'abatement' => $this->abatement,
-            'gross_income' => $this->formatCents($comparison['gross_income']),
+            // Comparaison principale
+            'gross_income' => $this->fmt($grossIncome),
+            'platform_fees' => $this->fmt($platformFees),
+            'net_income' => $this->fmt($netIncome),
             'micro_bic_result' => $this->formatCents($comparison['micro_bic_result']),
             'real_result' => $this->formatCents($comparison['real_result']),
             'advantage' => $this->formatCents($comparison['advantage']),
             'recommended' => $comparison['recommended'],
-            'expenses_dedicated' => $this->formatCents((string) $totalExpensesDedicated),
-            'expenses_shared' => $this->formatCents((string) $totalExpensesShared),
+            // Charges détaillées
+            'expenses_dedicated' => $this->fmt($totalExpensesDedicated),
+            'expenses_shared' => $this->fmt($totalExpensesShared),
+            'expenses_by_category' => $expensesByCategory,
+            'loan_interest' => $this->fmt($loanInterest),
+            'loan_insurance' => $this->fmt($loanInsurance),
+            'total_expenses' => $this->fmt($totalExpenses),
+            // Waterfall
+            'result_before_depreciation' => $this->fmt($resultBeforeDepreciation),
+            // Amortissements
+            'depreciation_building' => $this->fmt($depBuilding),
+            'depreciation_furniture' => $this->fmt($depFurniture),
+            'depreciation_notary' => $this->fmt($depNotary),
+            'total_depreciation' => $this->fmt($totalDepreciation),
+            'capped_depreciation' => $this->fmt($cappedDepreciation),
+            'deferred_depreciation' => $this->fmt($deferredDepreciation),
             'depreciation_details' => $depreciationDetails,
-            'tax_saving_11' => $this->formatCents((string) $taxSaving11),
-            'tax_saving_30' => $this->formatCents((string) $taxSaving30),
-            'ps_saving' => $this->formatCents((string) $psSaving),
+            'fiscal_result' => $this->fmt($fiscalResult),
+            // Économie
+            'tax_saving_11' => $this->fmt($taxSaving11),
+            'tax_saving_30' => $this->fmt($taxSaving30),
+            'ps_saving' => $this->fmt($psSaving),
+            // Raw values for charts (centimes)
+            'chart_data' => [
+                'micro_bic' => (int) $comparison['micro_bic_result'],
+                'real' => $fiscalResult,
+                'expenses_dedicated' => $totalExpensesDedicated,
+                'expenses_shared' => $totalExpensesShared,
+                'loan_interest' => $loanInterest,
+                'loan_insurance' => $loanInsurance,
+                'dep_building' => $depBuilding,
+                'dep_furniture' => $depFurniture,
+                'dep_notary' => $depNotary,
+            ],
         ];
+    }
+
+    private function fmt(int $cents): string
+    {
+        return number_format($cents / 100, 0, ',', ' ');
     }
 
     private function formatCents(string $cents): string
