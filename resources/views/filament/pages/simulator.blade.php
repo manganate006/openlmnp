@@ -148,9 +148,17 @@
                 (function() {
                     if (window._simCharts) window._simCharts.forEach(c => c.destroy());
                     window._simCharts = [];
-                    const d = @json($r['chart_data']);
+                    let d = @json($r['chart_data']);
                     const eur = v => v / 100;
                     const fmt = v => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:0}).format(v) + ' €';
+
+                    // Écouter les mises à jour Livewire (changement année/abattement)
+                    document.addEventListener('livewire:initialized', () => {
+                        Livewire.on('sim-chart-update', (event) => {
+                            d = event.data || event[0]?.data || event;
+                            render();
+                        });
+                    });
 
                     function render() {
                         if (window._simCharts.length) window._simCharts.forEach(ch => ch.destroy());
