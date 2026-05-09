@@ -233,10 +233,12 @@ class Simulator extends Page implements HasForms
     public function updatedYear(): void
     {
         unset($this->simulationResults);
+        $this->dispatch('sim-chart-update', data: $this->simulationResults['chart_data'] ?? []);
     }
 
     public function updatedAbatement(): void
     {
         unset($this->simulationResults);
+        $this->dispatch('sim-chart-update', data: $this->simulationResults['chart_data'] ?? []);
     }
 }
