@@ -251,6 +251,15 @@ class OnboardingWizard extends Page implements HasForms
                         ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : '0')
                         ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
                         ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Amortis sur 25 ans, avec quote-part si résidence principale'),
+                    TextInput::make('agency_fees')
+                        ->label('Honoraires agence')
+                        ->suffix('€')
+                        ->numeric()
+                        ->step(1)
+                        ->default(0)
+                        ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : '0')
+                        ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                        ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Amortis sur 25 ans, avec quote-part si résidence principale'),
                     DatePicker::make('acquisition_date')
                         ->label('Date d\'achat')
                         ->required()
@@ -495,6 +504,7 @@ class OnboardingWizard extends Page implements HasForms
             'is_primary_residence' => (bool) ($data['is_primary_residence'] ?? false),
             'acquisition_price' => (int) round(((float) ($data['acquisition_price'] ?? 0)) * 100),
             'notary_fees' => (int) round(((float) ($data['notary_fees'] ?? 0)) * 100),
+            'agency_fees' => (int) round(((float) ($data['agency_fees'] ?? 0)) * 100),
             'acquisition_date' => $data['acquisition_date'],
             'market_value' => isset($data['market_value']) && $data['market_value']
                 ? (int) round(((float) $data['market_value']) * 100) : null,

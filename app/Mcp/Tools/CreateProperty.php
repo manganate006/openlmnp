@@ -29,6 +29,7 @@ class CreateProperty extends Tool
         $acquisitionDate  = $request->get('acquisition_date');
         $acquisitionPrice = $request->get('acquisition_price', 0);
         $notaryFees       = $request->get('notary_fees', 0);
+        $agencyFees       = $request->get('agency_fees', 0);
         $marketValue      = $request->get('market_value');
         $marketValueDate  = $request->get('market_value_date');
         $landPercentage   = (int) $request->get('land_percentage', 15);
@@ -64,6 +65,7 @@ class CreateProperty extends Tool
             'acquisition_date'     => $acquisitionDate,
             'acquisition_price'    => (int) bcmul((string) $acquisitionPrice, '100', 0),
             'notary_fees'          => (int) bcmul((string) $notaryFees, '100', 0),
+            'agency_fees'          => (int) bcmul((string) $agencyFees, '100', 0),
             'market_value'         => $marketValue !== null ? (int) bcmul((string) $marketValue, '100', 0) : null,
             'market_value_date'    => $marketValueDate,
             'land_percentage'      => $landPercentage,
@@ -103,6 +105,7 @@ class CreateProperty extends Tool
             'acquisition_date'    => $schema->string('Date d\'acquisition (YYYY-MM-DD)')->required(),
             'acquisition_price'   => $schema->number('Prix d\'acquisition en euros')->required(),
             'notary_fees'         => $schema->number('Frais de notaire en euros'),
+            'agency_fees'         => $schema->number('Honoraires agence en euros'),
             'market_value'        => $schema->number('Valeur de marché actuelle en euros'),
             'market_value_date'   => $schema->string('Date d\'estimation de la valeur de marché (YYYY-MM-DD)'),
             'land_percentage'     => $schema->integer('Quote-part terrain non amortissable en % (défaut : 15)'),

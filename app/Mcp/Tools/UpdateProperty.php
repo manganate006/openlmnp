@@ -41,7 +41,7 @@ class UpdateProperty extends Tool
             }
         }
 
-        foreach (['acquisition_price', 'notary_fees', 'market_value'] as $field) {
+        foreach (['acquisition_price', 'notary_fees', 'agency_fees', 'market_value'] as $field) {
             $val = $request->get($field);
             if ($val !== null) {
                 $updates[$field] = (int) bcmul((string) $val, '100', 0);
@@ -86,6 +86,7 @@ class UpdateProperty extends Tool
             'rented_area'          => $schema->integer('Surface louée en m²'),
             'acquisition_price'    => $schema->number('Prix d\'acquisition en euros'),
             'notary_fees'          => $schema->number('Frais de notaire en euros'),
+            'agency_fees'          => $schema->number('Honoraires agence en euros'),
             'market_value'         => $schema->number('Valeur de marché en euros'),
             'market_value_date'    => $schema->string('Date d\'estimation valeur de marché (YYYY-MM-DD)'),
             'land_percentage'      => $schema->integer('Quote-part terrain en %'),

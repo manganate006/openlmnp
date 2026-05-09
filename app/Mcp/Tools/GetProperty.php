@@ -36,6 +36,7 @@ class GetProperty extends Tool
             'acquisition_date'      => $property->acquisition_date?->toDateString(),
             'acquisition_price_eur' => $property->acquisition_price_euros,
             'notary_fees_eur'       => $property->notary_fees_euros,
+            'agency_fees_eur'       => $property->agency_fees_euros,
             'market_value_eur'      => $property->market_value_euros,
             'market_value_date'     => $property->market_value_date?->toDateString(),
             'land_percentage'       => $property->land_percentage,

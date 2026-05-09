@@ -137,16 +137,19 @@ class DepreciationService
             ];
         }
 
-        // Amortissement frais de notaire (25 ans, avec quote-part si RP)
+        // Amortissement frais de notaire et honoraires agence (25 ans, avec quote-part si RP)
         $notaryTotal = '0';
-        if ($property->notary_fees > 0) {
-            $notaryTotal = $this->calculateNotaryFeesForYear($property, $year);
-            if (bccomp($notaryTotal, '0', 0) > 0) {
-                $details[] = [
-                    'type'   => 'notary',
-                    'name'   => 'Frais de notaire',
-                    'amount' => $notaryTotal,
-                ];
+        foreach (['notary_fees' => 'Frais de notaire', 'agency_fees' => 'Honoraires agence'] as $field => $label) {
+            if ($property->$field > 0) {
+                $annual = $this->calculateAcquisitionFeesForYear($property, $field, $year);
+                if (bccomp($annual, '0', 0) > 0) {
+                    $notaryTotal = bcadd($notaryTotal, $annual, 0);
+                    $details[] = [
+                        'type'   => 'notary',
+                        'name'   => $label,
+                        'amount' => $annual,
+                    ];
+                }
             }
         }
 
@@ -250,7 +253,7 @@ class DepreciationService
     /**
      * Calcule l'amortissement des frais de notaire pour une année (25 ans linéaire).
      */
-    private function calculateNotaryFeesForYear(Property $property, int $year): string
+    private function calculateAcquisitionFeesForYear(Property $property, string $field, int $year): string
     {
         $startDate = $property->rental_start_date;
         $startYear = (int) $startDate->format('Y');
@@ -260,7 +263,7 @@ class DepreciationService
             return '0';
         }
 
-        $annual = bcdiv((string) $property->notary_fees, (string) self::NOTARY_FEES_DURATION, 0);
+        $annual = bcdiv((string) $property->$field, (string) self::NOTARY_FEES_DURATION, 0);
 
         // Quote-part si résidence principale
         if ($property->is_primary_residence) {
