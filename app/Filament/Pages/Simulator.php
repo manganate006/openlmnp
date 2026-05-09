@@ -73,6 +73,9 @@ class Simulator extends Page implements HasForms
         $fiscalService = app(FiscalYearService::class);
         $comparison = $fiscalService->compareMicroBicVsReal($user, $this->year, $this->abatement);
 
+        // Récupérer le fiscal year calculé pour les données détaillées
+        $fiscalYear = $fiscalService->getOrCreate($user, $this->year);
+
         $depreciationService = app(DepreciationService::class);
 
         // Recettes détaillées
@@ -198,23 +201,21 @@ class Simulator extends Page implements HasForms
             'tax_saving_11' => $this->fmt($taxSaving11),
             'tax_saving_30' => $this->fmt($taxSaving30),
             'ps_saving' => $this->fmt($psSaving),
-            // Raw values for charts (centimes)
+            // Raw values for charts (centimes) — données fiables du fiscal year
             'chart_data' => [
                 'micro_bic' => (int) $comparison['micro_bic_result'],
                 'real' => (int) $comparison['real_result'],
-                'gross_income' => $grossIncome,
-                'net_income' => $netIncome,
-                'platform_fees' => $platformFees,
+                'net_income' => (int) $fiscalYear->total_income,
+                'total_expenses' => (int) $fiscalYear->total_expenses,
+                'total_depreciation' => (int) $fiscalYear->capped_depreciation,
+                'fiscal_result' => (int) $fiscalYear->fiscal_result,
                 'expenses_dedicated' => $totalExpensesDedicated,
                 'expenses_shared' => $totalExpensesShared,
                 'loan_interest' => $loanInterest,
                 'loan_insurance' => $loanInsurance,
-                'total_expenses' => $totalExpenses,
                 'dep_building' => $depBuilding,
                 'dep_furniture' => $depFurniture,
                 'dep_notary' => $depNotary,
-                'total_depreciation' => $cappedDepreciation,
-                'fiscal_result' => $fiscalResult,
             ],
         ];
     }
