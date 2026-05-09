@@ -203,7 +203,8 @@ class PropertyForm
                     ->step(1)
                     ->default(0)
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : '0')
-                    ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100)),
+                    ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Amortis sur 25 ans, avec quote-part si résidence principale'),
                 DatePicker::make('acquisition_date')
                     ->label('Date d\'achat')
                     ->required()

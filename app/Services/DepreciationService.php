@@ -137,12 +137,26 @@ class DepreciationService
             ];
         }
 
-        $total = bcadd(bcadd($buildingTotal, $worksTotal, 0), $furnitureTotal, 0);
+        // Amortissement frais de notaire (25 ans, avec quote-part si RP)
+        $notaryTotal = '0';
+        if ($property->notary_fees > 0) {
+            $notaryTotal = $this->calculateNotaryFeesForYear($property, $year);
+            if (bccomp($notaryTotal, '0', 0) > 0) {
+                $details[] = [
+                    'type'   => 'notary',
+                    'name'   => 'Frais de notaire',
+                    'amount' => $notaryTotal,
+                ];
+            }
+        }
+
+        $total = bcadd(bcadd(bcadd($buildingTotal, $worksTotal, 0), $furnitureTotal, 0), $notaryTotal, 0);
 
         return [
             'building'  => $buildingTotal,
             'works'     => $worksTotal,
             'furniture' => $furnitureTotal,
+            'notary'    => $notaryTotal,
             'total'     => $total,
             'details'   => $details,
         ];
@@ -230,6 +244,38 @@ class DepreciationService
         if ($year === $startYear) {
             $daysInYear = $purchaseDate->isLeapYear() ? 366 : 365;
             $remainingDays = $purchaseDate->diffInDays($purchaseDate->copy()->endOfYear()) + 1;
+            $annual = bcmul($annual, bcdiv((string) $remainingDays, (string) $daysInYear, 10), 0);
+        }
+
+        return $annual;
+    }
+
+    private const NOTARY_FEES_DURATION = 25;
+
+    /**
+     * Calcule l'amortissement des frais de notaire pour une année (25 ans linéaire).
+     */
+    private function calculateNotaryFeesForYear(Property $property, int $year): string
+    {
+        $startDate = $property->rental_start_date;
+        $startYear = (int) $startDate->format('Y');
+        $endYear = $startYear + self::NOTARY_FEES_DURATION - 1;
+
+        if ($year < $startYear || $year > $endYear) {
+            return '0';
+        }
+
+        $annual = bcdiv((string) $property->notary_fees, (string) self::NOTARY_FEES_DURATION, 0);
+
+        // Quote-part si résidence principale
+        if ($property->is_primary_residence) {
+            $annual = bcmul($annual, $property->quota_share, 0);
+        }
+
+        // Prorata temporis la 1ère année
+        if ($year === $startYear) {
+            $daysInYear = $startDate->isLeapYear() ? 366 : 365;
+            $remainingDays = $startDate->diffInDays($startDate->copy()->endOfYear()) + 1;
             $annual = bcmul($annual, bcdiv((string) $remainingDays, (string) $daysInYear, 10), 0);
         }
 
