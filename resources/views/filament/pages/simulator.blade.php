@@ -137,18 +137,18 @@
                 </table>
             </div>
 
-            {{-- Graphiques --}}
-            <div class="sim-grid sim-grid-2">
+            {{-- Graphiques (Alpine.js pour survivre au re-rendu Livewire) --}}
+            <div class="sim-grid sim-grid-2" x-data="simCharts({{ json_encode($r['chart_data']) }})" x-init="render()">
                 <div class="sim-card">
                     <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Comparaison régimes</h3>
                     <div class="sim-chart-container">
-                        <canvas id="chartComparison"></canvas>
+                        <canvas x-ref="chartComparison"></canvas>
                     </div>
                 </div>
                 <div class="sim-card">
                     <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Répartition des déductions</h3>
                     <div class="sim-chart-container">
-                        <canvas id="chartDeductions"></canvas>
+                        <canvas x-ref="chartDeductions"></canvas>
                     </div>
                 </div>
             </div>
@@ -171,64 +171,61 @@
 
             <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
             <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const data = @json($r['chart_data']);
-                    const fmt = v => new Intl.NumberFormat('fr-FR', {style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v/100);
+                document.addEventListener('alpine:init', () => {
+                    Alpine.data('simCharts', (data) => ({
+                        charts: [],
+                        render() {
+                            this.$nextTick(() => {
+                                this.charts.forEach(c => c.destroy());
+                                this.charts = [];
+                                const fmt = v => new Intl.NumberFormat('fr-FR', {style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v/100);
 
-                    // Bar chart: comparaison
-                    new Chart(document.getElementById('chartComparison'), {
-                        type: 'bar',
-                        data: {
-                            labels: ['Micro-BIC', 'Régime réel'],
-                            datasets: [{
-                                label: 'Base imposable',
-                                data: [data.micro_bic / 100, data.real / 100],
-                                backgroundColor: ['#fbbf24', '#34d399'],
-                                borderRadius: 8,
-                                barPercentage: 0.6,
-                            }]
-                        },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: { callbacks: { label: ctx => fmt(ctx.raw * 100) } }
-                            },
-                            scales: {
-                                y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } }
-                            }
+                                this.charts.push(new Chart(this.$refs.chartComparison, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: ['Micro-BIC', 'Régime réel'],
+                                        datasets: [{
+                                            label: 'Base imposable',
+                                            data: [data.micro_bic / 100, data.real / 100],
+                                            backgroundColor: ['#fbbf24', '#34d399'],
+                                            borderRadius: 8,
+                                            barPercentage: 0.6,
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true, maintainAspectRatio: false,
+                                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmt(ctx.raw * 100) } } },
+                                        scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } } }
+                                    }
+                                }));
+
+                                const deductions = [
+                                    { label: 'Charges dédiées', value: data.expenses_dedicated, color: '#f87171' },
+                                    { label: 'Charges mixtes (QP)', value: data.expenses_shared, color: '#fb923c' },
+                                    { label: 'Intérêts emprunt', value: data.loan_interest, color: '#fbbf24' },
+                                    { label: 'Assurance emprunt', value: data.loan_insurance, color: '#facc15' },
+                                    { label: 'Amort. immeuble', value: data.dep_building, color: '#34d399' },
+                                    { label: 'Amort. mobilier', value: data.dep_furniture, color: '#22d3ee' },
+                                    { label: 'Amort. notaire/agence', value: data.dep_notary, color: '#818cf8' },
+                                ].filter(d => d.value > 0);
+
+                                this.charts.push(new Chart(this.$refs.chartDeductions, {
+                                    type: 'doughnut',
+                                    data: {
+                                        labels: deductions.map(d => d.label),
+                                        datasets: [{ data: deductions.map(d => d.value / 100), backgroundColor: deductions.map(d => d.color), borderWidth: 2, borderColor: '#fff' }]
+                                    },
+                                    options: {
+                                        responsive: true, maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { position: 'right', labels: { font: { size: 12 }, padding: 8, usePointStyle: true } },
+                                            tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmt(ctx.raw * 100) } }
+                                        }
+                                    }
+                                }));
+                            });
                         }
-                    });
-
-                    // Doughnut: répartition déductions
-                    const deductions = [
-                        { label: 'Charges dédiées', value: data.expenses_dedicated, color: '#f87171' },
-                        { label: 'Charges mixtes (QP)', value: data.expenses_shared, color: '#fb923c' },
-                        { label: 'Intérêts emprunt', value: data.loan_interest, color: '#fbbf24' },
-                        { label: 'Assurance emprunt', value: data.loan_insurance, color: '#facc15' },
-                        { label: 'Amort. immeuble', value: data.dep_building, color: '#34d399' },
-                        { label: 'Amort. mobilier', value: data.dep_furniture, color: '#22d3ee' },
-                        { label: 'Amort. notaire/agence', value: data.dep_notary, color: '#818cf8' },
-                    ].filter(d => d.value > 0);
-
-                    new Chart(document.getElementById('chartDeductions'), {
-                        type: 'doughnut',
-                        data: {
-                            labels: deductions.map(d => d.label),
-                            datasets: [{
-                                data: deductions.map(d => d.value / 100),
-                                backgroundColor: deductions.map(d => d.color),
-                                borderWidth: 2, borderColor: '#fff',
-                            }]
-                        },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            plugins: {
-                                legend: { position: 'right', labels: { font: { size: 12 }, padding: 8, usePointStyle: true } },
-                                tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmt(ctx.raw * 100) } }
-                            }
-                        }
-                    });
+                    }));
                 });
             </script>
         @endif
