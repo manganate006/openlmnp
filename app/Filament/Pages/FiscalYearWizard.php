@@ -162,7 +162,7 @@ class FiscalYearWizard extends Page
                             ->content(fn () => $this->buildPlaceholderHtml(
                                 $this->getYearIncomeCents(),
                                 'Loyers encaissés déduction faite des commissions plateformes',
-                                'text-green-700 dark:text-green-400'
+                                'wz-green-dark'
                             )),
 
                         \Filament\Forms\Components\Placeholder::make('verify_expenses')
@@ -170,7 +170,7 @@ class FiscalYearWizard extends Page
                             ->content(fn () => $this->buildPlaceholderHtml(
                                 $this->getYearExpensesCents(),
                                 'Charges directes + quote-part des charges partagées + intérêts d\'emprunt',
-                                'text-red-700 dark:text-red-400'
+                                'wz-red-dark'
                             )),
 
                         \Filament\Forms\Components\Placeholder::make('verify_depreciation')
@@ -178,7 +178,7 @@ class FiscalYearWizard extends Page
                             ->content(fn () => $this->buildPlaceholderHtml(
                                 $this->getYearDepreciationCents(),
                                 'Immeuble (composants) + travaux + mobilier, au prorata temporis',
-                                'text-blue-700 dark:text-blue-400'
+                                'wz-blue'
                             )),
 
                         \Filament\Forms\Components\Placeholder::make('verify_alert')
@@ -213,7 +213,7 @@ class FiscalYearWizard extends Page
                             ->content(fn () => $this->buildPlaceholderHtml(
                                 $this->getPreviousDeferred(),
                                 'Report de l\'exercice précédent (non limités dans le temps)',
-                                'text-purple-700 dark:text-purple-400'
+                                'wz-purple'
                             )),
 
                         \Filament\Forms\Components\Placeholder::make('result_total_dep')
@@ -221,7 +221,7 @@ class FiscalYearWizard extends Page
                             ->content(fn () => $this->buildPlaceholderHtml(
                                 $this->getTotalAvailableDepreciation(),
                                 'Amortissements de l\'année + différés N−1',
-                                'text-blue-700 dark:text-blue-400'
+                                'wz-blue'
                             )),
 
                         \Filament\Forms\Components\Placeholder::make('result_capped')
@@ -229,7 +229,7 @@ class FiscalYearWizard extends Page
                             ->content(fn () => $this->buildPlaceholderHtml(
                                 $this->getCappedDepreciation(),
                                 'Limité au résultat avant amortissement (ne peut pas créer de déficit)',
-                                'text-orange-700 dark:text-orange-400'
+                                'wz-orange'
                             )),
 
                         \Filament\Forms\Components\Placeholder::make('result_deferred')
@@ -237,7 +237,7 @@ class FiscalYearWizard extends Page
                             ->content(fn () => $this->buildPlaceholderHtml(
                                 $this->getDeferredDepreciation(),
                                 'Excédent d\'amortissement reporté indéfiniment',
-                                'text-purple-700 dark:text-purple-400'
+                                'wz-purple'
                             )),
 
                         \Filament\Forms\Components\Placeholder::make('result_fiscal')
@@ -565,18 +565,18 @@ class FiscalYearWizard extends Page
             ->first();
 
         $existingBadge = $existing
-            ? '<span class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-200">Exercice existant — sera recalculé</span>'
+            ? '<span class="wz-badge">Exercice existant — sera recalculé</span>'
             : '';
 
         return new HtmlString(
-            '<div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">'
-            . '<p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">'
+            '<div class="wz-box">'
+            . '<p class="wz-box-title">'
             . 'Année ' . $year . $existingBadge
             . '</p>'
-            . '<div class="grid grid-cols-3 gap-4">'
-            . $this->buildStatCard('Biens', $propertyCount, 'text-indigo-600', 'bien(s) enregistré(s)')
-            . $this->buildStatCard('Recettes', $incomeCount, 'text-green-600', 'ligne(s) de revenu')
-            . $this->buildStatCard('Charges', $expenseCount, 'text-red-600', 'ligne(s) de charge')
+            . '<div class="wz-grid">'
+            . $this->buildStatCard('Biens', $propertyCount, 'wz-indigo', 'bien(s) enregistré(s)')
+            . $this->buildStatCard('Recettes', $incomeCount, 'wz-green', 'ligne(s) de revenu')
+            . $this->buildStatCard('Charges', $expenseCount, 'wz-red', 'ligne(s) de charge')
             . '</div>'
             . '</div>'
         );
@@ -584,18 +584,18 @@ class FiscalYearWizard extends Page
 
     private function buildStatCard(string $label, int|string $value, string $colorClass, string $subtitle): string
     {
-        return '<div class="text-center">'
-            . '<div class="text-2xl font-bold ' . $colorClass . '">' . $value . '</div>'
-            . '<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">' . $subtitle . '</div>'
+        return '<div class="wz-stat">'
+            . '<div class="wz-stat-value ' . $colorClass . '">' . $value . '</div>'
+            . '<div class="wz-stat-label">' . $subtitle . '</div>'
             . '</div>';
     }
 
     private function buildPlaceholderHtml(int $cents, string $detail, string $colorClass): HtmlString
     {
         return new HtmlString(
-            '<div class="flex flex-col gap-0.5">'
-            . '<span class="text-xl font-bold ' . $colorClass . '">' . $this->formatEuros($cents) . '</span>'
-            . '<span class="text-xs text-gray-500 dark:text-gray-400">' . $detail . '</span>'
+            '<div class="wz-amount">'
+            . '<span class="wz-amount-value ' . $colorClass . '">' . $this->formatEuros($cents) . '</span>'
+            . '<span class="wz-amount-detail">' . $detail . '</span>'
             . '</div>'
         );
     }
@@ -603,13 +603,13 @@ class FiscalYearWizard extends Page
     private function buildResultLineHtml(int $cents, string $formula): HtmlString
     {
         $color = $cents >= 0
-            ? 'text-green-700 dark:text-green-400'
-            : 'text-red-700 dark:text-red-400';
+            ? 'wz-green-dark'
+            : 'wz-red-dark';
 
         return new HtmlString(
-            '<div class="flex flex-col gap-0.5">'
-            . '<span class="text-xl font-bold ' . $color . '">' . $this->formatEuros($cents) . '</span>'
-            . '<span class="text-xs text-gray-500 dark:text-gray-400">' . $formula . '</span>'
+            '<div class="wz-amount">'
+            . '<span class="wz-amount-value ' . $color . '">' . $this->formatEuros($cents) . '</span>'
+            . '<span class="wz-amount-detail">' . $formula . '</span>'
             . '</div>'
         );
     }
@@ -617,18 +617,16 @@ class FiscalYearWizard extends Page
     private function buildFiscalResultHtml(): HtmlString
     {
         $result = $this->getFiscalResult();
-        $color  = $result <= 0
-            ? 'bg-green-50 border-green-300 dark:bg-green-900/30 dark:border-green-700'
-            : 'bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700';
+        $color  = $result <= 0 ? 'wz-result-zero' : 'wz-result-positive';
 
         $label = $result === 0
             ? 'Résultat nul — aucune imposition au réel'
             : 'Montant imposable au régime réel simplifié';
 
         return new HtmlString(
-            '<div class="rounded-lg border p-4 ' . $color . '">'
-            . '<div class="text-2xl font-bold text-gray-900 dark:text-white">' . $this->formatEuros($result) . '</div>'
-            . '<div class="mt-1 text-sm text-gray-600 dark:text-gray-400">' . $label . '</div>'
+            '<div class="wz-result ' . $color . '">'
+            . '<div class="wz-result-value">' . $this->formatEuros($result) . '</div>'
+            . '<div class="wz-result-label">' . $label . '</div>'
             . '</div>'
         );
     }
@@ -664,34 +662,31 @@ class FiscalYearWizard extends Page
 
         $headerRow = array_shift($rows);
 
-        $tableHtml = '<table class="w-full text-sm border-collapse">'
-            . '<thead><tr class="bg-gray-100 dark:bg-gray-700">'
+        $tableHtml = '<table class="wz-table">'
+            . '<thead><tr>'
             . implode('', array_map(
-                fn ($h) => '<th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">' . $h . '</th>',
+                fn ($h) => '<th>' . $h . '</th>',
                 $headerRow
             ))
             . '</tr></thead><tbody>';
 
         foreach ($rows as $i => $row) {
-            $bg         = $i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/50';
-            $tableHtml .= '<tr class="' . $bg . '">';
+            $tableHtml .= '<tr>';
             foreach ($row as $j => $cell) {
-                $align      = $j === 0 ? 'text-left' : 'text-right font-mono';
-                $tableHtml .= '<td class="px-3 py-2 ' . $align . '">' . $cell . '</td>';
+                $cls        = $j === 0 ? '' : ' class="wz-num"';
+                $tableHtml .= '<td' . $cls . '>' . $cell . '</td>';
             }
             $tableHtml .= '</tr>';
         }
 
         $tableHtml .= '</tbody></table>';
 
-        $verdictColor = $realResult < $microBic50
-            ? 'bg-green-50 border-green-300 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300'
-            : 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300';
+        $verdictColor = $realResult < $microBic50 ? 'wz-verdict-good' : 'wz-verdict-bad';
 
         return new HtmlString(
-            '<div class="flex flex-col gap-4">'
-            . '<div class="overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">' . $tableHtml . '</div>'
-            . '<div class="rounded-lg border p-3 text-sm font-medium ' . $verdictColor . '">'
+            '<div style="display:flex;flex-direction:column;gap:1rem">'
+            . '<div class="wz-table-wrap">' . $tableHtml . '</div>'
+            . '<div class="wz-verdict ' . $verdictColor . '">'
             . 'Recommandation : <strong>' . $recommended . '</strong>'
             . '</div>'
             . '</div>'
@@ -736,18 +731,16 @@ class FiscalYearWizard extends Page
 
         $html = '';
         foreach ($alerts as [$message, $severity]) {
-            $icon    = $severity === 'danger' ? '🔴' : '⚠';
-            $border  = $severity === 'danger'
-                ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300'
-                : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300';
+            $icon  = $severity === 'danger' ? '🔴' : '⚠';
+            $cls   = $severity === 'danger' ? 'wz-alert-danger' : 'wz-alert-warning';
 
-            $html .= '<div class="flex items-start gap-2 rounded-lg border p-4 text-sm ' . $border . '">'
-                . '<span class="mt-0.5 shrink-0">' . $icon . '</span>'
+            $html .= '<div class="wz-alert ' . $cls . '">'
+                . '<span class="wz-alert-icon">' . $icon . '</span>'
                 . '<span>' . $message . '</span>'
                 . '</div>';
         }
 
-        return new HtmlString('<div class="flex flex-col gap-2">' . $html . '</div>');
+        return new HtmlString('<div class="wz-alerts">' . $html . '</div>');
     }
 
     private function buildConfirmationSummaryHtml(): HtmlString
@@ -771,15 +764,15 @@ class FiscalYearWizard extends Page
 
         $rows = implode('', array_map(function ($line) {
             [$label, $value] = $line;
-            return '<tr class="border-b border-gray-100 dark:border-gray-700 last:border-0">'
-                . '<td class="py-2 pr-4 text-sm text-gray-600 dark:text-gray-400 font-medium">' . $label . '</td>'
-                . '<td class="py-2 text-sm text-right font-mono text-gray-900 dark:text-white">' . $value . '</td>'
+            return '<tr>'
+                . '<td>' . $label . '</td>'
+                . '<td>' . $value . '</td>'
                 . '</tr>';
         }, $lines));
 
         return new HtmlString(
-            '<div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">'
-            . '<table class="w-full"><tbody>' . $rows . '</tbody></table>'
+            '<div class="wz-confirm">'
+            . '<table><tbody>' . $rows . '</tbody></table>'
             . '</div>'
         );
     }
@@ -787,13 +780,13 @@ class FiscalYearWizard extends Page
     private function formatSignedEuros(int $cents): string
     {
         if ($cents === 0) {
-            return '<span class="text-gray-500">0,00&nbsp;€</span>';
+            return '<span class="wz-muted">0,00&nbsp;€</span>';
         }
 
         if ($cents > 0) {
-            return '<span class="text-green-600">+&nbsp;' . $this->formatEuros($cents) . '</span>';
+            return '<span class="wz-green">+&nbsp;' . $this->formatEuros($cents) . '</span>';
         }
 
-        return '<span class="text-red-600">' . $this->formatEuros($cents) . '</span>';
+        return '<span class="wz-red">' . $this->formatEuros($cents) . '</span>';
     }
 }
