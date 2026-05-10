@@ -21,6 +21,7 @@ class ExpenseCompletionGrid extends Widget
         $categories = array_keys(Expense::categoryEmojis());
         $emojis = Expense::categoryEmojis();
         $shortLabels = Expense::categoryShortLabels();
+        $fullLabels = array_map(fn ($v) => preg_replace('/^.+?\s/', '', $v, 1), Expense::categoryLabels());
 
         // Trouver les années avec activité (recettes ou charges)
         $incomeYears = Income::selectRaw("DISTINCT strftime('%Y', income_date) as y")->pluck('y')->toArray();
@@ -39,6 +40,7 @@ class ExpenseCompletionGrid extends Widget
             $row['categories'][] = [
                 'emoji' => '💰',
                 'label' => 'Recettes',
+                'tooltip' => 'Recettes',
                 'filled' => $hasIncome,
             ];
 
@@ -46,6 +48,7 @@ class ExpenseCompletionGrid extends Widget
                 $row['categories'][] = [
                     'emoji' => $emojis[$cat],
                     'label' => $shortLabels[$cat],
+                    'tooltip' => $fullLabels[$cat],
                     'filled' => in_array($cat, $filledCategories),
                 ];
             }

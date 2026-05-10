@@ -2,7 +2,7 @@
     <style>
         .cg-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
         .cg-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--fi-fg, #374151); }
-        .cg-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .cg-scroll { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; padding-top: 32px; margin-top: -32px; }
         .cg-row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
         .cg-year { font-size: 13px; font-weight: 700; color: var(--fi-fg, #374151); width: 45px; flex-shrink: 0; }
         .cg-cell { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 36px; border-radius: 6px; padding: 4px 2px; cursor: pointer; position: relative; }
@@ -28,7 +28,7 @@
                     <span class="cg-year">{{ $row['year'] }}</span>
                     @foreach($row['categories'] as $cat)
                         <div class="cg-cell {{ $cat['filled'] ? 'cg-filled' : 'cg-missing' }}" tabindex="0">
-                            <span class="cg-tooltip">{{ $cat['label'] }}</span>
+                            <span class="cg-tooltip">{{ $cat['tooltip'] }}</span>
                             <span class="cg-emoji">{{ $cat['emoji'] }}</span>
                             <span class="cg-label">{{ $cat['label'] }}</span>
                         </div>
