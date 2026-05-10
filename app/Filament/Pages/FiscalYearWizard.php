@@ -124,8 +124,8 @@ class FiscalYearWizard extends Page
                                         $hasDepreciation = Property::all()->contains(fn ($p) => $p->components()->exists() || $p->works()->exists() || $p->furniture()->exists());
                                         if ($hasDepreciation) {
                                             // Vérifier aussi qu'il ne s'agit pas de la toute première année d'activité
-                                            $firstProperty = Property::orderBy('activity_start_date')->first();
-                                            if ($firstProperty && $firstProperty->activity_start_date->year < $year) {
+                                            $firstProperty = Property::whereNotNull('rental_start_date')->orderBy('rental_start_date')->first();
+                                            if ($firstProperty && $firstProperty->rental_start_date->year < $year) {
                                                 $fail('L\'exercice ' . ($year - 1) . ' n\'existe pas. Créez-le d\'abord pour reporter correctement les amortissements différés.');
                                             }
                                         }
@@ -138,7 +138,7 @@ class FiscalYearWizard extends Page
                             ->content(fn () => $this->buildYearSummaryHtml()),
 
                         \Filament\Forms\Components\Placeholder::make('year_chain_alert')
-                            ->label('')
+                            ->hiddenLabel()
                             ->content(fn () => $this->buildAlertsHtml())
                             ->visible(fn () => $this->hasAlerts()),
                     ]),
