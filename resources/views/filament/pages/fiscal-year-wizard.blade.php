@@ -61,6 +61,9 @@
         .wz-confirm tr { border-bottom: 1px solid #f3f4f6; }
         .wz-confirm tr:last-child { border-bottom: none; }
 
+        /* Status info */
+        .wz-status-info { border-radius: 0.5rem; border: 1px solid #93c5fd; background: #eff6ff; color: #1e40af; padding: 1rem; font-size: 0.875rem; }
+
         /* Dark mode */
         .dark .wz-box { border-color: #374151; background: rgba(31,41,55,0.5); }
         .dark .wz-box-title { color: #d1d5db; }
@@ -87,6 +90,7 @@
         .dark .wz-confirm td:first-child { color: #9ca3af; }
         .dark .wz-confirm td:last-child { color: #fff; }
         .dark .wz-confirm tr { border-color: #374151; }
+        .dark .wz-status-info { border-color: #1e3a5f; background: rgba(30,58,138,0.3); color: #93c5fd; }
     </style>
 
     <form wire:submit="create">

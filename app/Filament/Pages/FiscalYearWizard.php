@@ -267,7 +267,7 @@ class FiscalYearWizard extends Page
                 Section::make('Récapitulatif')
                     ->schema([
                         \Filament\Forms\Components\Placeholder::make('confirmation_summary')
-                            ->label('')
+                            ->hiddenLabel()
                             ->content(fn () => $this->buildConfirmationSummaryHtml()),
                     ]),
 
@@ -282,6 +282,10 @@ class FiscalYearWizard extends Page
                                 ? FiscalYear::STATUS_CLOSED
                                 : FiscalYear::STATUS_DRAFT
                             ),
+
+                        \Filament\Forms\Components\Placeholder::make('status_hint')
+                            ->hiddenLabel()
+                            ->content(fn () => $this->buildStatusHintHtml()),
                     ]),
             ]);
     }
@@ -788,5 +792,28 @@ class FiscalYearWizard extends Page
         }
 
         return '<span class="wz-red">' . $this->formatEuros($cents) . '</span>';
+    }
+
+    private function buildStatusHintHtml(): HtmlString
+    {
+        $isClosed = ($this->data['status'] ?? FiscalYear::STATUS_DRAFT) === FiscalYear::STATUS_CLOSED;
+
+        if ($isClosed) {
+            return new HtmlString(
+                '<div class="wz-alert wz-alert-warning">'
+                . '<span class="wz-alert-icon">🔒</span>'
+                . '<span>L\'exercice sera <strong>clôturé définitivement</strong>. '
+                . 'Vous ne pourrez plus modifier les montants. '
+                . 'La liasse fiscale et le FEC seront disponibles au téléchargement.</span>'
+                . '</div>'
+            );
+        }
+
+        return new HtmlString(
+            '<div class="wz-status-info">'
+            . '📝 L\'exercice sera enregistré en <strong>brouillon</strong>. '
+            . 'Vous pourrez le modifier et le clôturer plus tard depuis la liste des exercices.'
+            . '</div>'
+        );
     }
 }
