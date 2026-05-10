@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comparatif plateformes LMNP 2026</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f7fa;
+    color: #1a1a2e;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: .3rem; color: #1a1a2e; }
+  .subtitle { color: #666; font-size: .85rem; margin-bottom: 1.5rem; }
+  h2 { font-size: 1.15rem; margin: 1.5rem 0 .75rem; color: #2d3748; }
+  h3 { font-size: 1rem; margin: .75rem 0 .4rem; }
+
+  /* Cards layout for mobile */
+  .cards { display: flex; flex-direction: column; gap: .75rem; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    border-left: 4px solid #e2e8f0;
+  }
+  .card.top1 { border-left-color: #f59e0b; }
+  .card.top2 { border-left-color: #94a3b8; }
+  .card.top3 { border-left-color: #b45309; }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .5rem;
+  }
+  .card-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .card-name a { color: #2563eb; text-decoration: none; }
+  .card-name a:hover { text-decoration: underline; }
+  .card-price {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #059669;
+    white-space: nowrap;
+  }
+  .card-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .35rem .75rem;
+    font-size: .85rem;
+    color: #4a5568;
+  }
+  .card-details dt { font-weight: 600; color: #64748b; }
+  .card-details dd { margin: 0; }
+  .badge {
+    display: inline-block;
+    padding: .1rem .45rem;
+    border-radius: 6px;
+    font-size: .75rem;
+    font-weight: 600;
+  }
+  .badge-yes { background: #d1fae5; color: #065f46; }
+  .badge-no { background: #fee2e2; color: #991b1b; }
+  .badge-maybe { background: #fef3c7; color: #92400e; }
+  .badge-top { background: #fef3c7; color: #92400e; }
+
+  .top-pick {
+    background: linear-gradient(135deg, #fffbeb, #fff);
+    border: 1px solid #f59e0b;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: .75rem;
+  }
+  .top-pick h3 { margin-top: 0; }
+  .top-pick ul { padding-left: 1.2rem; font-size: .9rem; }
+  .top-pick li { margin-bottom: .25rem; }
+
+  .note {
+    background: #eff6ff;
+    border-radius: 10px;
+    padding: .85rem;
+    font-size: .85rem;
+    color: #1e40af;
+    margin-top: 1rem;
+  }
+  .note strong { display: block; margin-bottom: .3rem; }
+  .note ul { padding-left: 1.2rem; }
+  .note li { margin-bottom: .2rem; }
+
+  .footer {
+    margin-top: 1.5rem;
+    font-size: .75rem;
+    color: #94a3b8;
+    text-align: center;
+  }
+
+  /* Desktop: table view */
+  @media (min-width: 900px) {
+    body { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+    h1 { font-size: 1.7rem; }
+    .cards-mobile { display: none; }
+    .table-desktop { display: block; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    th { background: #f1f5f9; text-align: left; padding: .65rem .75rem; font-weight: 600; color: #475569; }
+    td { padding: .55rem .75rem; border-top: 1px solid #e2e8f0; }
+    tr:hover { background: #f8fafc; }
+    .top-picks { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  }
+  @media (max-width: 899px) {
+    .table-desktop { display: none; }
+    .top-picks { display: flex; flex-direction: column; gap: .75rem; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Comparatif plateformes LMNP 2026</h1>
+<p class="subtitle">Régime réel — Mise à jour : 9 mai 2026</p>
+
+<h2>🏆 Top 3 pour location partielle de résidence principale</h2>
+
+<div class="top-picks">
+  <div class="top-pick">
+    <h3>🥇 LMNP.AI — 179 €/an</h3>
+    <ul>
+      <li>Essai <strong>gratuit illimité</strong></li>
+      <li>EDI-TDFC incluse</li>
+      <li>Multi-biens illimité</li>
+      <li>Gère RP partielle</li>
+      <li>Amortissements auto</li>
+    </ul>
+  </div>
+  <div class="top-pick">
+    <h3>🥈 Jungloo — 180 €/an</h3>
+    <ul>
+      <li><strong>3 mois gratuits</strong> sans CB</li>
+      <li>EDI incluse</li>
+      <li>Multi-biens illimité</li>
+      <li>Quote-part / indivision</li>
+      <li>15 €/mois sans engagement</li>
+    </ul>
+  </div>
+  <div class="top-pick">
+    <h3>🥉 ISYDEC — 114 €/an</h3>
+    <ul>
+      <li>Le <strong>moins cher</strong></li>
+      <li>Plan Basic gratuit</li>
+      <li>EDI en option (+18 €)</li>
+      <li>Quote-part RP non confirmée</li>
+      <li>Interface basique</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Comparatif complet</h2>
+
+<!-- Mobile: cards -->
+<div class="cards cards-mobile">
+
+  <div class="card top1">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.declarer-lmnp.com/">ISYDEC</a></span>
+      <span class="card-price">96 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd>+18 € option</dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Essai gratuit</dt><dd>Plan Basic gratuit</dd>
+      <dt>Multi-biens</dt><dd>Illimité</dd>
+    </dl>
+  </div>
+
+  <div class="card top1">
+    <div class="card-header">
+      <span class="card-name"><a href="https://lmnp.ai/">LMNP.AI Autonomie</a></span>
+      <span class="card-price">179 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-yes">Oui</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-yes">Illimité</span></dd>
+      <dt>Multi-biens</dt><dd>Illimité</dd>
+    </dl>
+  </div>
+
+  <div class="card top2">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.jungloo.fr/">Jungloo</a></span>
+      <span class="card-price">180 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-yes">Oui</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-yes">3 mois</span></dd>
+      <dt>Multi-biens</dt><dd>Illimité</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.amarris-immo.fr/">Amarris Immo</a></span>
+      <span class="card-price">210 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-maybe">À vérifier</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Multi-biens</dt><dd>Par bien</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.decla.fr/">Decla.fr</a></span>
+      <span class="card-price">219 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-yes">Oui</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-no">Non</span></dd>
+      <dt>Multi-biens</dt><dd>Par déclaration</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://lmnp.ai/">LMNP.AI Expert</a></span>
+      <span class="card-price">249 € + 108 €/bien</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse + expert</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-yes">Oui</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-yes">Illimité</span></dd>
+      <dt>Multi-biens</dt><dd>Par bien supp.</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.qlower.com/">Qlower</a></span>
+      <span class="card-price">269 € + 130 €/bien</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Multi-biens</dt><dd>Par bien supp.</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.jedeclaremonmeuble.com/">JD2M Essentielle</a></span>
+      <span class="card-price">289 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-yes">Oui</span></dd>
+      <dt>Essai gratuit</dt><dd>Saisie gratuite</dd>
+      <dt>Multi-biens</dt><dd>Par liasse</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.ownily.fr/">Ownily</a></span>
+      <span class="card-price">299 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-yes">14 jours</span></dd>
+      <dt>Multi-biens</dt><dd>Par bien</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.indy.fr/">Indy</a></span>
+      <span class="card-price">346 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Multi-biens</dt><dd>?</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.nopillo.com/">Nopillo</a></span>
+      <span class="card-price">599 €</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-maybe">Non précisé</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-no">Non</span></dd>
+      <dt>Multi-biens</dt><dd>Par bien (+100 €)</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name"><a href="https://www.jedeclaremonmeuble.com/">JD2M Intégrale</a></span>
+      <span class="card-price">629 € + 120 €/bien</span>
+    </div>
+    <dl class="card-details">
+      <dt>EDI</dt><dd><span class="badge badge-yes">Incluse</span></dd>
+      <dt>Quote-part RP</dt><dd><span class="badge badge-yes">Oui</span></dd>
+      <dt>Essai gratuit</dt><dd><span class="badge badge-no">Non</span></dd>
+      <dt>Multi-biens</dt><dd>Par bien supp.</dd>
+    </dl>
+  </div>
+
+</div>
+
+<!-- Desktop: table -->
+<div class="table-desktop">
+  <table>
+    <thead>
+      <tr>
+        <th>Plateforme</th>
+        <th>Tarif TTC/an</th>
+        <th>EDI incluse</th>
+        <th>Quote-part / RP</th>
+        <th>Essai gratuit</th>
+        <th>Multi-biens</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><a href="https://www.declarer-lmnp.com/">ISYDEC</a></td><td><strong>96 €</strong></td><td>+18 € option</td><td><span class="badge badge-maybe">Non précisé</span></td><td>Plan Basic gratuit</td><td>Illimité</td></tr>
+      <tr><td><a href="https://lmnp.ai/">LMNP.AI Autonomie</a></td><td><strong>179 €</strong></td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-yes">✅ Oui</span></td><td><span class="badge badge-yes">Illimité</span></td><td>Illimité</td></tr>
+      <tr><td><a href="https://www.jungloo.fr/">Jungloo</a></td><td><strong>180 €</strong></td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-yes">✅ Oui</span></td><td><span class="badge badge-yes">3 mois</span></td><td>Illimité</td></tr>
+      <tr><td><a href="https://www.amarris-immo.fr/">Amarris Immo</a></td><td><strong>210 €</strong></td><td><span class="badge badge-maybe">À vérifier</span></td><td><span class="badge badge-maybe">Non précisé</span></td><td><span class="badge badge-maybe">Non précisé</span></td><td>Par bien</td></tr>
+      <tr><td><a href="https://www.decla.fr/">Decla.fr</a></td><td><strong>219 €</strong></td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-yes">✅ Oui</span></td><td><span class="badge badge-no">Non</span></td><td>Par déclaration</td></tr>
+      <tr><td><a href="https://lmnp.ai/">LMNP.AI Expert</a></td><td><strong>249 €</strong> + 108 €/bien</td><td><span class="badge badge-yes">✅ + expert</span></td><td><span class="badge badge-yes">✅ Oui</span></td><td><span class="badge badge-yes">Illimité</span></td><td>Par bien supp.</td></tr>
+      <tr><td><a href="https://www.qlower.com/">Qlower</a></td><td><strong>269 €</strong> + 130 €/bien</td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-maybe">Non précisé</span></td><td><span class="badge badge-maybe">Non précisé</span></td><td>Par bien supp.</td></tr>
+      <tr><td><a href="https://www.jedeclaremonmeuble.com/">JD2M Essentielle</a></td><td><strong>289 €</strong></td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-yes">✅ Oui</span></td><td>Saisie gratuite</td><td>Par liasse</td></tr>
+      <tr><td><a href="https://www.ownily.fr/">Ownily</a></td><td><strong>299 €</strong></td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-maybe">Non précisé</span></td><td><span class="badge badge-yes">14 jours</span></td><td>Par bien</td></tr>
+      <tr><td><a href="https://www.indy.fr/">Indy</a></td><td><strong>346 €</strong></td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-maybe">Non précisé</span></td><td><span class="badge badge-maybe">Non précisé</span></td><td>?</td></tr>
+      <tr><td><a href="https://www.nopillo.com/">Nopillo</a></td><td><strong>599 €</strong></td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-maybe">Non précisé</span></td><td><span class="badge badge-no">Non</span></td><td>Par bien (+100 €)</td></tr>
+      <tr><td><a href="https://www.jedeclaremonmeuble.com/">JD2M Intégrale</a></td><td><strong>629 €</strong> + 120 €/bien</td><td><span class="badge badge-yes">✅ Incluse</span></td><td><span class="badge badge-yes">✅ Oui</span></td><td><span class="badge badge-no">Non</span></td><td>Par bien supp.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note">
+  <strong>⚠️ Points de vigilance</strong>
+  <ul>
+    <li><strong>Réduction OGA supprimée</strong> (février 2025) : les prix « nets après déduction » ne sont plus d'actualité</li>
+    <li><strong>Télétransmission EDI-TDFC</strong> obligatoire — vérifier qu'elle est incluse</li>
+    <li><strong>Quote-part</strong> indispensable si vous louez une partie de votre résidence principale</li>
+    <li><strong>FEC</strong> (Fichier des Écritures Comptables) obligatoire en cas de contrôle fiscal</li>
+    <li><strong>Plafond 120 jours/an</strong> pour les meublés de tourisme en résidence principale</li>
+  </ul>
+</div>
+
+<p class="footer">Comparatif réalisé le 9 mai 2026 — tarifs vérifiés sur les sites officiels</p>
+
+</body>
+</html>
