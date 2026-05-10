@@ -39,6 +39,7 @@ class AdminPanelProvider extends PanelProvider
                 'success' => Color::Green,
                 'info' => Color::Sky,
             ])
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->sidebarCollapsibleOnDesktop()
             ->navigationGroups($this->getNavigationGroups())
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
