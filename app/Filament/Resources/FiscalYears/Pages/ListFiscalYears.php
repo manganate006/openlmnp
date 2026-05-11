@@ -54,8 +54,9 @@ class ListFiscalYears extends ListRecords
                 ->url(Teledeclaration::getUrl()),
             Action::make('export_documents')
                 ->label('Justificatifs')
-                ->icon(Heroicon::OutlinedArchiveBox)
+                ->icon(Heroicon::OutlinedArrowDownTray)
                 ->color('gray')
+                ->modalSubmitActionLabel('Télécharger')
                 ->form([
                     Select::make('year')
                         ->label('Année')
