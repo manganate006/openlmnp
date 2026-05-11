@@ -69,8 +69,19 @@ class OpenLmnpServer extends Server
         Tools\CreateProperty::class,
         Tools\UpdateProperty::class,
 
+        // Suppression
+        Tools\DeleteIncome::class,
+        Tools\DeleteExpense::class,
+        Tools\DeleteFurniture::class,
+        Tools\DeletePropertyWork::class,
+        Tools\DeleteDocument::class,
+
+        // Référentiel
+        Tools\ListCategories::class,
+
         // Import & analyse
         Tools\ImportAirbnbCsv::class,
+        Tools\ExportDocuments::class,
         Tools\GetProjection::class,
         Tools\GetSimulation::class,
     ];
