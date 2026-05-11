@@ -55,7 +55,7 @@ class Simulator extends Page implements HasForms
 
     public function mount(): void
     {
-        $this->year = (int) date('Y');
+        $this->year = (int) (request()->query('year', date('Y')));
 
         app(BadgeService::class)->evaluate(auth()->user(), 'simulator_used');
     }
