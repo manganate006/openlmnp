@@ -34,7 +34,7 @@ class Teledeclaration extends Page
 
     public function mount(): void
     {
-        $this->year = (int) date('Y');
+        $this->year = (int) (request()->query('year', date('Y')));
     }
 
     #[Computed]

@@ -27,17 +27,17 @@ class EditFiscalYear extends EditRecord
                 ->label('Simulateur')
                 ->icon(Heroicon::OutlinedCalculator)
                 ->color('gray')
-                ->url(Simulator::getUrl()),
+                ->url(fn () => Simulator::getUrl() . '?year=' . $this->record->year),
             Action::make('projection')
                 ->label('Projection')
                 ->icon(Heroicon::OutlinedChartBar)
                 ->color('gray')
-                ->url(Projection::getUrl()),
+                ->url(fn () => Projection::getUrl() . '?year=' . $this->record->year),
             Action::make('teledeclaration')
                 ->label('Télédéclaration')
                 ->icon(Heroicon::OutlinedPaperAirplane)
                 ->color('gray')
-                ->url(Teledeclaration::getUrl()),
+                ->url(fn () => Teledeclaration::getUrl() . '?year=' . $this->record->year),
             DeleteAction::make(),
         ];
     }

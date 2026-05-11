@@ -36,7 +36,7 @@ class Projection extends Page
 
     public function mount(): void
     {
-        $this->startYear = (int) date('Y');
+        $this->startYear = (int) (request()->query('year', date('Y')));
 
         app(BadgeService::class)->evaluate(auth()->user(), 'projection_used');
     }
