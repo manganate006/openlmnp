@@ -51,7 +51,9 @@ class OpenLmnpServer extends Server
         Tools\CreateExpense::class,
         Tools\UpdateExpense::class,
         Tools\CreateFurniture::class,
+        Tools\UpdateFurniture::class,
         Tools\CreatePropertyWork::class,
+        Tools\UpdatePropertyWork::class,
         Tools\AttachDocument::class,
 
         // Calcul & export
