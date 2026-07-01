@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag existant à publier (ex : v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Résoudre le tag
+        id: t
+        run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Extraire les notes du CHANGELOG
+        run: |
+          v="${{ steps.t.outputs.tag }}"
+          v="${v#v}"
+          awk -v ver="$v" '
+            $0 ~ ("^## \\[" ver "\\]") { f = 1; next }
+            f && /^## \[/ { exit }
+            f { print }
+          ' CHANGELOG.md > NOTES.md
+          if [ ! -s NOTES.md ]; then
+            echo "Voir CHANGELOG.md pour le détail des changements." > NOTES.md
+          fi
+          echo "----- notes -----"; cat NOTES.md
+
+      - name: Créer (ou mettre à jour) la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.t.outputs.tag }}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" \
+              --title "OpenLMNP $tag" --notes-file NOTES.md
+          else
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+              --title "OpenLMNP $tag" --notes-file NOTES.md --verify-tag
+          fi
