@@ -28,3 +28,4 @@ yarn-error.log
 *.swp
 *.swo
 /_data/
+/CLAUDE.md
