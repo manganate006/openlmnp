@@ -13,16 +13,10 @@ return new class extends Migration
             $table->boolean('is_admin')->default(false)->after('email');
         });
 
-        // Set admin for known admin account + first user as fallback
-        $adminSet = DB::table('users')
-            ->where('email', '***REDACTED-EMAIL***')
-            ->update(['is_admin' => true]);
-
-        if (! $adminSet) {
-            $firstUser = DB::table('users')->orderBy('id')->first();
-            if ($firstUser) {
-                DB::table('users')->where('id', $firstUser->id)->update(['is_admin' => true]);
-            }
+        // Grant admin to the first user (fresh installs have a single account)
+        $firstUser = DB::table('users')->orderBy('id')->first();
+        if ($firstUser) {
+            DB::table('users')->where('id', $firstUser->id)->update(['is_admin' => true]);
         }
     }
 
