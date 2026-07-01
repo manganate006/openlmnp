@@ -35,7 +35,8 @@ fetch_and_deploy_gh_release "openlmnp" "manganate006/openlmnp" "tarball"
 msg_info "Configuring OpenLMNP (Patience)"
 cd /opt/openlmnp || exit
 
-APP_KEY=$(php artisan key:generate --show)
+# Generate a valid Laravel APP_KEY without artisan (vendor/ is installed by composer below)
+APP_KEY="base64:$(head -c 32 /dev/urandom | base64 | tr -d '\n')"
 cat <<EOF >/opt/openlmnp/.env
 APP_NAME=OpenLMNP
 APP_ENV=production
