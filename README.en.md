@@ -96,6 +96,19 @@ docker run -d --name openlmnp -p 8090:8000 --restart unless-stopped openlmnp
 Access: `http://localhost:8090`
 Demo account: `demo@openlmnp.fr` / `demo2026`
 
+## Proxmox LXC install (community script)
+
+On a Proxmox VE host, create a ready-to-use LXC container in one command:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/manganate006/openlmnp/main/community-scripts/ct/openlmnp.sh)"
+```
+
+Debian 13 · nginx + PHP 8.4-FPM · SQLite. A **random** admin password is generated at install time
+and saved to `/opt/openlmnp/admin_credentials.txt`.
+
+> ℹ️ Requires a public repository with a published *release* (the script fetches the latest GitHub release).
+
 ## Development Setup
 
 ```bash
