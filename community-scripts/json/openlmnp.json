@@ -26,12 +26,12 @@
     }
   ],
   "default_credentials": {
-    "username": "demo@openlmnp.fr",
-    "password": "demo2026"
+    "username": null,
+    "password": null
   },
   "notes": [
     {
-      "text": "Default credentials: demo@openlmnp.fr / demo2026. Change the password after first login.",
+      "text": "Admin account and a random password are generated during installation and saved to /opt/openlmnp/admin_credentials.txt inside the container. Change the password after first login.",
       "type": "warning"
     },
     {
