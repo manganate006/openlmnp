@@ -33,7 +33,7 @@ setup_composer
 fetch_and_deploy_gh_release "openlmnp" "manganate006/openlmnp" "tarball"
 
 msg_info "Configuring OpenLMNP (Patience)"
-cd /opt/openlmnp
+cd /opt/openlmnp || exit
 
 APP_KEY=$(php artisan key:generate --show)
 cat <<EOF >/opt/openlmnp/.env
@@ -75,11 +75,26 @@ $STD php artisan storage:link
 $STD php artisan migrate --force
 $STD php artisan db:seed --force
 $STD php artisan optimize
+msg_ok "Configured OpenLMNP"
+
+msg_info "Securing Admin Account"
+ADMIN_PASS="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20)"
+# Replace the seeded demo password with a random one (password is cast as 'hashed')
+$STD php artisan tinker --execute="\$u = \App\Models\User::query()->orderBy('id')->first(); if (\$u) { \$u->password = '${ADMIN_PASS}'; \$u->save(); }"
+{
+  echo "OpenLMNP — identifiants administrateur"
+  echo "Email    : demo@openlmnp.fr"
+  echo "Password : ${ADMIN_PASS}"
+  echo ""
+  echo "Changez-les après la première connexion."
+} >/opt/openlmnp/admin_credentials.txt
+chmod 600 /opt/openlmnp/admin_credentials.txt
+msg_ok "Secured Admin Account (credentials in /opt/openlmnp/admin_credentials.txt)"
 
 chown -R www-data:www-data /opt/openlmnp
 chmod -R 775 /opt/openlmnp/storage /opt/openlmnp/database /opt/openlmnp/bootstrap/cache
 chmod 640 /opt/openlmnp/.env
-msg_ok "Configured OpenLMNP"
+chmod 600 /opt/openlmnp/admin_credentials.txt
 
 msg_info "Configuring Nginx"
 cat <<'EOF' >/etc/nginx/sites-available/openlmnp

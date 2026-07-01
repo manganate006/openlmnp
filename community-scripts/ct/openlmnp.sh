@@ -52,7 +52,7 @@ function update_script() {
     msg_ok "Restored Data"
 
     msg_info "Updating Application"
-    cd /opt/openlmnp
+    cd /opt/openlmnp || exit
     export COMPOSER_ALLOW_SUPERUSER=1
     $STD /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
     $STD npm install --no-audit --no-fund
@@ -80,3 +80,5 @@ msg_ok "Completed successfully!\n"
 echo -e "${CREATING}${GN}${APP} setup has been successfully initialized!${CL}"
 echo -e "${INFO}${YW} Access it using the following URL:${CL}"
 echo -e "${TAB}${GATEWAY}${BGN}http://${IP}${CL}"
+echo -e "${INFO}${YW} Admin credentials (generated at install) are stored in the container at:${CL}"
+echo -e "${TAB}${GATEWAY}${BGN}/opt/openlmnp/admin_credentials.txt${CL}"
