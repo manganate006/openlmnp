@@ -3,6 +3,9 @@
 /.env
 /.env.backup
 /.env.testing
+/.mcp.json
+/docs/contexte-prive.md
+/docs/rotation-secrets-prive.md
 /database/database.sqlite
 /storage/*.key
 /storage/app/data/

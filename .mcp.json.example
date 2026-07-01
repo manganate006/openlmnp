@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "ovh": {
+      "command": "/usr/local/bin/mcp-server-ovh",
+      "args": [],
+      "timeout": 60000,
+      "env": {
+        "OVH_ENDPOINT": "ovh-eu",
+        "OVH_APP_KEY": "<your-ovh-app-key>",
+        "OVH_APP_SECRET": "<your-ovh-app-secret>",
+        "OVH_CONSUMER_KEY": "<your-ovh-consumer-key>"
+      }
+    },
+    "stripe": {
+      "command": "/usr/local/bin/mcp",
+      "args": ["--tools=all"],
+      "timeout": 60000,
+      "env": {
+        "STRIPE_SECRET_KEY": "sk_test_VOTRE_CLE_STRIPE"
+      }
+    },
+    "openlmnp": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://your-openlmnp-instance.example.com/mcp",
+        "--header",
+        "Authorization: Bearer <your-sanctum-token>"
+      ]
+    }
+  }
+}
