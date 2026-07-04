@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Income;
 use App\Models\Loan;
+use App\Models\LoanPayment;
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\PropertyWork;
@@ -221,19 +222,24 @@ class DemoDataService
      */
     protected function purgeForUser(User $user): void
     {
+        // withoutGlobalScopes : la purge doit fonctionner quel que soit le
+        // contexte d'authentification (seeder CLI, contrôleur /demo).
         Property::withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->get()
             ->each(function (Property $property) {
-                PropertyComponent::where('property_id', $property->id)->delete();
-                PropertyWork::where('property_id', $property->id)->delete();
-                Furniture::where('property_id', $property->id)->delete();
-                Expense::where('property_id', $property->id)->delete();
-                Income::where('property_id', $property->id)->delete();
-                $property->loans()->each(function (Loan $loan) {
-                    $loan->payments()->delete();
-                    $loan->delete();
-                });
+                PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->delete();
+                PropertyWork::withoutGlobalScopes()->where('property_id', $property->id)->delete();
+                Furniture::withoutGlobalScopes()->where('property_id', $property->id)->delete();
+                Expense::withoutGlobalScopes()->where('property_id', $property->id)->delete();
+                Income::withoutGlobalScopes()->where('property_id', $property->id)->delete();
+                Loan::withoutGlobalScopes()
+                    ->where('property_id', $property->id)
+                    ->get()
+                    ->each(function (Loan $loan) {
+                        LoanPayment::where('loan_id', $loan->id)->delete();
+                        $loan->delete();
+                    });
                 $property->delete();
             });
     }

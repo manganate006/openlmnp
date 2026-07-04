@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\BelongsToUserThroughPropertyScope;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -29,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int    $annual_depreciation centimes
  * @property int    $sort_order
  */
+#[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class PropertyComponent extends Model
 {
     // Composants standards avec leurs paramètres par défaut
