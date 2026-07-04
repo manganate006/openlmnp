@@ -17,15 +17,15 @@ use Illuminate\Console\Command;
  */
 class DemoCleanupCommand extends Command
 {
-    protected $signature = 'openlmnp:demo-cleanup';
+    protected $signature = 'openlmnp:demo-cleanup {--all : Supprime tous les comptes démo, même non expirés (assainissement)}';
 
-    protected $description = 'Supprime les comptes de démonstration expirés et leurs données';
+    protected $description = 'Supprime les comptes de démonstration expirés (ou tous avec --all) et leurs données';
 
     public function handle(): int
     {
         $expired = User::query()
             ->where('is_demo', true)
-            ->where('demo_expires_at', '<', now())
+            ->when(! $this->option('all'), fn ($q) => $q->where('demo_expires_at', '<', now()))
             ->get();
 
         $count = 0;

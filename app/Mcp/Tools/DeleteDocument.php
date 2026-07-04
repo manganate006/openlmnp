@@ -8,6 +8,7 @@ use App\Models\Furniture;
 use App\Models\Property;
 use App\Models\PropertyWork;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -29,11 +30,15 @@ class DeleteDocument extends Tool
 
         $document = Document::findOrFail($validated['document_id']);
 
-        // Verify ownership: the parent entity's property must belong to the authenticated user
+        // Verify ownership: the parent entity's property must belong to the
+        // authenticated user. The parent models are user-scoped, so a foreign
+        // document resolves to a null parent — treat it as not found instead
+        // of skipping the check (which would allow cross-user deletion).
         $parent = $document->documentable;
-        if ($parent instanceof Expense || $parent instanceof Furniture || $parent instanceof PropertyWork) {
-            Property::findOrFail($parent->property_id);
+        if (! $parent instanceof Expense && ! $parent instanceof Furniture && ! $parent instanceof PropertyWork) {
+            throw (new ModelNotFoundException)->setModel(Document::class, [$validated['document_id']]);
         }
+        Property::findOrFail($parent->property_id);
 
         $id = $document->id;
 

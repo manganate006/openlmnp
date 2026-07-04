@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\BelongsToUserScope;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[ScopedBy([BelongsToUserScope::class])]
 class BadgeProgress extends Model
 {
     protected $table = 'badge_progress';
