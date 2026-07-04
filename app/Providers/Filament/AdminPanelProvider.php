@@ -62,6 +62,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook('panels::sidebar.footer', fn () => view('livewire.nav-mode-toggle-hook'))
             ->renderHook('panels::body.end', fn () => view('livewire.contextual-help-hook'))
+            ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
             ->authMiddleware([
                 Authenticate::class,
             ]);
