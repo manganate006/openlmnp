@@ -4,6 +4,7 @@
 /.env.backup
 /.env.testing
 /.mcp.json
+/docs/cahier-des-charges-lmnp-app.md
 /docs/contexte-prive.md
 /docs/rotation-secrets-prive.md
 /database/database.sqlite

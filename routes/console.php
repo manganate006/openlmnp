@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('app:auto-update')->hourly();
+Schedule::command('openlmnp:demo-cleanup')->hourly();

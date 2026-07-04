@@ -67,6 +67,21 @@ et produisez votre liasse fiscale au régime réel.
 - **Guide d'utilisation intégré** — Organisé en 3 temps : mise en route, suivi régulier, déclaration annuelle
 - **102 tests automatisés** — Pest PHP, 266 assertions
 
+## Documentation
+
+Une documentation complète est disponible dans le dossier [`docs/`](docs/) :
+
+| Document | Contenu |
+|----------|---------|
+| [Installation](docs/INSTALLATION.md) | Auto-hébergement via Docker : build, run, volumes de persistance, variables d'environnement, mise à jour et sauvegarde |
+| [Fonctionnalités](docs/FONCTIONNALITES.md) | Amortissement par composant, FEC, liasse fiscale 2031/2033, import CSV, simulateur, multi-biens, emprunts, justificatifs |
+| [Mode démonstration](docs/DEMO.md) | Activer et utiliser le mode démo multi-utilisateurs (sandbox éphémère isolé par visiteur) |
+| [FAQ](docs/FAQ.md) | Questions courantes : gratuité, confidentialité des données, régime réel vs micro-BIC, sauvegardes… |
+| [Guide fiscal LMNP / Airbnb](docs/fiscalite-lmnp-airbnb.md) | Règles fiscales du régime réel : amortissements, abattements, plafonds, réforme 2026 |
+| [Guide de conception UI](docs/ui-design-openlmnp.md) | Choix de design de l'interface Filament |
+
+Pour contribuer au projet, voir [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Stack technique
 
 | Composant | Technologie |
