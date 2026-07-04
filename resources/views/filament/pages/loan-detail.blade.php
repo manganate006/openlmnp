@@ -53,11 +53,11 @@
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
                 <div>
                     <h3 style="font-size:18px;font-weight:700;">{{ $loan->bank_name ?? 'Emprunt' }}</h3>
-                    <p style="font-size:13px;color:#6b7280;">{{ $data['property']->name }} · Taux {{ $loan->annual_rate }}% · {{ $loan->duration_months / 12 }} ans</p>
+                    <p style="font-size:13px;color:#6b7280;">{{ $data['property']?->name ?? 'Bien non rattaché' }} · Taux {{ $loan->annual_rate }}% · {{ $loan->duration_months / 12 }} ans</p>
                 </div>
-                @if(\App\Models\Loan::whereHas('property', fn ($q) => $q->where('user_id', auth()->id()))->count() > 1)
+                @if(\App\Models\Loan::count() > 1)
                     <select wire:model.live="loanId" class="ld-select">
-                        @foreach(\App\Models\Loan::whereHas('property', fn ($q) => $q->where('user_id', auth()->id()))->get() as $l)
+                        @foreach(\App\Models\Loan::all() as $l)
                             <option value="{{ $l->id }}">{{ $l->bank_name ?? 'Emprunt' }} — {{ $fmtInt($l->amount) }} €</option>
                         @endforeach
                     </select>

@@ -3,8 +3,10 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Resources\Loans\LoanResource;
 use App\Models\Loan;
 use BackedEnum;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Livewire\Attributes\Computed;
@@ -33,9 +35,22 @@ class LoanDetail extends Page
 
     public function mount(): void
     {
+        // Le scope BelongsToUserThroughPropertyScope limite la requête aux
+        // emprunts de l'utilisateur : un loanId étranger est donc introuvable.
+        if ($this->loanId && ! Loan::whereKey($this->loanId)->exists()) {
+            Notification::make()
+                ->title('Emprunt introuvable')
+                ->body('Cet emprunt n\'existe pas ou ne vous appartient pas.')
+                ->warning()
+                ->send();
+
+            $this->redirect(LoanResource::getUrl());
+
+            return;
+        }
+
         if (! $this->loanId) {
-            $loan = Loan::whereHas('property', fn ($q) => $q->where('user_id', auth()->id()))->first();
-            $this->loanId = $loan?->id;
+            $this->loanId = Loan::query()->value('id');
         }
     }
 
@@ -69,7 +84,7 @@ class LoanDetail extends Page
         $nextPayments = $payments->filter(fn ($p) => $p->payment_date->format('Y-m-d') > $today)->take(6);
 
         // Intérêts déductibles par année (avec quote-part)
-        $quotaShare = $loan->property->quota_share;
+        $quotaShare = $loan->property?->quota_share ?? '1';
         $interestByYear = [];
         foreach ($payments->groupBy(fn ($p) => $p->payment_date->format('Y')) as $year => $yearPayments) {
             $yearInterest = $yearPayments->sum('interest_amount');

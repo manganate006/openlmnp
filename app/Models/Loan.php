@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\BelongsToUserThroughPropertyScope;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int         $monthly_payment    centimes
  * @property int         $insurance_monthly  centimes
  */
+#[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Loan extends Model
 {
     public const INSURANCE_FIXED = 'fixed';
