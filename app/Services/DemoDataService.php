@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Expense;
+use App\Models\FiscalYear;
 use App\Models\Furniture;
 use App\Models\Income;
 use App\Models\Loan;
@@ -49,7 +50,7 @@ class DemoDataService
             'market_value' => 70000000, // 700 000 €
             'market_value_date' => '2026-01-01',
             'land_percentage' => 15,
-            'rental_start_date' => '2023-06-01',
+            'rental_start_date' => '2022-06-01',
             'rental_type' => 'seasonal',
             'is_primary_residence' => true,
         ]);
@@ -77,12 +78,12 @@ class DemoDataService
             ]);
         }
 
-        // Travaux
+        // Travaux (réalisés avant la mise en location de juin 2022)
         PropertyWork::create([
             'property_id' => $property->id,
             'description' => 'Piscine 40m²',
             'amount' => 3500000, // 35 000 €
-            'work_date' => '2023-04-01',
+            'work_date' => '2022-04-01',
             'duration_years' => 15,
             'is_dedicated' => false,
             'annual_depreciation' => (int) bcdiv('3500000', '15', 0),
@@ -92,7 +93,7 @@ class DemoDataService
             'property_id' => $property->id,
             'description' => 'Aménagement chambre et salle de bain',
             'amount' => 2800000, // 28 000 €
-            'work_date' => '2023-04-01',
+            'work_date' => '2022-04-01',
             'duration_years' => 10,
             'is_dedicated' => true,
             'annual_depreciation' => (int) bcdiv('2800000', '10', 0),
@@ -103,7 +104,7 @@ class DemoDataService
             'property_id' => $property->id,
             'description' => 'Mobilier et équipements',
             'amount' => 250000, // 2 500 €
-            'purchase_date' => '2023-06-01',
+            'purchase_date' => '2022-06-01',
             'duration_years' => 5,
             'is_dedicated' => true,
             'is_second_hand' => false,
@@ -111,10 +112,10 @@ class DemoDataService
         ]);
 
         $equipments = [
-            ['Télévision 55 pouces', '2023-06-01', 7],
-            ['Climatisation réversible', '2023-06-01', 10],
-            ['Réfrigérateur', '2023-06-01', 7],
-            ['Lave-vaisselle', '2023-06-01', 7],
+            ['Télévision 55 pouces', '2022-06-01', 7],
+            ['Climatisation réversible', '2022-06-01', 10],
+            ['Réfrigérateur', '2022-06-01', 7],
+            ['Lave-vaisselle', '2022-06-01', 7],
         ];
         foreach ($equipments as [$desc, $date, $dur]) {
             Furniture::create([
@@ -129,24 +130,31 @@ class DemoDataService
             ]);
         }
 
-        // Charges
-        $charges = [
-            ['property_tax', 'Taxe foncière 2026', 220000, false],
-            ['energy', 'Électricité annuelle', 180000, false],
-            ['energy', 'Eau annuelle', 100000, false],
-            ['telecom', 'Internet annuel', 36000, false],
-            ['accounting', 'Logiciel comptabilité LMNP', 20000, true],
-        ];
-        foreach ($charges as [$cat, $desc, $amt, $ded]) {
-            Expense::create([
-                'property_id' => $property->id,
-                'expense_date' => '2026-01-01',
-                'amount' => $amt,
-                'category' => $cat,
-                'description' => $desc,
-                'is_dedicated' => $ded,
-                'recurring_type' => 'yearly',
-            ]);
+        // Charges récurrentes chaque année depuis la mise en location (2022)
+        $currentYear = (int) date('Y');
+        for ($year = 2022; $year <= $currentYear; $year++) {
+            // Taxe foncière en hausse d'environ 50 € par an
+            $propertyTax = 200000 + ($year - 2022) * 5000;
+
+            $charges = [
+                ['property_tax', "Taxe foncière {$year}", "{$year}-10-15", $propertyTax, false],
+                ['insurance', "Assurance PNO {$year}", "{$year}-01-10", 18000, false],
+                ['energy', "Électricité {$year}", "{$year}-02-05", 175000, false],
+                ['energy', "Eau {$year}", "{$year}-02-05", 95000, false],
+                ['telecom', "Internet {$year}", "{$year}-01-05", 36000, false],
+                ['accounting', "Logiciel comptabilité LMNP {$year}", "{$year}-01-05", 20000, true],
+            ];
+            foreach ($charges as [$cat, $desc, $date, $amt, $ded]) {
+                Expense::create([
+                    'property_id' => $property->id,
+                    'expense_date' => $date,
+                    'amount' => $amt,
+                    'category' => $cat,
+                    'description' => $desc,
+                    'is_dedicated' => $ded,
+                    'recurring_type' => 'yearly',
+                ]);
+            }
         }
 
         // Emprunt
@@ -165,54 +173,47 @@ class DemoDataService
 
         app(LoanService::class)->generateSchedule($loan);
 
-        // Revenus Airbnb (données fictives réalistes)
-        $revenues = [
-            // 2023 (début activité juin)
-            ['2023-06-15', 25000, 900, 'Réservation 06/2023'],
-            ['2023-07-15', 110000, 3960, 'Réservation 07/2023'],
-            ['2023-08-15', 135000, 4860, 'Réservation 08/2023'],
-            ['2023-09-15', 85000, 3060, 'Réservation 09/2023'],
-            ['2023-10-15', 60000, 2160, 'Réservation 10/2023'],
-            ['2023-11-15', 40000, 1440, 'Réservation 11/2023'],
-            ['2023-12-15', 55000, 1980, 'Réservation 12/2023'],
-            // 2024
-            ['2024-01-15', 35000, 1260, 'Réservation 01/2024'],
-            ['2024-02-15', 45000, 1620, 'Réservation 02/2024'],
-            ['2024-03-15', 65000, 2340, 'Réservation 03/2024'],
-            ['2024-04-15', 95000, 3420, 'Réservation 04/2024'],
-            ['2024-05-15', 120000, 4320, 'Réservation 05/2024'],
-            ['2024-06-15', 145000, 5220, 'Réservation 06/2024'],
-            ['2024-07-15', 185000, 6660, 'Réservation 07/2024'],
-            ['2024-08-15', 195000, 7020, 'Réservation 08/2024'],
-            ['2024-09-15', 105000, 3780, 'Réservation 09/2024'],
-            ['2024-10-15', 75000, 2700, 'Réservation 10/2024'],
-            ['2024-11-15', 50000, 1800, 'Réservation 11/2024'],
-            ['2024-12-15', 60000, 2160, 'Réservation 12/2024'],
-            // 2025
-            ['2025-01-15', 40000, 1440, 'Réservation 01/2025'],
-            ['2025-02-15', 50000, 1800, 'Réservation 02/2025'],
-            ['2025-03-15', 70000, 2520, 'Réservation 03/2025'],
-            ['2025-04-15', 100000, 3600, 'Réservation 04/2025'],
-            ['2025-05-15', 130000, 4680, 'Réservation 05/2025'],
-            ['2025-06-15', 155000, 5580, 'Réservation 06/2025'],
-            ['2025-07-15', 200000, 7200, 'Réservation 07/2025'],
-            ['2025-08-15', 210000, 7560, 'Réservation 08/2025'],
-            ['2025-09-15', 110000, 3960, 'Réservation 09/2025'],
-            ['2025-10-15', 80000, 2880, 'Réservation 10/2025'],
-            ['2025-11-15', 55000, 1980, 'Réservation 11/2025'],
-            ['2025-12-15', 65000, 2340, 'Réservation 12/2025'],
+        // Revenus Airbnb saisonniers, de juin 2022 (mise en location) au dernier
+        // mois échu de l'année en cours. Montants déterministes : profil
+        // saisonnier de référence (année 2025) avec progression de 5 % par an.
+        $monthlyPattern = [
+            1 => 40000, 2 => 50000, 3 => 70000, 4 => 100000, 5 => 130000, 6 => 155000,
+            7 => 200000, 8 => 210000, 9 => 110000, 10 => 80000, 11 => 55000, 12 => 65000,
         ];
+        $currentMonth = (int) date('n');
 
-        foreach ($revenues as [$date, $amount, $fee, $guest]) {
-            Income::create([
-                'property_id' => $property->id,
-                'income_date' => $date,
-                'amount' => $amount,
-                'platform_fee' => $fee,
-                'tourist_tax' => 0,
-                'source' => 'airbnb',
-                'guest_name' => $guest,
-            ]);
+        for ($year = 2022; $year <= $currentYear; $year++) {
+            $growth = bcadd('1', bcmul('0.05', (string) ($year - 2025), 10), 10);
+
+            foreach ($monthlyPattern as $month => $baseAmount) {
+                if ($year === 2022 && $month < 6) {
+                    continue; // mise en location au 1er juin 2022
+                }
+                if ($year === $currentYear && $month >= $currentMonth) {
+                    break; // uniquement les mois échus de l'année en cours
+                }
+
+                $amount = (int) bcmul((string) $baseAmount, $growth, 0);
+                $fee = (int) bcmul((string) $amount, '0.036', 0);
+
+                Income::create([
+                    'property_id' => $property->id,
+                    'income_date' => sprintf('%d-%02d-15', $year, $month),
+                    'amount' => $amount,
+                    'platform_fee' => $fee,
+                    'tourist_tax' => 0,
+                    'source' => 'airbnb',
+                    'guest_name' => sprintf('Réservation %02d/%d', $month, $year),
+                ]);
+            }
+        }
+
+        // Chaîne d'exercices fiscaux clôturés : 2022 → N-1, dans l'ordre,
+        // pour que les reports d'amortissements différés se propagent.
+        $fiscalYearService = app(FiscalYearService::class);
+        for ($year = 2022; $year < $currentYear; $year++) {
+            $fiscalYear = $fiscalYearService->getOrCreate($user, $year);
+            $fiscalYear->update(['status' => FiscalYear::STATUS_CLOSED]);
         }
     }
 
@@ -224,6 +225,9 @@ class DemoDataService
     {
         // withoutGlobalScopes : la purge doit fonctionner quel que soit le
         // contexte d'authentification (seeder CLI, contrôleur /demo).
+        // Les écritures comptables sont supprimées en cascade (FK).
+        FiscalYear::withoutGlobalScopes()->where('user_id', $user->id)->delete();
+
         Property::withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->get()

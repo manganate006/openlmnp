@@ -68,12 +68,24 @@ en ajoutant `DEMO_TTL_HOURS` heures.
 ## Données de démonstration
 
 Le jeu de données fictif est généré par le service `DemoDataService`. Il décrit un bien
-d'exemple entièrement **inventé** — *Villa Les Oliviers* à Mougins — avec ses composants
-d'amortissement, travaux, mobilier, recettes, charges et un emprunt, afin d'illustrer toutes
-les fonctionnalités du logiciel.
+d'exemple entièrement **inventé** — *Villa Les Oliviers* à Mougins — afin d'illustrer toutes
+les fonctionnalités du logiciel :
+
+- **1 bien** acquis en juin 2020, mis en location saisonnière en juin 2022, décomposé en
+  6 composants d'amortissement ;
+- **2 chantiers de travaux** (piscine, aménagement chambre et salle de bain) et
+  **5 lignes de mobilier / équipements** ;
+- **1 emprunt** de 500 000 € sur 25 ans, rattaché au bien, avec son tableau
+  d'amortissement complet ;
+- des **recettes Airbnb saisonnières** de juin 2022 jusqu'au dernier mois écoulé, et des
+  **charges récurrentes** (taxe foncière, assurance PNO, énergie, internet, comptabilité)
+  chaque année depuis 2022 ;
+- la **chaîne d'exercices fiscaux clôturés** de 2022 à l'année précédente, avec propagation
+  des reports d'amortissements différés.
 
 Le même service alimente le seeder historique `DemoSeeder` (compte fixe `demo@openlmnp.fr`),
-conservé pour la rétrocompatibilité et les environnements de développement :
+conservé pour la rétrocompatibilité et les environnements de développement. Le seed est
+idempotent : le relancer **réinitialise** le compte fixe sur ce jeu de données de référence :
 
 ```bash
 php artisan db:seed --class=DemoSeeder

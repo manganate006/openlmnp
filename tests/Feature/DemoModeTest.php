@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Expense;
+use App\Models\FiscalYear;
+use App\Models\Income;
+use App\Models\Loan;
 use App\Models\Property;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -75,6 +79,49 @@ it('seeds isolated demo data visible only to its own demo user', function () {
 
     // Chaque visiteur a exactement 1 bien : aucun mélange des données.
     expect(Property::withoutGlobalScopes()->count())->toBe(2);
+});
+
+it('seeds a realistic and complete demo dataset', function () {
+    config(['demo.enabled' => true]);
+
+    $this->get('/demo')->assertRedirect('/');
+
+    $user = User::query()->where('is_demo', true)->first();
+    $property = Property::withoutGlobalScopes()->where('user_id', $user->id)->first();
+    $currentYear = (int) date('Y');
+
+    // Un seul emprunt, rattaché au bien copié (pas de property_id orphelin).
+    $loans = Loan::withoutGlobalScopes()->where('property_id', $property->id)->get();
+    expect($loans)->toHaveCount(1)
+        ->and(Loan::withoutGlobalScopes()->count())->toBe(1)
+        ->and($loans->first()->property_id)->toBe($property->id);
+
+    // Recettes de 2022 à l'année en cours, charges chaque année.
+    $incomeYears = Income::withoutGlobalScopes()
+        ->where('property_id', $property->id)
+        ->selectRaw("DISTINCT strftime('%Y', income_date) as y")
+        ->pluck('y')->map(fn ($y) => (int) $y)->sort()->values();
+    expect($incomeYears->first())->toBe(2022);
+
+    $expenseYears = Expense::withoutGlobalScopes()
+        ->where('property_id', $property->id)
+        ->selectRaw("DISTINCT strftime('%Y', expense_date) as y")
+        ->pluck('y')->map(fn ($y) => (int) $y)->sort()->values();
+    expect($expenseYears->all())->toBe(range(2022, $currentYear));
+
+    // Chaîne d'exercices fiscaux 2022 → N-1, tous clôturés.
+    $fiscalYears = FiscalYear::withoutGlobalScopes()
+        ->where('user_id', $user->id)
+        ->orderBy('year')
+        ->get();
+    expect($fiscalYears->pluck('year')->all())->toBe(range(2022, $currentYear - 1))
+        ->and($fiscalYears->every(fn ($fy) => $fy->status === FiscalYear::STATUS_CLOSED))->toBeTrue();
+
+    // Les reports d'amortissements se propagent le long de la chaîne.
+    $chained = $fiscalYears->skip(1)->every(
+        fn ($fy) => (int) $fy->previous_deferred === (int) $fiscalYears->firstWhere('year', $fy->year - 1)->deferred_depreciation
+    );
+    expect($chained)->toBeTrue();
 });
 
 // === LIMITE DE COMPTES ===
