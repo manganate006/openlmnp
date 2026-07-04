@@ -24,15 +24,14 @@ COPY . .
 # Use Docker-specific env
 RUN cp .env.docker .env
 
-RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-interaction
-
-# Build des assets CSS/JS
-RUN npm install --no-audit --no-fund && npm run build
+# Build des dépendances dans l'image (DNS fonctionnel sur le LXC)
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction
+RUN npm install --no-audit --no-fund && npm run build && rm -rf node_modules
 
 RUN mkdir -p database storage/app/public storage/app/data storage/logs storage/framework/{sessions,views,cache} \
     && chmod -R 775 storage database bootstrap/cache
 
-RUN php artisan key:generate --force
+RUN php artisan key:generate --force 2>/dev/null || true
 
 # Volumes pour persister les données entre rebuilds
 VOLUME ["/var/www/html/database", "/var/www/html/storage"]
