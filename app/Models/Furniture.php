@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Helpers\TvaHelper;
 use App\Models\Concerns\HasDocuments;
+use App\Models\Scopes\BelongsToUserThroughPropertyScope;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -24,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool        $is_second_hand      mobilier d'occasion
  * @property int         $annual_depreciation centimes
  */
+#[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Furniture extends Model
 {
     use HasDocuments;

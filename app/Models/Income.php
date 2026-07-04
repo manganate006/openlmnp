@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use App\Helpers\TvaHelper;
+use App\Models\Scopes\BelongsToUserThroughPropertyScope;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Income extends Model
 {
     public const SOURCE_AIRBNB  = 'airbnb';
