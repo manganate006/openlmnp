@@ -276,11 +276,36 @@ class FiscalYearService
     }
 
     /**
+     * Première année d'activité LMNP : minimum entre la mise en location
+     * et la première recette ou charge saisie. C'est l'ancre de la chaîne
+     * d'exercices (les amortissements ne démarrent qu'à l'activité,
+     * contrairement à firstDataYear qui inclut l'année d'acquisition).
+     */
+    public function firstActivityYear(User $user): int
+    {
+        $propertyIds = Property::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->pluck('id');
+
+        $dates = array_filter([
+            Property::withoutGlobalScopes()->where('user_id', $user->id)->min('rental_start_date'),
+            Income::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->min('income_date'),
+            Expense::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->min('expense_date'),
+        ]);
+
+        if ($dates === []) {
+            return $this->firstDataYear($user);
+        }
+
+        return (int) substr(min($dates), 0, 4);
+    }
+
+    /**
      * Message d'erreur si l'exercice $year ne peut pas être créé faute de
      * prédécesseur, null si la création est autorisée.
      *
-     * Le premier exercice de la chaîne (première année de données) peut
-     * toujours être créé sans N-1 : le report d'amortissements vaut alors 0.
+     * Tout exercice antérieur ou égal à la première année d'activité peut
+     * être créé sans N-1 : le report d'amortissements vaut alors 0.
      * Sans amortissement actif, la chaîne n'est pas indispensable non plus.
      */
     public function missingPreviousYearError(User $user, int $year): ?string
@@ -290,7 +315,7 @@ class FiscalYearService
             ->where('year', $year - 1)
             ->exists();
 
-        if ($previousExists || $year <= $this->firstDataYear($user)) {
+        if ($previousExists || $year <= $this->firstActivityYear($user)) {
             return null;
         }
 
@@ -311,13 +336,18 @@ class FiscalYearService
 
     /**
      * Année proposée par défaut dans l'assistant de clôture : premier
-     * exercice manquant entre la première année de données et N-1.
+     * exercice manquant de la chaîne, entre le début de la chaîne
+     * existante (à défaut la première année d'activité) et N-1.
      */
     public function nextYearToCreate(User $user): int
     {
         $currentYear = (int) date('Y');
 
-        for ($y = $this->firstDataYear($user); $y < $currentYear; $y++) {
+        $chainStart = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->min('year') ?? $this->firstActivityYear($user);
+
+        for ($y = (int) $chainStart; $y < $currentYear; $y++) {
             $exists = FiscalYear::withoutGlobalScopes()
                 ->where('user_id', $user->id)
                 ->where('year', $y)

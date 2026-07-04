@@ -78,6 +78,20 @@ it('falls back to the current year without any data', function () {
     expect($this->service->firstDataYear($this->user))->toBe((int) date('Y'));
 });
 
+// === firstActivityYear ===
+
+it('anchors the chain on the rental start year, not the acquisition year', function () {
+    $property = makeChainProperty($this->user, '2020-06-15', '2022-06-01');
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    // L'acquisition (2020) élargit la liste d'années…
+    expect($this->service->firstDataYear($this->user))->toBe(2020)
+        // …mais la chaîne d'exercices démarre à la mise en location (2022).
+        ->and($this->service->firstActivityYear($this->user))->toBe(2022)
+        ->and($this->service->missingPreviousYearError($this->user, 2022))->toBeNull()
+        ->and($this->service->nextYearToCreate($this->user))->toBe(2022);
+});
+
 // === missingPreviousYearError ===
 
 it('allows creating the first fiscal year of the chain without a predecessor', function () {
