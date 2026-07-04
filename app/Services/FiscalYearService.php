@@ -2,8 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Expense;
 use App\Models\FiscalYear;
+use App\Models\Furniture;
+use App\Models\Income;
 use App\Models\Property;
+use App\Models\PropertyComponent;
+use App\Models\PropertyWork;
 use App\Models\User;
 
 /**
@@ -243,6 +248,87 @@ class FiscalYearService
         }
 
         return $count;
+    }
+
+    /**
+     * Première année de données de l'utilisateur : minimum entre la date
+     * d'acquisition / de mise en location des biens et la première
+     * recette ou charge saisie. Année courante à défaut de données.
+     */
+    public function firstDataYear(User $user): int
+    {
+        $propertyIds = Property::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->pluck('id');
+
+        $dates = array_filter([
+            Property::withoutGlobalScopes()->where('user_id', $user->id)->min('acquisition_date'),
+            Property::withoutGlobalScopes()->where('user_id', $user->id)->min('rental_start_date'),
+            Income::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->min('income_date'),
+            Expense::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->min('expense_date'),
+        ]);
+
+        if ($dates === []) {
+            return (int) date('Y');
+        }
+
+        return (int) substr(min($dates), 0, 4);
+    }
+
+    /**
+     * Message d'erreur si l'exercice $year ne peut pas être créé faute de
+     * prédécesseur, null si la création est autorisée.
+     *
+     * Le premier exercice de la chaîne (première année de données) peut
+     * toujours être créé sans N-1 : le report d'amortissements vaut alors 0.
+     * Sans amortissement actif, la chaîne n'est pas indispensable non plus.
+     */
+    public function missingPreviousYearError(User $user, int $year): ?string
+    {
+        $previousExists = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where('year', $year - 1)
+            ->exists();
+
+        if ($previousExists || $year <= $this->firstDataYear($user)) {
+            return null;
+        }
+
+        $propertyIds = Property::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->pluck('id');
+
+        $hasDepreciation = PropertyComponent::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->exists()
+            || PropertyWork::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->exists()
+            || Furniture::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->exists();
+
+        if (! $hasDepreciation) {
+            return null;
+        }
+
+        return 'L\'exercice ' . ($year - 1) . ' n\'existe pas. Créez-le d\'abord pour reporter correctement les amortissements différés.';
+    }
+
+    /**
+     * Année proposée par défaut dans l'assistant de clôture : premier
+     * exercice manquant entre la première année de données et N-1.
+     */
+    public function nextYearToCreate(User $user): int
+    {
+        $currentYear = (int) date('Y');
+
+        for ($y = $this->firstDataYear($user); $y < $currentYear; $y++) {
+            $exists = FiscalYear::withoutGlobalScopes()
+                ->where('user_id', $user->id)
+                ->where('year', $y)
+                ->exists();
+
+            if (! $exists) {
+                return $y;
+            }
+        }
+
+        return $currentYear - 1;
     }
 
     /**

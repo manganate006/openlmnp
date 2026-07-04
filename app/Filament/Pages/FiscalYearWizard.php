@@ -58,7 +58,7 @@ class FiscalYearWizard extends Page
     public function mount(): void
     {
         $this->data = [
-            'year'   => (int) date('Y') - 1,
+            'year'   => app(FiscalYearService::class)->nextYearToCreate(auth()->user()),
             'status' => FiscalYear::STATUS_DRAFT,
         ];
     }
@@ -113,22 +113,11 @@ class FiscalYearWizard extends Page
                             ->hint('L\'exercice couvre du 1er janvier au 31 décembre')
                             ->rules([
                                 fn () => function (string $attribute, $value, \Closure $fail) {
-                                    $year = (int) $value;
-                                    $previous = FiscalYear::withoutGlobalScopes()
-                                        ->where('user_id', auth()->id())
-                                        ->where('year', $year - 1)
-                                        ->first();
+                                    $error = app(FiscalYearService::class)
+                                        ->missingPreviousYearError(auth()->user(), (int) $value);
 
-                                    if (! $previous) {
-                                        // Vérifier s'il y a des amortissements actifs
-                                        $hasDepreciation = Property::all()->contains(fn ($p) => $p->components()->exists() || $p->works()->exists() || $p->furniture()->exists());
-                                        if ($hasDepreciation) {
-                                            // Vérifier aussi qu'il ne s'agit pas de la toute première année d'activité
-                                            $firstProperty = Property::whereNotNull('rental_start_date')->orderBy('rental_start_date')->first();
-                                            if ($firstProperty && $firstProperty->rental_start_date->year < $year) {
-                                                $fail('L\'exercice ' . ($year - 1) . ' n\'existe pas. Créez-le d\'abord pour reporter correctement les amortissements différés.');
-                                            }
-                                        }
+                                    if ($error !== null) {
+                                        $fail($error);
                                     }
                                 },
                             ]),
@@ -480,8 +469,18 @@ class FiscalYearWizard extends Page
     {
         return $this->getYearIncomeCents() === 0
             || Property::count() === 0
-            || $this->getPreviousYearStatus() === 'missing'
+            || $this->previousYearMissingError() !== null
             || $this->getPreviousYearStatus() === 'draft';
+    }
+
+    /**
+     * Erreur de chaîne N-1 pour l'année sélectionnée (null si la création
+     * est autorisée, notamment pour le premier exercice de la chaîne).
+     */
+    private function previousYearMissingError(): ?string
+    {
+        return app(FiscalYearService::class)
+            ->missingPreviousYearError(auth()->user(), $this->selectedYear());
     }
 
     /**
@@ -541,8 +540,15 @@ class FiscalYearWizard extends Page
 
     private function buildYearOptions(int $currentYear): array
     {
+        // La liste démarre à la première année de données de l'utilisateur
+        // (au plus tard N-2) pour permettre de reconstruire toute la chaîne.
+        $start = min(
+            app(FiscalYearService::class)->firstDataYear(auth()->user()),
+            $currentYear - 2
+        );
+
         $options = [];
-        for ($y = $currentYear + 2; $y >= $currentYear - 2; $y--) {
+        for ($y = $currentYear + 2; $y >= $start; $y--) {
             $options[$y] = $y;
         }
         return $options;
@@ -709,7 +715,7 @@ class FiscalYearWizard extends Page
         }
 
         $prevStatus = $this->getPreviousYearStatus();
-        if ($prevStatus === 'missing') {
+        if ($prevStatus === 'missing' && $this->previousYearMissingError() !== null) {
             $alerts[] = [
                 'L\'exercice ' . ($year - 1) . ' n\'existe pas. Les amortissements différés de ' . ($year - 1) . ' ne seront pas reportés. '
                 . '<a href="' . route('filament.admin.pages.fiscal-year-wizard') . '" class="underline font-semibold">Créez d\'abord l\'exercice ' . ($year - 1) . '</a>.',
