@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\BelongsToUserThroughLoanScope;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int         $insurance_amount   centimes - assurance emprunteur
  * @property int         $remaining_capital  centimes - capital restant dû après paiement
  */
+#[ScopedBy([BelongsToUserThroughLoanScope::class])]
 class LoanPayment extends Model
 {
     protected $fillable = [
