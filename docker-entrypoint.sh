@@ -3,6 +3,20 @@ set -e
 
 cd /var/www/html
 
+# Propage les variables d'environnement runtime (docker run -e …) vers .env :
+# `php artisan serve` ne transmet pas l'environnement du processus aux workers
+# du serveur intégré PHP (variables_order sans E) — seul .env est lu par le web.
+for var in DEMO_MODE DEMO_TTL_HOURS DEMO_MAX_ACCOUNTS MCP_ENABLED GITHUB_TOKEN GITHUB_REPO; do
+    value="${!var-}"
+    if [ -n "$value" ]; then
+        if grep -q "^${var}=" .env 2>/dev/null; then
+            sed -i "s|^${var}=.*|${var}=${value}|" .env
+        else
+            echo "${var}=${value}" >> .env
+        fi
+    fi
+done
+
 # Nettoyage des caches
 php artisan optimize:clear 2>/dev/null || true
 php artisan storage:link 2>/dev/null || true
