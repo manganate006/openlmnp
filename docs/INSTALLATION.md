@@ -82,6 +82,12 @@ L'image utilise le fichier `.env.docker` fourni. Les variables non sensibles uti
 | `DB_DATABASE` | Chemin du fichier SQLite | `/var/www/html/database/database.sqlite` |
 | `LOG_LEVEL` | Niveau de journalisation | `warning` |
 | `DEMO_MODE` | Active le mode démonstration (voir [DEMO.md](DEMO.md)) | `false` |
+| `GTM_CONTAINER_ID` | Identifiant Google Tag Manager (`GTM-XXXXXXX`). Vide = aucun script de mesure injecté | *(vide)* |
+| `GTM_SERVER_URL` | URL d'un GTM server-side auto-hébergé (sinon serveurs Google) | `https://www.googletagmanager.com` |
+| `GTM_SCRIPT_PATH` | Chemin du script GTM (utile si renommé côté serveur) | `/gtm.js` |
+
+> **Vie privée** : aucune mesure d'audience n'est active par défaut. L'intégration
+> Google Tag Manager ne s'active que si vous définissez explicitement `GTM_CONTAINER_ID`.
 
 Pour surcharger une variable au lancement, utilisez `-e` :
 

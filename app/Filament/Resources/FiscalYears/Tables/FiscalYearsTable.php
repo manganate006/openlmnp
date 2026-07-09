@@ -148,12 +148,15 @@ class FiscalYearsTable
                     ->label('PDF')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('success')
-                    ->action(function (FiscalYear $record) {
+                    ->action(function (FiscalYear $record, $livewire) {
                         $path = app(TaxReturnService::class)->generatePdf($record);
 
                         app(BadgeService::class)->evaluate(auth()->user(), 'tax_return_generated', [
                             'fiscal_year' => $record->year,
                         ]);
+
+                        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head)
+                        $livewire->dispatch('analytics', event: 'cerfa_generated', fiscal_year: $record->year);
 
                         return response()->streamDownload(
                             fn () => print(Storage::get($path)),
@@ -164,13 +167,16 @@ class FiscalYearsTable
                     ->label('FEC')
                     ->icon('heroicon-o-document-text')
                     ->color('gray')
-                    ->action(function (FiscalYear $record) {
+                    ->action(function (FiscalYear $record, $livewire) {
                         app(FiscalYearService::class)->calculate($record);
                         $path = app(FecService::class)->generate($record);
 
                         app(BadgeService::class)->evaluate(auth()->user(), 'fec_generated', [
                             'fiscal_year' => $record->year,
                         ]);
+
+                        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head)
+                        $livewire->dispatch('analytics', event: 'fec_exported', fiscal_year: $record->year);
 
                         return response()->streamDownload(
                             fn () => print(Storage::get($path)),

@@ -63,6 +63,8 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook('panels::sidebar.footer', fn () => view('livewire.nav-mode-toggle-hook'))
             ->renderHook('panels::body.end', fn () => view('livewire.contextual-help-hook'))
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
+            ->renderHook(\Filament\View\PanelsRenderHook::HEAD_START, fn () => config('services.gtm.id') ? view('partials.gtm-head') : '')
+            ->renderHook(\Filament\View\PanelsRenderHook::BODY_START, fn () => config('services.gtm.id') ? view('partials.gtm-body') : '')
             ->authMiddleware([
                 Authenticate::class,
             ]);
