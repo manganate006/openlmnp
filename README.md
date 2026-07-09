@@ -2,74 +2,101 @@
 
 # OpenLMNP
 
-**Logiciel open source de comptabilité LMNP**
-
-![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)
-![Filament](https://img.shields.io/badge/Filament-5.6-FBBF24?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAyMmgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=)
-![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
-![License](https://img.shields.io/badge/Licence-AGPLv3-green)
-![Tests](https://img.shields.io/badge/Tests-167%20pass%C3%A9s-brightgreen)
-![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+**Logiciel open source de comptabilité LMNP (Location Meublée Non Professionnelle)**
 
 Gérez vos biens en location meublée, calculez vos amortissements,
-et produisez votre liasse fiscale au régime réel.
+et produisez votre liasse fiscale au régime réel — sans abonnement, chez vous.
 
-[English version](README.en.md)
+[![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
+[![Release](https://img.shields.io/github/v/release/manganate006/openlmnp?label=Release&color=blue)](https://github.com/manganate006/openlmnp/releases)
+[![Licence](https://img.shields.io/github/license/manganate006/openlmnp?label=Licence&color=green)](LICENSE)
+![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)
+![Filament](https://img.shields.io/badge/Filament-5-FBBF24)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+
+**[🚀 Démo live](https://app.lmnp.mangi.fr)** · **[📦 Installation](#installation-rapide-docker)** · **[📚 Documentation](#documentation)** · **[🇬🇧 English](README.en.md)**
+
+![Démonstration d'OpenLMNP : tableau de bord, simulateur, projection et télédéclaration](docs/screenshots/demo.gif)
 
 </div>
 
----
+> **🎯 Essayez sans rien installer** — la [démo en ligne](https://app.lmnp.mangi.fr) crée un bac à sable
+> éphémère et isolé pour chaque visiteur, pré-rempli avec 4 années de comptabilité fictive.
+> Connexion : `demo@openlmnp.fr` / `demo2026`.
 
-## Captures d'écran
+## Sommaire
 
-<details>
-<summary>Tableau de bord</summary>
+- [Pourquoi OpenLMNP ?](#pourquoi-openlmnp-)
+- [Fonctionnalités](#fonctionnalités)
+- [Captures d'écran](#captures-décran)
+- [Documentation](#documentation)
+- [Installation rapide (Docker)](#installation-rapide-docker)
+- [Installation LXC Proxmox](#installation-lxc-proxmox-script-communautaire)
+- [Installation développement](#installation-développement)
+- [Configuration](#configuration)
+- [Tests](#tests)
+- [Contribution](#contribution)
+- [Licence](#licence)
 
-![Dashboard](docs/screenshots/dashboard.png)
+## Pourquoi OpenLMNP ?
 
-</details>
+Le régime réel LMNP est presque toujours plus avantageux que le micro-BIC pour un meublé,
+mais il exige des amortissements par composant, une liasse fiscale (2031, 2033) et un FEC
+conforme. Les options habituelles ont chacune leur défaut :
 
-<details>
-<summary>Charges</summary>
+| | **OpenLMNP** | Tableur maison | SaaS comptable | Expert-comptable |
+|---|---|---|---|---|
+| **Coût** | Gratuit (AGPLv3) | Gratuit | Abonnement annuel | Honoraires annuels |
+| **Vos données** | Chez vous (auto-hébergé) | Chez vous | Cloud d'un tiers | Chez un tiers |
+| **Amortissements par composant** | ✅ Automatiques | ⚠️ Formules à maintenir | ✅ | ✅ |
+| **Liasse fiscale + FEC** | ✅ Générés | ❌ | ✅ | ✅ |
+| **Calculs au centime (bcmath)** | ✅ | ⚠️ Arrondis flottants | ✅ | ✅ |
 
-![Charges](docs/screenshots/charges.png)
-
-</details>
-
-<details>
-<summary>Télédéclaration</summary>
-
-![Télédéclaration](docs/screenshots/teledeclaration.png)
-
-</details>
+OpenLMNP automatise le régime réel de bout en bout et reste un **outil d'aide** : pour les
+situations complexes (indivision, TVA para-hôtelière, passage en LMP…), un expert-comptable
+reste recommandé.
 
 ## Fonctionnalités
 
-- **Multi-utilisateurs** — Chaque propriétaire voit uniquement ses données
-- **Biens immobiliers** — Adresse, surfaces, quote-part résidence principale, valeur vénale
-- **Amortissement par composant** — Gros œuvre, toiture, plomberie, agencements (durées standards)
-- **Travaux & Mobilier** — Amortissement dédié ou au prorata, gestion neuf/occasion avec justificatifs
-- **Recettes** — Saisie manuelle ou import CSV Airbnb/Booking
-- **Charges** — Catégorisées, prorata automatique, justificatifs uploadés
-- **Emprunts** — Tableau d'amortissement auto, intérêts déductibles
-- **Simulateur** — Comparaison micro-BIC vs régime réel avec verdict
-- **Projection pluriannuelle** — Tableau sur 5 à 20 ans
-- **Télédéclaration interactive** — Lignes Cerfa 2031, 2033-A/B/C/D, 2042-C-PRO avec boutons « Copier »
-- **Liasse fiscale PDF** — Génération complète
-- **FEC conforme** — Article A.47 A-1 du LPF, 18 colonnes, format légal
-- **Écritures comptables** — Génération automatique (plan comptable LMNP)
-- **API MCP** — Intégration avec assistants IA (Claude, etc.)
-- **Mises à jour automatiques** — Notification et déploiement depuis GitHub
-- **Assistants guidés (wizards)** — Onboarding, création de bien, clôture fiscale, emprunt, import annuel
-- **Export CSV** — Recettes, charges, télédéclaration
-- **Dark mode** — Natif Filament
-- **Guide d'utilisation intégré** — Organisé en 3 temps : mise en route, suivi régulier, déclaration annuelle
-- **167 tests automatisés** — Pest PHP, 472 assertions
+### 🏠 Comptabilité & amortissements
+- **Amortissement par composant** — gros œuvre, toiture, plomberie, agencements (durées standards)
+- **Travaux & mobilier** — amortissement dédié ou au prorata, gestion neuf/occasion
+- **Emprunts** — tableau d'amortissement automatique, intérêts déductibles
+- **Écritures comptables** — génération automatique selon le plan comptable LMNP
+- **Multi-biens** — adresse, surfaces, quote-part résidence principale, valeur vénale
+
+### 📋 Fiscal & déclarations
+- **Exercices chaînés** — reports N−1, amortissements différés, plafonnement
+- **Simulateur micro-BIC vs régime réel** — avec verdict chiffré
+- **Projection pluriannuelle** — tableau sur 5 à 20 ans, année de bascule des régimes
+- **Télédéclaration interactive** — lignes Cerfa 2031, 2033-A/B/C/D, 2042-C-PRO avec boutons « Copier »
+- **Liasse fiscale PDF** — génération complète
+- **FEC conforme** — article A.47 A-1 du LPF, 18 colonnes, format légal
+
+### 🔌 Import & intégrations
+- **Import CSV Airbnb / Booking** — formats FR/EN, détection des doublons
+- **Export CSV** — recettes, charges, télédéclaration
+- **API MCP** — pilotez votre comptabilité depuis un assistant IA (Claude, etc.)
+- **Mises à jour automatiques** — notification et déploiement depuis GitHub
+
+### 🛡️ Confort & sécurité
+- **Multi-utilisateurs** — chaque propriétaire voit uniquement ses données
+- **Assistants guidés** — onboarding, création de bien, clôture fiscale, emprunt, import annuel
+- **Justificatifs** — pièces uploadées sur charges, travaux et mobilier
+- **Guide intégré & badges de progression** — mise en route, suivi régulier, déclaration annuelle
+- **Dark mode** — natif Filament
+- **167 tests automatisés** — Pest PHP, 472 assertions ([détail](docs/TESTS.md))
+
+## Captures d'écran
+
+| Simulateur | Projection | Télédéclaration |
+|---|---|---|
+| [![Simulateur micro-BIC vs réel](docs/screenshots/simulateur.png)](docs/screenshots/simulateur.png) | [![Projection pluriannuelle](docs/screenshots/projection.png)](docs/screenshots/projection.png) | [![Aide à la télédéclaration](docs/screenshots/teledeclaration.png)](docs/screenshots/teledeclaration.png) |
+
+D'autres captures : [tableau de bord](docs/screenshots/dashboard.png) · [charges](docs/screenshots/charges.png)
 
 ## Documentation
-
-Une documentation complète est disponible dans le dossier [`docs/`](docs/) :
 
 | Document | Contenu |
 |----------|---------|
@@ -78,6 +105,7 @@ Une documentation complète est disponible dans le dossier [`docs/`](docs/) :
 | [Mode démonstration](docs/DEMO.md) | Activer et utiliser le mode démo multi-utilisateurs (sandbox éphémère isolé par visiteur) |
 | [FAQ](docs/FAQ.md) | Questions courantes : gratuité, confidentialité des données, régime réel vs micro-BIC, sauvegardes… |
 | [Guide fiscal LMNP / Airbnb](docs/fiscalite-lmnp-airbnb.md) | Règles fiscales du régime réel : amortissements, abattements, plafonds, réforme 2026 |
+| [Couverture de tests](docs/TESTS.md) | Détail des 167 tests automatisés, suite par suite |
 | [Guide de conception UI](docs/ui-design-openlmnp.md) | Choix de design de l'interface Filament |
 
 Pour contribuer au projet, voir [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -145,6 +173,11 @@ Ajoutez votre SIREN dans votre profil utilisateur pour les documents fiscaux.
 
 ## Tests
 
+[![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
+
+**167 tests Pest PHP, 472 assertions** — services de calcul, pages Filament, isolation
+multi-utilisateurs, mode démo. Détail suite par suite : [docs/TESTS.md](docs/TESTS.md).
+
 ```bash
 # Lancer tous les tests
 vendor/bin/pest
@@ -152,35 +185,8 @@ vendor/bin/pest
 # Par catégorie
 vendor/bin/pest --filter="Depreciation"
 vendor/bin/pest --filter="FiscalYear"
-vendor/bin/pest --filter="Loan"
-vendor/bin/pest --filter="Airbnb"
-vendor/bin/pest --filter="Fec"
 vendor/bin/pest --filter="Filament"
 ```
-
-### Couverture
-
-| Suite | Tests | Couverture |
-|-------|-------|------------|
-| DepreciationService | 5 | Composants, base amortissable, quote-part, prorata |
-| FiscalYearService | 6 | Résultat fiscal, plafonnement, quote-part charges, micro-BIC |
-| FiscalYearChain | 12 | Chaîne d'exercices : première année, année proposée, validation N-1 |
-| LoanService | 3 | Tableau amortissement, capital restant, intérêts déductibles |
-| AirbnbImportService | 5 | CSV FR/EN, doublons, montants négatifs, format européen |
-| FecService | 2 | 18 colonnes, format légal |
-| TaxReturnService | 1 | Génération PDF liasse fiscale |
-| AccountingEntryService | 3 | Écritures équilibrées, comptes PCG, quote-part |
-| BadgeService | 15 | Attribution, dédoublonnage, heatmap, score |
-| TVA (helper + déclaration) | 11 | TVA collectée/déductible, trimestriel, calculs HT/TTC |
-| McpServer | 15 | Auth, isolation données, CRUD, justificatifs, audit |
-| Pages Filament | 26 | Auth, CRUD, simulateur, projection, isolation données |
-| Navigation (liens + badges) | 15 | Orphelins, liens, modes Simple/Avancé/Guidé, badges |
-| Wizards | 8 | Onboarding, clôture fiscale, emprunt, import annuel |
-| Mode démo | 7 | Sandbox éphémère isolé par visiteur, purge automatique |
-| Isolation multi-utilisateurs | 10 | Scopes via le bien, modèles enfants, page loan-detail |
-| Mesure d'audience opt-in (GTM) | 21 | Désactivée par défaut, injection conditionnelle |
-| Smoke (framework) | 2 | Amorçage de l'application |
-| **Total** | **167** | **472 assertions** |
 
 ## Contribution
 

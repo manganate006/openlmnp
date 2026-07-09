@@ -2,89 +2,130 @@
 
 # OpenLMNP
 
-**Open-source accounting software for French furnished rentals (LMNP)**
+**Open source accounting software for French LMNP furnished rentals**
 
-![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)
-![Filament](https://img.shields.io/badge/Filament-5.6-FBBF24)
+Manage your furnished rental properties, compute depreciation,
+and produce your French tax return under the « régime réel » — no subscription, self-hosted.
+
+[![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
+[![Release](https://img.shields.io/github/v/release/manganate006/openlmnp?label=Release&color=blue)](https://github.com/manganate006/openlmnp/releases)
+[![License](https://img.shields.io/github/license/manganate006/openlmnp?label=License&color=green)](LICENSE)
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
-![License](https://img.shields.io/badge/License-AGPLv3-green)
-![Tests](https://img.shields.io/badge/Tests-167%20passed-brightgreen)
+![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)
+![Filament](https://img.shields.io/badge/Filament-5-FBBF24)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
-Manage your rental properties, calculate depreciation,
-and generate your tax return under the French real regime.
+**[🚀 Live demo](https://app.lmnp.mangi.fr)** · **[📦 Install](#quick-install-docker)** · **[📚 Documentation](#documentation)** · **[🇫🇷 Français](README.md)**
 
-[Version française](README.md)
+![OpenLMNP demo: dashboard, simulator, projection and tax return helper](docs/screenshots/demo.gif)
 
 </div>
 
----
+> **🎯 Try it without installing anything** — the [online demo](https://app.lmnp.mangi.fr) spawns an
+> ephemeral, isolated sandbox for each visitor, pre-filled with 4 years of fictional accounting.
+> Login: `demo@openlmnp.fr` / `demo2026`.
 
-## Screenshots
+## Table of contents
 
-<details>
-<summary>Dashboard</summary>
+- [Why OpenLMNP?](#why-openlmnp)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Documentation](#documentation)
+- [Quick install (Docker)](#quick-install-docker)
+- [Proxmox LXC install](#proxmox-lxc-install-community-script)
+- [Development install](#development-install)
+- [Configuration](#configuration)
+- [Tests](#tests)
+- [Contributing](#contributing)
+- [License](#license)
 
-![Dashboard](docs/screenshots/dashboard.png)
+## Why OpenLMNP?
 
-</details>
+For a French furnished rental, the « régime réel » tax regime almost always beats the
+micro-BIC flat allowance — but it requires component-based depreciation, a full tax return
+(forms 2031, 2033) and a legally compliant FEC ledger. The usual options each have a flaw:
 
-<details>
-<summary>Expenses</summary>
+| | **OpenLMNP** | DIY spreadsheet | Accounting SaaS | Accountant |
+|---|---|---|---|---|
+| **Cost** | Free (AGPLv3) | Free | Yearly subscription | Yearly fees |
+| **Your data** | At home (self-hosted) | At home | Third-party cloud | Third party |
+| **Component depreciation** | ✅ Automatic | ⚠️ Formulas to maintain | ✅ | ✅ |
+| **Tax return + FEC** | ✅ Generated | ❌ | ✅ | ✅ |
+| **Cent-accurate math (bcmath)** | ✅ | ⚠️ Floating-point rounding | ✅ | ✅ |
 
-![Expenses](docs/screenshots/charges.png)
-
-</details>
-
-<details>
-<summary>Tax return helper</summary>
-
-![Tax return](docs/screenshots/teledeclaration.png)
-
-</details>
-
-## What is LMNP?
-
-**LMNP** (Location Meublée Non Professionnelle) is the French tax regime for non-professional furnished rental property owners. OpenLMNP helps owners manage their accounting under the "régime réel" (actual expenses regime), which allows deducting real expenses and depreciation instead of a flat-rate deduction.
+OpenLMNP automates the « régime réel » end to end while remaining an **assistance tool**:
+for complex situations (joint ownership, para-hotel VAT, switching to LMP status…), a
+chartered accountant is still recommended.
 
 ## Features
 
-- **Multi-user** — Each owner sees only their own data
-- **Properties** — Address, surfaces, quota share for primary residence, market value
-- **Component depreciation** — Building structure, roof, plumbing, fittings (standard durations)
-- **Works & Furniture** — Dedicated or prorated depreciation, new/second-hand with adapted receipts
-- **Income** — Manual entry or Airbnb/Booking CSV import
-- **Expenses** — Categorized, automatic prorata, receipt uploads
-- **Loans** — Auto-generated amortization schedule, deductible interest
-- **Simulator** — Micro-BIC vs real regime comparison with verdict
-- **Multi-year projection** — 5 to 20 year table
-- **Interactive tax return** — Cerfa lines 2031, 2033-A/B/C/D, 2042-C-PRO with "Copy" buttons
-- **Tax return PDF** — Full generation
-- **FEC compliant** — Article A.47 A-1 LPF, 18 columns, legal format
-- **Accounting entries** — Auto-generated (French chart of accounts)
-- **MCP API** — Integration with AI assistants (Claude, etc.)
-- **Auto-updates** — Notification and deployment from GitHub
-- **Guided wizards** — Onboarding, property creation, fiscal year closing, loan, annual import
-- **CSV export** — Income, expenses, tax return
-- **Dark mode** — Native Filament support
-- **In-app documentation** — User guide organized in 3 phases: setup, regular tracking, annual declaration
-- **167 automated tests** — Pest PHP, 472 assertions
+### 🏠 Accounting & depreciation
+- **Component-based depreciation** — structure, roof, plumbing, fittings (standard durations)
+- **Works & furniture** — dedicated or prorated depreciation, new/second-hand handling
+- **Loans** — automatic amortization schedule, deductible interest
+- **Accounting entries** — generated automatically following the LMNP chart of accounts
+- **Multi-property** — address, surfaces, main-residence share, market value
 
-## Tech Stack
+### 📋 Tax & filings
+- **Chained fiscal years** — prior-year carryovers, deferred depreciation, capping rules
+- **Micro-BIC vs régime réel simulator** — with a quantified verdict
+- **Multi-year projection** — 5 to 20 year table, regime switch year
+- **Interactive filing helper** — Cerfa 2031, 2033-A/B/C/D, 2042-C-PRO lines with "Copy" buttons
+- **Tax return PDF** — full generation
+- **Compliant FEC** — article A.47 A-1 of the French tax code, 18 columns, legal format
+
+### 🔌 Import & integrations
+- **Airbnb / Booking CSV import** — FR/EN formats, duplicate detection
+- **CSV export** — income, expenses, filing lines
+- **MCP API** — drive your accounting from an AI assistant (Claude, etc.)
+- **Automatic updates** — notification and deployment from GitHub
+
+### 🛡️ Comfort & safety
+- **Multi-user** — each owner only ever sees their own data
+- **Guided wizards** — onboarding, property creation, fiscal year closing, loan, yearly import
+- **Receipts** — files attached to expenses, works and furniture
+- **Built-in guide & progress badges** — getting started, regular bookkeeping, yearly filing
+- **Dark mode** — native Filament
+- **167 automated tests** — Pest PHP, 472 assertions ([details](docs/TESTS.md), in French)
+
+## Screenshots
+
+| Simulator | Projection | Filing helper |
+|---|---|---|
+| [![Micro-BIC vs régime réel simulator](docs/screenshots/simulateur.png)](docs/screenshots/simulateur.png) | [![Multi-year projection](docs/screenshots/projection.png)](docs/screenshots/projection.png) | [![Filing helper](docs/screenshots/teledeclaration.png)](docs/screenshots/teledeclaration.png) |
+
+More screenshots: [dashboard](docs/screenshots/dashboard.png) · [expenses](docs/screenshots/charges.png)
+
+## Documentation
+
+Documentation is written in French (the software targets French tax law):
+
+| Document | Contents |
+|----------|----------|
+| [Installation](docs/INSTALLATION.md) | Self-hosting with Docker: build, run, persistent volumes, environment variables, updates and backups |
+| [Features](docs/FONCTIONNALITES.md) | Component depreciation, FEC, 2031/2033 tax return, CSV import, simulator, multi-property, loans, receipts |
+| [Demo mode](docs/DEMO.md) | Enable and use the multi-user demo mode (ephemeral per-visitor sandbox) |
+| [FAQ](docs/FAQ.md) | Common questions: pricing, data privacy, régime réel vs micro-BIC, backups… |
+| [LMNP / Airbnb tax guide](docs/fiscalite-lmnp-airbnb.md) | Régime réel tax rules: depreciation, allowances, caps, 2026 reform |
+| [Test coverage](docs/TESTS.md) | Breakdown of the 167 automated tests, suite by suite |
+| [UI design guide](docs/ui-design-openlmnp.md) | Design decisions behind the Filament interface |
+
+To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Tech stack
 
 | Component | Technology |
-|-----------|-----------|
+|-----------|------------|
 | Framework | Laravel 13 |
 | Admin UI | Filament 5 |
-| Reactivity | Livewire 4 |
+| Interactivity | Livewire 4 |
 | Database | SQLite (PostgreSQL optional) |
 | PDF | DomPDF |
 | Financial math | PHP bcmath (decimal precision) |
 | Tests | Pest PHP |
 | Deployment | Docker |
 
-## Quick Start (Docker)
+## Quick install (Docker)
 
 ```bash
 git clone https://github.com/manganate006/openlmnp.git
@@ -98,18 +139,18 @@ Demo account: `demo@openlmnp.fr` / `demo2026`
 
 ## Proxmox LXC install (community script)
 
-On a Proxmox VE host, create a ready-to-use LXC container in one command:
+On a Proxmox VE host, spin up a ready-to-use LXC container with a single command:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/manganate006/openlmnp/main/community-scripts/ct/openlmnp.sh)"
 ```
 
-Debian 13 · nginx + PHP 8.4-FPM · SQLite. A **random** admin password is generated at install time
-and saved to `/opt/openlmnp/admin_credentials.txt`.
+Debian 13 · nginx + PHP 8.4-FPM · SQLite. A **random** admin password is generated at
+install time and stored in `/opt/openlmnp/admin_credentials.txt`.
 
 > ℹ️ Requires a public repository with a published *release* (the script fetches the latest GitHub release).
 
-## Development Setup
+## Development install
 
 ```bash
 git clone https://github.com/manganate006/openlmnp.git
@@ -122,41 +163,60 @@ php artisan migrate:fresh --seed
 php artisan serve
 ```
 
+## Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DB_CONNECTION` | Database | `sqlite` |
+| `DB_DATABASE` | SQLite path | `database/database.sqlite` |
+| `APP_LOCALE` | Language | `fr` |
+
+Add your SIREN number in your user profile for tax documents.
+
 ## Tests
 
+[![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
+
+**167 Pest PHP tests, 472 assertions** — calculation services, Filament pages, multi-user
+isolation, demo mode. Suite-by-suite breakdown: [docs/TESTS.md](docs/TESTS.md).
+
 ```bash
+# Run all tests
 vendor/bin/pest
+
+# By category
+vendor/bin/pest --filter="Depreciation"
+vendor/bin/pest --filter="FiscalYear"
+vendor/bin/pest --filter="Filament"
 ```
 
-167 tests, 472 assertions covering: depreciation calculations, fiscal result and fiscal-year chaining, loan amortization, Airbnb CSV import, FEC generation, accounting entries, badges, VAT, MCP API, all Filament pages, navigation, wizards, demo mode, opt-in analytics (GTM, off by default), and data isolation between users.
+## Contributing
 
-## French Tax Context
+Contributions are welcome! Please open an issue before submitting a PR.
 
-This software generates documents aligned with French tax forms:
-
-| Form | Purpose |
-|------|---------|
-| **2031-SD** | BIC income declaration |
-| **2033-A** | Simplified balance sheet |
-| **2033-B** | Simplified income statement (lines 218-372) |
-| **2033-C** | Fixed assets and depreciation (lines 430-572) |
-| **2033-D** | Reportable deficits |
-| **FEC** | Accounting entries file (legal requirement) |
-| **2042-C-PRO** | Personal income tax (cases 5NA/5NK) |
+```bash
+# Fork + clone
+git checkout -b feature/my-feature
+# ... edit ...
+vendor/bin/pest  # make sure tests pass
+git commit -m "feat: description"
+git push origin feature/my-feature
+# Open a PR
+```
 
 ## License
 
-[AGPLv3](LICENSE) — Free software. You can use, modify and redistribute it
-as long as you share modifications under the same license.
+[AGPLv3](LICENSE) — Free software. You may use, modify and redistribute it,
+provided modifications are shared under the same license.
 
 ## Credits
 
-- [Laravel](https://laravel.com) — PHP Framework
+- [Laravel](https://laravel.com) — PHP framework
 - [Filament](https://filamentphp.com) — Admin panel
 - [Pest PHP](https://pestphp.com) — Testing framework
 
 ---
 
 <div align="center">
-<sub>OpenLMNP is an accounting aid tool. It does not replace a professional accountant for complex cases.</sub>
+<sub>OpenLMNP is an accounting assistance tool. It does not replace a chartered accountant for complex cases.</sub>
 </div>
