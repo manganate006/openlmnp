@@ -45,8 +45,10 @@ return [
     // chemin de script renommé (anti-adblock).
     'gtm' => [
         'id' => env('GTM_CONTAINER_ID'),
-        'server_url' => env('GTM_SERVER_URL', 'https://www.googletagmanager.com'),
-        'script_path' => env('GTM_SCRIPT_PATH', '/gtm.js'),
+        // `?:` et non un défaut env() : un `GTM_SERVER_URL=` vide dans .env doit
+        // retomber sur les serveurs Google, pas produire une URL vide.
+        'server_url' => env('GTM_SERVER_URL') ?: 'https://www.googletagmanager.com',
+        'script_path' => env('GTM_SCRIPT_PATH') ?: '/gtm.js',
     ],
 
 ];

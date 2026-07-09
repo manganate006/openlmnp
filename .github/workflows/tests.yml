@@ -31,13 +31,14 @@ jobs:
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
+      - name: Préparer l'environnement
+        run: cp .env.example .env
+
       - name: Installer les dépendances
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      - name: Préparer l'application
-        run: |
-          cp .env.example .env
-          php artisan key:generate
+      - name: Générer la clé d'application
+        run: php artisan key:generate
 
       - name: Lancer les tests Pest
         run: vendor/bin/pest
