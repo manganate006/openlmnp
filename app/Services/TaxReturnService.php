@@ -23,7 +23,10 @@ class TaxReturnService
 
     public function generatePdf(FiscalYear $fiscalYear): string
     {
-        $this->fiscalYearService->calculate($fiscalYear);
+        // Un exercice clôturé est généré depuis ses totaux figés, sans recalcul.
+        if ($fiscalYear->status !== FiscalYear::STATUS_CLOSED) {
+            $this->fiscalYearService->calculate($fiscalYear);
+        }
         $fiscalYear->refresh();
 
         $user = $fiscalYear->user;

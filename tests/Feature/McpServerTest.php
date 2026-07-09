@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Expense;
+use App\Models\FiscalYear;
 use App\Models\Furniture;
 use App\Models\Income;
 use App\Models\McpAuditLog;
@@ -373,4 +374,115 @@ it('logs MCP tool calls to audit table', function () {
     expect($log)->not->toBeNull();
     expect($log->tool_name)->toBe('list_properties');
     expect($log->result_status)->toBe('success');
+});
+
+// === CLOSED FISCAL YEAR (lecture sans recalcul) ===
+
+it('computes a closed fiscal year via MCP without recalculating it', function () {
+    // Totaux volontairement faux : s'ils changent, un recalcul a eu lieu
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2024,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'total_income' => 999999,
+        'fiscal_result' => 123456,
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'compute_fiscal_year',
+                'arguments' => ['year' => 2024],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->not->toBeTrue();
+
+    $result = json_decode($response->json('result.content.0.text', '{}'), true);
+    expect($result['status'])->toBe(FiscalYear::STATUS_CLOSED);
+    expect($result['total_income_eur'])->toBe('9999.99');
+    expect($result['fiscal_result_eur'])->toBe('1234.56');
+
+    $fiscalYear = FiscalYear::withoutGlobalScopes()
+        ->where('user_id', $this->user->id)
+        ->where('year', 2024)
+        ->first();
+    expect($fiscalYear->total_income)->toBe(999999);
+    expect($fiscalYear->status)->toBe(FiscalYear::STATUS_CLOSED);
+});
+
+it('generates a tax return for a closed fiscal year from frozen totals', function () {
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2024,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'total_income' => 999999,
+        'fiscal_result' => 123456,
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'generate_tax_return',
+                'arguments' => ['year' => 2024],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->not->toBeTrue();
+
+    $result = json_decode($response->json('result.content.0.text', '{}'), true);
+    expect($result['fiscal_year']['status'])->toBe(FiscalYear::STATUS_CLOSED);
+    expect($result['declaration_summary']['total_income_eur'])->toBe('9999.99');
+    expect($result['pdf']['filename'])->toBe('liasse_fiscale_2024.pdf');
+
+    // La génération a abouti (chemin persisté) et les totaux figés n'ont pas bougé
+    $fiscalYear = FiscalYear::withoutGlobalScopes()
+        ->where('user_id', $this->user->id)
+        ->where('year', 2024)
+        ->first();
+    expect($fiscalYear->pdf_path)->not->toBeNull();
+    expect($fiscalYear->total_income)->toBe(999999);
+});
+
+it('generates a FEC for a closed fiscal year without recalculating it', function () {
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2024,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'total_income' => 999999,
+        'fiscal_result' => 123456,
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'generate_fec',
+                'arguments' => ['year' => 2024],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->not->toBeTrue();
+
+    $result = json_decode($response->json('result.content.0.text', '{}'), true);
+    expect($result['fiscal_year']['status'])->toBe(FiscalYear::STATUS_CLOSED);
+    expect($result['fiscal_year']['fiscal_result_eur'])->toBe('1234.56');
+
+    // Les totaux figés n'ont pas bougé
+    $fiscalYear = FiscalYear::withoutGlobalScopes()
+        ->where('user_id', $this->user->id)
+        ->where('year', 2024)
+        ->first();
+    expect($fiscalYear->total_income)->toBe(999999);
 });

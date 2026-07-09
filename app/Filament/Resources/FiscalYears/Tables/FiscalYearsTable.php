@@ -168,7 +168,10 @@ class FiscalYearsTable
                     ->icon('heroicon-o-document-text')
                     ->color('gray')
                     ->action(function (FiscalYear $record, $livewire) {
-                        app(FiscalYearService::class)->calculate($record);
+                        // Un exercice clôturé est exporté depuis ses totaux figés, sans recalcul.
+                        if ($record->status !== FiscalYear::STATUS_CLOSED) {
+                            app(FiscalYearService::class)->calculate($record);
+                        }
                         $path = app(FecService::class)->generate($record);
 
                         app(BadgeService::class)->evaluate(auth()->user(), 'fec_generated', [

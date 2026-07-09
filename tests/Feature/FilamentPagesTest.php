@@ -7,6 +7,7 @@ use App\Models\Loan;
 use App\Models\Property;
 use App\Models\User;
 use App\Services\DepreciationService;
+use Livewire\Livewire;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -237,6 +238,135 @@ it('simulator shows results with property data', function () {
         ->assertOk()
         ->assertSee('CA brut')
         ->assertSee('Résultat');
+});
+
+it('simulator shows a closed fiscal year without error', function () {
+    $property = Property::forceCreate([
+        'user_id' => $this->user->id,
+        'name' => 'Test Sim Clos',
+        'address' => '1 rue Test',
+        'city' => 'Paris',
+        'postal_code' => '75001',
+        'type' => 'apartment',
+        'total_area' => 100,
+        'rented_area' => 100,
+        'acquisition_date' => '2020-01-01',
+        'acquisition_price' => 30000000,
+        'notary_fees' => 0,
+        'land_percentage' => 15,
+        'rental_start_date' => '2023-01-01',
+        'rental_type' => 'seasonal',
+        'is_primary_residence' => false,
+    ]);
+
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    Income::create([
+        'property_id' => $property->id,
+        'income_date' => '2024-06-15',
+        'amount' => 200000,
+        'platform_fee' => 6000,
+        'tourist_tax' => 0,
+        'source' => 'airbnb',
+    ]);
+
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2024,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'total_income' => 194000,
+        'fiscal_result' => 50000,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get('/simulator?year=2024')
+        ->assertOk()
+        ->assertSee('CA brut 2024');
+});
+
+it('simulator switches to a closed year via livewire without error', function () {
+    $property = Property::forceCreate([
+        'user_id' => $this->user->id,
+        'name' => 'Test Sim Livewire',
+        'address' => '1 rue Test',
+        'city' => 'Paris',
+        'postal_code' => '75001',
+        'type' => 'apartment',
+        'total_area' => 100,
+        'rented_area' => 100,
+        'acquisition_date' => '2020-01-01',
+        'acquisition_price' => 30000000,
+        'notary_fees' => 0,
+        'land_percentage' => 15,
+        'rental_start_date' => '2023-01-01',
+        'rental_type' => 'seasonal',
+        'is_primary_residence' => false,
+    ]);
+
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    Income::create([
+        'property_id' => $property->id,
+        'income_date' => '2024-06-15',
+        'amount' => 200000,
+        'platform_fee' => 6000,
+        'tourist_tax' => 0,
+        'source' => 'airbnb',
+    ]);
+
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2024,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'total_income' => 194000,
+        'fiscal_result' => 50000,
+    ]);
+
+    $this->actingAs($this->user);
+
+    Livewire::test(\App\Filament\Pages\Simulator::class)
+        ->set('year', 2024)
+        ->assertSet('year', 2024);
+});
+
+// === TELEDECLARATION WITH CLOSED YEAR ===
+
+it('teledeclaration shows a closed fiscal year with frozen totals', function () {
+    $property = Property::forceCreate([
+        'user_id' => $this->user->id,
+        'name' => 'Test Teledec',
+        'address' => '1 rue Test',
+        'city' => 'Paris',
+        'postal_code' => '75001',
+        'type' => 'apartment',
+        'total_area' => 100,
+        'rented_area' => 100,
+        'acquisition_date' => '2020-01-01',
+        'acquisition_price' => 30000000,
+        'notary_fees' => 0,
+        'land_percentage' => 15,
+        'rental_start_date' => '2023-01-01',
+        'rental_type' => 'seasonal',
+        'is_primary_residence' => false,
+    ]);
+
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    // Totaux figés volontairement distincts des données réelles :
+    // la page doit afficher les montants figés, pas un recalcul.
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2024,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'total_income' => 999999,
+        'fiscal_result' => 123456,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get('/teledeclaration?year=2024')
+        ->assertOk()
+        ->assertSee('2031')
+        ->assertSee('9 999,99');
 });
 
 // === PROJECTION WITH DATA ===

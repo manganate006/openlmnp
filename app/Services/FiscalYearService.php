@@ -217,6 +217,9 @@ class FiscalYearService
 
     /**
      * Crée ou récupère l'exercice fiscal pour une année et le calcule.
+     *
+     * Un exercice clôturé est retourné tel quel, sans recalcul : ses totaux
+     * sont figés par la clôture et font foi.
      */
     public function getOrCreate(User $user, int $year): FiscalYear
     {
@@ -225,6 +228,10 @@ class FiscalYearService
                 ['user_id' => $user->id, 'year' => $year],
                 ['status' => FiscalYear::STATUS_DRAFT]
             );
+
+        if ($fiscalYear->status === FiscalYear::STATUS_CLOSED) {
+            return $fiscalYear;
+        }
 
         return $this->calculate($fiscalYear);
     }
