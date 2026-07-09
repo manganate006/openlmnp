@@ -9,7 +9,7 @@
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
-![Tests](https://img.shields.io/badge/Tests-102%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-167%20passed-brightgreen)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
 Manage your rental properties, calculate depreciation,
@@ -69,7 +69,7 @@ and generate your tax return under the French real regime.
 - **CSV export** — Income, expenses, tax return
 - **Dark mode** — Native Filament support
 - **In-app documentation** — User guide organized in 3 phases: setup, regular tracking, annual declaration
-- **102 automated tests** — Pest PHP, 266 assertions
+- **167 automated tests** — Pest PHP, 472 assertions
 
 ## Tech Stack
 
@@ -128,7 +128,7 @@ php artisan serve
 vendor/bin/pest
 ```
 
-102 tests, 266 assertions covering: depreciation calculations, fiscal result, loan amortization, Airbnb CSV import, FEC generation, accounting entries, badges, VAT, MCP API, all Filament pages, navigation, wizards, and data isolation between users.
+167 tests, 472 assertions covering: depreciation calculations, fiscal result and fiscal-year chaining, loan amortization, Airbnb CSV import, FEC generation, accounting entries, badges, VAT, MCP API, all Filament pages, navigation, wizards, demo mode, opt-in analytics (GTM, off by default), and data isolation between users.
 
 ## French Tax Context
 

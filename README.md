@@ -9,7 +9,7 @@
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/Licence-AGPLv3-green)
-![Tests](https://img.shields.io/badge/Tests-102%20pass%C3%A9s-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-167%20pass%C3%A9s-brightgreen)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
 Gérez vos biens en location meublée, calculez vos amortissements,
@@ -65,7 +65,7 @@ et produisez votre liasse fiscale au régime réel.
 - **Export CSV** — Recettes, charges, télédéclaration
 - **Dark mode** — Natif Filament
 - **Guide d'utilisation intégré** — Organisé en 3 temps : mise en route, suivi régulier, déclaration annuelle
-- **102 tests automatisés** — Pest PHP, 266 assertions
+- **167 tests automatisés** — Pest PHP, 472 assertions
 
 ## Documentation
 
@@ -163,19 +163,24 @@ vendor/bin/pest --filter="Filament"
 | Suite | Tests | Couverture |
 |-------|-------|------------|
 | DepreciationService | 5 | Composants, base amortissable, quote-part, prorata |
-| FiscalYearService | 4 | Résultat fiscal, plafonnement, comparaison micro-BIC |
-| LoanService | 3 | Tableau amortissement, capital, intérêts déductibles |
+| FiscalYearService | 6 | Résultat fiscal, plafonnement, quote-part charges, micro-BIC |
+| FiscalYearChain | 12 | Chaîne d'exercices : première année, année proposée, validation N-1 |
+| LoanService | 3 | Tableau amortissement, capital restant, intérêts déductibles |
 | AirbnbImportService | 5 | CSV FR/EN, doublons, montants négatifs, format européen |
 | FecService | 2 | 18 colonnes, format légal |
 | TaxReturnService | 1 | Génération PDF liasse fiscale |
 | AccountingEntryService | 3 | Écritures équilibrées, comptes PCG, quote-part |
-| BadgeService | 14 | Attribution, dédoublonnage, heatmap, score |
-| TvaService | 10 | TVA collectée/déductible, trimestriel, calculs HT/TTC |
-| McpServer | 10 | Auth, isolation données, CRUD, justificatifs, audit |
-| Pages Filament | 22 | Auth, CRUD, simulateur, projection, isolation données |
-| Navigation | 9 | Orphelins, liens, modes Simple/Avancé/Guidé |
-| Wizards | 7 | Onboarding, clôture fiscale, emprunt, import annuel |
-| **Total** | **102** | **266 assertions** |
+| BadgeService | 15 | Attribution, dédoublonnage, heatmap, score |
+| TVA (helper + déclaration) | 11 | TVA collectée/déductible, trimestriel, calculs HT/TTC |
+| McpServer | 15 | Auth, isolation données, CRUD, justificatifs, audit |
+| Pages Filament | 26 | Auth, CRUD, simulateur, projection, isolation données |
+| Navigation (liens + badges) | 15 | Orphelins, liens, modes Simple/Avancé/Guidé, badges |
+| Wizards | 8 | Onboarding, clôture fiscale, emprunt, import annuel |
+| Mode démo | 7 | Sandbox éphémère isolé par visiteur, purge automatique |
+| Isolation multi-utilisateurs | 10 | Scopes via le bien, modèles enfants, page loan-detail |
+| Mesure d'audience opt-in (GTM) | 21 | Désactivée par défaut, injection conditionnelle |
+| Smoke (framework) | 2 | Amorçage de l'application |
+| **Total** | **167** | **472 assertions** |
 
 ## Contribution
 
