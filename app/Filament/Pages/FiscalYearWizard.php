@@ -314,6 +314,14 @@ class FiscalYearWizard extends Page
             'fiscal_year' => $year,
         ]);
 
+        if ($status === FiscalYear::STATUS_CLOSED) {
+            // Via la session (flash) : la soumission est suivie d'une redirection.
+            \App\Providers\AppServiceProvider::queueAnalyticsEvent([
+                'event' => 'fiscal_year_closed',
+                'fiscal_year' => $year,
+            ]);
+        }
+
         Notification::make()
             ->title('Exercice fiscal créé')
             ->body(sprintf(

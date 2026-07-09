@@ -39,6 +39,12 @@ class Projection extends Page
         $this->startYear = (int) (request()->query('year', date('Y')));
 
         app(BadgeService::class)->evaluate(auth()->user(), 'projection_used');
+
+        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head)
+        $this->dispatch('analytics', [
+            'event' => 'projection_used',
+            'years' => max(1, min(15, (int) $this->projectionYears)),
+        ]);
     }
 
     #[Computed]

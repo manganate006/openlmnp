@@ -58,6 +58,13 @@ class Simulator extends Page implements HasForms
         $this->year = (int) (request()->query('year', date('Y')));
 
         app(BadgeService::class)->evaluate(auth()->user(), 'simulator_used');
+
+        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head).
+        // regime_recommended est une donnée dérivée (jamais les montants saisis).
+        $this->dispatch('analytics', [
+            'event' => 'simulator_used',
+            'regime_recommended' => $this->simulationResults['recommended'] ?? null,
+        ]);
     }
 
     #[Computed]

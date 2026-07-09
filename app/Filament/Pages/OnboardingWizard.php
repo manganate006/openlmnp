@@ -53,6 +53,9 @@ class OnboardingWizard extends Page implements HasForms
             return;
         }
 
+        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head)
+        $this->dispatch('analytics', ['event' => 'tutorial_begin']);
+
         $this->form->fill([
             'type' => 'apartment',
             'rental_type' => 'seasonal',
@@ -89,6 +92,19 @@ class OnboardingWizard extends Page implements HasForms
             ]);
     }
 
+    /**
+     * Suivi de la progression dans le wizard : l'événement onboarding_step part
+     * quand l'étape est validée (clic « Suivant »), relayé vers le dataLayer GTM.
+     */
+    private function trackStep(int $step, string $stepName): \Closure
+    {
+        return fn () => $this->dispatch('analytics', [
+            'event' => 'onboarding_step',
+            'step' => $step,
+            'step_name' => $stepName,
+        ]);
+    }
+
     // -------------------------------------------------------------------------
     // Étape 1 : Bienvenue
     // -------------------------------------------------------------------------
@@ -96,6 +112,7 @@ class OnboardingWizard extends Page implements HasForms
     private function stepWelcome(): Step
     {
         return Step::make('Bienvenue')
+            ->afterValidation($this->trackStep(1, 'welcome'))
             ->icon('heroicon-o-sparkles')
             ->description('Présentation de l\'assistant')
             ->schema([
@@ -128,6 +145,7 @@ class OnboardingWizard extends Page implements HasForms
     private function stepProperty(): Step
     {
         return Step::make('Votre bien')
+            ->afterValidation($this->trackStep(2, 'property'))
             ->icon('heroicon-o-home-modern')
             ->description('Informations générales')
             ->schema([
@@ -185,6 +203,7 @@ class OnboardingWizard extends Page implements HasForms
     private function stepSurfaces(): Step
     {
         return Step::make('Surfaces')
+            ->afterValidation($this->trackStep(3, 'surfaces'))
             ->icon('heroicon-o-square-3-stack-3d')
             ->description('Quote-part du bien loué')
             ->schema([
@@ -230,6 +249,7 @@ class OnboardingWizard extends Page implements HasForms
     private function stepAcquisition(): Step
     {
         return Step::make('Acquisition')
+            ->afterValidation($this->trackStep(4, 'acquisition'))
             ->icon('heroicon-o-banknotes')
             ->description('Prix et valeur du bien')
             ->schema([
@@ -296,6 +316,7 @@ class OnboardingWizard extends Page implements HasForms
     private function stepRental(): Step
     {
         return Step::make('Location')
+            ->afterValidation($this->trackStep(5, 'rental'))
             ->icon('heroicon-o-calendar')
             ->description('Début de location et annonces')
             ->schema([
@@ -334,6 +355,7 @@ class OnboardingWizard extends Page implements HasForms
     private function stepLoan(): Step
     {
         return Step::make('Emprunt')
+            ->afterValidation($this->trackStep(6, 'loan'))
             ->icon('heroicon-o-credit-card')
             ->description('Optionnel — conditions de votre prêt')
             ->schema([
@@ -411,6 +433,7 @@ class OnboardingWizard extends Page implements HasForms
     private function stepDepreciation(): Step
     {
         return Step::make('Amortissements')
+            ->afterValidation($this->trackStep(7, 'depreciation'))
             ->icon('heroicon-o-building-library')
             ->description('Composants par défaut générés automatiquement')
             ->schema([
@@ -488,7 +511,9 @@ class OnboardingWizard extends Page implements HasForms
 
     public function create(): void
     {
-        $data = $this->data;
+        // getState() valide et déshydrate le formulaire (FileUpload notamment :
+        // l'état brut est un tableau, la déshydratation le convertit en chemin).
+        $data = $this->form->getState();
 
         // 1. Créer le bien
         $property = Property::create([
@@ -537,6 +562,11 @@ class OnboardingWizard extends Page implements HasForms
 
             app(LoanService::class)->generateSchedule($loan);
         }
+
+        // Via la session (flash) : la soumission est suivie d'une redirection,
+        // un événement navigateur Livewire serait perdu.
+        \App\Providers\AppServiceProvider::queueAnalyticsEvent(['event' => 'property_added', 'source' => 'wizard']);
+        \App\Providers\AppServiceProvider::queueAnalyticsEvent(['event' => 'tutorial_complete']);
 
         Notification::make()
             ->title('Configuration terminée !')
