@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\FiscalYear;
 use App\Models\Property;
 use App\Models\User;
+use Livewire\Livewire;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -21,6 +23,34 @@ it('fiscal year wizard shows year selection', function () {
         ->get('/fiscal-year-wizard')
         ->assertOk()
         ->assertSee('fiscale');
+});
+
+it('fiscal year wizard refuses to recreate a closed year', function () {
+    // Totaux volontairement faux : s'ils changent, un recalcul a eu lieu
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2024,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'total_income' => 999999,
+        'fiscal_result' => 123456,
+    ]);
+
+    $this->actingAs($this->user);
+
+    Livewire::test(\App\Filament\Pages\FiscalYearWizard::class)
+        ->set('data.year', 2024)
+        ->set('data.status', FiscalYear::STATUS_DRAFT)
+        ->call('create')
+        ->assertNotified('Exercice déjà clôturé');
+
+    $fiscalYear = FiscalYear::withoutGlobalScopes()
+        ->where('user_id', $this->user->id)
+        ->where('year', 2024)
+        ->first();
+
+    // Pas de réouverture silencieuse ni de recalcul
+    expect($fiscalYear->status)->toBe(FiscalYear::STATUS_CLOSED);
+    expect($fiscalYear->total_income)->toBe(999999);
 });
 
 // === Wizard 3: Onboarding ===

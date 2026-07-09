@@ -288,6 +288,23 @@ class FiscalYearWizard extends Page
         $year   = (int) ($this->data['year'] ?? date('Y') - 1);
         $status = $this->data['status'] ?? FiscalYear::STATUS_DRAFT;
 
+        // Un exercice clôturé est figé : on refuse de le recréer ou de le
+        // rouvrir silencieusement depuis l'assistant.
+        $existing = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', auth()->id())
+            ->where('year', $year)
+            ->first();
+
+        if ($existing?->status === FiscalYear::STATUS_CLOSED) {
+            Notification::make()
+                ->title('Exercice déjà clôturé')
+                ->body("L'exercice {$year} est clôturé. Rouvrez-le depuis la liste des exercices avant de le recréer.")
+                ->warning()
+                ->send();
+
+            return;
+        }
+
         $service    = app(FiscalYearService::class);
         $fiscalYear = $service->getOrCreate(auth()->user(), $year);
 
@@ -574,9 +591,12 @@ class FiscalYearWizard extends Page
             ->where('year', $year)
             ->first();
 
-        $existingBadge = $existing
-            ? '<span class="wz-badge">Exercice existant — sera recalculé</span>'
-            : '';
+        $existingBadge = '';
+        if ($existing) {
+            $existingBadge = $existing->status === FiscalYear::STATUS_CLOSED
+                ? '<span class="wz-badge">Exercice clôturé — rouvrez-le pour le recalculer</span>'
+                : '<span class="wz-badge">Exercice existant — sera recalculé</span>';
+        }
 
         return new HtmlString(
             '<div class="wz-box">'
