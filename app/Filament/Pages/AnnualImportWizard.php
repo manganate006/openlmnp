@@ -314,6 +314,14 @@ class AnnualImportWizard extends Page implements HasForms
                     if ($result['skipped'] > 0) {
                         $messages[] = $result['skipped'] . ' ligne(s) ignorée(s)';
                     }
+
+                    // Via la session (flash) : la soumission est suivie d'une
+                    // redirection. RGPD : tranche de lignes, jamais les montants.
+                    \App\Providers\AppServiceProvider::queueAnalyticsEvent([
+                        'event' => 'airbnb_import',
+                        'status' => $result['imported'] > 0 ? 'success' : 'error',
+                        'rows_bucket' => \App\Support\Analytics::rowsBucket((int) $result['imported']),
+                    ]);
                 }
             }
         }

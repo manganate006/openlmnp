@@ -160,6 +160,14 @@ class ImportAirbnb extends Page implements HasForms
         $service = app(AirbnbImportService::class);
         $result = $service->import($uploadedFile, $property);
 
+        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head).
+        // RGPD : tranche de lignes uniquement, jamais les montants.
+        $this->dispatch('analytics', [
+            'event' => 'airbnb_import',
+            'status' => $result['imported'] > 0 ? 'success' : 'error',
+            'rows_bucket' => \App\Support\Analytics::rowsBucket((int) $result['imported']),
+        ]);
+
         $this->lastResult = $result;
         $this->previewData = null;
         $this->previewFilePath = null;

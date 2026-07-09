@@ -28,6 +28,6 @@ class CreateProperty extends CreateRecord
 
         // Via la session (flash) : la création est suivie d'une redirection,
         // un événement navigateur Livewire serait perdu.
-        \App\Providers\AppServiceProvider::queueAnalyticsEvent(['event' => 'property_added']);
+        \App\Providers\AppServiceProvider::queueAnalyticsEvent(['event' => 'property_added', 'source' => 'manual']);
     }
 }

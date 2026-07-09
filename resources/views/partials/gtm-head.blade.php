@@ -15,11 +15,15 @@ new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 @js($gtmSrc)+'?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer',@js($gtmId));</script>
-{{-- Relais des événements applicatifs (dispatch Livewire « analytics ») vers le dataLayer --}}
+{{-- Relais des événements applicatifs (dispatch Livewire « analytics ») vers le dataLayer.
+     Le payload est passé en tableau positionnel côté PHP (le nom « event » entrerait en
+     collision avec le paramètre $event de Livewire dispatch()), d'où detail = [{...}]. --}}
 <script>
 window.addEventListener('analytics', function (e) {
+    var d = e.detail || {};
+    if (Array.isArray(d)) { d = d[0] || {}; }
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push(Object.assign({}, e.detail || {}));
+    window.dataLayer.push(Object.assign({}, d));
 });
 </script>
 @if (session()->has('analytics'))

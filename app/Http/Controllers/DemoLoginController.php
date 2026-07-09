@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\DemoDataService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -57,6 +58,11 @@ class DemoLoginController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+
+        // Drapeau first-party « a testé la démo » (30 jours, sans identifiant) :
+        // consommé par l'événement sign_up (paramètre from_demo) pour mesurer
+        // la conversion démo → inscription même après purge du compte sandbox.
+        Cookie::queue('olmnp_demo_seen', '1', 60 * 24 * 30);
 
         return redirect('/');
     }

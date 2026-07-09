@@ -37,7 +37,13 @@ class AppServiceProvider extends ServiceProvider
         // The queue survives the post-auth redirect and is consumed by
         // partials/gtm-head, which is only rendered when GTM is configured.
         Event::listen(Registered::class, function () {
-            self::queueAnalyticsEvent(['event' => 'sign_up', 'method' => 'email']);
+            self::queueAnalyticsEvent([
+                'event' => 'sign_up',
+                'method' => 'email',
+                // Drapeau posé par la route /demo : mesure la conversion
+                // démo → inscription (le compte sandbox est un autre user).
+                'from_demo' => request()->hasCookie('olmnp_demo_seen'),
+            ]);
         });
         Event::listen(Login::class, function (Login $event) {
             self::queueAnalyticsEvent([

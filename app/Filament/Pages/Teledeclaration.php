@@ -168,6 +168,13 @@ class Teledeclaration extends Page
             return;
         }
 
+        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head)
+        $this->dispatch('analytics', [
+            'event' => 'teledeclaration_generated',
+            'form_type' => 'csv',
+            'fiscal_year' => $this->year,
+        ]);
+
         $allLines = collect();
         foreach ($data['forms'] as $formKey => $form) {
             foreach ($form['lines'] as $line) {

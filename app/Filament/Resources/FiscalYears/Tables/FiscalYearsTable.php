@@ -155,8 +155,10 @@ class FiscalYearsTable
                             'fiscal_year' => $record->year,
                         ]);
 
-                        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head)
-                        $livewire->dispatch('analytics', event: 'cerfa_generated', fiscal_year: $record->year);
+                        // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head).
+                        // Payload en tableau : « event: » en argument nommé entrerait en
+                        // collision avec le paramètre $event de Livewire dispatch().
+                        $livewire->dispatch('analytics', ['event' => 'cerfa_generated', 'fiscal_year' => $record->year]);
 
                         return response()->streamDownload(
                             fn () => print(Storage::get($path)),
@@ -179,7 +181,7 @@ class FiscalYearsTable
                         ]);
 
                         // Événement navigateur relayé vers le dataLayer GTM (partials/gtm-head)
-                        $livewire->dispatch('analytics', event: 'fec_exported', fiscal_year: $record->year);
+                        $livewire->dispatch('analytics', ['event' => 'fec_exported', 'fiscal_year' => $record->year]);
 
                         return response()->streamDownload(
                             fn () => print(Storage::get($path)),
