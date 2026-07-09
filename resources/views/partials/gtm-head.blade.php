@@ -1,7 +1,14 @@
 @php
     $gtmId = config('services.gtm.id');
     $gtmSrc = rtrim(config('services.gtm.server_url'), '/') . config('services.gtm.script_path');
+    $userType = auth()->check() ? ((auth()->user()->is_demo ?? false) ? 'demo' : 'user') : 'visitor';
 @endphp
+{{-- État initial du dataLayer AVANT le conteneur : user_type permet de distinguer
+     les sessions démo des vrais utilisateurs dans GA4 (user property) --}}
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({ user_type: @js($userType) });
+</script>
 {{-- Google Tag Manager (activé uniquement si GTM_CONTAINER_ID est défini) --}}
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],

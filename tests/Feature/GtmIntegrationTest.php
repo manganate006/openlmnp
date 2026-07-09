@@ -87,6 +87,39 @@ it('registers a sign_up event through the full registration flow', function () {
         ->assertSee('\\u0022event\\u0022:\\u0022sign_up\\u0022', false);
 });
 
+// === USER TYPE (distinction démo / utilisateur réel dans GA4) ===
+
+it('marks anonymous pages with visitor user_type', function () {
+    config(['services.gtm.id' => 'GTM-TEST123']);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertSee("user_type: 'visitor'", false);
+});
+
+it('marks authenticated pages with user user_type', function () {
+    config(['services.gtm.id' => 'GTM-TEST123']);
+
+    $this->actingAs($this->user)
+        ->get('/')
+        ->assertOk()
+        ->assertSee("user_type: 'user'", false);
+});
+
+it('marks demo sandbox pages with demo user_type', function () {
+    config(['services.gtm.id' => 'GTM-TEST123']);
+
+    $demoUser = User::factory()->create([
+        'is_demo' => true,
+        'demo_expires_at' => now()->addHours(24),
+    ]);
+
+    $this->actingAs($demoUser)
+        ->get('/')
+        ->assertOk()
+        ->assertSee("user_type: 'demo'", false);
+});
+
 it('queues multiple analytics events without overwriting them', function () {
     AppServiceProvider::queueAnalyticsEvent(['event' => 'sign_up', 'method' => 'email']);
     AppServiceProvider::queueAnalyticsEvent(['event' => 'login', 'method' => 'email']);
