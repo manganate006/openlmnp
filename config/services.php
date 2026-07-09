@@ -40,4 +40,13 @@ return [
         'repo' => env('GITHUB_REPO', 'openlmnp/openlmnp'),
     ],
 
+    // Google Tag Manager (optionnel) : rien n'est injecté tant que `id` est vide.
+    // `server_url` permet un GTM server-side auto-hébergé, `script_path` un
+    // chemin de script renommé (anti-adblock).
+    'gtm' => [
+        'id' => env('GTM_CONTAINER_ID'),
+        'server_url' => env('GTM_SERVER_URL', 'https://www.googletagmanager.com'),
+        'script_path' => env('GTM_SCRIPT_PATH', '/gtm.js'),
+    ],
+
 ];

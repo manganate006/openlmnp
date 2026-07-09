@@ -25,5 +25,9 @@ class CreateProperty extends CreateRecord
         app(DepreciationService::class)->generateDefaultComponents($this->record);
 
         app(BadgeService::class)->evaluate(auth()->user(), 'property_created');
+
+        // Via la session (flash) : la création est suivie d'une redirection,
+        // un événement navigateur Livewire serait perdu.
+        \App\Providers\AppServiceProvider::queueAnalyticsEvent(['event' => 'property_added']);
     }
 }
