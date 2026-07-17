@@ -24,7 +24,12 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        return $this->suspended_at === null;
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
     }
 
     public function isAdmin(): bool
@@ -118,6 +123,7 @@ class User extends Authenticatable implements FilamentUser
             'mcp_enabled' => 'boolean',
             'nav_mode' => NavMode::class,
             'onboarding_dismissed_at' => 'datetime',
+            'suspended_at' => 'datetime',
         ];
     }
 }

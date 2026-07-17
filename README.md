@@ -168,8 +168,40 @@ php artisan serve
 | `DB_CONNECTION` | Base de données | `sqlite` |
 | `DB_DATABASE` | Chemin SQLite | `database/database.sqlite` |
 | `APP_LOCALE` | Langue | `fr` |
+| `ALLOW_REGISTRATION` | Inscription publique (`/register`) | `true` |
+| `PROVISION_TOKEN` | Active l'API de création de comptes (vide = désactivée) | *(vide)* |
 
 Ajoutez votre SIREN dans votre profil utilisateur pour les documents fiscaux.
+
+### Emails (optionnel)
+
+Par défaut (`MAIL_MAILER=log`), aucun email n'est envoyé : les messages — **lien de
+réinitialisation de mot de passe inclus** — sont écrits dans
+`storage/logs/laravel.log`. Pour de vrais envois, configurez le SMTP de votre choix
+(Gmail avec mot de passe d'application, votre FAI, Brevo…) dans `.env` :
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.exemple.fr
+MAIL_PORT=587
+MAIL_USERNAME=vous@exemple.fr
+MAIL_PASSWORD=********
+MAIL_FROM_ADDRESS=vous@exemple.fr
+MAIL_FROM_NAME=OpenLMNP
+```
+
+La délivrabilité (SPF/DKIM) est gérée par votre fournisseur SMTP — rien à
+configurer côté OpenLMNP.
+
+Mot de passe oublié sans SMTP ? Depuis le serveur :
+
+```bash
+# Affiche un lien de réinitialisation (valable 60 min)
+php artisan openlmnp:reset-password vous@exemple.fr
+
+# Ou définit directement un nouveau mot de passe
+php artisan openlmnp:reset-password vous@exemple.fr --password="NouveauMotDePasse"
+```
 
 ## Tests
 

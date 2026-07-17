@@ -40,6 +40,12 @@ return [
         'repo' => env('GITHUB_REPO', 'openlmnp/openlmnp'),
     ],
 
+    // API de provisioning de comptes (POST /api/admin/users). Désactivée (404)
+    // tant que PROVISION_TOKEN est vide — cas normal d'une instance self-hosted.
+    'provisioning' => [
+        'token' => env('PROVISION_TOKEN'),
+    ],
+
     // Google Tag Manager (optionnel) : rien n'est injecté tant que `id` est vide.
     // `server_url` permet un GTM server-side auto-hébergé, `script_path` un
     // chemin de script renommé (anti-adblock).

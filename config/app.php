@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Inscription publique
+    |--------------------------------------------------------------------------
+    |
+    | Contrôle l'affichage de la page /register du panel. Désactiver quand les
+    | comptes sont créés par un administrateur (API de provisioning ou CLI).
+    |
+    */
+
+    'allow_registration' => (bool) env('ALLOW_REGISTRATION', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
