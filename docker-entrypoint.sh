@@ -19,6 +19,16 @@ for var in DEMO_MODE DEMO_TTL_HOURS DEMO_MAX_ACCOUNTS MCP_ENABLED GITHUB_TOKEN G
     fi
 done
 
+# Le volume monté sur database/ masque les fichiers de l'image : resynchroniser
+# migrations/seeders/factories depuis la copie de référence (sinon les nouvelles
+# migrations n'atteignent jamais la prod).
+if [ -d /database-dist/migrations ]; then
+    mkdir -p database/migrations database/seeders database/factories
+    cp -f /database-dist/migrations/*.php database/migrations/ 2>/dev/null || true
+    cp -f /database-dist/seeders/*.php database/seeders/ 2>/dev/null || true
+    cp -f /database-dist/factories/*.php database/factories/ 2>/dev/null || true
+fi
+
 # Nettoyage des caches
 php artisan optimize:clear 2>/dev/null || true
 php artisan storage:link 2>/dev/null || true

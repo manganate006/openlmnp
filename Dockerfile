@@ -31,6 +31,10 @@ RUN npm install --no-audit --no-fund && npm run build && rm -rf node_modules
 RUN mkdir -p database storage/app/public storage/app/data storage/logs storage/framework/{sessions,views,cache} \
     && chmod -R 775 storage database bootstrap/cache
 
+# Copie de référence : le volume monté sur database/ masque le contenu de
+# l'image ; l'entrypoint resynchronise migrations/seeders/factories depuis ici.
+RUN cp -r database /database-dist
+
 RUN php artisan key:generate --force 2>/dev/null || true
 
 # Volumes pour persister les données entre rebuilds
