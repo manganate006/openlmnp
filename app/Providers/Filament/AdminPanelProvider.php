@@ -31,9 +31,10 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->passwordReset();
 
-        // Désactivable pour les instances où les comptes sont créés par un
-        // administrateur (ALLOW_REGISTRATION=false). Défaut : inscription ouverte.
-        if (config('app.allow_registration')) {
+        // ALLOW_REGISTRATION : "auto" (défaut, ouverte jusqu'au premier compte),
+        // true (toujours ouverte) ou false (toujours fermée). Évalué à chaque
+        // requête (boot du panel), donc la porte se referme dès le compte créé.
+        if (\App\Support\RegistrationGate::allows()) {
             $panel = $panel->registration();
         }
 

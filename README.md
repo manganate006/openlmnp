@@ -168,7 +168,7 @@ php artisan serve
 | `DB_CONNECTION` | Base de données | `sqlite` |
 | `DB_DATABASE` | Chemin SQLite | `database/database.sqlite` |
 | `APP_LOCALE` | Langue | `fr` |
-| `ALLOW_REGISTRATION` | Inscription publique (`/register`) | `true` |
+| `ALLOW_REGISTRATION` | Inscription publique : `auto` = ouverte jusqu'au premier compte, `true` = toujours, `false` = jamais | `auto` |
 | `PROVISION_TOKEN` | Active l'API de création de comptes (vide = désactivée) | *(vide)* |
 
 Ajoutez votre SIREN dans votre profil utilisateur pour les documents fiscaux.
