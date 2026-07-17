@@ -21,6 +21,10 @@ class McpGuard
             abort(403, 'MCP access is not enabled for this account.');
         }
 
+        if ($user->isSuspended()) {
+            abort(403, 'This account is suspended.');
+        }
+
         $start = microtime(true);
 
         $response = $next($request);

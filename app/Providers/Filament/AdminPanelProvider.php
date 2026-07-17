@@ -24,12 +24,20 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        $panel = $panel
             ->default()
             ->id('admin')
             ->path('/')
             ->login()
-            ->registration()
+            ->passwordReset();
+
+        // Désactivable pour les instances où les comptes sont créés par un
+        // administrateur (ALLOW_REGISTRATION=false). Défaut : inscription ouverte.
+        if (config('app.allow_registration')) {
+            $panel = $panel->registration();
+        }
+
+        return $panel
             ->profile(\App\Filament\Pages\EditProfile::class)
             ->brandName('OpenLMNP')
             ->colors([
