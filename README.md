@@ -86,7 +86,7 @@ reste recommandé.
 - **Justificatifs** — pièces uploadées sur charges, travaux et mobilier
 - **Guide intégré & badges de progression** — mise en route, suivi régulier, déclaration annuelle
 - **Dark mode** — natif Filament
-- **167 tests automatisés** — Pest PHP, 472 assertions ([détail](docs/TESTS.md))
+- **189 tests automatisés** — Pest PHP, 513 assertions ([détail](docs/TESTS.md))
 
 ## Captures d'écran
 
@@ -105,7 +105,7 @@ D'autres captures : [tableau de bord](docs/screenshots/dashboard.png) · [charge
 | [Mode démonstration](docs/DEMO.md) | Activer et utiliser le mode démo multi-utilisateurs (sandbox éphémère isolé par visiteur) |
 | [FAQ](docs/FAQ.md) | Questions courantes : gratuité, confidentialité des données, régime réel vs micro-BIC, sauvegardes… |
 | [Guide fiscal LMNP / Airbnb](docs/fiscalite-lmnp-airbnb.md) | Règles fiscales du régime réel : amortissements, abattements, plafonds, réforme 2026 |
-| [Couverture de tests](docs/TESTS.md) | Détail des 167 tests automatisés, suite par suite |
+| [Couverture de tests](docs/TESTS.md) | Détail des 189 tests automatisés, suite par suite |
 | [Guide de conception UI](docs/ui-design-openlmnp.md) | Choix de design de l'interface Filament |
 
 Pour contribuer au projet, voir [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -163,51 +163,37 @@ php artisan serve
 
 ## Configuration
 
+À la première visite, créez votre compte sur `/register` : il devient
+**administrateur**, puis la page d'inscription **se referme automatiquement**
+(instance personnelle par défaut — réglable via `ALLOW_REGISTRATION`).
+Ajoutez ensuite votre SIREN dans votre profil pour les documents fiscaux.
+
 | Variable | Description | Défaut |
 |----------|-------------|--------|
 | `DB_CONNECTION` | Base de données | `sqlite` |
 | `DB_DATABASE` | Chemin SQLite | `database/database.sqlite` |
 | `APP_LOCALE` | Langue | `fr` |
-| `ALLOW_REGISTRATION` | Inscription publique : `auto` = ouverte jusqu'au premier compte, `true` = toujours, `false` = jamais | `auto` |
-| `PROVISION_TOKEN` | Active l'API de création de comptes (vide = désactivée) | *(vide)* |
-
-Ajoutez votre SIREN dans votre profil utilisateur pour les documents fiscaux.
+| `ALLOW_REGISTRATION` | Inscription : `auto` (jusqu'au premier compte), `true` (toujours), `false` (jamais) | `auto` |
 
 ### Emails (optionnel)
 
-Par défaut (`MAIL_MAILER=log`), aucun email n'est envoyé : les messages — **lien de
-réinitialisation de mot de passe inclus** — sont écrits dans
-`storage/logs/laravel.log`. Pour de vrais envois, configurez le SMTP de votre choix
-(Gmail avec mot de passe d'application, votre FAI, Brevo…) dans `.env` :
-
-```env
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.exemple.fr
-MAIL_PORT=587
-MAIL_USERNAME=vous@exemple.fr
-MAIL_PASSWORD=********
-MAIL_FROM_ADDRESS=vous@exemple.fr
-MAIL_FROM_NAME=OpenLMNP
-```
-
-La délivrabilité (SPF/DKIM) est gérée par votre fournisseur SMTP — rien à
-configurer côté OpenLMNP.
-
-Mot de passe oublié sans SMTP ? Depuis le serveur :
+Aucun email ne part par défaut (`MAIL_MAILER=log`) — l'application fonctionne très
+bien sans. Pour activer le lien « Mot de passe oublié », branchez le SMTP de votre
+choix via les variables `MAIL_*` (l'expéditeur est votre propre adresse ; SPF/DKIM
+sont gérés par votre fournisseur). Et en cas d'oubli sans SMTP, depuis le serveur :
 
 ```bash
-# Affiche un lien de réinitialisation (valable 60 min)
 php artisan openlmnp:reset-password vous@exemple.fr
-
-# Ou définit directement un nouveau mot de passe
-php artisan openlmnp:reset-password vous@exemple.fr --password="NouveauMotDePasse"
 ```
+
+📖 **Référence complète** — toutes les variables, volumes de persistance, comptes,
+SMTP pas à pas, sauvegarde : [docs/INSTALLATION.md](docs/INSTALLATION.md)
 
 ## Tests
 
 [![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
 
-**167 tests Pest PHP, 472 assertions** — services de calcul, pages Filament, isolation
+**189 tests Pest PHP, 513 assertions** — services de calcul, pages Filament, isolation
 multi-utilisateurs, mode démo. Détail suite par suite : [docs/TESTS.md](docs/TESTS.md).
 
 ```bash

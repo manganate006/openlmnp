@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **167 tests automatisés (472 assertions)** écrits avec
+OpenLMNP est couvert par **189 tests automatisés (513 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -40,8 +40,11 @@ vendor/bin/pest --filter="Filament"
 | Mode démo | 7 | Sandbox éphémère isolé par visiteur, purge automatique |
 | Isolation multi-utilisateurs | 10 | Scopes via le bien, modèles enfants, page loan-detail |
 | Mesure d'audience opt-in (GTM) | 21 | Désactivée par défaut, injection conditionnelle |
+| API de provisioning | 10 | Jeton requis (404/401), création idempotente, notification, suspension |
+| Inscription (RegistrationGate) | 8 | Mode auto (fermée après le premier compte), démo exclue, true/false |
+| Commande reset-password | 4 | Lien de réinitialisation, --password, validations |
 | Smoke (framework) | 2 | Amorçage de l'application |
-| **Total** | **167** | **472 assertions** |
+| **Total** | **189** | **513 assertions** |
 
 ## Principes
 
