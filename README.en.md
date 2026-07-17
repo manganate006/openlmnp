@@ -15,13 +15,13 @@ and produce your French tax return under the « régime réel » — no subscrip
 ![Filament](https://img.shields.io/badge/Filament-5-FBBF24)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
-**[🚀 Live demo](https://app.lmnp.mangi.fr)** · **[📦 Install](#quick-install-docker)** · **[📚 Documentation](#documentation)** · **[🇫🇷 Français](README.md)**
+**[🚀 Live demo](https://app.openlmnp.fr)** · **[📦 Install](#quick-install-docker)** · **[📚 Documentation](#documentation)** · **[🇫🇷 Français](README.md)**
 
 ![OpenLMNP demo: dashboard, simulator, projection and tax return helper](docs/screenshots/demo.gif)
 
 </div>
 
-> **🎯 Try it without installing anything** — the [online demo](https://app.lmnp.mangi.fr) spawns an
+> **🎯 Try it without installing anything** — the [online demo](https://app.openlmnp.fr) spawns an
 > ephemeral, isolated sandbox for each visitor, pre-filled with 4 years of fictional accounting.
 > Login: `demo@openlmnp.fr` / `demo2026`.
 
