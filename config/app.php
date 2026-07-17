@@ -20,12 +20,15 @@ return [
     | Inscription publique
     |--------------------------------------------------------------------------
     |
-    | Contrôle l'affichage de la page /register du panel. Désactiver quand les
-    | comptes sont créés par un administrateur (API de provisioning ou CLI).
+    | Contrôle la page /register du panel :
+    | - "auto" (défaut) : ouverte uniquement tant qu'aucun compte (hors démo)
+    |   n'existe — l'installateur s'inscrit, puis la porte se referme.
+    | - true : toujours ouverte (instance multi-comptes assumée).
+    | - false : toujours fermée (comptes créés par provisioning ou CLI).
     |
     */
 
-    'allow_registration' => (bool) env('ALLOW_REGISTRATION', true),
+    'allow_registration' => env('ALLOW_REGISTRATION', 'auto'),
 
     /*
     |--------------------------------------------------------------------------
