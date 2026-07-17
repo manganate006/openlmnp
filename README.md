@@ -15,13 +15,13 @@ et produisez votre liasse fiscale au régime réel — sans abonnement, chez vou
 ![Filament](https://img.shields.io/badge/Filament-5-FBBF24)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
-**[🚀 Démo live](https://app.lmnp.mangi.fr)** · **[📦 Installation](#installation-rapide-docker)** · **[📚 Documentation](#documentation)** · **[🇬🇧 English](README.en.md)**
+**[🚀 Démo live](https://app.openlmnp.fr)** · **[📦 Installation](#installation-rapide-docker)** · **[📚 Documentation](#documentation)** · **[🇬🇧 English](README.en.md)**
 
 ![Démonstration d'OpenLMNP : tableau de bord, simulateur, projection et télédéclaration](docs/screenshots/demo.gif)
 
 </div>
 
-> **🎯 Essayez sans rien installer** — la [démo en ligne](https://app.lmnp.mangi.fr) crée un bac à sable
+> **🎯 Essayez sans rien installer** — la [démo en ligne](https://app.openlmnp.fr) crée un bac à sable
 > éphémère et isolé pour chaque visiteur, pré-rempli avec 4 années de comptabilité fictive.
 > Connexion : `demo@openlmnp.fr` / `demo2026`.
 
