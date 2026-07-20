@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
+source "$(dirname "${BASH_SOURCE[0]}")/../misc/build.func" 2>/dev/null || source <(curl -fsSL "${COMMUNITY_SCRIPTS_URL:-https://raw.githubusercontent.com/community-scripts/ProxmoxVED/main}/misc/build.func")
 # Copyright (c) 2021-2026 community-scripts ORG
 # Author: manganate006
-# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+# License: MIT | https://github.com/community-scripts/ProxmoxVED/raw/main/LICENSE
 # Source: https://github.com/manganate006/openlmnp
 
 APP="OpenLMNP"
@@ -12,6 +12,7 @@ var_ram="${var_ram:-2048}"
 var_disk="${var_disk:-4}"
 var_os="${var_os:-debian}"
 var_version="${var_version:-13}"
+var_arm64="${var_arm64:-no}"
 var_unprivileged="${var_unprivileged:-1}"
 
 header_info "$APP"
@@ -34,22 +35,11 @@ function update_script() {
     systemctl stop nginx php8.4-fpm
     msg_ok "Stopped Services"
 
-    msg_info "Creating Backup"
-    mkdir -p /tmp/openlmnp_backup
-    cp /opt/openlmnp/.env /tmp/openlmnp_backup/
-    cp -r /opt/openlmnp/database /tmp/openlmnp_backup/ 2>/dev/null || true
-    cp -r /opt/openlmnp/storage /tmp/openlmnp_backup/ 2>/dev/null || true
-    msg_ok "Created Backup"
+    create_backup /opt/openlmnp/.env /opt/openlmnp/database /opt/openlmnp/storage/app /opt/openlmnp/storage/logs
 
-    fetch_and_deploy_gh_release "openlmnp" "manganate006/openlmnp" "tarball"
+    CLEAN_INSTALL=1 fetch_and_deploy_gh_release "openlmnp" "manganate006/openlmnp" "tarball"
 
-    msg_info "Restoring Data"
-    cp /tmp/openlmnp_backup/.env /opt/openlmnp/
-    cp /tmp/openlmnp_backup/database/database.sqlite /opt/openlmnp/database/ 2>/dev/null || true
-    cp -r /tmp/openlmnp_backup/storage/app /opt/openlmnp/storage/ 2>/dev/null || true
-    cp -r /tmp/openlmnp_backup/storage/logs /opt/openlmnp/storage/ 2>/dev/null || true
-    rm -rf /tmp/openlmnp_backup
-    msg_ok "Restored Data"
+    restore_backup
 
     msg_info "Updating Application"
     cd /opt/openlmnp || exit

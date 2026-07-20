@@ -2,7 +2,7 @@
 
 # Copyright (c) 2021-2026 community-scripts ORG
 # Author: manganate006
-# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+# License: MIT | https://github.com/community-scripts/ProxmoxVED/raw/main/LICENSE
 # Source: https://github.com/manganate006/openlmnp
 
 source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
@@ -14,25 +14,21 @@ network_check
 update_os
 
 msg_info "Installing Dependencies"
-$STD apt-get install -y \
-  curl \
+$STD apt install -y \
   git \
   sqlite3 \
   unzip \
   rsync
 msg_ok "Installed Dependencies"
 
-msg_info "Setting up Node.js"
-curl -fsSL https://deb.nodesource.com/setup_22.x | $STD bash -
-$STD apt-get install -y nodejs
-msg_ok "Set up Node.js"
+NODE_VERSION="22" setup_nodejs
 
 PHP_VERSION="8.4" PHP_FPM="YES" PHP_MODULE="bcmath,intl,gd,zip,sqlite3" setup_php
 setup_composer
 
 fetch_and_deploy_gh_release "openlmnp" "manganate006/openlmnp" "tarball"
 
-msg_info "Configuring OpenLMNP (Patience)"
+msg_info "Configuring OpenLMNP"
 cd /opt/openlmnp || exit
 
 # Generate a valid Laravel APP_KEY without artisan (vendor/ is installed by composer below)
@@ -139,7 +135,7 @@ server {
 }
 EOF
 
-$STD apt-get install -y nginx
+$STD apt install -y nginx
 ln -sf /etc/nginx/sites-available/openlmnp /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 $STD systemctl reload nginx
