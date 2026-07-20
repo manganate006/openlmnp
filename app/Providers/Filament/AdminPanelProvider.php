@@ -74,6 +74,7 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
             ->renderHook(\Filament\View\PanelsRenderHook::HEAD_START, fn () => config('services.gtm.id') ? view('partials.gtm-head') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::BODY_START, fn () => config('services.gtm.id') ? view('partials.gtm-body') : '')
+            ->renderHook(\Filament\View\PanelsRenderHook::BODY_END, fn () => view('filament.partials.privacy-footer-hook'))
             ->authMiddleware([
                 Authenticate::class,
             ]);

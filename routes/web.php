@@ -12,3 +12,6 @@ Route::get('/d/{path}', DocumentController::class)
 Route::get('/demo', DemoLoginController::class)
     ->middleware('throttle:30,1')
     ->name('demo.start');
+
+Route::view('/confidentialite', 'legal.confidentialite')
+    ->name('legal.confidentialite');
