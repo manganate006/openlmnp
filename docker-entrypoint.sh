@@ -3,6 +3,14 @@ set -e
 
 cd /var/www/html
 
+# Mode commande alternative (`docker run … openlmnp <cmd>`) : la préparation
+# s'exécute quand même, mais stdout doit rester vierge pour les protocoles
+# parlés sur stdio (ex. JSON-RPC de `php artisan mcp:start openlmnp`) —
+# on détourne stdout vers stderr le temps de la préparation.
+if [ "$#" -gt 0 ]; then
+    exec 3>&1 1>&2
+fi
+
 # Propage les variables d'environnement runtime (docker run -e …) vers .env :
 # `php artisan serve` ne transmet pas l'environnement du processus aux workers
 # du serveur intégré PHP (variables_order sans E) — seul .env est lu par le web.
@@ -49,6 +57,12 @@ fi
 
 # Permissions
 chmod -R 775 storage database bootstrap/cache 2>/dev/null || true
+
+# Commande alternative : restaurer stdout puis exécuter (remplace serveur web + scheduler)
+if [ "$#" -gt 0 ]; then
+    exec 1>&3 3>&-
+    exec "$@"
+fi
 
 echo "[entrypoint] Démarrage du scheduler en arrière-plan..."
 while true; do php artisan schedule:run --quiet 2>/dev/null; sleep 60; done &

@@ -2,6 +2,8 @@
 
 namespace App\Mcp;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
@@ -89,4 +91,34 @@ class OpenLmnpServer extends Server
     protected array $resources = [];
 
     protected array $prompts = [];
+
+    /**
+     * En transport stdio (`php artisan mcp:start openlmnp`), aucune authentification
+     * HTTP n'a lieu alors que l'isolation des données repose sur l'utilisateur
+     * connecté (scopes globaux) : on authentifie le compte désigné par
+     * OPENLMNP_MCP_USER, ou l'unique compte réel (hors démo) de l'instance.
+     */
+    protected function boot(): void
+    {
+        if (! app()->runningInConsole() || Auth::check()) {
+            return;
+        }
+
+        try {
+            if ($email = config('mcp.local_user')) {
+                $user = User::where('email', $email)->first();
+            } else {
+                $realUsers = User::where('is_demo', false)->limit(2)->get();
+                $user = $realUsers->count() === 1 ? $realUsers->first() : null;
+            }
+        } catch (\Throwable) {
+            // Base inaccessible : l'introspection (tools/list…) doit rester
+            // possible, les outils échoueront d'eux-mêmes à l'appel.
+            return;
+        }
+
+        if ($user) {
+            Auth::setUser($user);
+        }
+    }
 }

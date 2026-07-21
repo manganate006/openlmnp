@@ -126,6 +126,38 @@ OpenLMNP expose un serveur **MCP (Model Context Protocol)** qui permet à un ass
 recettes et charges, calculer amortissements et résultats fiscaux, générer le FEC ou la liasse.
 L'accès est authentifié et l'isolation des données entre utilisateurs est garantie.
 
+Deux transports sont disponibles :
+
+- **HTTP** (`/mcp`) — pour une instance accessible par le réseau. Activez `MCP_ENABLED=true`,
+  puis générez un jeton depuis la page **Jetons MCP** de l'application ; l'assistant
+  s'authentifie avec ce jeton (Bearer).
+- **stdio** (local) — pour un assistant qui tourne sur la même machine que l'instance
+  auto-hébergée, sans HTTP ni jeton :
+
+  ```bash
+  php artisan mcp:start openlmnp
+  ```
+
+  Le serveur agit au nom de l'unique compte réel de l'instance ; si elle en compte
+  plusieurs, désignez-le via `OPENLMNP_MCP_USER=email@exemple.fr`. Ce transport est
+  réservé à un opérateur ayant déjà accès à la machine (pas d'authentification propre).
+
+  Exemple de déclaration côté client (Claude Desktop / Claude Code) :
+
+  ```json
+  {
+    "mcpServers": {
+      "openlmnp": {
+        "command": "php",
+        "args": ["/chemin/vers/openlmnp/artisan", "mcp:start", "openlmnp"]
+      }
+    }
+  }
+  ```
+
+  Via Docker : `docker run --rm -i openlmnp php artisan mcp:start openlmnp`
+  (tout argument passé au conteneur remplace le serveur web, après la préparation de la base).
+
 ---
 
 Voir aussi : [INSTALLATION.md](INSTALLATION.md) · [DEMO.md](DEMO.md) · [FAQ.md](FAQ.md) · [fiscalite-lmnp-airbnb.md](fiscalite-lmnp-airbnb.md)
