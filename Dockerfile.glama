@@ -1,0 +1,50 @@
+# Dedicated image for the Glama MCP registry: builds the app and starts the
+# embedded MCP server over stdio (php artisan mcp:start openlmnp).
+# The default ./Dockerfile serves the web app; this one only speaks JSON-RPC on
+# stdio so Glama can introspect initialize + tools/list. Same build as prod.
+FROM php:8.4-cli
+
+RUN apt-get update && apt-get install -y \
+    libicu-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
+    libsqlite3-dev unzip git sqlite3 rsync \
+    curl ca-certificates \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_sqlite bcmath intl gd zip opcache \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js (pour le build CSS Tailwind)
+COPY --from=node:22-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:22-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
+
+# Increase PHP memory for composer
+RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory.ini
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+COPY . .
+
+# Use Docker-specific env, and enable the MCP server for stdio introspection
+RUN cp .env.docker .env \
+    && (grep -q '^MCP_ENABLED=' .env && sed -i 's/^MCP_ENABLED=.*/MCP_ENABLED=true/' .env || echo 'MCP_ENABLED=true' >> .env)
+
+# Build des dépendances dans l'image
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction
+RUN npm install --no-audit --no-fund && npm run build && rm -rf node_modules
+
+RUN mkdir -p database storage/app/public storage/app/data storage/logs storage/framework/{sessions,views,cache} \
+    && chmod -R 775 storage database bootstrap/cache
+
+# Copie de référence : le volume masque database/ ; l'entrypoint resynchronise depuis ici.
+RUN cp -r database /database-dist
+
+RUN php artisan key:generate --force 2>/dev/null || true
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# The entrypoint runs setup with stdout redirected to stderr, then execs the
+# command below in stdio mode with a clean stdout (JSON-RPC only).
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["php", "artisan", "mcp:start", "openlmnp"]
