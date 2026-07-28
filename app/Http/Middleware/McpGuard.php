@@ -3,8 +3,11 @@
 namespace App\Http\Middleware;
 
 use App\Models\McpAuditLog;
+use App\Models\User;
+use App\Support\McpDemo;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 class McpGuard
@@ -25,15 +28,10 @@ class McpGuard
             abort(403, 'This account is suspended.');
         }
 
-        $start = microtime(true);
-
-        $response = $next($request);
-
-        $durationMs = (int) ((microtime(true) - $start) * 1000);
-
-        // Audit logging — extract tool name from JSON-RPC body
+        // Décodage JSON-RPC (méthode, outil, id) — utilisé par le garde démo et l'audit.
         $body = $request->json()->all();
         $method = $body['method'] ?? null;
+        $rpcId = $body['id'] ?? null;
         $toolName = null;
         $params = null;
 
@@ -49,19 +47,79 @@ class McpGuard
             $toolName = $method;
         }
 
+        // === Garde démo publique (compte à identifiants publics) ===
+        if (McpDemo::isDemoRequest($request)) {
+            // Rate-limiting par IP (le token est partagé).
+            $limiterKey = 'mcp-demo:' . $request->ip();
+            $maxPerMinute = max(1, (int) config('mcp.demo.rate_limit_per_minute', 20));
+
+            if (RateLimiter::tooManyAttempts($limiterKey, $maxPerMinute)) {
+                return response()->json([
+                    'jsonrpc' => '2.0',
+                    'id' => $rpcId,
+                    'error' => [
+                        'code' => -32000,
+                        'message' => 'Démo publique OpenLMNP : trop de requêtes, réessayez dans un instant.',
+                    ],
+                ], 429);
+            }
+            RateLimiter::hit($limiterKey, 60);
+
+            // Outils d'écriture : visibles dans tools/list mais NON exécutables.
+            if ($method === 'tools/call' && ! McpDemo::allows($toolName, $request)) {
+                $this->audit($user, $toolName, $params, 'error', $request, 0);
+
+                return response()->json([
+                    'jsonrpc' => '2.0',
+                    'id' => $rpcId,
+                    'result' => [
+                        'content' => [[
+                            'type' => 'text',
+                            'text' => McpDemo::blockedMessage(),
+                        ]],
+                        'isError' => true,
+                    ],
+                ]);
+            }
+        }
+
+        $start = microtime(true);
+
+        $response = $next($request);
+
+        $durationMs = (int) ((microtime(true) - $start) * 1000);
+
         if ($toolName) {
-            McpAuditLog::create([
-                'user_id' => $user->id,
-                'token_name' => $user->currentAccessToken()?->name,
-                'tool_name' => $toolName,
-                'parameters' => $params,
-                'result_status' => $response->isSuccessful() ? 'success' : 'error',
-                'ip_address' => $request->ip(),
-                'duration_ms' => $durationMs,
-                'created_at' => now(),
-            ]);
+            $this->audit(
+                $user,
+                $toolName,
+                $params,
+                $response->isSuccessful() ? 'success' : 'error',
+                $request,
+                $durationMs,
+            );
         }
 
         return $response;
+    }
+
+    private function audit(
+        User $user,
+        ?string $toolName,
+        mixed $params,
+        string $status,
+        Request $request,
+        int $durationMs,
+    ): void {
+        McpAuditLog::create([
+            'user_id' => $user->id,
+            'token_name' => $user->currentAccessToken()?->name,
+            'tool_name' => $toolName,
+            'parameters' => $params,
+            'result_status' => $status,
+            'ip_address' => $request->ip(),
+            'duration_ms' => $durationMs,
+            'created_at' => now(),
+        ]);
     }
 }

@@ -14,7 +14,9 @@ fi
 # Propage les variables d'environnement runtime (docker run -e …) vers .env :
 # `php artisan serve` ne transmet pas l'environnement du processus aux workers
 # du serveur intégré PHP (variables_order sans E) — seul .env est lu par le web.
-for var in DEMO_MODE DEMO_TTL_HOURS DEMO_MAX_ACCOUNTS MCP_ENABLED GITHUB_TOKEN GITHUB_REPO GTM_CONTAINER_ID GTM_SERVER_URL GTM_SCRIPT_PATH \
+for var in DEMO_MODE DEMO_TTL_HOURS DEMO_MAX_ACCOUNTS DEMO_EMAIL \
+    MCP_ENABLED MCP_DEMO_ENABLED MCP_DEMO_TOKEN MCP_DEMO_RATE_LIMIT \
+    GITHUB_TOKEN GITHUB_REPO GTM_CONTAINER_ID GTM_SERVER_URL GTM_SCRIPT_PATH \
     ALLOW_REGISTRATION PROVISION_TOKEN APP_URL \
     MAIL_MAILER MAIL_SCHEME MAIL_HOST MAIL_PORT MAIL_USERNAME MAIL_PASSWORD MAIL_FROM_ADDRESS MAIL_FROM_NAME; do
     value="${!var-}"
@@ -54,6 +56,9 @@ else
     php artisan migrate --force
     echo "[entrypoint] Migrations appliquées."
 fi
+
+# Token MCP démo public (idempotent ; no-op si MCP_DEMO_ENABLED=false)
+php artisan openlmnp:mcp-demo-token 2>/dev/null || echo "[entrypoint] mcp-demo-token ignoré"
 
 # Permissions
 chmod -R 775 storage database bootstrap/cache 2>/dev/null || true
