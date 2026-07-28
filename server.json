@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.manganate006/openlmnp",
+  "title": "OpenLMNP",
+  "description": "Accounting MCP server for the French LMNP tax status (furnished rentals, e.g. Airbnb hosts): 45 tools to manage properties, income and expenses, compute component-based depreciation and fiscal results, and generate the official French tax return (2031/2033) and FEC accounting export.",
+  "version": "1.1.0",
+  "repository": {
+    "url": "https://github.com/manganate006/openlmnp",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://app.openlmnp.fr/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Personal Bearer token created in your OpenLMNP account under Paramètres → API MCP",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
