@@ -158,6 +158,28 @@ Deux transports sont disponibles :
   Via Docker : `docker run --rm -i openlmnp php artisan mcp:start openlmnp`
   (tout argument passé au conteneur remplace le serveur web, après la préparation de la base).
 
+### Démo publique (lecture seule)
+
+Pour permettre aux annuaires MCP et aux curieux d'**essayer** le serveur sans créer de compte,
+un **jeton démo partagé** peut être exposé, adossé au compte de démonstration à **données
+fictives**. Les 44 outils restent visibles, mais seuls les ~23 outils de **lecture/calcul**
+s'exécutent ; les outils d'écriture renvoient un message invitant à créer un compte. Un
+**rate-limiting par IP** protège l'instance.
+
+```bash
+# activation (env)
+MCP_DEMO_ENABLED=true
+MCP_DEMO_TOKEN=<valeur_stable_sans_pipe>
+MCP_DEMO_RATE_LIMIT=20        # requêtes/minute/IP
+
+# provisioning (compte démo + jeton déterministe)
+php artisan openlmnp:mcp-demo-token
+```
+
+La détection se fait par **compte** (les identifiants du compte démo étant publics, tout jeton
+porté par ce compte est traité en lecture seule). Connexion client : `Authorization: Bearer
+<MCP_DEMO_TOKEN>` sur `/mcp`.
+
 ---
 
 Voir aussi : [INSTALLATION.md](INSTALLATION.md) · [DEMO.md](DEMO.md) · [FAQ.md](FAQ.md) · [fiscalite-lmnp-airbnb.md](fiscalite-lmnp-airbnb.md)
