@@ -193,3 +193,43 @@ it('provisions a stable deterministic demo token via the artisan command', funct
     $response->assertOk();
     expect($response->json('result.isError'))->not->toBeTrue();
 });
+
+// === AUTH DÉMO PAR QUERY PARAM (?demo_token=) — pour la gateway Smithery ===
+
+it('authenticates the demo token via the ?demo_token query param (read allowed, write blocked)', function () {
+    config(['mcp.demo.token' => 'openlmnp_demo_ro_qtest']);
+    // PAT déterministe (comme la commande openlmnp:mcp-demo-token).
+    $this->demoUser->tokens()->create([
+        'name' => 'demo-public-readonly',
+        'token' => hash('sha256', 'openlmnp_demo_ro_qtest'),
+        'abilities' => ['*'],
+    ]);
+    $propertyId = Property::withoutGlobalScopes()->where('user_id', $this->demoUser->id)->value('id');
+
+    // Lecture via query param, SANS en-tête Authorization → autorisée.
+    $read = $this->postJson('/mcp?demo_token=openlmnp_demo_ro_qtest', [
+        'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+        'params' => ['name' => 'list_properties', 'arguments' => []],
+    ]);
+    $read->assertOk();
+    expect($read->json('result.isError'))->not->toBeTrue();
+
+    // Écriture via query param → bloquée (même barrière lecture seule).
+    $write = $this->postJson('/mcp?demo_token=openlmnp_demo_ro_qtest', [
+        'jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call',
+        'params' => ['name' => 'create_expense', 'arguments' => [
+            'property_id' => $propertyId, 'expense_date' => '2025-01-01',
+            'amount' => 10, 'category' => 'other', 'description' => 'x',
+        ]],
+    ]);
+    $write->assertOk();
+    expect($write->json('result.isError'))->toBeTrue();
+});
+
+it('rejects a wrong ?demo_token (no header promotion)', function () {
+    config(['mcp.demo.token' => 'openlmnp_demo_ro_qtest']);
+    // Test isolé : aucune requête authentifiée préalable (pas d'auth en cache).
+    $this->postJson('/mcp?demo_token=mauvais', [
+        'jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize', 'params' => [],
+    ])->assertUnauthorized();
+});
