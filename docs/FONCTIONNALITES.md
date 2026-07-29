@@ -180,6 +180,11 @@ La détection se fait par **compte** (les identifiants du compte démo étant pu
 porté par ce compte est traité en lecture seule). Connexion client : `Authorization: Bearer
 <MCP_DEMO_TOKEN>` sur `/mcp`.
 
+Pour les passerelles/annuaires qui réservent l'en-tête `Authorization` (ex. Smithery), le token
+démo est aussi accepté en **paramètre d'URL** : `https://…/mcp?demo_token=<MCP_DEMO_TOKEN>`
+(uniquement pour ce token public ; le token en clair dans l'URL apparaît dans les logs d'accès —
+sans risque car public et en lecture seule).
+
 ---
 
 Voir aussi : [INSTALLATION.md](INSTALLATION.md) · [DEMO.md](DEMO.md) · [FAQ.md](FAQ.md) · [fiscalite-lmnp-airbnb.md](fiscalite-lmnp-airbnb.md)
