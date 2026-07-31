@@ -57,4 +57,11 @@ return [
         'script_path' => env('GTM_SCRIPT_PATH') ?: '/gtm.js',
     ],
 
+    // Site officiel du projet. Affiché comme lien « Découvrir OpenLMNP » sur /login.
+    // Défaut visible (openlmnp.fr) ; vider OPENLMNP_WEBSITE_URL pour masquer le lien
+    // sur une instance auto-hébergée.
+    'website' => [
+        'url' => env('OPENLMNP_WEBSITE_URL', 'https://openlmnp.fr'),
+    ],
+
 ];
