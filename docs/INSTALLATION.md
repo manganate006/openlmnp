@@ -1,7 +1,10 @@
 # Installation — Auto-hébergement OpenLMNP
 
-OpenLMNP est un logiciel **libre** que vous hébergez vous-même. Vos données comptables
-restent sur votre machine ou votre serveur : rien n'est envoyé à un tiers.
+OpenLMNP est un logiciel **libre** que vous hébergez vous-même. **Aucune donnée
+comptable, personnelle ou fiscale ne quitte jamais votre serveur.** Le logiciel envoie
+seulement, une fois par jour, un compteur anonyme d'installation (un identifiant aléatoire
+et le numéro de version, rien d'autre) — entièrement désactivable
+(voir [Télémétrie anonyme](#télémétrie-anonyme)).
 
 La méthode recommandée est **Docker**. Une installation en environnement de développement
 (sans Docker) est également décrite plus bas.
@@ -147,9 +150,34 @@ L'image utilise le fichier `.env.docker` fourni. Les variables non sensibles uti
 | `GTM_CONTAINER_ID` | Identifiant Google Tag Manager (`GTM-XXXXXXX`). Vide = aucun script de mesure injecté | *(vide)* |
 | `GTM_SERVER_URL` | URL d'un GTM server-side auto-hébergé (sinon serveurs Google) | `https://www.googletagmanager.com` |
 | `GTM_SCRIPT_PATH` | Chemin du script GTM (utile si renommé côté serveur) | `/gtm.js` |
+| `TELEMETRY_ENABLED` | Check-in anonyme quotidien (identifiant aléatoire + version) pour compter les instances installées. Aucune donnée comptable/personnelle. `false` = désactivé, aucune requête émise | `true` |
+| `TELEMETRY_URL` | Endpoint recevant le check-in de télémétrie | `https://openlmnp.fr/api/instances/checkin` |
 
 > **Vie privée** : aucune mesure d'audience n'est active par défaut. L'intégration
 > Google Tag Manager ne s'active que si vous définissez explicitement `GTM_CONTAINER_ID`.
+
+### Télémétrie anonyme
+
+Pour savoir combien d'instances OpenLMNP sont installées, le logiciel envoie **une fois
+par jour** un « check-in » minimal au projet :
+
+- un **identifiant aléatoire** (UUID) généré au premier lancement, **sans aucun lien**
+  avec vous, vos comptes ou vos biens ;
+- le **numéro de version** de l'application ;
+- rien d'autre : **aucune donnée comptable, personnelle, fiscale, ni votre adresse IP**
+  n'est conservée.
+
+C'est le **seul** flux sortant du logiciel (avec la vérification de mise à jour qui
+interroge GitHub). Pour le **désactiver complètement** :
+
+```bash
+docker run -d --name openlmnp -p 8090:8000 \
+  -e TELEMETRY_ENABLED=false \
+  --restart unless-stopped openlmnp
+```
+
+Aucune requête n'est alors émise. Vous pouvez aussi le rediriger vers votre propre
+collecteur avec `TELEMETRY_URL`.
 
 Pour surcharger une variable au lancement, utilisez `-e` :
 

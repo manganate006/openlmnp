@@ -19,10 +19,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Sur workflow_dispatch, se placer sur le tag demandé (pas sur la branche
+          # par défaut) pour que `git archive HEAD` produise l'archive du bon commit.
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
 
       - name: Résoudre le tag
         id: t
         run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Construire l'archive source (asset de release)
+        id: asset
+        run: |
+          v="${{ steps.t.outputs.tag }}"; v="${v#v}"
+          file="openlmnp-${v}.tar.gz"
+          # Archive source (le script d'install fait ensuite composer/npm build).
+          # Dossier racine openlmnp/ que le framework community-scripts strip à l'extraction.
+          git archive --format=tar.gz --prefix=openlmnp/ -o "$file" HEAD
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "----- asset -----"; ls -lh "$file"
 
       - name: Extraire les notes du CHANGELOG
         run: |
@@ -43,6 +58,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="${{ steps.t.outputs.tag }}"
+          asset="${{ steps.asset.outputs.file }}"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$tag" --repo "$GITHUB_REPOSITORY" \
               --title "OpenLMNP $tag" --notes-file NOTES.md
@@ -50,3 +66,6 @@ jobs:
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
               --title "OpenLMNP $tag" --notes-file NOTES.md --verify-tag
           fi
+          # Asset téléchargeable : son download_count sert de proxy d'installations
+          # self-hosted (voir community-scripts/install/openlmnp-install.sh).
+          gh release upload "$tag" "$asset" --repo "$GITHUB_REPOSITORY" --clobber
