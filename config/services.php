@@ -64,4 +64,16 @@ return [
         'url' => env('OPENLMNP_WEBSITE_URL', 'https://openlmnp.fr'),
     ],
 
+    // Télémétrie anonyme (opt-out). Un check-in quotidien envoie UNIQUEMENT un
+    // identifiant aléatoire (UUID) + la version de l'app, pour permettre au projet
+    // de compter le nombre d'instances auto-hébergées. AUCUNE donnée comptable,
+    // personnelle ou fiscale n'est transmise. Pour la désactiver complètement :
+    // TELEMETRY_ENABLED=false dans .env (aucune requête sortante alors).
+    'telemetry' => [
+        'enabled' => env('TELEMETRY_ENABLED', true),
+        'url' => env('TELEMETRY_URL', 'https://openlmnp.fr/api/instances/checkin'),
+        // Indice grossier et non identifiant du mode de déploiement (selfhosted/cloud/dev).
+        'install_type' => env('TELEMETRY_INSTALL_TYPE', 'selfhosted'),
+    ],
+
 ];

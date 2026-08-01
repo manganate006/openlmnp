@@ -10,3 +10,5 @@ Artisan::command('inspire', function () {
 
 Schedule::command('app:auto-update')->hourly();
 Schedule::command('openlmnp:demo-cleanup')->hourly();
+// Check-in anonyme quotidien (télémétrie opt-out) — compte les instances self-hosted.
+Schedule::command('app:instance-checkin')->daily();
