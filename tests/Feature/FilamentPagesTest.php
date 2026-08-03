@@ -99,6 +99,18 @@ it('shows loan creation form', function () {
         ->assertOk();
 });
 
+it('shows property work creation form', function () {
+    $this->actingAs($this->user)
+        ->get('/property-works/create')
+        ->assertOk();
+});
+
+it('shows furniture creation form', function () {
+    $this->actingAs($this->user)
+        ->get('/furniture/create')
+        ->assertOk();
+});
+
 it('shows fiscal years page', function () {
     $this->actingAs($this->user)
         ->get('/fiscal-years')

@@ -70,8 +70,8 @@ class FurnitureResource extends Resource
     {
         return [
             'index' => ListFurniture::route('/'),
-            'property' => ListFurniture::route('/{propertyId}'),
             'create' => CreateFurniture::route('/create'),
+            'property' => ListFurniture::route('/{propertyId}'),
             'edit' => EditFurniture::route('/{record}/edit'),
         ];
     }
