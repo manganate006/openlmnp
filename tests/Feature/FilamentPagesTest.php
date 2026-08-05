@@ -2,11 +2,15 @@
 
 use App\Models\Expense;
 use App\Models\FiscalYear;
+use App\Models\Furniture;
 use App\Models\Income;
 use App\Models\Loan;
 use App\Models\Property;
+use App\Models\PropertyComponent;
+use App\Models\PropertyWork;
 use App\Models\User;
 use App\Services\DepreciationService;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -99,15 +103,139 @@ it('shows loan creation form', function () {
         ->assertOk();
 });
 
+it('shows property works list page', function () {
+    $this->actingAs($this->user)
+        ->get('/property-works')
+        ->assertOk();
+});
+
 it('shows property work creation form', function () {
     $this->actingAs($this->user)
         ->get('/property-works/create')
         ->assertOk();
 });
 
+it('shows property work edit page', function () {
+    $property = Property::forceCreate([
+        'user_id' => $this->user->id,
+        'name' => 'Bien test travaux',
+        'address' => '1 rue Test',
+        'city' => 'Paris',
+        'postal_code' => '75001',
+        'type' => 'apartment',
+        'total_area' => 100,
+        'rented_area' => 100,
+        'acquisition_date' => '2020-01-01',
+        'acquisition_price' => 30000000,
+        'notary_fees' => 0,
+        'land_percentage' => 15,
+        'rental_start_date' => '2023-01-01',
+        'rental_type' => 'seasonal',
+        'is_primary_residence' => false,
+    ]);
+    $work = PropertyWork::forceCreate([
+        'property_id' => $property->id,
+        'description' => 'Réfection toiture',
+        'amount' => 500000,
+        'work_date' => '2024-06-01',
+        'duration_years' => 10,
+        'is_dedicated' => true,
+        'annual_depreciation' => 50000,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/property-works/{$work->id}/edit")
+        ->assertOk();
+});
+
+it('shows furniture list page', function () {
+    $this->actingAs($this->user)
+        ->get('/furniture')
+        ->assertOk();
+});
+
 it('shows furniture creation form', function () {
     $this->actingAs($this->user)
         ->get('/furniture/create')
+        ->assertOk();
+});
+
+it('shows furniture edit page', function () {
+    $property = Property::forceCreate([
+        'user_id' => $this->user->id,
+        'name' => 'Bien test mobilier',
+        'address' => '1 rue Test',
+        'city' => 'Paris',
+        'postal_code' => '75001',
+        'type' => 'apartment',
+        'total_area' => 100,
+        'rented_area' => 100,
+        'acquisition_date' => '2020-01-01',
+        'acquisition_price' => 30000000,
+        'notary_fees' => 0,
+        'land_percentage' => 15,
+        'rental_start_date' => '2023-01-01',
+        'rental_type' => 'seasonal',
+        'is_primary_residence' => false,
+    ]);
+    $furniture = Furniture::forceCreate([
+        'property_id' => $property->id,
+        'description' => 'Canapé',
+        'amount' => 80000,
+        'purchase_date' => '2024-01-01',
+        'duration_years' => 5,
+        'is_dedicated' => true,
+        'is_second_hand' => false,
+        'annual_depreciation' => 16000,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/furniture/{$furniture->id}/edit")
+        ->assertOk();
+});
+
+it('shows property components list page', function () {
+    $this->actingAs($this->user)
+        ->get('/property-components')
+        ->assertOk();
+});
+
+it('shows property component creation form', function () {
+    $this->actingAs($this->user)
+        ->get('/property-components/create')
+        ->assertOk();
+});
+
+it('shows property component edit page', function () {
+    $property = Property::forceCreate([
+        'user_id' => $this->user->id,
+        'name' => 'Bien test composant',
+        'address' => '1 rue Test',
+        'city' => 'Paris',
+        'postal_code' => '75001',
+        'type' => 'apartment',
+        'total_area' => 100,
+        'rented_area' => 100,
+        'acquisition_date' => '2020-01-01',
+        'acquisition_price' => 30000000,
+        'notary_fees' => 0,
+        'land_percentage' => 15,
+        'rental_start_date' => '2023-01-01',
+        'rental_type' => 'seasonal',
+        'is_primary_residence' => false,
+    ]);
+    $component = PropertyComponent::forceCreate([
+        'property_id' => $property->id,
+        'name' => 'Gros œuvre',
+        'percentage' => 50,
+        'duration_years' => 40,
+        'base_amount' => 1000000,
+        'annual_depreciation' => 25000,
+        'sort_order' => 0,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/property-components/{$component->id}/edit")
         ->assertOk();
 });
 
@@ -154,6 +282,65 @@ it('shows help page', function () {
         ->get('/help-page')
         ->assertOk()
         ->assertSee('Guide');
+});
+
+it('shows tva declaration page', function () {
+    $this->actingAs($this->user)
+        ->get('/tva-declaration')
+        ->assertOk();
+});
+
+it('shows depreciation editor page', function () {
+    $this->actingAs($this->user)
+        ->get('/depreciation-editor')
+        ->assertOk();
+});
+
+it('shows mcp tokens page when mcp is enabled for the user', function () {
+    config(['mcp.enabled' => true]);
+    $this->user->update(['mcp_enabled' => true]);
+
+    $this->actingAs($this->user)
+        ->get('/mcp-tokens')
+        ->assertOk();
+});
+
+it('shows admin update page for an admin', function () {
+    Http::fake(['api.github.com/*' => Http::response([], 200)]);
+
+    $admin = User::factory()->create(['is_admin' => true]);
+    $this->actingAs($admin)
+        ->get('/admin-update')
+        ->assertOk();
+});
+
+it('shows admin mcp page for an admin', function () {
+    config(['mcp.enabled' => true]);
+
+    $admin = User::factory()->create(['is_admin' => true]);
+    $this->actingAs($admin)
+        ->get('/admin-mcp')
+        ->assertOk();
+});
+
+// === REGRESSION : ROUTE WILDCARD {propertyId} NON NUMÉRIQUE (issue #1) ===
+
+it('returns 404 for a non-numeric property-works property segment', function () {
+    $this->actingAs($this->user)
+        ->get('/property-works/abc')
+        ->assertNotFound();
+});
+
+it('returns 404 for a non-numeric furniture property segment', function () {
+    $this->actingAs($this->user)
+        ->get('/furniture/abc')
+        ->assertNotFound();
+});
+
+it('returns 404 for a non-numeric depreciation-editor property segment', function () {
+    $this->actingAs($this->user)
+        ->get('/depreciation-editor/abc')
+        ->assertNotFound();
 });
 
 // === DATA ISOLATION ===
