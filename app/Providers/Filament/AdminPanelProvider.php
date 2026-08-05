@@ -18,12 +18,20 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        // Un segment {propertyId} non numérique (lien cassé, faute de frappe) ne doit
+        // jamais matcher : sinon Livewire tente d'hydrater une propriété publique typée
+        // ?int avec une chaîne, ce qui lève un TypeError avant même mount() (issue #1).
+        // Doit être posé ici, avant que le panel n'enregistre ses routes de ressources
+        // (même timing que le pattern `tenant` interne de Filament::Panel::register()).
+        Route::pattern('propertyId', '[0-9]+');
+
         $panel = $panel
             ->default()
             ->id('admin')
