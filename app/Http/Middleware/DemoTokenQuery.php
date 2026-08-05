@@ -7,29 +7,30 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Authentifie le token MCP démo public via le paramètre d'URL `?demo_token=<token>`
- * (en plus de l'en-tête `Authorization`).
+ * En mode démo public, toute requête MCP **sans en-tête `Authorization`** est traitée
+ * comme le **compte démo public en lecture seule** : le middleware injecte le Bearer du
+ * token démo avant `auth:sanctum`.
  *
- * Utile pour les gateways/annuaires (ex. Smithery) qui **réservent** l'en-tête
- * `Authorization` et ne peuvent donc pas transmettre un Bearer à l'upstream : un
- * paramètre d'URL, lui, passe. Si le token démo (public, lecture seule) est fourni
- * en query et qu'aucun `Authorization` n'est déjà présent, on le promeut en Bearer
- * → le reste de la chaîne (`auth:sanctum` → `McpGuard`) fonctionne à l'identique
- * (résolution du PAT démo déterministe + gating lecture seule). Aucune nouvelle
- * logique d'auth. **Doit s'exécuter AVANT `auth:sanctum`.**
+ * Conséquences :
+ * - l'URL de base `…/mcp` répond aux **health-checks / inspecteurs anonymes** (Glama, etc.)
+ *   → 200 + serverInfo + 44 outils (démo), plus de 401 ;
+ * - la démo est **essayable sans configuration** (pas besoin de `?demo_token=`) ;
+ * - un **vrai en-tête `Authorization`** (token perso) a la **priorité** → accès à ses
+ *   propres données (aucune régression) ;
+ * - hors mode démo (`MCP_DEMO_ENABLED=false`, ex. auto-hébergé), comportement inchangé (401).
+ *
+ * Réutilise le PAT démo déterministe + la barrière lecture seule de `McpGuard`.
+ * Doit s'exécuter AVANT `auth:sanctum`.
  */
 class DemoTokenQuery
 {
     public function handle(Request $request, Closure $next): Response
     {
         $configured = (string) config('mcp.demo.token');
-        $provided = (string) $request->query('demo_token', '');
 
         if (config('mcp.demo.enabled')
             && $configured !== ''
-            && ! $request->headers->has('Authorization')
-            && $provided !== ''
-            && hash_equals($configured, $provided)) {
+            && ! $request->headers->has('Authorization')) {
             $request->headers->set('Authorization', 'Bearer ' . $configured);
         }
 

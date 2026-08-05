@@ -226,10 +226,40 @@ it('authenticates the demo token via the ?demo_token query param (read allowed, 
     expect($write->json('result.isError'))->toBeTrue();
 });
 
-it('rejects a wrong ?demo_token (no header promotion)', function () {
+it('serves any request without Authorization as the read-only demo', function () {
     config(['mcp.demo.token' => 'openlmnp_demo_ro_qtest']);
-    // Test isolé : aucune requête authentifiée préalable (pas d'auth en cache).
-    $this->postJson('/mcp?demo_token=mauvais', [
+    $this->demoUser->tokens()->create([
+        'name' => 'demo-public-readonly',
+        'token' => hash('sha256', 'openlmnp_demo_ro_qtest'),
+        'abilities' => ['*'],
+    ]);
+
+    // Requête ANONYME (aucun en-tête Authorization, aucun ?demo_token) → démo lecture seule.
+    // C'est ce qui rend l'URL de base essayable + les health-checks anonymes (Glama) healthy.
+    $read = $this->postJson('/mcp', [
+        'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+        'params' => ['name' => 'list_properties', 'arguments' => []],
+    ]);
+    $read->assertOk();
+    expect($read->json('result.isError'))->not->toBeTrue();
+    $t = json_decode($read->json('result.content.0.text', '{}'), true);
+    expect($t['properties'][0]['name'])->toBe('Villa Les Oliviers');
+
+    // Écriture toujours bloquée (démo lecture seule).
+    $write = $this->postJson('/mcp', [
+        'jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call',
+        'params' => ['name' => 'create_expense', 'arguments' => [
+            'property_id' => 1, 'expense_date' => '2025-01-01',
+            'amount' => 10, 'category' => 'other', 'description' => 'x',
+        ]],
+    ]);
+    $write->assertOk();
+    expect($write->json('result.isError'))->toBeTrue();
+});
+
+it('still returns 401 anonymously when demo mode is OFF (self-hosted default)', function () {
+    config(['mcp.demo.enabled' => false]);
+    $this->postJson('/mcp', [
         'jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize', 'params' => [],
     ])->assertUnauthorized();
 });
