@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **233 tests automatisés (626 assertions)** écrits avec
+OpenLMNP est couvert par **234 tests automatisés (629 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -33,7 +33,7 @@ vendor/bin/pest --filter="Filament"
 | AccountingEntryService | 3 | Écritures équilibrées, comptes PCG, quote-part |
 | BadgeService | 15 | Attribution, dédoublonnage, heatmap, score |
 | TVA (helper + déclaration) | 11 | TVA collectée/déductible, trimestriel, calculs HT/TTC |
-| Serveur MCP | 17 | Auth, isolation données, CRUD, justificatifs (garde anti-SSRF), audit |
+| Serveur MCP | 18 | Auth, isolation données, CRUD, justificatifs (garde anti-SSRF : IP privées + redirections), audit |
 | API MCP démo (lecture seule) | 11 | Jeton démo public, écritures bloquées, quota de requêtes |
 | Pages Filament | 43 | Auth, CRUD, simulateur, projection, isolation données |
 | Navigation & liens | 19 | Orphelins, liens, modes Simple/Avancé/Guidé, badges, page de connexion |
@@ -48,7 +48,7 @@ vendor/bin/pest --filter="Filament"
 | Page politique de confidentialité | 2 | Rendu et accessibilité de la page légale |
 | En-têtes de sécurité (F8) | 1 | X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy |
 | Smoke (framework) | 2 | Amorçage de l'application |
-| **Total** | **233** | **626 assertions** |
+| **Total** | **234** | **629 assertions** |
 
 ## Principes
 
