@@ -11,12 +11,11 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://app.openlmnp.fr/mcp",
+      "url": "https://app.openlmnp.fr/mcp?demo_token=openlmnp_demo_ro_ebd891f45e8a771ca1a718f239b733b438a31d48",
       "headers": [
         {
           "name": "Authorization",
-          "description": "Personal Bearer token created in your OpenLMNP account under Paramètres → API MCP",
-          "isRequired": true,
+          "description": "Optional — your personal Bearer token to access your own data (overrides the public read-only demo)",
           "isSecret": true
         }
       ]
