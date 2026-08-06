@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **189 tests automatisés (513 assertions)** écrits avec
+OpenLMNP est couvert par **231 tests automatisés (614 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -27,15 +27,16 @@ vendor/bin/pest --filter="Filament"
 | FiscalYearService | 6 | Résultat fiscal, plafonnement, quote-part charges, micro-BIC |
 | FiscalYearChain | 12 | Chaîne d'exercices : première année, année proposée, validation N−1 |
 | LoanService | 3 | Tableau amortissement, capital restant, intérêts déductibles |
-| AirbnbImportService | 5 | CSV FR/EN, doublons, montants négatifs, format européen |
+| AirbnbImportService | 7 | CSV FR/EN, doublons, montants négatifs, format européen, plafond de taille |
 | FecService | 2 | 18 colonnes, format légal |
 | TaxReturnService | 1 | Génération PDF liasse fiscale |
 | AccountingEntryService | 3 | Écritures équilibrées, comptes PCG, quote-part |
 | BadgeService | 15 | Attribution, dédoublonnage, heatmap, score |
 | TVA (helper + déclaration) | 11 | TVA collectée/déductible, trimestriel, calculs HT/TTC |
-| McpServer | 15 | Auth, isolation données, CRUD, justificatifs, audit |
-| Pages Filament | 26 | Auth, CRUD, simulateur, projection, isolation données |
-| Navigation (liens + badges) | 15 | Orphelins, liens, modes Simple/Avancé/Guidé, badges |
+| Serveur MCP | 17 | Auth, isolation données, CRUD, justificatifs (garde anti-SSRF), audit |
+| API MCP démo (lecture seule) | 11 | Jeton démo public, écritures bloquées, quota de requêtes |
+| Pages Filament | 43 | Auth, CRUD, simulateur, projection, isolation données |
+| Navigation & liens | 19 | Orphelins, liens, modes Simple/Avancé/Guidé, badges, page de connexion |
 | Wizards | 8 | Onboarding, clôture fiscale, emprunt, import annuel |
 | Mode démo | 7 | Sandbox éphémère isolé par visiteur, purge automatique |
 | Isolation multi-utilisateurs | 10 | Scopes via le bien, modèles enfants, page loan-detail |
@@ -43,8 +44,10 @@ vendor/bin/pest --filter="Filament"
 | API de provisioning | 10 | Jeton requis (404/401), création idempotente, notification, suspension |
 | Inscription (RegistrationGate) | 8 | Mode auto (fermée après le premier compte), démo exclue, true/false |
 | Commande reset-password | 4 | Lien de réinitialisation, --password, validations |
+| Télémétrie instances (opt-out) | 4 | Check-in anonyme, désactivable, silencieux sur erreur |
+| Page politique de confidentialité | 2 | Rendu et accessibilité de la page légale |
 | Smoke (framework) | 2 | Amorçage de l'application |
-| **Total** | **189** | **513 assertions** |
+| **Total** | **231** | **614 assertions** |
 
 ## Principes
 
