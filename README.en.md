@@ -86,7 +86,7 @@ chartered accountant is still recommended.
 - **Receipts** — files attached to expenses, works and furniture
 - **Built-in guide & progress badges** — getting started, regular bookkeeping, yearly filing
 - **Dark mode** — native Filament
-- **231 automated tests** — Pest PHP, 614 assertions ([details](docs/TESTS.md), in French)
+- **233 automated tests** — Pest PHP, 626 assertions ([details](docs/TESTS.md), in French)
 
 ## Screenshots
 
@@ -107,7 +107,7 @@ Documentation is written in French (the software targets French tax law):
 | [Demo mode](docs/DEMO.md) | Enable and use the multi-user demo mode (ephemeral per-visitor sandbox) |
 | [FAQ](docs/FAQ.md) | Common questions: pricing, data privacy, régime réel vs micro-BIC, backups… |
 | [LMNP / Airbnb tax guide](docs/fiscalite-lmnp-airbnb.md) | Régime réel tax rules: depreciation, allowances, caps, 2026 reform |
-| [Test coverage](docs/TESTS.md) | Breakdown of the 231 automated tests, suite by suite |
+| [Test coverage](docs/TESTS.md) | Breakdown of the 233 automated tests, suite by suite |
 | [UI design guide](docs/ui-design-openlmnp.md) | Design decisions behind the Filament interface |
 
 To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -205,7 +205,7 @@ backups: [docs/INSTALLATION.md](docs/INSTALLATION.md)
 
 [![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
 
-**231 Pest PHP tests, 614 assertions** — calculation services, Filament pages, multi-user
+**233 Pest PHP tests, 626 assertions** — calculation services, Filament pages, multi-user
 isolation, demo mode. Suite-by-suite breakdown: [docs/TESTS.md](docs/TESTS.md).
 
 ```bash

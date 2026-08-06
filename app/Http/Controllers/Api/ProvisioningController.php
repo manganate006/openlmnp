@@ -62,28 +62,37 @@ class ProvisioningController extends Controller
 
     public function suspend(Request $request): JsonResponse
     {
-        $user = $this->findUser($request);
-        $user->suspended_at = now();
-        $user->save();
-
-        return response()->json(['status' => 'suspended', 'id' => $user->id]);
+        return $this->setSuspension($request, now(), 'suspended');
     }
 
     public function unsuspend(Request $request): JsonResponse
     {
-        $user = $this->findUser($request);
-        $user->suspended_at = null;
-        $user->save();
-
-        return response()->json(['status' => 'active', 'id' => $user->id]);
+        return $this->setSuspension($request, null, 'active');
     }
 
-    private function findUser(Request $request): User
+    /**
+     * Applique/retire la suspension de façon idempotente. La réponse est
+     * uniforme, que le compte existe ou non (F10 : pas d'oracle d'énumération
+     * d'e-mails) ; un e-mail inconnu est journalisé côté serveur pour repérer
+     * une éventuelle désynchronisation avec la vitrine.
+     */
+    private function setSuspension(Request $request, ?\Illuminate\Support\Carbon $suspendedAt, string $status): JsonResponse
     {
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
         ]);
 
-        return User::query()->where('email', $data['email'])->firstOrFail();
+        $user = User::query()->where('email', $data['email'])->first();
+
+        if ($user) {
+            $user->suspended_at = $suspendedAt;
+            $user->save();
+        } else {
+            Log::warning('Provisioning: '.$status.' demandé pour un e-mail inconnu', [
+                'email' => $data['email'],
+            ]);
+        }
+
+        return response()->json(['status' => $status]);
     }
 }
