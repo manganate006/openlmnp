@@ -91,3 +91,25 @@ it('handles french column headers', function () {
     expect($income->guest_name)->toBe('Pierre Dupont');
     expect($income->platform_fee)->toBe(750); // 7.50€
 });
+
+it('rejects csv files exceeding the maximum import size', function () {
+    // Fichier factice au-delà du plafond de 10 Mo (MAX_IMPORT_BYTES) : simule un DoS mémoire.
+    $file = UploadedFile::fake()->create('airbnb-huge.csv', 11 * 1024, 'text/csv');
+
+    $result = $this->service->import($file, $this->property);
+
+    expect($result['imported'])->toBe(0);
+    expect($result['skipped'])->toBe(0);
+    expect($result['errors'])->toHaveCount(1);
+    expect($result['errors'][0])->toContain('taille maximum autorisée');
+});
+
+it('rejects csv files exceeding the maximum size on preview', function () {
+    $file = UploadedFile::fake()->create('airbnb-huge.csv', 11 * 1024, 'text/csv');
+
+    $result = $this->service->preview($file, $this->property);
+
+    expect($result['rows'])->toBe([]);
+    expect($result['errors'])->toHaveCount(1);
+    expect($result['errors'][0])->toContain('taille maximum autorisée');
+});
