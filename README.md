@@ -86,7 +86,7 @@ reste recommandé.
 - **Justificatifs** — pièces uploadées sur charges, travaux et mobilier
 - **Guide intégré & badges de progression** — mise en route, suivi régulier, déclaration annuelle
 - **Dark mode** — natif Filament
-- **233 tests automatisés** — Pest PHP, 626 assertions ([détail](docs/TESTS.md))
+- **234 tests automatisés** — Pest PHP, 629 assertions ([détail](docs/TESTS.md))
 
 ## Captures d'écran
 
@@ -105,7 +105,7 @@ D'autres captures : [tableau de bord](docs/screenshots/dashboard.png) · [charge
 | [Mode démonstration](docs/DEMO.md) | Activer et utiliser le mode démo multi-utilisateurs (sandbox éphémère isolé par visiteur) |
 | [FAQ](docs/FAQ.md) | Questions courantes : gratuité, confidentialité des données, régime réel vs micro-BIC, sauvegardes… |
 | [Guide fiscal LMNP / Airbnb](docs/fiscalite-lmnp-airbnb.md) | Règles fiscales du régime réel : amortissements, abattements, plafonds, réforme 2026 |
-| [Couverture de tests](docs/TESTS.md) | Détail des 233 tests automatisés, suite par suite |
+| [Couverture de tests](docs/TESTS.md) | Détail des 234 tests automatisés, suite par suite |
 | [Guide de conception UI](docs/ui-design-openlmnp.md) | Choix de design de l'interface Filament |
 
 Pour contribuer au projet, voir [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -204,7 +204,7 @@ SMTP pas à pas, sauvegarde : [docs/INSTALLATION.md](docs/INSTALLATION.md)
 
 [![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
 
-**233 tests Pest PHP, 626 assertions** — services de calcul, pages Filament, isolation
+**234 tests Pest PHP, 629 assertions** — services de calcul, pages Filament, isolation
 multi-utilisateurs, mode démo. Détail suite par suite : [docs/TESTS.md](docs/TESTS.md).
 
 ```bash

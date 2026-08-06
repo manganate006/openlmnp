@@ -364,6 +364,48 @@ it('blocks file_url targeting a private or link-local IP (SSRF protection)', fun
     expect($expense->documents()->count())->toBe(0);
 });
 
+it('does not follow redirects on file_url (SSRF protection)', function () {
+    // Hôte public (IP littérale → pas de DNS) renvoyant un 3xx vers une IP interne :
+    // la redirection ne doit PAS être suivie, sinon le contrôle anti-SSRF est contourné.
+    Http::preventStrayRequests();
+    Http::fake([
+        '1.1.1.1/*' => Http::response('', 302, ['Location' => 'http://169.254.169.254/latest/meta-data/']),
+    ]);
+
+    $expense = Expense::forceCreate([
+        'property_id' => $this->property->id,
+        'expense_date' => '2024-01-01',
+        'amount' => 15700,
+        'amount_ht' => 15700,
+        'amount_tva' => 0,
+        'tva_rate' => 0,
+        'category' => 'property_tax',
+        'description' => 'CFE 2024',
+        'is_dedicated' => true,
+        'recurring_type' => 'yearly',
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'attach_document',
+                'arguments' => [
+                    'type'      => 'expense',
+                    'record_id' => $expense->id,
+                    'label'     => 'Tentative SSRF via redirection',
+                    'file_url'  => 'http://1.1.1.1/evil.pdf',
+                ],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->toBeTrue();
+    expect($expense->documents()->count())->toBe(0);
+});
+
 it('rejects the html extension for attach_document', function () {
     $expense = Expense::forceCreate([
         'property_id' => $this->property->id,

@@ -210,7 +210,14 @@ class AttachDocument extends Tool
             return Response::error('file_url refusée : l\'hôte cible pointe vers une adresse IP privée, locale ou réservée (protection anti-SSRF).');
         }
 
-        $response = Http::timeout(30)->get($url);
+        // Ne PAS suivre les redirections : une URL dont l'hôte initial est public
+        // pourrait sinon renvoyer un 3xx vers une IP interne (169.254.169.254…) et
+        // contourner le contrôle anti-SSRF ci-dessus (l'hôte redirigé n'étant pas revalidé).
+        $response = Http::withoutRedirecting()->timeout(30)->get($url);
+
+        if ($response->redirect()) {
+            return Response::error('file_url refusée : les redirections ne sont pas suivies (protection anti-SSRF). Fournissez l\'URL finale directe.');
+        }
 
         if (! $response->successful()) {
             return Response::error("Impossible de télécharger le fichier (HTTP {$response->status()}).");
