@@ -102,9 +102,25 @@ it('suspends then unsuspends a user', function () {
     expect($user->fresh()->canAccessPanel(filament()->getDefaultPanel()))->toBeTrue();
 });
 
-it('returns 404 when suspending an unknown user', function () {
+it('responds idempotently (uniform) when suspending an unknown user', function () {
+    // F10 : pas d'oracle d'énumération — réponse identique à un compte existant.
     $this->postJson('/api/admin/users/suspend', ['email' => 'inconnu@example.com'], provisionHeaders())
-        ->assertNotFound();
+        ->assertOk()
+        ->assertJson(['status' => 'suspended']);
+
+    // Aucun compte n'est créé au passage.
+    expect(User::query()->where('email', 'inconnu@example.com')->exists())->toBeFalse();
+});
+
+it('does not leak account existence via suspend response shape', function () {
+    User::factory()->create(['email' => 'client@example.com']);
+
+    $known = $this->postJson('/api/admin/users/suspend', ['email' => 'client@example.com'], provisionHeaders());
+    $unknown = $this->postJson('/api/admin/users/suspend', ['email' => 'inconnu@example.com'], provisionHeaders());
+
+    // Même statut HTTP et même corps (pas d'id qui trahirait l'existence).
+    expect($known->status())->toBe($unknown->status());
+    expect($known->json())->toBe($unknown->json());
 });
 
 // === Accès panel d'un compte suspendu ===
