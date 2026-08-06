@@ -77,7 +77,7 @@ chartered accountant is still recommended.
 ### 🔌 Import & integrations
 - **Airbnb / Booking CSV import** — FR/EN formats, duplicate detection
 - **CSV export** — income, expenses, filing lines
-- **MCP API** — drive your accounting from an AI assistant (Claude, etc.)
+- **MCP API (44 tools)** — drive your accounting from an AI assistant (Claude, etc.)
 - **Automatic updates** — notification and deployment from GitHub
 
 ### 🛡️ Comfort & safety
@@ -86,7 +86,7 @@ chartered accountant is still recommended.
 - **Receipts** — files attached to expenses, works and furniture
 - **Built-in guide & progress badges** — getting started, regular bookkeeping, yearly filing
 - **Dark mode** — native Filament
-- **167 automated tests** — Pest PHP, 472 assertions ([details](docs/TESTS.md), in French)
+- **231 automated tests** — Pest PHP, 614 assertions ([details](docs/TESTS.md), in French)
 
 ## Screenshots
 
@@ -107,7 +107,7 @@ Documentation is written in French (the software targets French tax law):
 | [Demo mode](docs/DEMO.md) | Enable and use the multi-user demo mode (ephemeral per-visitor sandbox) |
 | [FAQ](docs/FAQ.md) | Common questions: pricing, data privacy, régime réel vs micro-BIC, backups… |
 | [LMNP / Airbnb tax guide](docs/fiscalite-lmnp-airbnb.md) | Régime réel tax rules: depreciation, allowances, caps, 2026 reform |
-| [Test coverage](docs/TESTS.md) | Breakdown of the 167 automated tests, suite by suite |
+| [Test coverage](docs/TESTS.md) | Breakdown of the 231 automated tests, suite by suite |
 | [UI design guide](docs/ui-design-openlmnp.md) | Design decisions behind the Filament interface |
 
 To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -176,19 +176,36 @@ php artisan serve
 
 ## Configuration
 
+On first visit, create your account at `/register`: it becomes the **administrator**, then the
+registration page **closes automatically** (personal instance by default — tunable via
+`ALLOW_REGISTRATION`). Then add your SIREN number in your profile for tax documents.
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DB_CONNECTION` | Database | `sqlite` |
 | `DB_DATABASE` | SQLite path | `database/database.sqlite` |
 | `APP_LOCALE` | Language | `fr` |
+| `ALLOW_REGISTRATION` | Registration: `auto` (until first account), `true` (always), `false` (never) | `auto` |
 
-Add your SIREN number in your user profile for tax documents.
+### Emails (optional)
+
+No email is sent by default (`MAIL_MAILER=log`) — the app works fine without. To enable the
+"Forgot password" link, plug in any SMTP provider via the `MAIL_*` variables (the sender is
+your own address; SPF/DKIM are handled by your provider). And if you forget your password
+without SMTP, from the server:
+
+```bash
+php artisan openlmnp:reset-password you@example.com
+```
+
+📖 **Full reference** — all variables, persistent volumes, accounts, step-by-step SMTP,
+backups: [docs/INSTALLATION.md](docs/INSTALLATION.md)
 
 ## Tests
 
 [![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
 
-**167 Pest PHP tests, 472 assertions** — calculation services, Filament pages, multi-user
+**231 Pest PHP tests, 614 assertions** — calculation services, Filament pages, multi-user
 isolation, demo mode. Suite-by-suite breakdown: [docs/TESTS.md](docs/TESTS.md).
 
 ```bash
