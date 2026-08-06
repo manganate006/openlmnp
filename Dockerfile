@@ -35,7 +35,8 @@ RUN mkdir -p database storage/app/public storage/app/data storage/logs storage/f
 # l'image ; l'entrypoint resynchronise migrations/seeders/factories depuis ici.
 RUN cp -r database /database-dist
 
-RUN php artisan key:generate --force 2>/dev/null || true
+# Pas de key:generate ici : une APP_KEY figée au build serait partagée par toutes
+# les installations qui pullent l'image — l'entrypoint la génère par instance.
 
 # Volumes pour persister les données entre rebuilds
 VOLUME ["/var/www/html/database", "/var/www/html/storage"]

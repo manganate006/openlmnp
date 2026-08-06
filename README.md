@@ -13,7 +13,7 @@ et produisez votre liasse fiscale au régime réel — sans abonnement, chez vou
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
 ![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)
 ![Filament](https://img.shields.io/badge/Filament-5-FBBF24)
-![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+![Docker Pulls](https://img.shields.io/docker/pulls/manganate06/openlmnp?logo=docker&logoColor=white&label=Docker%20pulls)
 
 **[🚀 Démo live](https://app.openlmnp.fr)** · **[📦 Installation](#installation-rapide-docker)** · **[📚 Documentation](#documentation)** · **[🇬🇧 English](README.en.md)**
 
@@ -124,6 +124,17 @@ Pour contribuer au projet, voir [CONTRIBUTING.md](CONTRIBUTING.md).
 | Déploiement | Docker |
 
 ## Installation rapide (Docker)
+
+Avec l'image officielle [`manganate06/openlmnp`](https://hub.docker.com/r/manganate06/openlmnp) :
+
+```bash
+docker run -d --name openlmnp -p 8090:8000 \
+  -v openlmnp-database:/var/www/html/database \
+  -v openlmnp-storage:/var/www/html/storage \
+  --restart unless-stopped manganate06/openlmnp:latest
+```
+
+Ou en construisant l'image depuis les sources :
 
 ```bash
 git clone https://github.com/manganate006/openlmnp.git

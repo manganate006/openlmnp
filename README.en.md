@@ -13,7 +13,7 @@ and produce your French tax return under the « régime réel » — no subscrip
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
 ![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white)
 ![Filament](https://img.shields.io/badge/Filament-5-FBBF24)
-![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+![Docker Pulls](https://img.shields.io/docker/pulls/manganate06/openlmnp?logo=docker&logoColor=white&label=Docker%20pulls)
 
 **[🚀 Live demo](https://app.openlmnp.fr)** · **[📦 Install](#quick-install-docker)** · **[📚 Documentation](#documentation)** · **[🇫🇷 Français](README.md)**
 
@@ -126,6 +126,17 @@ To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 | Deployment | Docker |
 
 ## Quick install (Docker)
+
+Using the official [`manganate06/openlmnp`](https://hub.docker.com/r/manganate06/openlmnp) image:
+
+```bash
+docker run -d --name openlmnp -p 8090:8000 \
+  -v openlmnp-database:/var/www/html/database \
+  -v openlmnp-storage:/var/www/html/storage \
+  --restart unless-stopped manganate06/openlmnp:latest
+```
+
+Or building the image from source:
 
 ```bash
 git clone https://github.com/manganate006/openlmnp.git

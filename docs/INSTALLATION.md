@@ -32,6 +32,18 @@ Aucune base de données externe n'est requise.
 
 ## Installation Docker (recommandée)
 
+**Option A — image officielle** ([`manganate06/openlmnp`](https://hub.docker.com/r/manganate06/openlmnp)
+sur Docker Hub, publiée à chaque release, amd64 + arm64) :
+
+```bash
+docker run -d --name openlmnp -p 8090:8000 \
+  -v /opt/openlmnp-data/database:/var/www/html/database \
+  -v /opt/openlmnp-data/storage:/var/www/html/storage \
+  --restart unless-stopped manganate06/openlmnp:latest
+```
+
+**Option B — construire l'image depuis les sources** :
+
 ```bash
 # 1. Récupérer le code
 git clone https://github.com/manganate006/openlmnp.git
@@ -187,8 +199,10 @@ docker run -d --name openlmnp -p 8090:8000 \
   --restart unless-stopped openlmnp
 ```
 
-> `APP_KEY` est générée automatiquement au build. Ne la partagez jamais : elle chiffre
-> les sessions et données sensibles.
+> `APP_KEY` est générée automatiquement **au premier démarrage** (unique par instance)
+> puis conservée dans `storage/app/.app_key` — elle survit aux mises à jour tant que le
+> volume `storage` est monté. Vous pouvez aussi l'imposer avec `-e APP_KEY=…`.
+> Ne la partagez jamais : elle chiffre les sessions et données sensibles.
 
 ## Installation LXC Proxmox (script communautaire)
 
@@ -229,6 +243,16 @@ Prérequis : **PHP 8.4** (extensions `pdo_sqlite`, `bcmath`, `intl`, `gd`, `zip`
 
 OpenLMNP intègre une notification de mise à jour dans l'interface (comparaison avec
 la dernière version publiée sur GitHub). Pour mettre à jour une installation Docker :
+
+**Avec l'image officielle (option A)** :
+
+```bash
+docker pull manganate06/openlmnp:latest
+docker rm -f openlmnp
+# Relancez avec la même commande docker run que ci-dessus (volumes conservés)
+```
+
+**Avec une image construite localement (option B)** :
 
 ```bash
 cd openlmnp

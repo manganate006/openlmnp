@@ -14,7 +14,7 @@ fi
 # Propage les variables d'environnement runtime (docker run -e …) vers .env :
 # `php artisan serve` ne transmet pas l'environnement du processus aux workers
 # du serveur intégré PHP (variables_order sans E) — seul .env est lu par le web.
-for var in DEMO_MODE DEMO_TTL_HOURS DEMO_MAX_ACCOUNTS DEMO_EMAIL \
+for var in APP_KEY DEMO_MODE DEMO_TTL_HOURS DEMO_MAX_ACCOUNTS DEMO_EMAIL \
     MCP_ENABLED MCP_DEMO_ENABLED MCP_DEMO_TOKEN MCP_DEMO_RATE_LIMIT \
     GITHUB_TOKEN GITHUB_REPO GTM_CONTAINER_ID GTM_SERVER_URL GTM_SCRIPT_PATH \
     ALLOW_REGISTRATION PROVISION_TOKEN APP_URL \
@@ -37,6 +37,24 @@ if [ -d /database-dist/migrations ]; then
     cp -f /database-dist/migrations/*.php database/migrations/ 2>/dev/null || true
     cp -f /database-dist/seeders/*.php database/seeders/ 2>/dev/null || true
     cp -f /database-dist/factories/*.php database/factories/ 2>/dev/null || true
+fi
+
+# APP_KEY par instance : l'image publiée n'embarque aucune clé (une clé commune
+# à toutes les installations permettrait de déchiffrer sessions/cookies d'autrui).
+# Priorité : -e APP_KEY (propagé ci-dessus) > clé persistée dans le volume
+# storage/ > génération au premier démarrage, puis persistance.
+if ! grep -q '^APP_KEY=.\+' .env; then
+    keyfile="storage/app/.app_key"
+    if [ -s "$keyfile" ]; then
+        sed -i "s|^APP_KEY=.*|APP_KEY=$(cat "$keyfile")|" .env
+        echo "[entrypoint] APP_KEY restaurée depuis ${keyfile}."
+    else
+        php artisan key:generate --force
+        mkdir -p storage/app
+        grep '^APP_KEY=' .env | cut -d= -f2- > "$keyfile"
+        chmod 600 "$keyfile"
+        echo "[entrypoint] APP_KEY générée et persistée dans ${keyfile}."
+    fi
 fi
 
 # Nettoyage des caches

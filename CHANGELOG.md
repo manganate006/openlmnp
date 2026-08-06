@@ -2,6 +2,23 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.1.1] — 2026-08-06
+
+### Nouveautés
+
+- **Image Docker officielle** [`manganate06/openlmnp`](https://hub.docker.com/r/manganate06/openlmnp)
+  publiée automatiquement à chaque release (amd64 + arm64) — installation en une commande,
+  sans build local
+
+### Corrections
+
+- **Sécurité Docker** : `APP_KEY` n'est plus figée dans l'image au build (une image publiée
+  aurait partagé la même clé entre toutes les installations). Elle est générée au premier
+  démarrage, unique par instance, persistée dans `storage/app/.app_key` et surchargeable par
+  `-e APP_KEY=…`
+- `version.json` resynchronisé avec la version publiée (la notification de mise à jour
+  se déclenchait à tort)
+
 ## [1.1.0] — 2026-07-20
 
 ### Nouveautés
