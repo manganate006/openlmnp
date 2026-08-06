@@ -7,6 +7,7 @@ use App\Models\Income;
 use App\Models\McpAuditLog;
 use App\Models\Property;
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
     config(['mcp.enabled' => true]);
@@ -319,6 +320,87 @@ it('blocks file_path outside the allowed prefix', function () {
 
     $response->assertOk();
     expect($response->json('result.isError'))->toBeTrue();
+    expect($expense->documents()->count())->toBe(0);
+});
+
+it('blocks file_url targeting a private or link-local IP (SSRF protection)', function () {
+    // Garde-fou : si le code tentait malgré tout un appel réseau réel, le test échoue au lieu de sortir.
+    Http::preventStrayRequests();
+
+    $expense = Expense::forceCreate([
+        'property_id' => $this->property->id,
+        'expense_date' => '2024-01-01',
+        'amount' => 15700,
+        'amount_ht' => 15700,
+        'amount_tva' => 0,
+        'tva_rate' => 0,
+        'category' => 'property_tax',
+        'description' => 'CFE 2024',
+        'is_dedicated' => true,
+        'recurring_type' => 'yearly',
+    ]);
+
+    foreach (['http://127.0.0.1/x.pdf', 'http://169.254.169.254/x'] as $maliciousUrl) {
+        $response = $this->withToken($this->token->plainTextToken)
+            ->postJson('/mcp', [
+                'jsonrpc' => '2.0',
+                'id' => 1,
+                'method' => 'tools/call',
+                'params' => [
+                    'name' => 'attach_document',
+                    'arguments' => [
+                        'type'      => 'expense',
+                        'record_id' => $expense->id,
+                        'label'     => 'Tentative SSRF',
+                        'file_url'  => $maliciousUrl,
+                    ],
+                ],
+            ]);
+
+        $response->assertOk();
+        expect($response->json('result.isError'))->toBeTrue();
+    }
+
+    expect($expense->documents()->count())->toBe(0);
+});
+
+it('rejects the html extension for attach_document', function () {
+    $expense = Expense::forceCreate([
+        'property_id' => $this->property->id,
+        'expense_date' => '2024-01-01',
+        'amount' => 15700,
+        'amount_ht' => 15700,
+        'amount_tva' => 0,
+        'tva_rate' => 0,
+        'category' => 'property_tax',
+        'description' => 'CFE 2024',
+        'is_dedicated' => true,
+        'recurring_type' => 'yearly',
+    ]);
+
+    $content = '<html><body>fake html document</body></html>';
+    $base64  = base64_encode($content);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'attach_document',
+                'arguments' => [
+                    'type'        => 'expense',
+                    'record_id'   => $expense->id,
+                    'label'       => 'Tentative HTML',
+                    'file_base64' => $base64,
+                    'filename'    => 'document.html',
+                ],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->toBeTrue();
+    expect($response->json('result.content.0.text'))->not->toContain('html');
     expect($expense->documents()->count())->toBe(0);
 });
 

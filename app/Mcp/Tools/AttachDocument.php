@@ -31,7 +31,7 @@ class AttachDocument extends Tool
     ];
 
     /** Extensions de fichiers autorisées */
-    private const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'html'];
+    private const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'];
 
     /** Taille maximum du fichier décodé : 10 Mo */
     private const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -200,6 +200,16 @@ class AttachDocument extends Tool
             return Response::error('file_url doit utiliser le schéma http ou https.');
         }
 
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (empty($host)) {
+            return Response::error('file_url doit contenir un nom d\'hôte valide.');
+        }
+
+        if (! $this->isHostAllowed($host)) {
+            return Response::error('file_url refusée : l\'hôte cible pointe vers une adresse IP privée, locale ou réservée (protection anti-SSRF).');
+        }
+
         $response = Http::timeout(30)->get($url);
 
         if (! $response->successful()) {
@@ -210,6 +220,109 @@ class AttachDocument extends Tool
         $resolvedFilename = $filename ?? basename(parse_url($url, PHP_URL_PATH) ?? '') ?: 'document';
 
         return [$decoded, $resolvedFilename];
+    }
+
+    /**
+     * Vérifier que l'hôte ne résout vers aucune adresse IP privée/loopback/
+     * link-local/réservée (protection anti-SSRF sur file_url).
+     *
+     * Toutes les IP résolues (IPv4 et IPv6) doivent être publiques.
+     */
+    private function isHostAllowed(string $host): bool
+    {
+        // Hôte fourni directement sous forme d'IP littérale (avec ou sans crochets IPv6)
+        $literalIp = trim($host, '[]');
+
+        if (filter_var($literalIp, FILTER_VALIDATE_IP) !== false) {
+            return $this->isPublicIp($literalIp);
+        }
+
+        $ips = [];
+
+        // Résolution IPv4
+        $ipv4 = @gethostbynamel($host);
+
+        if (is_array($ipv4)) {
+            $ips = array_merge($ips, $ipv4);
+        }
+
+        // Résolution IPv6 (best effort)
+        $aaaaRecords = @dns_get_record($host, DNS_AAAA);
+
+        if (is_array($aaaaRecords)) {
+            foreach ($aaaaRecords as $record) {
+                if (! empty($record['ipv6'])) {
+                    $ips[] = $record['ipv6'];
+                }
+            }
+        }
+
+        if ($ips === []) {
+            // Résolution impossible : on refuse par précaution.
+            return false;
+        }
+
+        foreach ($ips as $ip) {
+            if (! $this->isPublicIp($ip)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** Déterminer si une IP (v4 ou v6) est publique, c'est-à-dire ni privée, ni loopback, ni réservée. */
+    private function isPublicIp(string $ip): bool
+    {
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            return false;
+        }
+
+        // Garde-fous explicites supplémentaires (au cas où les filtres ci-dessus
+        // ne couvriraient pas une plage particulière selon l'implémentation).
+        $blockedCidrs = [
+            '169.254.0.0/16', // link-local IPv4 (metadata cloud AWS/GCP/Azure)
+            'fc00::/7',       // unique local address IPv6
+            'fe80::/10',      // link-local IPv6
+            '::1/128',        // loopback IPv6
+        ];
+
+        foreach ($blockedCidrs as $cidr) {
+            if ($this->ipInCidr($ip, $cidr)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** Vérifier qu'une IP (v4 ou v6) appartient à un bloc CIDR donné. */
+    private function ipInCidr(string $ip, string $cidr): bool
+    {
+        [$subnet, $prefixLength] = explode('/', $cidr);
+
+        $ipBinary     = @inet_pton($ip);
+        $subnetBinary = @inet_pton($subnet);
+
+        if ($ipBinary === false || $subnetBinary === false || strlen($ipBinary) !== strlen($subnetBinary)) {
+            return false;
+        }
+
+        $prefixLength = (int) $prefixLength;
+        $bytes        = intdiv($prefixLength, 8);
+        $remainder    = $prefixLength % 8;
+
+        if ($bytes > 0 && substr($ipBinary, 0, $bytes) !== substr($subnetBinary, 0, $bytes)) {
+            return false;
+        }
+
+        if ($remainder === 0) {
+            return true;
+        }
+
+        $mask = ~(0xFF >> $remainder) & 0xFF;
+
+        return (ord($ipBinary[$bytes]) & $mask) === (ord($subnetBinary[$bytes]) & $mask);
     }
 
     public function schema(JsonSchema $schema): array

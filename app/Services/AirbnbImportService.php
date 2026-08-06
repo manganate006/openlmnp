@@ -17,6 +17,14 @@ use Illuminate\Support\Carbon;
 class AirbnbImportService
 {
     /**
+     * Taille maximale acceptée pour un fichier CSV Airbnb : 10 Mo.
+     * Alignée sur la limite d'upload des justificatifs (maxSize Filament 10240 Ko,
+     * MAX_FILE_SIZE_BYTES de App\Mcp\Tools\AttachDocument) pour éviter qu'un fichier
+     * énorme sature la mémoire au file_get_contents().
+     */
+    private const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+
+    /**
      * Mapping des en-têtes CSV Airbnb vers nos champs.
      * Supporte plusieurs variantes (FR / EN, formats Transactions et Réservations).
      */
@@ -44,7 +52,12 @@ class AirbnbImportService
      */
     public function preview(UploadedFile $file, Property $property): array
     {
-        $parsed = $this->parseFile($file);
+        try {
+            $parsed = $this->parseFile($file);
+        } catch (\RuntimeException $e) {
+            return ['rows' => [], 'skipped' => 0, 'errors' => [$e->getMessage()], 'warnings' => []];
+        }
+
         if ($parsed === null) {
             return ['rows' => [], 'skipped' => 0, 'errors' => [], 'warnings' => []];
         }
@@ -94,7 +107,12 @@ class AirbnbImportService
      */
     public function import(UploadedFile $file, Property $property): array
     {
-        $parsed = $this->parseFile($file);
+        try {
+            $parsed = $this->parseFile($file);
+        } catch (\RuntimeException $e) {
+            return ['imported' => 0, 'skipped' => 0, 'errors' => [$e->getMessage()]];
+        }
+
         if ($parsed === null) {
             return ['imported' => 0, 'skipped' => 0, 'errors' => ['Fichier vide ou invalide']];
         }
@@ -130,9 +148,20 @@ class AirbnbImportService
 
     /**
      * Parse le fichier CSV et retourne les lignes + index de colonnes.
+     *
+     * @throws \RuntimeException Si le fichier dépasse MAX_IMPORT_BYTES
      */
     private function parseFile(UploadedFile $file): ?array
     {
+        // On mesure via getSize() (taille réelle du fichier temporaire uploadé,
+        // non contrôlable par le client) plutôt que filesize() : même valeur en
+        // production, mais respecte aussi la taille simulée par UploadedFile::fake().
+        $size = $file->getSize();
+        if ($size !== false && $size > self::MAX_IMPORT_BYTES) {
+            $maxMo = self::MAX_IMPORT_BYTES / (1024 * 1024);
+            throw new \RuntimeException("Le fichier dépasse la taille maximum autorisée ({$maxMo} Mo).");
+        }
+
         $content = file_get_contents($file->getRealPath());
 
         // Supprimer le BOM UTF-8
