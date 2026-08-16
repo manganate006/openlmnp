@@ -33,7 +33,17 @@ RUN cp .env.docker .env \
 RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction
 RUN npm install --no-audit --no-fund && npm run build && rm -rf node_modules
 
-RUN mkdir -p database storage/app/public storage/app/data storage/logs storage/framework/{sessions,views,cache} \
+# Création des répertoires nécessaires à Laravel
+RUN mkdir -p \
+    database \
+    storage/app/public \
+    storage/app/data \
+    storage/app \
+    storage/logs \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/cache \
+    bootstrap/cache \
     && chmod -R 775 storage database bootstrap/cache
 
 # Copie de référence : le volume masque database/ ; l'entrypoint resynchronise depuis ici.

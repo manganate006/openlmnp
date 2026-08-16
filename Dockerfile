@@ -28,7 +28,17 @@ RUN cp .env.docker .env
 RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction
 RUN npm install --no-audit --no-fund && npm run build && rm -rf node_modules
 
-RUN mkdir -p database storage/app/public storage/app/data storage/logs storage/framework/{sessions,views,cache} \
+# Création des répertoires nécessaires à Laravel
+RUN mkdir -p \
+    database \
+    storage/app/public \
+    storage/app/data \
+    storage/app \
+    storage/logs \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/cache \
+    bootstrap/cache \
     && chmod -R 775 storage database bootstrap/cache
 
 # Copie de référence : le volume monté sur database/ masque le contenu de
@@ -37,9 +47,6 @@ RUN cp -r database /database-dist
 
 # Pas de key:generate ici : une APP_KEY figée au build serait partagée par toutes
 # les installations qui pullent l'image — l'entrypoint la génère par instance.
-
-# Volumes pour persister les données entre rebuilds
-VOLUME ["/var/www/html/database", "/var/www/html/storage"]
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
