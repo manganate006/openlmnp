@@ -16,6 +16,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(BadgeSeeder::class);
-        $this->call(DemoSeeder::class);
+
+        if (config('demo.enabled')) {
+            $this->call(DemoSeeder::class);
+        }
     }
 }
