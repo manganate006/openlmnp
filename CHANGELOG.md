@@ -2,6 +2,19 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.1.2] — 2026-08-18
+
+### Corrections
+
+- **Sécurité** : le compte de démonstration fixe (`demo@openlmnp.fr`, mot de passe
+  publié dans le README pour la démo officielle) n'est plus créé que si
+  `DEMO_MODE=true`. Il était auparavant seedé sur toute installation
+  self-hébergée, quel que soit ce réglage (#2)
+- **Docker** : le conteneur ne démarrait plus lorsque `database/`/`storage/`
+  étaient montés via des dossiers hôtes (bind-mounts) plutôt que des volumes
+  nommés — correctif du `Dockerfile` et resynchronisation de `storage/` par
+  l'entrypoint, compatible `podman-compose` (#3, merci @cocool97)
+
 ## [1.1.1] — 2026-08-06
 
 ### Nouveautés
