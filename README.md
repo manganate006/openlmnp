@@ -37,7 +37,6 @@ et produisez votre liasse fiscale au régime réel — sans abonnement, chez vou
 - [Configuration](#configuration)
 - [Tests](#tests)
 - [Contribution](#contribution)
-- [Comment nous soutenir ?](#comment-nous-soutenir-)
 - [Licence](#licence)
 
 ## Pourquoi OpenLMNP ?
@@ -231,18 +230,6 @@ git commit -m "feat: description"
 git push origin feature/ma-fonctionnalite
 # Ouvrir une PR
 ```
-
-## 💛 Comment nous soutenir ?
-
-OpenLMNP est développé sur mon temps libre. Si l'outil vous rend service, voici comment
-m'aider à continuer :
-
-- ⭐ **Mettez une étoile** sur le repo — ça aide d'autres loueurs meublés à découvrir le projet
-- 💛 **Devenez sponsor** via [GitHub Sponsors](https://github.com/sponsors/manganate006) — quelques euros par mois financent le temps de développement
-- 🐛 **Signalez un bug** ou proposez une fonctionnalité via les [issues](https://github.com/manganate006/openlmnp/issues)
-- 🔧 **Contribuez du code** — voir [CONTRIBUTING.md](CONTRIBUTING.md)
-
-Merci à toutes celles et ceux qui soutiennent le projet !
 
 ## Licence
 
