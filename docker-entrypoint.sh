@@ -39,6 +39,14 @@ if [ -d /database-dist/migrations ]; then
     cp -f /database-dist/factories/*.php database/factories/ 2>/dev/null || true
 fi
 
+# Même chose pour storage/ : un volume (nommé ou bind-mount) tout juste créé
+# masque les répertoires de l'image. Sans ça, le premier boot plante avant
+# même d'atteindre les migrations ("Please provide a valid cache path", faute
+# de storage/framework/views).
+mkdir -p storage/app/public storage/app/data storage/logs \
+    storage/framework/sessions storage/framework/views storage/framework/cache \
+    bootstrap/cache
+
 # APP_KEY par instance : l'image publiée n'embarque aucune clé (une clé commune
 # à toutes les installations permettrait de déchiffrer sessions/cookies d'autrui).
 # Priorité : -e APP_KEY (propagé ci-dessus) > clé persistée dans le volume
