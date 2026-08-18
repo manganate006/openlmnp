@@ -37,6 +37,7 @@ and produce your French tax return under the « régime réel » — no subscrip
 - [Configuration](#configuration)
 - [Tests](#tests)
 - [Contributing](#contributing)
+- [How to support us?](#how-to-support-us)
 - [License](#license)
 
 ## Why OpenLMNP?
@@ -231,6 +232,18 @@ git commit -m "feat: description"
 git push origin feature/my-feature
 # Open a PR
 ```
+
+## 💛 How to support us?
+
+OpenLMNP is developed in my free time. If the tool is useful to you, here's how you
+can help keep it going:
+
+- ⭐ **Star the repo** — it helps other furnished-rental landlords discover the project
+- 💛 **Become a sponsor** via [GitHub Sponsors](https://github.com/sponsors/manganate006) — a few euros a month fund development time
+- 🐛 **Report a bug** or suggest a feature via [issues](https://github.com/manganate006/openlmnp/issues)
+- 🔧 **Contribute code** — see [CONTRIBUTING.md](CONTRIBUTING.md)
+
+Thanks to everyone who supports the project!
 
 ## License
 
