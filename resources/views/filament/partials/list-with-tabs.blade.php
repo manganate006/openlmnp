@@ -5,30 +5,46 @@
     $currentUrl = $currentUrl ?? null;
 @endphp
 
+{{--
+    ⚠️ Aucun utilitaire Tailwind n'existe dans le CSS du panel (cf. app/CLAUDE.md).
+    La mise en forme vient donc des vraies classes Filament (`fi-breadcrumbs`, `fi-header`,
+    `fi-header-heading`, `fi-header-actions-ctn`) et, pour le reste, du <style> scopé `lwt-*`.
+    `.fi-header .fi-breadcrumbs` est une règle DESCENDANTE : le <nav> étant frère de `.fi-header`
+    et non son descendant, sa marge basse et son masquage mobile ne s'appliquent pas ici.
+--}}
+<style>
+    .lwt-crumbs { margin-bottom: 0.5rem; }
+    .lwt-crumbs a:hover { text-decoration: underline; }
+    /* Met en valeur le niveau courant : `.fi-breadcrumbs ol li` le laisse en gris 500 */
+    .lwt-crumb-current { color: #030712; }
+    .dark .lwt-crumb-current { color: #fff; }
+</style>
+
 <div>
     {{-- Fil d'ariane --}}
-    <nav class="fi-breadcrumbs mb-2">
-        <ol class="fi-breadcrumbs-list flex flex-wrap items-center gap-x-2 text-sm text-gray-500 dark:text-gray-400">
-            <li><a href="/properties" class="hover:underline">Biens Immobiliers</a></li>
+    <nav class="fi-breadcrumbs lwt-crumbs">
+        <ol>
+            <li><a href="/properties">Biens Immobiliers</a></li>
             @if($propertyId)
-                <li class="fi-breadcrumbs-separator">&rsaquo;</li>
-                <li><a href="/properties/{{ $propertyId }}/edit" class="hover:underline">{{ $propertyName ?? '' }}</a></li>
-                <li class="fi-breadcrumbs-separator">&rsaquo;</li>
-                <li class="font-medium text-gray-950 dark:text-white">{{ $currentLabel }}</li>
+                <li>&rsaquo;</li>
+                <li><a href="/properties/{{ $propertyId }}/edit">{{ $propertyName ?? '' }}</a></li>
+                <li>&rsaquo;</li>
+                <li class="lwt-crumb-current">{{ $currentLabel }}</li>
             @else
-                <li class="fi-breadcrumbs-separator">&rsaquo;</li>
-                <li class="font-medium text-gray-950 dark:text-white">{{ $currentLabel }}</li>
+                <li>&rsaquo;</li>
+                <li class="lwt-crumb-current">{{ $currentLabel }}</li>
             @endif
         </ol>
     </nav>
 
     {{-- Titre + actions --}}
-    <div class="fi-header flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 class="fi-header-heading text-2xl font-bold tracking-tight text-gray-950 dark:text-white sm:text-3xl">
+    <div class="fi-header">
+        <h1 class="fi-header-heading">
             {{ $heading }}
         </h1>
         @if(!empty($actions))
-            <div class="fi-header-actions flex shrink-0 items-center gap-3">
+            {{-- fi-header-actions-ctn (et non fi-header-actions, qui n'existe pas) : flex, gap 12px, shrink-0 --}}
+            <div class="fi-header-actions-ctn">
                 @foreach($actions as $action)
                     {{ $action }}
                 @endforeach
