@@ -597,3 +597,57 @@ it('projection shows table with property data', function () {
         ->assertSee('Projection')
         ->assertSee('Immeuble');
 });
+
+// === RENDU DES WIDGETS ET VUES DU PANEL ===
+//
+// Les widgets du tableau de bord sont en chargement PARESSEUX : un simple `get('/')`
+// renvoie la coquille sans jamais évaluer leur Blade. Une erreur de syntaxe dans
+// `onboarding-checklist.blade.php` ou `badges-widget.blade.php` passait donc au travers
+// de toute la suite (constaté le 2026-08-21 : un ParseError a survécu à 249 tests verts,
+// seul le rendu réel dans un navigateur l'a montré).
+// Ces tests forcent le rendu effectif des vues concernées.
+
+it('renders the onboarding checklist widget', function () {
+    Livewire::actingAs($this->user)
+        ->test(\App\Filament\Widgets\OnboardingChecklist::class)
+        ->assertOk();
+});
+
+it('renders the badges widget', function () {
+    Livewire::actingAs($this->user)
+        ->test(\App\Filament\Widgets\BadgesWidget::class)
+        ->assertOk();
+});
+
+it('renders the badges page', function () {
+    $this->actingAs($this->user)
+        ->get('/badges')
+        ->assertOk()
+        ->assertSee('Mes badges');
+});
+
+it('renders the shared header partial with its tabs', function () {
+    $property = Property::create([
+        'user_id' => $this->user->id,
+        'name' => 'Bien header',
+        'address' => '1 rue du Test',
+        'city' => 'Lyon',
+        'postal_code' => '69003',
+        'type' => 'apartment',
+        'total_area' => 45,
+        'rented_area' => 45,
+        'acquisition_date' => '2022-01-01',
+        'acquisition_price' => 20000000,
+        'land_percentage' => 15,
+        'rental_start_date' => '2022-03-01',
+        'rental_type' => 'seasonal',
+        'is_primary_residence' => false,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/furniture/{$property->id}")
+        ->assertOk()
+        // fi-header-actions-ctn est la VRAIE classe Filament (fi-header-actions n'existe pas)
+        ->assertSee('fi-header-actions-ctn', false)
+        ->assertSee('lwt-crumb-current', false);
+});

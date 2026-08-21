@@ -42,7 +42,7 @@
 
     <div class="bw-card">
         <div class="bw-title">
-            <x-filament::icon icon="heroicon-o-trophy" class="w-5 h-5" style="color: #f59e0b;" />
+            <x-filament::icon icon="heroicon-o-trophy" style="color: #f59e0b;" />
             Suivi et badges {{ $data['year'] }}
         </div>
 
@@ -115,7 +115,7 @@
                 @if($data['nextBadge'])
                     <div class="bw-next">
                         <div class="bw-next-title">
-                            <x-filament::icon :icon="$data['nextBadge']['badge']->icon" class="w-4 h-4" style="display: inline;" />
+                            <x-filament::icon :icon="$data['nextBadge']['badge']->icon" :size="\Filament\Support\Enums\IconSize::Small" style="display: inline;" />
                             Prochain : {{ $data['nextBadge']['badge']->name }}
                         </div>
                         <div class="bw-next-desc">{{ $data['nextBadge']['badge']->description }}</div>

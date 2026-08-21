@@ -33,7 +33,7 @@
     <div class="oc-card">
         <div class="oc-header">
             <div class="oc-title">
-                <x-filament::icon icon="heroicon-o-rocket-launch" class="w-5 h-5" style="color: #2563eb;" />
+                <x-filament::icon icon="heroicon-o-rocket-launch" style="color: #2563eb;" />
                 Guide de demarrage
             </div>
             <select class="oc-year-select" wire:change="setYear($event.target.value)">
@@ -55,9 +55,9 @@
                 <div class="oc-step">
                     <div class="oc-circle oc-circle-{{ $step['status'] }}">
                         @if($step['status'] === 'completed')
-                            <x-filament::icon icon="heroicon-o-check" class="w-4 h-4" />
+                            <x-filament::icon icon="heroicon-o-check" :size="\Filament\Support\Enums\IconSize::Small" />
                         @elseif($step['status'] === 'current')
-                            <x-filament::icon icon="{{ $step['icon'] }}" class="w-4 h-4" />
+                            <x-filament::icon icon="{{ $step['icon'] }}" :size="\Filament\Support\Enums\IconSize::Small" />
                         @else
                             {{ $loop->iteration }}
                         @endif
@@ -71,7 +71,7 @@
                     @if($step['status'] === 'current')
                         <div class="oc-action">
                             <a href="{{ $step['url'] }}" class="oc-btn">
-                                <x-filament::icon icon="heroicon-o-arrow-right" class="w-3 h-3" />
+                                <x-filament::icon icon="heroicon-o-arrow-right" :size="\Filament\Support\Enums\IconSize::ExtraSmall" />
                                 Commencer
                             </a>
                         </div>

@@ -107,7 +107,7 @@
                     @foreach($users as $user)
                         <tr>
                             <td>
-                                <div class="font-medium">{{ $user['name'] }}</div>
+                                <div style="font-weight:500;">{{ $user['name'] }}</div>
                                 <div class="am-muted">{{ $user['email'] }}</div>
                             </td>
                             <td>
@@ -161,7 +161,7 @@
                             <tr>
                                 <td class="am-mono">{{ $token['token_name'] }}</td>
                                 <td>
-                                    <div class="font-medium">{{ $token['user_name'] }}</div>
+                                    <div style="font-weight:500;">{{ $token['user_name'] }}</div>
                                     <div class="am-muted">{{ $token['user_email'] }}</div>
                                 </td>
                                 <td class="am-muted">{{ $token['last_used_at'] }}</td>
@@ -237,7 +237,7 @@
                             <tr>
                                 <td class="am-muted am-mono" style="white-space:nowrap;">{{ $entry['created_at'] }}</td>
                                 <td>
-                                    <div class="font-medium" style="font-size:12px;">{{ $entry['user_name'] }}</div>
+                                    <div style="font-weight:500;font-size:12px;">{{ $entry['user_name'] }}</div>
                                 </td>
                                 <td class="am-muted am-mono">{{ $entry['token_name'] }}</td>
                                 <td class="am-mono">{{ $entry['tool_name'] }}</td>
