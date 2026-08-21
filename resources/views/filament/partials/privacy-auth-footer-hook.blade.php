@@ -1,5 +1,10 @@
 {{--
-    Injecté en bas de TOUTES les pages du panel (render hook BODY_END).
+    Injecté sous la carte des pages d'authentification (render hook SIMPLE_PAGE_END) :
+    login, inscription, demande et réinitialisation de mot de passe. Un visiteur doit
+    pouvoir lire la politique avant de créer un compte.
+    Dans l'app connectée, le lien vit dans le menu de l'avatar (->userMenuItems() de
+    AdminPanelProvider) — pas en bandeau de page.
+
     ⚠️ Aucun utilitaire Tailwind n'existe dans le CSS du panel, et `fi-simple-page-footer`
     n'existe pas non plus : la mise en forme passe par ce <style> scopé.
 --}}
