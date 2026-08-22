@@ -145,6 +145,21 @@ class AdminUpdate extends Page
         }
     }
 
+    /**
+     * Faux sur l'image Docker officielle : on masque les boutons d'application et on
+     * affiche la marche à suivre (`docker pull`) plutôt que de laisser l'utilisateur
+     * lancer un déploiement qui ne peut pas aboutir.
+     */
+    public function canSelfApply(): bool
+    {
+        return (new UpdateService())->selfApplyEnabled();
+    }
+
+    public function dockerUpdateCommand(): string
+    {
+        return (new UpdateService())->dockerUpdateInstructions();
+    }
+
     public function getCurrentVersion(): string
     {
         return (new UpdateService())->getCurrentVersion();

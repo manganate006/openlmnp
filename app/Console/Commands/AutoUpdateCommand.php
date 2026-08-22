@@ -15,13 +15,22 @@ class AutoUpdateCommand extends Command
 
     public function handle(): int
     {
+        $service = new UpdateService();
+
+        // Instance immuable (image Docker) : ne pas même interroger GitHub, le
+        // déploiement échouerait de toute façon — et en silence sans ce garde-fou.
+        if ($reason = $service->selfApplyBlockedReason()) {
+            $this->info($reason);
+
+            return self::SUCCESS;
+        }
+
         if (Setting::get('auto_update_enabled') !== '1') {
             $this->info('Mise à jour automatique désactivée.');
 
             return self::SUCCESS;
         }
 
-        $service = new UpdateService();
         $branchInfo = $service->checkBranchUpdates();
 
         $aheadBy = $branchInfo['ahead_by'] ?? 0;
