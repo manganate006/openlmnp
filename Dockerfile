@@ -1,11 +1,14 @@
-ARG PHP_IMAGE=php:8.4-cli-alpine@sha256:f80f7fae697397e1a864c3dfbcbdb5cb7ca107da25ebfadffab5022897c1202a
-ARG COMPOSER_IMAGE=composer:2@sha256:9e446351d4008451e4975358203cbe00509bd6ab494fb2b7cab0113efe91505a
+# Images de base épinglées par digest d'INDEX (manifest list) et non par digest de
+# plateforme : l'image officielle est publiée en amd64 + arm64 (docker-publish.yml), un
+# digest mono-plateforme ferait échouer le leg arm64 avec « no match for platform ».
+ARG PHP_IMAGE=php:8.4-cli-alpine@sha256:26e3f1de7f6aa3e8ea15584d803c5e088c57df89ff02a3ecf2dc855a4282d8d7
+ARG COMPOSER_IMAGE=composer:2@sha256:4d71c3c2109c61d5415544264b59ad4087e4c5b7244481723664138fd36d5040
 ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
 
 # ============================================================
 # 1. PHP BUILD STAGE
 # ============================================================
-FROM ${PHP_IMAGE} AS PHP-BUILDER
+FROM ${PHP_IMAGE} AS php-builder
 
 RUN apk add --no-cache \
         libzip-dev \
@@ -28,10 +31,10 @@ RUN apk add --no-cache \
 # ============================================================
 # 2. COMPOSER DEPENDENCIES STAGE
 # ============================================================
-FROM ${COMPOSER_IMAGE} AS COMPOSER_BINARY
-FROM PHP-BUILDER AS COMPOSER-BUILDER
+FROM ${COMPOSER_IMAGE} AS composer-binary
+FROM php-builder AS composer-builder
 
-COPY --from=COMPOSER_BINARY \
+COPY --from=composer-binary \
     /usr/bin/composer \
     /usr/bin/composer
 
@@ -51,7 +54,7 @@ RUN COMPOSER_ALLOW_SUPERUSER=1 \
 # ============================================================
 # 3. FRONTEND BUILD STAGE
 # ============================================================
-FROM ${NODE_IMAGE} AS FRONTEND-BUILDER
+FROM ${NODE_IMAGE} AS frontend-builder
 
 WORKDIR /app
 
@@ -61,33 +64,36 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 
+# resources/css/app.css scanne `vendor/laravel/framework/…/Pagination/*.blade.php` via
+# @source : sans vendor/, Tailwind n'y trouve rien et retire silencieusement les classes
+# de pagination du CSS compilé (aucune erreur levée).
+COPY --from=composer-builder /var/www/html/vendor ./vendor
+
 RUN npm run build
 
 # ============================================================
 # 4. APPLICATION BUILD STAGE
 # ============================================================
-FROM COMPOSER-BUILDER AS app-builder
+FROM composer-builder AS app-builder
 
 WORKDIR /var/www/html
 
+# vendor/ est déjà en place (hérité du stage composer) et absent du contexte de build
+# (.dockerignore) : ce COPY ne peut donc pas l'écraser.
 COPY . .
 
 RUN cp .env.docker .env
 
-# Récupération des vendor déjà calculés dans le stage Composer.
-# Le stage précédent contient déjà vendor/, donc COPY . . ne doit
-# pas écraser celui-ci si vendor/ est présent dans le contexte.
-COPY --from=COMPOSER-BUILDER /var/www/html/vendor ./vendor
-
-# Package discovery Laravel + autoload optimisé.
-RUN php artisan package:discover --ansi \
-    && composer dump-autoload \
+# Autoload optimisé. ⚠️ Ne JAMAIS ajouter --no-scripts ici : le hook post-autoload-dump
+# de composer.json exécute `package:discover` ET `filament:upgrade`, seul producteur de
+# public/css/filament/** et public/js/filament/** (non committés). Sans lui, panel nu.
+RUN composer dump-autoload \
         --no-dev \
         --optimize \
         --classmap-authoritative
 
 # Assets compilés.
-COPY --from=FRONTEND-BUILDER /app/public/build ./public/build
+COPY --from=frontend-builder /app/public/build ./public/build
 
 # Répertoires nécessaires à Laravel.
 RUN mkdir -p \
@@ -101,12 +107,14 @@ RUN mkdir -p \
     bootstrap/cache \
     && chmod -R 775 storage database bootstrap/cache
 
+# Copie de référence : le volume monté sur database/ masque le contenu de l'image ;
+# l'entrypoint resynchronise migrations/seeders/factories depuis ici.
 RUN rm -rf /database-dist && cp -a database /database-dist
 
 # ============================================================
 # 5. RUNTIME STAGE
 # ============================================================
-FROM ${PHP_IMAGE} AS RUNTIME
+FROM ${PHP_IMAGE} AS runtime
 
 RUN apk add --no-cache \
     bash \
@@ -118,21 +126,13 @@ RUN apk add --no-cache \
     icu-libs
 
 # Extensions PHP compilées.
-COPY --from=PHP-BUILDER /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=php-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 
 # Configuration générée par docker-php-ext-install
-COPY --from=PHP-BUILDER /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+COPY --from=php-builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
-# Configuration PHP applicative.
-RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory.ini \
-    && cat > /usr/local/etc/php/conf.d/opcache.ini <<'EOF'
-opcache.enable=1
-opcache.enable_cli=1
-opcache.validate_timestamps=0
-opcache.memory_consumption=128
-opcache.interned_strings_buffer=16
-opcache.max_accelerated_files=20000
-EOF
+# Configuration PHP applicative (préfixe zz- : chargée après les docker-php-ext-*.ini).
+COPY docker/php.ini /usr/local/etc/php/conf.d/zz-openlmnp.ini
 
 WORKDIR /var/www/html
 
@@ -141,6 +141,9 @@ COPY --from=app-builder /var/www/html /var/www/html
 
 # Copie de référence database/ utilisée par l'entrypoint.
 COPY --from=app-builder /database-dist /database-dist
+
+# Pas de key:generate ici : une APP_KEY figée au build serait partagée par toutes
+# les installations qui pullent l'image — l'entrypoint la génère par instance.
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

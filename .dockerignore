@@ -7,3 +7,11 @@ storage/framework/views/*
 .env
 .env.testing
 database/*.sqlite
+
+# Artefacts de build : recalculés dans les stages dédiés du Dockerfile. Les laisser
+# entrer dans le contexte ferait écraser par la copie de l'hôte le résultat de
+# `composer install --no-dev` et de `npm ci` (un COPY de répertoire fusionne, il ne
+# remplace pas : les paquets de dev de l'hôte resteraient dans l'image finale).
+vendor/
+node_modules/
+public/build/
