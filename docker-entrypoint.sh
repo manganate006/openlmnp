@@ -14,7 +14,7 @@ fi
 # Propage les variables d'environnement runtime (docker run -e …) vers .env :
 # `php artisan serve` ne transmet pas l'environnement du processus aux workers
 # du serveur intégré PHP (variables_order sans E) — seul .env est lu par le web.
-for var in APP_KEY DEMO_MODE DEMO_TTL_HOURS DEMO_MAX_ACCOUNTS DEMO_EMAIL \
+for var in APP_KEY APP_LOCALE APP_FALLBACK_LOCALE DEMO_MODE DEMO_TTL_HOURS DEMO_MAX_ACCOUNTS DEMO_EMAIL \
     MCP_ENABLED MCP_DEMO_ENABLED MCP_DEMO_TOKEN MCP_DEMO_RATE_LIMIT \
     GITHUB_TOKEN GITHUB_REPO GTM_CONTAINER_ID GTM_SERVER_URL GTM_SCRIPT_PATH \
     ALLOW_REGISTRATION PROVISION_TOKEN APP_URL UPDATE_SELF_APPLY UPDATE_DOCKER_IMAGE \
