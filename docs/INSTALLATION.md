@@ -244,6 +244,12 @@ Prérequis : **PHP 8.4** (extensions `pdo_sqlite`, `bcmath`, `intl`, `gd`, `zip`
 OpenLMNP intègre une notification de mise à jour dans l'interface (comparaison avec
 la dernière version publiée sur GitHub). Pour mettre à jour une installation Docker :
 
+> **L'image Docker est immuable.** Elle ne contient ni `rsync`, ni Composer, ni npm, et
+> son opcache tourne sans revalidation des fichiers : le bouton « Mise à jour » de la page
+> *Mises à jour* y est donc masqué (`UPDATE_SELF_APPLY=false`), la détection de version
+> restant active. On met à jour en récupérant la nouvelle image, jamais en réécrivant le
+> code du conteneur.
+
 **Avec l'image officielle (option A)** :
 
 ```bash

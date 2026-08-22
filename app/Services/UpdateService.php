@@ -48,6 +48,58 @@ class UpdateService
         return Setting::get('deploy_commit');
     }
 
+    // -------------------------------------------------------------------------
+    // Mise à jour en place : disponible ou non
+    // -------------------------------------------------------------------------
+
+    /**
+     * L'instance peut-elle réécrire ses propres fichiers ?
+     *
+     * Faux sur l'image Docker officielle (.env.docker), volontairement immuable :
+     * ni rsync, ni composer, ni npm dans le runtime, et opcache tourne avec
+     * validate_timestamps=0. La détection de version reste active dans tous les cas.
+     */
+    public function selfApplyEnabled(): bool
+    {
+        return (bool) config('updater.self_apply', true);
+    }
+
+    /**
+     * Marche à suivre pour mettre à jour une instance conteneurisée.
+     */
+    public function dockerUpdateInstructions(): string
+    {
+        return 'docker pull ' . config('updater.docker_image', 'manganate06/openlmnp:latest');
+    }
+
+    /**
+     * Raison pour laquelle la mise à jour en place est impossible, ou null si elle l'est.
+     *
+     * Appelée avant tout Process : sans elle, `rsync`/`composer`/`npm` absents font
+     * échouer le déploiement en silence (le retour des Process n'est jamais vérifié).
+     */
+    public function selfApplyBlockedReason(): ?string
+    {
+        if (! $this->selfApplyEnabled()) {
+            return 'Mise à jour en place désactivée : cette instance tourne sur une image '
+                . 'Docker immuable. Mettez à jour avec « ' . $this->dockerUpdateInstructions()
+                . ' » puis recréez le conteneur — les données des volumes sont conservées.';
+        }
+
+        if (! $this->commandExists('rsync')) {
+            return 'La commande « rsync » est introuvable sur ce serveur : la mise à jour '
+                . 'en place ne peut pas être appliquée. Installez le paquet « rsync », '
+                . 'ou mettez à jour manuellement.';
+        }
+
+        return null;
+    }
+
+    private function commandExists(string $command): bool
+    {
+        return Process::run('command -v ' . escapeshellarg($command))->successful();
+    }
+
     private function saveDeployInfo(string $commit, string $branch = 'main'): void
     {
         Setting::set('deploy_commit', $commit);
@@ -147,6 +199,10 @@ class UpdateService
 
     public function applyBranchUpdate(string $branch = 'main'): array
     {
+        if ($reason = $this->selfApplyBlockedReason()) {
+            return ['success' => false, 'error' => $reason];
+        }
+
         // Récupérer le SHA du dernier commit avant le déploiement
         $commitSha = null;
         try {
@@ -249,6 +305,10 @@ class UpdateService
 
     public function applyUpdate(string $downloadUrl): array
     {
+        if ($reason = $this->selfApplyBlockedReason()) {
+            return ['success' => false, 'error' => $reason];
+        }
+
         $result = $this->applyFromTarball($downloadUrl);
 
         if ($result['success']) {

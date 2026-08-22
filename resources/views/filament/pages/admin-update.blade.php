@@ -26,7 +26,28 @@
         .au-input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,.2); }
         .au-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; display: block; }
         .au-hint { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .au-notice { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; }
+        .au-notice-title { font-size: 14px; font-weight: 700; color: #1e40af; margin-bottom: 6px; }
+        .au-notice-text { font-size: 13px; color: #1e3a8a; }
+        .au-notice-cmd { display: block; margin-top: 10px; padding: 10px 12px; background: #1e293b; color: #e2e8f0; border-radius: 8px; font-family: monospace; font-size: 12px; overflow-x: auto; }
     </style>
+
+    {{-- ================================================================== --}}
+    {{-- Instance immuable : la mise à jour en place est impossible          --}}
+    {{-- ================================================================== --}}
+    @unless($this->canSelfApply())
+        <div class="au-notice">
+            <div class="au-notice-title">Instance Docker &mdash; mise &agrave; jour par image</div>
+            <div class="au-notice-text">
+                Cette instance tourne sur une image immuable : elle ne contient ni
+                <code>rsync</code>, ni Composer, ni npm, et son code n'est jamais r&eacute;&eacute;crit sur place.
+                La d&eacute;tection des nouvelles versions ci-dessous reste active ; pour appliquer une
+                mise &agrave; jour, r&eacute;cup&eacute;rez la nouvelle image puis recr&eacute;ez le conteneur &mdash; les
+                donn&eacute;es des volumes (base et <code>storage/</code>) sont conserv&eacute;es.
+            </div>
+            <code class="au-notice-cmd">{{ $this->dockerUpdateCommand() }}</code>
+        </div>
+    @endunless
 
     {{-- ================================================================== --}}
     {{-- Section Déploiement branche (développement)                        --}}
@@ -71,7 +92,7 @@
                 <span wire:loading wire:target="checkBranch">Vérification...</span>
             </button>
 
-            @if($branchInfo && ($branchInfo['available'] ?? false))
+            @if($this->canSelfApply() && $branchInfo && ($branchInfo['available'] ?? false))
                 <button wire:click="applyBranchUpdate" wire:loading.attr="disabled" wire:target="applyBranchUpdate" class="au-btn">
                     <span wire:loading.remove wire:target="applyBranchUpdate">Mise &agrave; jour</span>
                     <span wire:loading wire:target="applyBranchUpdate">Mise &agrave; jour en cours...</span>
@@ -79,7 +100,7 @@
             @endif
         </div>
 
-        <div style="margin-top:12px;">
+        <div style="margin-top:12px;" @unless($this->canSelfApply()) hidden @endunless>
             <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#374151;">
                 <button wire:click="toggleAutoUpdate" style="position:relative;width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;transition:background .2s;{{ $autoUpdateEnabled ? 'background:#10b981;' : 'background:#d1d5db;' }}">
                     <span style="position:absolute;top:2px;{{ $autoUpdateEnabled ? 'left:22px;' : 'left:2px;' }}width:20px;height:20px;background:white;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
@@ -160,7 +181,7 @@
                 <span wire:loading wire:target="checkUpdate">Vérification...</span>
             </button>
 
-            @if($updateInfo && ($updateInfo['available'] ?? false))
+            @if($this->canSelfApply() && $updateInfo && ($updateInfo['available'] ?? false))
                 <button wire:click="applyUpdate" wire:loading.attr="disabled" wire:target="applyUpdate" class="au-btn">
                     <span wire:loading.remove wire:target="applyUpdate">Installer v{{ $updateInfo['latest_version'] }}</span>
                     <span wire:loading wire:target="applyUpdate">Mise à jour en cours...</span>

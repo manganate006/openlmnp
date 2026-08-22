@@ -1,0 +1,55 @@
+# Vérifie que l'image se construit sur les deux architectures publiées, SANS pousser.
+#
+# Raison d'être : docker-publish.yml ne tourne qu'au tag `v*`, donc une régression du
+# Dockerfile n'était découverte qu'au moment de la release. Un digest de base
+# mono-plateforme (arm64 introuvable) ou une syntaxe non supportée passait la CI
+# `tests.yml`, qui ne construit jamais l'image.
+#
+# Déclenché uniquement quand les fichiers du build changent : la compilation arm64
+# émulée (QEMU) est lente, inutile de la payer sur chaque PR.
+name: Docker (build de vérification)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - '.dockerignore'
+      - 'docker-entrypoint.sh'
+      - 'composer.lock'
+      - 'package-lock.json'
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - '.dockerignore'
+      - 'docker-entrypoint.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: QEMU (émulation arm64)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build amd64 + arm64 (sans push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
