@@ -48,6 +48,16 @@ class AdminPanelProvider extends PanelProvider
 
         return $panel
             ->profile(\App\Filament\Pages\EditProfile::class)
+            // Lien légal secondaire : dans le menu de l'avatar, pas en bandeau de page.
+            // Sans sort() explicite une Action vaut 0, donc l'item se pose tout seul entre
+            // le sélecteur de thème et « Se déconnecter » (profile = -1, logout = PHP_INT_MAX).
+            // url() en Closure : la route ne doit pas être résolue au boot du panel.
+            ->userMenuItems([
+                \Filament\Actions\Action::make('privacy')
+                    ->label('Confidentialité')
+                    ->icon(\Filament\Support\Icons\Heroicon::ShieldCheck)
+                    ->url(fn (): string => route('legal.confidentialite'), shouldOpenInNewTab: true),
+            ])
             ->brandName('OpenLMNP')
             ->colors([
                 'primary' => Color::Emerald,
@@ -82,7 +92,10 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
             ->renderHook(\Filament\View\PanelsRenderHook::HEAD_START, fn () => config('services.gtm.id') ? view('partials.gtm-head') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::BODY_START, fn () => config('services.gtm.id') ? view('partials.gtm-body') : '')
-            ->renderHook(\Filament\View\PanelsRenderHook::BODY_END, fn () => view('filament.partials.privacy-footer-hook'))
+            // Pages d'authentification uniquement (login, inscription, mot de passe oublié) :
+            // le visiteur doit pouvoir lire la politique AVANT de créer un compte. Une fois
+            // connecté, le lien vit dans le menu utilisateur (->userMenuItems() ci-dessus).
+            ->renderHook(\Filament\View\PanelsRenderHook::SIMPLE_PAGE_END, fn () => view('filament.partials.privacy-auth-footer-hook'))
             ->authMiddleware([
                 Authenticate::class,
             ]);

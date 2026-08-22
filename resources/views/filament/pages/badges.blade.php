@@ -62,7 +62,7 @@
             {{-- Section header --}}
             <div class="bp-section-header">
                 <div class="bp-section-title">
-                    <x-filament::icon :icon="$cat['icon']" class="w-5 h-5" />
+                    <x-filament::icon :icon="$cat['icon']" />
                     {{ $cat['label'] }}
                     <span style="font-size: 12px; font-weight: 400; color: var(--fi-fg-muted, #9ca3af); margin-left: auto;">
                         {{ $cat['earned_count'] }} / {{ $cat['total_count'] }}
@@ -102,7 +102,7 @@
                             <div class="bp-meta">
                                 @if($item['is_yearly'] && !empty($item['earned_years']))
                                     <span class="bp-earned-check">
-                                        <x-filament::icon icon="heroicon-o-check-circle" class="w-4 h-4" />
+                                        <x-filament::icon icon="heroicon-o-check-circle" :size="\Filament\Support\Enums\IconSize::Small" />
                                         Obtenu
                                     </span>
                                     @foreach($item['earned_years'] as $y)
@@ -110,7 +110,7 @@
                                     @endforeach
                                 @elseif(!$item['is_yearly'] && $item['earned_at'])
                                     <span class="bp-earned-check">
-                                        <x-filament::icon icon="heroicon-o-check-circle" class="w-4 h-4" />
+                                        <x-filament::icon icon="heroicon-o-check-circle" :size="\Filament\Support\Enums\IconSize::Small" />
                                         Obtenu le {{ $item['earned_at']->format('d/m/Y') }}
                                     </span>
                                 @endif
