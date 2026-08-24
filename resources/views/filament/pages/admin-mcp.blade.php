@@ -4,30 +4,30 @@
         .am-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .am-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .am-grid-2 { grid-template-columns: repeat(2, 1fr); }
-        .am-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
-        .am-card-label { font-size: 11px; color: var(--fi-fg-muted, #6b7280); text-transform: uppercase; letter-spacing: 0.5px; }
+        .am-card { background: var(--olmnp-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--olmnp-border); }
+        .am-card-label { font-size: 11px; color: var(--olmnp-fg-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .am-card-value { font-size: 24px; font-weight: 800; margin-top: 4px; }
-        .am-card-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .am-card-sub { font-size: 12px; color: var(--olmnp-fg-muted); margin-top: 2px; }
         .am-section { margin-bottom: 28px; }
-        .am-section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
+        .am-section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--olmnp-border); }
         .am-table { width: 100%; font-size: 13px; border-collapse: collapse; }
-        .am-table th { text-align: left; padding: 8px 12px; background: #f9fafb; font-weight: 600; color: #374151; white-space: nowrap; }
-        .am-table td { padding: 8px 12px; border-top: 1px solid #f3f4f6; vertical-align: middle; }
-        .am-table-wrap { overflow: hidden; border-radius: 12px; border: 1px solid var(--fi-border-color, #e5e7eb); }
+        .am-table th { text-align: left; padding: 8px 12px; background: var(--olmnp-surface-muted); font-weight: 600; color: var(--olmnp-fg); white-space: nowrap; }
+        .am-table td { padding: 8px 12px; border-top: 1px solid var(--olmnp-surface-alt); vertical-align: middle; }
+        .am-table-wrap { overflow: hidden; border-radius: 12px; border: 1px solid var(--olmnp-border); }
         .am-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-        .am-badge-green { background: #d1fae5; color: #065f46; }
-        .am-badge-red { background: #fee2e2; color: #991b1b; }
-        .am-badge-gray { background: #f3f4f6; color: #6b7280; }
-        .am-badge-yellow { background: #fef3c7; color: #92400e; }
+        .am-badge-green { background: var(--olmnp-success-bg-strong); color: var(--olmnp-success-fg); }
+        .am-badge-red { background: var(--olmnp-danger-bg-strong); color: var(--olmnp-danger-fg); }
+        .am-badge-gray { background: var(--olmnp-surface-alt); color: var(--olmnp-fg-muted); }
+        .am-badge-yellow { background: var(--olmnp-warning-bg-strong); color: var(--olmnp-warning-fg); }
         .am-btn-sm { padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; }
-        .am-btn-danger { background: #fee2e2; color: #991b1b; }
-        .am-btn-danger:hover { background: #fca5a5; }
-        .am-btn-success { background: #d1fae5; color: #065f46; }
-        .am-btn-success:hover { background: #6ee7b7; }
-        .am-btn-warning { background: #fef3c7; color: #92400e; }
-        .am-btn-warning:hover { background: #fcd34d; }
-        .am-highlight { color: #10b981; }
-        .am-muted { color: #6b7280; font-size: 12px; }
+        .am-btn-danger { background: var(--olmnp-danger-bg-strong); color: var(--olmnp-danger-fg); }
+        .am-btn-danger:hover { background: var(--olmnp-danger-border); }
+        .am-btn-success { background: var(--olmnp-success-bg-strong); color: var(--olmnp-success-fg); }
+        .am-btn-success:hover { background: var(--olmnp-success-border); }
+        .am-btn-warning { background: var(--olmnp-warning-bg-strong); color: var(--olmnp-warning-fg); }
+        .am-btn-warning:hover { background: var(--olmnp-warning-border); }
+        .am-highlight { color: var(--olmnp-success-accent); }
+        .am-muted { color: var(--olmnp-fg-muted); font-size: 12px; }
         .am-mono { font-family: monospace; font-size: 12px; }
         @media (max-width: 900px) {
             .am-grid-4 { grid-template-columns: repeat(2, 1fr); }

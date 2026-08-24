@@ -1,32 +1,32 @@
 <x-filament-panels::page>
     <style>
-        .sim-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
+        .sim-card { background: var(--olmnp-surface); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--olmnp-border); margin-bottom: 16px; }
         .sim-grid { display: grid; gap: 16px; }
         .sim-grid-2 { grid-template-columns: repeat(2, 1fr); }
         .sim-grid-3 { grid-template-columns: repeat(3, 1fr); }
-        .sim-label { font-size: 14px; color: var(--fi-fg-muted, #6b7280); margin-bottom: 4px; }
-        .sim-value { font-size: 24px; font-weight: 700; }
+        .sim-label { font-size: 14px; color: var(--olmnp-fg-muted); margin-bottom: 4px; }
+        .sim-value { font-size: 24px; font-weight: 700; color: var(--olmnp-fg-strong); }
         .sim-sub { font-size: 12px; margin-top: 4px; }
-        .sim-card-amber { background: #fffbeb; border-color: #fbbf24; }
-        .sim-card-green { background: #ecfdf5; border-color: #34d399; }
+        .sim-card-amber { background: var(--olmnp-warning-bg); border-color: var(--olmnp-warning-border); }
+        .sim-card-green { background: var(--olmnp-success-bg); border-color: var(--olmnp-success-border); }
         .sim-verdict { padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; gap: 12px; margin: 16px 0; }
-        .sim-verdict-green { background: #d1fae5; border: 2px solid #10b981; }
-        .sim-verdict-amber { background: #fef3c7; border: 2px solid #f59e0b; }
+        .sim-verdict-green { background: var(--olmnp-success-bg-strong); border: 2px solid var(--olmnp-success-solid); }
+        .sim-verdict-amber { background: var(--olmnp-warning-bg-strong); border: 2px solid var(--olmnp-warning-solid); }
         .sim-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .sim-table td, .sim-table th { padding: 8px 12px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
-        .sim-table th { text-align: left; font-weight: 600; background: var(--fi-bg-muted, #f9fafb); }
+        .sim-table td, .sim-table th { padding: 8px 12px; border-bottom: 1px solid var(--olmnp-border); }
+        .sim-table th { text-align: left; font-weight: 600; background: var(--olmnp-surface-muted); }
         .sim-table .text-right { text-align: right; font-family: monospace; }
-        .sim-table .total { font-weight: 700; border-top: 2px solid #d1d5db; }
-        .sim-table .subtotal { font-weight: 600; color: #374151; }
-        .sim-table .indent { padding-left: 24px; color: #6b7280; }
-        .sim-table .positive { color: #059669; }
-        .sim-table .negative { color: #dc2626; }
-        .sim-table .result { font-weight: 700; font-size: 15px; background: #f0fdf4; }
-        .sim-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; width: 100%; font-size: 14px; }
-        .sim-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; padding: 16px 20px; background: var(--fi-bg-muted, #f9fafb); border-radius: 10px; margin-bottom: 16px; }
+        .sim-table .total { font-weight: 700; border-top: 2px solid var(--olmnp-border-strong); }
+        .sim-table .subtotal { font-weight: 600; color: var(--olmnp-fg); }
+        .sim-table .indent { padding-left: 24px; color: var(--olmnp-fg-muted); }
+        .sim-table .positive { color: var(--olmnp-success-accent); }
+        .sim-table .negative { color: var(--olmnp-danger-accent); }
+        .sim-table .result { font-weight: 700; font-size: 15px; background: var(--olmnp-success-bg); }
+        .sim-select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--olmnp-border-strong); width: 100%; font-size: 14px; }
+        .sim-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; padding: 16px 20px; background: var(--olmnp-surface-muted); border-radius: 10px; margin-bottom: 16px; }
         .sim-summary span { font-weight: 700; font-size: 17px; }
-        .sim-summary .op { color: #9ca3af; font-weight: 400; }
-        .sim-details-toggle { cursor: pointer; color: #2563eb; font-size: 14px; font-weight: 500; border: none; background: none; padding: 0; }
+        .sim-summary .op { color: var(--olmnp-fg-subtle); font-weight: 400; }
+        .sim-details-toggle { cursor: pointer; color: var(--olmnp-info-accent); font-size: 14px; font-weight: 500; border: none; background: none; padding: 0; }
         .sim-details-toggle:hover { text-decoration: underline; }
         @media (max-width: 768px) { .sim-grid-2, .sim-grid-3 { grid-template-columns: 1fr; } .sim-summary { font-size: 13px; } .sim-summary span { font-size: 15px; } }
     </style>
@@ -66,7 +66,7 @@
 
         @if($r['empty'] ?? false)
             <div class="sim-card" style="text-align: center; padding: 48px;">
-                <p style="font-size: 18px; color: var(--fi-fg-muted, #6b7280);">Ajoutez un bien immobilier pour lancer la simulation.</p>
+                <p style="font-size: 18px; color: var(--olmnp-fg-muted);">Ajoutez un bien immobilier pour lancer la simulation.</p>
             </div>
         @else
             {{-- Résumé rapide du calcul --}}
@@ -91,34 +91,34 @@
                     <div class="sim-value">{{ $r['gross_income'] }} €</div>
                 </div>
                 <div class="sim-card sim-card-amber">
-                    <div class="sim-label" style="color: #92400e;">Résultat micro-BIC (abattement {{ $r['abatement'] }}%)</div>
-                    <div class="sim-value" style="color: #92400e;">{{ $r['micro_bic_result'] }} €</div>
-                    <div class="sim-sub" style="color: #b45309;">Base imposable ajoutée au foyer</div>
+                    <div class="sim-label" style="color: var(--olmnp-warning-fg);">Résultat micro-BIC (abattement {{ $r['abatement'] }}%)</div>
+                    <div class="sim-value" style="color: var(--olmnp-warning-fg);">{{ $r['micro_bic_result'] }} €</div>
+                    <div class="sim-sub" style="color: var(--olmnp-warning-fg);">Base imposable ajoutée au foyer</div>
                 </div>
                 <div class="sim-card sim-card-green">
-                    <div class="sim-label" style="color: #065f46;">Résultat régime réel</div>
-                    <div class="sim-value" style="color: #065f46;">{{ $r['real_result'] }} €</div>
-                    <div class="sim-sub" style="color: #047857;">Base imposable ajoutée au foyer</div>
+                    <div class="sim-label" style="color: var(--olmnp-success-fg);">Résultat régime réel</div>
+                    <div class="sim-value" style="color: var(--olmnp-success-fg);">{{ $r['real_result'] }} €</div>
+                    <div class="sim-sub" style="color: var(--olmnp-success-accent);">Base imposable ajoutée au foyer</div>
                 </div>
             </div>
 
             {{-- Verdict --}}
             @if($r['recommended'] === 'real')
                 <div class="sim-verdict sim-verdict-green">
-                    <svg xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;color:#10b981;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;color:var(--olmnp-success-accent);flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                     <div>
-                        <div style="font-size:16px;font-weight:700;color:#065f46;">Le régime réel est plus avantageux de {{ $r['advantage'] }} €</div>
-                        <div style="font-size:13px;color:#047857;margin-top:2px;">
+                        <div style="font-size:16px;font-weight:700;color:var(--olmnp-success-fg);">Le régime réel est plus avantageux de {{ $r['advantage'] }} €</div>
+                        <div style="font-size:13px;color:var(--olmnp-success-accent);margin-top:2px;">
                             Économie d'impôt : {{ $r['tax_saving_11'] }} € (TMI 11%) à {{ $r['tax_saving_30'] }} € (TMI 30%) + {{ $r['ps_saving'] }} € de PS
                         </div>
                     </div>
                 </div>
             @else
                 <div class="sim-verdict sim-verdict-amber">
-                    <svg xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;color:#f59e0b;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;color:var(--olmnp-warning-accent);flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
                     <div>
-                        <div style="font-size:16px;font-weight:700;color:#92400e;">Le micro-BIC est plus avantageux</div>
-                        <div style="font-size:13px;color:#b45309;">Différence : {{ $r['advantage'] }} € en faveur du micro-BIC</div>
+                        <div style="font-size:16px;font-weight:700;color:var(--olmnp-warning-fg);">Le micro-BIC est plus avantageux</div>
+                        <div style="font-size:13px;color:var(--olmnp-warning-fg);">Différence : {{ $r['advantage'] }} € en faveur du micro-BIC</div>
                     </div>
                 </div>
             @endif
@@ -289,20 +289,20 @@
                         @foreach($r['expenses_by_category'] as $cat => $data)
                             @if($data['effective'] > 0)
                                 <tr>
-                                    <td class="indent">{{ $data['label'] }}@if($data['shared'] > 0) <span style="color:#9ca3af;font-size:12px;">(QP)</span>@endif</td>
+                                    <td class="indent">{{ $data['label'] }}@if($data['shared'] > 0) <span style="color:var(--olmnp-fg-subtle);font-size:12px;">(QP)</span>@endif</td>
                                     <td class="text-right negative">-{{ number_format($data['effective'] / 100, 0, ',', ' ') }} €</td>
                                 </tr>
                             @endif
                         @endforeach
                         @if($r['loan_interest'] !== '0')
-                            <tr><td class="indent">Intérêts d'emprunt <span style="color:#9ca3af;font-size:12px;">(QP)</span></td><td class="text-right negative">-{{ $r['loan_interest'] }} €</td></tr>
+                            <tr><td class="indent">Intérêts d'emprunt <span style="color:var(--olmnp-fg-subtle);font-size:12px;">(QP)</span></td><td class="text-right negative">-{{ $r['loan_interest'] }} €</td></tr>
                         @endif
                         @if($r['loan_insurance'] !== '0')
-                            <tr><td class="indent">Assurance emprunteur <span style="color:#9ca3af;font-size:12px;">(QP)</span></td><td class="text-right negative">-{{ $r['loan_insurance'] }} €</td></tr>
+                            <tr><td class="indent">Assurance emprunteur <span style="color:var(--olmnp-fg-subtle);font-size:12px;">(QP)</span></td><td class="text-right negative">-{{ $r['loan_insurance'] }} €</td></tr>
                         @endif
                         <tr class="subtotal"><td>= Total charges</td><td class="text-right negative">-{{ $r['total_expenses'] }} €</td></tr>
 
-                        <tr style="background:#f8fafc;"><td style="font-weight:600;">= Bénéfice avant amortissements</td><td class="text-right" style="font-weight:600;">{{ $r['result_before_depreciation'] }} €</td></tr>
+                        <tr style="background:var(--olmnp-surface-muted);"><td style="font-weight:600;">= Bénéfice avant amortissements</td><td class="text-right" style="font-weight:600;">{{ $r['result_before_depreciation'] }} €</td></tr>
 
                         <tr><td colspan="2" style="padding-top:12px;font-weight:600;">Amortissements</td></tr>
                         <tr><td class="indent">Immeuble (composants)</td><td class="text-right negative">-{{ $r['depreciation_building'] }} €</td></tr>
@@ -311,7 +311,7 @@
                         <tr class="subtotal"><td>= Total amortissements</td><td class="text-right negative">-{{ $r['total_depreciation'] }} €</td></tr>
 
                         @if($r['deferred_depreciation'] !== '0')
-                            <tr><td class="indent" style="color:#f59e0b;">dont plafonné (reporté)</td><td class="text-right" style="color:#f59e0b;">{{ $r['deferred_depreciation'] }} €</td></tr>
+                            <tr><td class="indent" style="color:var(--olmnp-warning-accent);">dont plafonné (reporté)</td><td class="text-right" style="color:var(--olmnp-warning-accent);">{{ $r['deferred_depreciation'] }} €</td></tr>
                             <tr class="subtotal"><td>= Amortissement déduit</td><td class="text-right negative">-{{ $r['capped_depreciation'] }} €</td></tr>
                         @endif
 

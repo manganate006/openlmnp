@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use Filament\Forms\Components\DatePicker;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Dates : saisie ET affichage au format français partout (issue #6).
+        //
+        // ⚠️ `DatePicker` est NATIF par défaut (`CanBeNative::$isNative = true`) : il rend un
+        // `<input type="date">` qui IGNORE `displayFormat()` et suit la locale du navigateur.
+        // Les 16 champs de l'app déclaraient bien `->displayFormat('d/m/Y')` sans aucun effet :
+        // la saisie partait en ISO alors que les colonnes des tables affichaient `d/m/Y`.
+        // `native(false)` bascule sur le sélecteur JS de Filament, qui l'honore.
+        // Configuré ici une fois pour toutes : un `->native(false)` par champ se réoublierait
+        // au prochain formulaire. Une chaîne locale peut toujours surcharger ces valeurs.
+        DatePicker::configureUsing(fn (DatePicker $picker) => $picker
+            ->native(false)
+            ->displayFormat('d/m/Y')
+            ->firstDayOfWeek(1)
+            ->closeOnDateSelection());
+
         // First registered user automatically becomes admin
         User::creating(function (User $user) {
             if (DB::table('users')->count() === 0) {

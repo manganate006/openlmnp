@@ -4,24 +4,28 @@
         .ss-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .ss-grid-5 { grid-template-columns: repeat(5, 1fr); }
         .ss-grid-2 { grid-template-columns: repeat(2, 1fr); }
-        .ss-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
-        .ss-card-label { font-size: 11px; color: var(--fi-fg-muted, #6b7280); }
-        .ss-card-value { font-size: 18px; font-weight: 700; }
+        .ss-card { background: var(--olmnp-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--olmnp-border); }
+        .ss-card-label { font-size: 11px; color: var(--olmnp-fg-muted); }
+        .ss-card-value { font-size: 18px; font-weight: 700; color: var(--olmnp-fg-strong); }
         .ss-card-center { text-align: center; }
-        .ss-card-center .ss-card-value { font-size: 24px; color: #10b981; }
-        .ss-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
-        .ss-btn:hover { background: #059669; }
-        .ss-btn:disabled { opacity: 0.5; cursor: wait; }
-        .ss-result-ok { background: #ecfdf5; border: 1px solid #86efac; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; }
-        .ss-result-fail { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; }
-        .ss-bar { width: 100%; background: #e5e7eb; border-radius: 6px; height: 12px; margin: 8px 0; }
+        .ss-card-center .ss-card-value { font-size: 24px; color: var(--olmnp-success-accent); }
+        .ss-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--olmnp-success-solid); color: var(--olmnp-on-solid); border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .ss-btn:hover { background: var(--olmnp-success-solid-hover); }
+                .ss-result-ok { background: var(--olmnp-success-bg); border: 1px solid var(--olmnp-success-border); border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; }
+        .ss-result-fail { background: var(--olmnp-danger-bg); border: 1px solid var(--olmnp-danger-border); border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 12px; }
+        .ss-bar { width: 100%; background: var(--olmnp-border); border-radius: 6px; height: 12px; margin: 8px 0; }
         .ss-bar-fill { height: 12px; border-radius: 6px; }
-        .ss-pre { margin-top: 12px; padding: 16px; background: #1f2937; color: #e5e7eb; border-radius: 8px; font-size: 11px; overflow-x: auto; max-height: 400px; font-family: monospace; white-space: pre-wrap; }
-        .ss-list { font-size: 12px; color: var(--fi-fg-muted, #6b7280); list-style: disc; padding-left: 20px; line-height: 2; }
+        .ss-pre { margin-top: 12px; padding: 16px; background: var(--olmnp-code-bg); color: var(--olmnp-code-fg); border-radius: 8px; font-size: 11px; overflow-x: auto; max-height: 400px; font-family: monospace; white-space: pre-wrap; }
+        .ss-blocked { background: var(--olmnp-warning-bg); border: 1px solid var(--olmnp-warning-border); color: var(--olmnp-warning-fg); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.6; display: flex; gap: 10px; align-items: flex-start; }
+        .ss-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ss-list { font-size: 12px; color: var(--olmnp-fg-muted); list-style: disc; padding-left: 20px; line-height: 2; }
         @media (max-width: 768px) { .ss-grid-4, .ss-grid-5 { grid-template-columns: repeat(2, 1fr); } }
     </style>
 
-    @php $info = $this->getSystemInfo(); @endphp
+    @php
+        $info = $this->getSystemInfo();
+        $blockedReason = $this->testsBlockedReason();
+    @endphp
 
     <div>
         <div class="ss-grid ss-grid-4" style="margin-bottom: 16px;">
@@ -47,27 +51,32 @@
         <div class="ss-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <h3 style="font-size:16px;font-weight:600;">Tests automatisés</h3>
-                <button wire:click="runTests" wire:loading.attr="disabled" wire:target="runTests" class="ss-btn">
+                <button wire:click="runTests" wire:loading.attr="disabled" wire:target="runTests" class="ss-btn" @disabled($blockedReason)>
                     <span wire:loading.remove wire:target="runTests">Lancer les tests</span>
                     <span wire:loading wire:target="runTests">Tests en cours...</span>
                 </button>
             </div>
 
-            @if($testResults)
+            @if($blockedReason)
+                <div class="ss-blocked">
+                    <x-filament::icon icon="heroicon-o-information-circle" :size="\Filament\Support\Enums\IconSize::Medium" />
+                    <span>{{ $blockedReason }}</span>
+                </div>
+            @elseif($testResults)
                 @if($testResults['success'])
                     <div class="ss-result-ok">
-                        <svg xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px;color:#10b981;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px;color:var(--olmnp-success-accent);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                         <div>
-                            <div style="font-size:16px;font-weight:700;color:#065f46;">Tous les tests passent</div>
-                            <div style="font-size:13px;color:#047857;">{{ $testResults['summary']['passed'] }} tests réussis — {{ $testResults['ran_at'] }}</div>
+                            <div style="font-size:16px;font-weight:700;color:var(--olmnp-success-fg);">Tous les tests passent</div>
+                            <div style="font-size:13px;color:var(--olmnp-success-accent);">{{ $testResults['summary']['passed'] }} tests réussis — {{ $testResults['ran_at'] }}</div>
                         </div>
                     </div>
                 @else
                     <div class="ss-result-fail">
-                        <svg xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px;color:#dc2626;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px;color:var(--olmnp-danger-accent);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                         <div>
-                            <div style="font-size:16px;font-weight:700;color:#991b1b;">Des tests ont échoué</div>
-                            <div style="font-size:13px;color:#dc2626;">{{ $testResults['summary']['passed'] }} réussis, {{ $testResults['summary']['failed'] }} échoués — {{ $testResults['ran_at'] }}</div>
+                            <div style="font-size:16px;font-weight:700;color:var(--olmnp-danger-fg);">Des tests ont échoué</div>
+                            <div style="font-size:13px;color:var(--olmnp-danger-accent);">{{ $testResults['summary']['passed'] }} réussis, {{ $testResults['summary']['failed'] }} échoués — {{ $testResults['ran_at'] }}</div>
                         </div>
                     </div>
                 @endif
@@ -78,15 +87,15 @@
                         <span>{{ $testResults['summary']['passed'] }} / {{ $testResults['summary']['total'] }} tests</span>
                         <span>{{ $pct }}%</span>
                     </div>
-                    <div class="ss-bar"><div class="ss-bar-fill" style="width:{{ $pct }}%;background:{{ $testResults['success'] ? '#10b981' : '#ef4444' }};"></div></div>
+                    <div class="ss-bar"><div class="ss-bar-fill" style="width:{{ $pct }}%;background:{{ $testResults['success'] ? 'var(--olmnp-success-solid)' : 'var(--olmnp-danger-solid)' }};"></div></div>
                 @endif
 
                 <details style="margin-top:12px;">
-                    <summary style="cursor:pointer;font-size:13px;color:#6b7280;">Voir le détail</summary>
+                    <summary style="cursor:pointer;font-size:13px;color:var(--olmnp-fg-muted);">Voir le détail</summary>
                     <pre class="ss-pre">{{ $testResults['output'] }}</pre>
                 </details>
             @else
-                <p style="font-size:13px;color:#6b7280;">Cliquez sur « Lancer les tests » pour vérifier que tout fonctionne.</p>
+                <p style="font-size:13px;color:var(--olmnp-fg-muted);">Cliquez sur « Lancer les tests » pour vérifier que tout fonctionne.</p>
                 <ul class="ss-list">
                     <li>Calculs d'amortissement par composant</li>
                     <li>Résultat fiscal et plafonnement</li>
@@ -99,7 +108,7 @@
             @endif
         </div>
 
-        <div style="text-align:center;font-size:11px;color:#9ca3af;padding:16px;">
+        <div style="text-align:center;font-size:11px;color:var(--olmnp-fg-subtle);padding:16px;">
             OpenLMNP v0.1 — Laravel {{ $info['laravel_version'] }} — Filament {{ $info['filament_version'] }}
         </div>
     </div>

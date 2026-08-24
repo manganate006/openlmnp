@@ -8,6 +8,7 @@ use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Process;
 use UnitEnum;
 
@@ -43,8 +44,46 @@ class SystemStatus extends Page
         ];
     }
 
+    /**
+     * Pourquoi la suite de tests ne peut pas tourner ici — `null` si elle le peut.
+     *
+     * ⚠️ Pest est une dépendance de développement : l'image Docker est construite avec
+     * `composer install --no-dev`, donc `vendor/bin/pest` n'y existe pas et le bouton
+     * renvoyait un « sh: 1: vendor/bin/pest: not found » présenté comme un échec des tests
+     * (issue #7). Ce n'est pas propre au build multi-étapes : l'ancien Dockerfile avait déjà
+     * `--no-dev`. Embarquer Pest en production annulerait le gain de taille de l'image —
+     * on explique donc la situation au lieu de faire semblant de lancer quoi que ce soit.
+     * Même parti pris que `UpdateService::selfApplyBlockedReason()`.
+     */
+    public function testsBlockedReason(): ?string
+    {
+        if (! is_file($this->pestBinary())) {
+            return "La suite de tests n'est pas disponible sur cette installation : Pest est "
+                . 'une dépendance de développement, absente des images Docker (construites '
+                . 'avec « composer install --no-dev »). Pour la lancer, utilisez un checkout '
+                . 'de développement : « composer install » puis « vendor/bin/pest ».';
+        }
+
+        return null;
+    }
+
+    protected function pestBinary(): string
+    {
+        return base_path('vendor/bin/pest');
+    }
+
     public function runTests(): void
     {
+        if ($reason = $this->testsBlockedReason()) {
+            Notification::make()
+                ->title('Tests indisponibles')
+                ->body($reason)
+                ->warning()
+                ->send();
+
+            return;
+        }
+
         $this->testsRunning = true;
 
         $result = Process::timeout(120)

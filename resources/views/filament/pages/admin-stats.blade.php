@@ -4,17 +4,17 @@
         .as-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .as-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .as-grid-2 { grid-template-columns: repeat(2, 1fr); }
-        .as-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
-        .as-card-label { font-size: 11px; color: var(--fi-fg-muted, #6b7280); text-transform: uppercase; letter-spacing: 0.5px; }
+        .as-card { background: var(--olmnp-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--olmnp-border); }
+        .as-card-label { font-size: 11px; color: var(--olmnp-fg-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .as-card-value { font-size: 24px; font-weight: 800; margin-top: 4px; }
-        .as-card-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .as-card-sub { font-size: 12px; color: var(--olmnp-fg-muted); margin-top: 2px; }
         .as-section { margin-bottom: 24px; }
-        .as-section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
+        .as-section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--olmnp-border); }
         .as-table { width: 100%; font-size: 13px; border-collapse: collapse; }
-        .as-table th { text-align: left; padding: 8px; background: #f9fafb; font-weight: 600; }
-        .as-table td { padding: 8px; border-top: 1px solid #f3f4f6; }
-        .as-highlight { color: #10b981; }
-        .as-muted { color: #6b7280; }
+        .as-table th { text-align: left; padding: 8px; background: var(--olmnp-surface-muted); font-weight: 600; }
+        .as-table td { padding: 8px; border-top: 1px solid var(--olmnp-surface-alt); }
+        .as-highlight { color: var(--olmnp-success-accent); }
+        .as-muted { color: var(--olmnp-fg-muted); }
         @media (max-width: 768px) { .as-grid-4 { grid-template-columns: repeat(2, 1fr); } .as-grid-3 { grid-template-columns: repeat(1, 1fr); } }
     </style>
 
@@ -84,7 +84,7 @@
             </div>
             <div class="as-card">
                 <div class="as-card-label">Charges totales</div>
-                <div class="as-card-value" style="color:#ef4444;">{{ number_format(($stats['financial']['total_expenses_cents'] ?? 0) / 100, 0, ',', ' ') }} &euro;</div>
+                <div class="as-card-value" style="color:var(--olmnp-danger-accent);">{{ number_format(($stats['financial']['total_expenses_cents'] ?? 0) / 100, 0, ',', ' ') }} &euro;</div>
             </div>
             <div class="as-card">
                 <div class="as-card-label">Capital emprunte total</div>
@@ -124,7 +124,7 @@
                         <tr>
                             <td>{{ ucfirst(str_replace('_', ' ', $cat)) }}</td>
                             <td>{{ $data->count ?? 0 }}</td>
-                            <td style="color:#ef4444;">{{ number_format(($data->total ?? 0) / 100, 0, ',', ' ') }} &euro;</td>
+                            <td style="color:var(--olmnp-danger-accent);">{{ number_format(($data->total ?? 0) / 100, 0, ',', ' ') }} &euro;</td>
                         </tr>
                     @endforeach
                     </tbody>

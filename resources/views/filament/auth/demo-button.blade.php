@@ -12,8 +12,8 @@
 
     /* Séparateur « ou » */
     .olmnp-login-divider { display: flex; align-items: center; padding: 0.5rem 0; }
-    .olmnp-login-divider-line { flex: 1 1 auto; border-top: 1px solid #e5e7eb; }
-    .olmnp-login-divider-label { flex: 0 0 auto; margin: 0 1rem; font-size: 0.875rem; color: #9ca3af; }
+    .olmnp-login-divider-line { flex: 1 1 auto; border-top: 1px solid var(--olmnp-border); }
+    .olmnp-login-divider-label { flex: 0 0 auto; margin: 0 1rem; font-size: 0.875rem; color: var(--olmnp-fg-subtle); }
 
     /* Carte démo */
     .olmnp-login-demo {
@@ -21,15 +21,15 @@
         align-items: flex-start;
         gap: 0.75rem;
         padding: 1rem;
-        border: 1px solid var(--primary-200, #a7f3d0);
+        border: 1px solid var(--primary-200, var(--olmnp-success-border));
         border-radius: 0.75rem;
-        background: var(--primary-50, #ecfdf5);
+        background: var(--primary-50, var(--olmnp-success-bg));
         text-decoration: none;
         outline: none;
         transition: border-color 75ms ease, box-shadow 75ms ease;
     }
-    .olmnp-login-demo:hover { border-color: var(--primary-400, #34d399); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-    .olmnp-login-demo:focus-visible { box-shadow: 0 0 0 2px var(--primary-600, #059669); }
+    .olmnp-login-demo:hover { border-color: var(--primary-400, var(--olmnp-success-border)); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    .olmnp-login-demo:focus-visible { box-shadow: 0 0 0 2px var(--primary-600, var(--olmnp-success-solid-hover)); }
 
     .olmnp-login-demo-icon {
         display: flex;
@@ -40,8 +40,8 @@
         height: 2.25rem;
         margin-top: 0.125rem;
         border-radius: 0.5rem;
-        background: var(--primary-600, #059669);
-        color: #fff;
+        background: var(--primary-600, var(--olmnp-success-solid-hover));
+        color: var(--olmnp-on-solid);
     }
     .olmnp-login-demo-icon svg { width: 1.25rem; height: 1.25rem; }
 
@@ -52,21 +52,21 @@
         gap: 0.5rem;
         font-size: 0.875rem;
         font-weight: 600;
-        color: var(--primary-700, #047857);
+        color: var(--primary-700, var(--olmnp-success-accent));
     }
     .olmnp-login-demo-dot {
         flex: 0 0 auto;
         width: 0.5rem;
         height: 0.5rem;
         border-radius: 9999px;
-        background: var(--primary-500, #10b981);
+        background: var(--primary-500, var(--olmnp-success-solid));
     }
     .olmnp-login-demo-subtitle {
         display: block; /* <span> inline sinon : margin-top et line-height sans effet */
         margin-top: 0.125rem;
         font-size: 0.75rem;
         line-height: 1rem;
-        color: var(--primary-700, #047857);
+        color: var(--primary-700, var(--olmnp-success-accent));
         opacity: 0.7;
     }
 
@@ -74,37 +74,37 @@
         display: flex;
         flex: 0 0 auto;
         align-self: center;
-        color: var(--primary-600, #059669);
+        color: var(--primary-600, var(--olmnp-success-accent));
         transition: transform 75ms ease;
     }
     .olmnp-login-demo-arrow svg { width: 1rem; height: 1rem; }
     .olmnp-login-demo:hover .olmnp-login-demo-arrow { transform: translateX(0.125rem); }
 
     /* Ligne « Pas encore de compte ? » */
-    .olmnp-login-signup { margin-top: 1.5rem; text-align: center; font-size: 0.875rem; color: #6b7280; }
+    .olmnp-login-signup { margin-top: 1.5rem; text-align: center; font-size: 0.875rem; color: var(--olmnp-fg-muted); }
     .olmnp-login-signup-link {
         font-weight: 600;
-        color: var(--primary-600, #059669);
+        color: var(--primary-600, var(--olmnp-success-accent));
         text-decoration: none;
         outline: none;
     }
-    .olmnp-login-signup-link:hover { color: var(--primary-500, #10b981); text-decoration: underline; }
-    .olmnp-login-signup-link:focus-visible { border-radius: 0.25rem; box-shadow: 0 0 0 2px var(--primary-600, #059669); }
+    .olmnp-login-signup-link:hover { color: var(--primary-500, var(--olmnp-success-accent)); text-decoration: underline; }
+    .olmnp-login-signup-link:focus-visible { border-radius: 0.25rem; box-shadow: 0 0 0 2px var(--primary-600, var(--olmnp-success-solid-hover)); }
 
     /* Mode sombre (le panel bascule via la classe .dark sur <html>) */
     .dark .olmnp-login-divider-line { border-top-color: rgb(255 255 255 / 0.1); }
-    .dark .olmnp-login-divider-label { color: #6b7280; }
+    .dark .olmnp-login-divider-label { color: var(--olmnp-fg-muted); }
     .dark .olmnp-login-demo { border-color: rgb(255 255 255 / 0.1); background: rgb(255 255 255 / 0.05); }
-    .dark .olmnp-login-demo:hover { border-color: var(--primary-500, #10b981); }
-    .dark .olmnp-login-demo:focus-visible { box-shadow: 0 0 0 2px var(--primary-400, #34d399); }
-    .dark .olmnp-login-demo-icon { background: var(--primary-500, #10b981); }
+    .dark .olmnp-login-demo:hover { border-color: var(--primary-500, var(--olmnp-success-solid)); }
+    .dark .olmnp-login-demo:focus-visible { box-shadow: 0 0 0 2px var(--primary-400, var(--olmnp-success-border)); }
+    .dark .olmnp-login-demo-icon { background: var(--primary-500, var(--olmnp-success-solid)); }
     .dark .olmnp-login-demo-title,
-    .dark .olmnp-login-demo-subtitle { color: var(--primary-300, #6ee7b7); }
-    .dark .olmnp-login-demo-arrow { color: var(--primary-400, #34d399); }
-    .dark .olmnp-login-signup { color: #9ca3af; }
-    .dark .olmnp-login-signup-link { color: var(--primary-400, #34d399); }
-    .dark .olmnp-login-signup-link:hover { color: var(--primary-300, #6ee7b7); }
-    .dark .olmnp-login-signup-link:focus-visible { box-shadow: 0 0 0 2px var(--primary-400, #34d399); }
+    .dark .olmnp-login-demo-subtitle { color: var(--primary-300, var(--olmnp-success-fg)); }
+    .dark .olmnp-login-demo-arrow { color: var(--primary-400, var(--olmnp-success-accent)); }
+    .dark .olmnp-login-signup { color: var(--olmnp-fg-subtle); }
+    .dark .olmnp-login-signup-link { color: var(--primary-400, var(--olmnp-success-accent)); }
+    .dark .olmnp-login-signup-link:hover { color: var(--primary-300, var(--olmnp-success-fg)); }
+    .dark .olmnp-login-signup-link:focus-visible { box-shadow: 0 0 0 2px var(--primary-400, var(--olmnp-success-border)); }
 </style>
 
 @if (config('demo.enabled'))

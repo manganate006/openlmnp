@@ -1,31 +1,31 @@
 <x-filament-widgets::widget>
     <style>
-        .oc-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
+        .oc-card { background: var(--olmnp-surface); border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--olmnp-border); }
         .oc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-        .oc-title { font-size: 15px; font-weight: 600; color: var(--fi-fg, #374151); display: flex; align-items: center; gap: 8px; }
+        .oc-title { font-size: 15px; font-weight: 600; color: var(--olmnp-fg); display: flex; align-items: center; gap: 8px; }
         .oc-progress-wrap { margin-bottom: 20px; }
-        .oc-progress-bar { height: 8px; border-radius: 4px; background: rgba(0,0,0,0.06); overflow: hidden; }
-        .oc-progress-fill { height: 100%; border-radius: 4px; background: #10b981; transition: width 0.4s ease; }
-        .oc-progress-label { font-size: 12px; color: var(--fi-fg-muted, #6b7280); margin-top: 4px; text-align: right; }
+        .oc-progress-bar { height: 8px; border-radius: 4px; background: var(--olmnp-surface-muted); overflow: hidden; }
+        .oc-progress-fill { height: 100%; border-radius: 4px; background: var(--olmnp-success-solid); transition: width 0.4s ease; }
+        .oc-progress-label { font-size: 12px; color: var(--olmnp-fg-muted); margin-top: 4px; text-align: right; }
         .oc-steps { display: flex; flex-direction: column; gap: 0; }
         .oc-step { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; position: relative; }
-        .oc-step + .oc-step { border-top: 1px solid rgba(0,0,0,0.04); }
+        .oc-step + .oc-step { border-top: 1px solid var(--olmnp-border); }
         .oc-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 600; }
-        .oc-circle-completed { background: #d1fae5; color: #059669; }
-        .oc-circle-current { background: #dbeafe; color: #2563eb; animation: oc-pulse 2s infinite; }
-        .oc-circle-pending { background: rgba(0,0,0,0.04); color: #9ca3af; }
-        @keyframes oc-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.2); } 50% { box-shadow: 0 0 0 6px rgba(37,99,235,0); } }
+        .oc-circle-completed { background: var(--olmnp-success-bg-strong); color: var(--olmnp-success-accent); }
+        .oc-circle-current { background: var(--olmnp-info-bg-strong); color: var(--olmnp-info-accent); animation: oc-pulse 2s infinite; }
+        .oc-circle-pending { background: var(--olmnp-surface-alt); color: var(--olmnp-fg-subtle); }
+        @keyframes oc-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--olmnp-info-accent) 20%, transparent); } 50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--olmnp-info-accent) 0%, transparent); } }
         .oc-content { flex: 1; min-width: 0; }
-        .oc-label { font-size: 14px; font-weight: 500; color: var(--fi-fg, #374151); }
-        .oc-label-completed { text-decoration: line-through; color: var(--fi-fg-muted, #6b7280); }
-        .oc-desc { font-size: 12px; color: var(--fi-fg-muted, #9ca3af); margin-top: 2px; }
+        .oc-label { font-size: 14px; font-weight: 500; color: var(--olmnp-fg); }
+        .oc-label-completed { text-decoration: line-through; color: var(--olmnp-fg-muted); }
+        .oc-desc { font-size: 12px; color: var(--olmnp-fg-muted); margin-top: 2px; }
         .oc-action { flex-shrink: 0; align-self: center; }
-        .oc-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; background: #2563eb; color: white; transition: background 0.2s; }
-        .oc-btn:hover { background: #1d4ed8; }
+        .oc-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; background: var(--olmnp-info-solid); color: var(--olmnp-on-solid); transition: background 0.2s; }
+        .oc-btn:hover { background: var(--olmnp-info-solid-hover); }
         .oc-footer { margin-top: 16px; text-align: right; }
-        .oc-dismiss { font-size: 12px; color: var(--fi-fg-muted, #9ca3af); cursor: pointer; background: none; border: none; padding: 4px 8px; border-radius: 4px; }
-        .oc-dismiss:hover { color: var(--fi-fg, #374151); background: rgba(0,0,0,0.04); }
-        .oc-year-select { font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--fi-border-color, #e5e7eb); background: var(--fi-body-bg, white); color: var(--fi-fg, #374151); }
+        .oc-dismiss { font-size: 12px; color: var(--olmnp-fg-muted); cursor: pointer; background: none; border: none; padding: 4px 8px; border-radius: 4px; }
+        .oc-dismiss:hover { color: var(--olmnp-fg); background: var(--olmnp-surface-alt); }
+        .oc-year-select { font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--olmnp-border); background: var(--olmnp-surface); color: var(--olmnp-fg); }
     </style>
 
     @php $data = $this->getData(); @endphp
@@ -33,7 +33,7 @@
     <div class="oc-card">
         <div class="oc-header">
             <div class="oc-title">
-                <x-filament::icon icon="heroicon-o-rocket-launch" style="color: #2563eb;" />
+                <x-filament::icon icon="heroicon-o-rocket-launch" style="color: var(--olmnp-info-accent);" />
                 Guide de demarrage
             </div>
             <select class="oc-year-select" wire:change="setYear($event.target.value)">

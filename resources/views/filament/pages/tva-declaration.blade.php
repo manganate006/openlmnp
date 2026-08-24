@@ -1,23 +1,23 @@
 <x-filament-panels::page>
     <style>
-        .tva-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
+        .tva-card { background: var(--olmnp-surface); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--olmnp-border); margin-bottom: 16px; }
         .tva-grid { display: grid; gap: 16px; }
         .tva-grid-2 { grid-template-columns: repeat(2, 1fr); }
         .tva-grid-3 { grid-template-columns: repeat(3, 1fr); }
-        .tva-label { font-size: 14px; color: var(--fi-fg-muted, #6b7280); margin-bottom: 4px; }
+        .tva-label { font-size: 14px; color: var(--olmnp-fg-muted); margin-bottom: 4px; }
         .tva-value { font-size: 24px; font-weight: 700; }
-        .tva-sub { font-size: 12px; margin-top: 4px; color: var(--fi-fg-muted, #6b7280); }
+        .tva-sub { font-size: 12px; margin-top: 4px; color: var(--olmnp-fg-muted); }
         .tva-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .tva-table td, .tva-table th { padding: 10px 14px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
-        .tva-table th { text-align: left; font-weight: 600; background: var(--fi-bg-muted, #f9fafb); }
+        .tva-table td, .tva-table th { padding: 10px 14px; border-bottom: 1px solid var(--olmnp-border); }
+        .tva-table th { text-align: left; font-weight: 600; background: var(--olmnp-surface-muted); }
         .tva-table .text-right { text-align: right; font-family: monospace; }
-        .tva-table .total { font-weight: 700; background: #f0f9ff; }
-        .tva-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 14px; }
-        .tva-balance-positive { color: #dc2626; }
-        .tva-balance-negative { color: #16a34a; }
+        .tva-table .total { font-weight: 700; background: var(--olmnp-info-bg); }
+        .tva-select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--olmnp-border-strong); font-size: 14px; }
+        .tva-balance-positive { color: var(--olmnp-danger-accent); }
+        .tva-balance-negative { color: var(--olmnp-success-accent); }
         .tva-badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
-        .tva-badge-red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .tva-badge-green { background: #ecfdf5; color: #16a34a; border: 1px solid #bbf7d0; }
+        .tva-badge-red { background: var(--olmnp-danger-bg); color: var(--olmnp-danger-accent); border: 1px solid var(--olmnp-danger-border); }
+        .tva-badge-green { background: var(--olmnp-success-bg); color: var(--olmnp-success-accent); border: 1px solid var(--olmnp-success-bg-strong); }
         @media (max-width: 768px) { .tva-grid-2, .tva-grid-3 { grid-template-columns: 1fr; } }
     </style>
 

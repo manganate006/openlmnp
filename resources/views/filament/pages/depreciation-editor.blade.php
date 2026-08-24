@@ -1,51 +1,51 @@
 <x-filament-panels::page>
     <style>
-        .de-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
+        .de-card { background: var(--olmnp-surface); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--olmnp-border); margin-bottom: 16px; }
         .de-grid { display: grid; gap: 12px; }
         .de-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .de-grid-main { grid-template-columns: 1fr 380px; }
         .de-stat { text-align: center; }
         .de-stat-value { font-size: 22px; font-weight: 700; }
-        .de-stat-label { font-size: 11px; color: var(--fi-fg-muted, #6b7280); margin-top: 4px; }
-        .de-stat-green .de-stat-value { color: #059669; }
-        .de-stat-amber .de-stat-value { color: #d97706; }
-        .de-stat-red .de-stat-value { color: #dc2626; }
-        .de-stat-blue .de-stat-value { color: #1e40af; }
-        .de-select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: var(--fi-body-bg, white); color: var(--fi-fg, #374151); }
-        .de-section-title { font-size: 13px; font-weight: 700; color: var(--fi-fg-muted, #6b7280); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
+        .de-stat-label { font-size: 11px; color: var(--olmnp-fg-muted); margin-top: 4px; }
+        .de-stat-green .de-stat-value { color: var(--olmnp-success-accent); }
+        .de-stat-amber .de-stat-value { color: var(--olmnp-warning-fg); }
+        .de-stat-red .de-stat-value { color: var(--olmnp-danger-accent); }
+        .de-stat-blue .de-stat-value { color: var(--olmnp-info-fg); }
+        .de-select { padding: 6px 10px; border: 1px solid var(--olmnp-border-strong); border-radius: 8px; font-size: 14px; background: var(--olmnp-surface); color: var(--olmnp-fg); }
+        .de-section-title { font-size: 13px; font-weight: 700; color: var(--olmnp-fg-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--olmnp-border); }
 
-        .de-comp { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
+        .de-comp { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--olmnp-border); }
         .de-comp:last-child { border-bottom: none; }
         .de-comp-disabled { opacity: 0.45; }
-        .de-comp-checkbox { width: 18px; height: 18px; accent-color: #10b981; cursor: pointer; margin-top: 3px; }
-        .de-comp-name { font-weight: 600; font-size: 14px; color: var(--fi-fg, #374151); }
+        .de-comp-checkbox { width: 18px; height: 18px; accent-color: var(--olmnp-success-accent); cursor: pointer; margin-top: 3px; }
+        .de-comp-name { font-weight: 600; font-size: 14px; color: var(--olmnp-fg); }
         .de-comp-emoji { margin-right: 6px; }
         .de-comp-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap; }
 
         .de-slider-container { flex: 1; min-width: 120px; display: flex; align-items: center; gap: 8px; }
-        .de-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: #e5e7eb; outline: none; cursor: pointer; }
-        .de-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #10b981; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
-        .de-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #10b981; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+        .de-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: var(--olmnp-border); outline: none; cursor: pointer; }
+        .de-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--olmnp-success-solid); cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+        .de-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--olmnp-success-solid); cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
         .de-slider:disabled { opacity: 0.3; cursor: not-allowed; }
-        .de-pct { font-family: monospace; font-weight: 700; font-size: 15px; min-width: 42px; text-align: right; color: var(--fi-fg, #374151); }
-        .de-duration-input { width: 52px; padding: 3px 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; text-align: center; background: var(--fi-body-bg, white); color: var(--fi-fg, #374151); }
-        .de-duration-label { font-size: 12px; color: var(--fi-fg-muted, #6b7280); }
-        .de-amount { font-family: monospace; font-size: 13px; color: var(--fi-fg-muted, #6b7280); min-width: 90px; text-align: right; }
+        .de-pct { font-family: monospace; font-weight: 700; font-size: 15px; min-width: 42px; text-align: right; color: var(--olmnp-fg); }
+        .de-duration-input { width: 52px; padding: 3px 6px; border: 1px solid var(--olmnp-border-strong); border-radius: 6px; font-size: 13px; text-align: center; background: var(--olmnp-surface); color: var(--olmnp-fg); }
+        .de-duration-label { font-size: 12px; color: var(--olmnp-fg-muted); }
+        .de-amount { font-family: monospace; font-size: 13px; color: var(--olmnp-fg-muted); min-width: 90px; text-align: right; }
 
         .de-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
         .de-btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
-        .de-btn-primary { background: #10b981; color: white; }
-        .de-btn-primary:hover { background: #059669; }
+        .de-btn-primary { background: var(--olmnp-success-solid); color: var(--olmnp-on-solid); }
+        .de-btn-primary:hover { background: var(--olmnp-success-solid-hover); }
         .de-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .de-btn-secondary { background: transparent; color: var(--fi-fg-muted, #6b7280); border: 1px solid #d1d5db; }
-        .de-btn-secondary:hover { background: var(--fi-bg-muted, #f3f4f6); }
+        .de-btn-secondary { background: transparent; color: var(--olmnp-fg-muted); border: 1px solid var(--olmnp-border-strong); }
+        .de-btn-secondary:hover { background: var(--olmnp-surface-muted); }
 
         .de-chart-container { position: sticky; top: 80px; }
         .de-chart-legend { margin-top: 16px; }
-        .de-chart-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; color: var(--fi-fg, #374151); }
+        .de-chart-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; color: var(--olmnp-fg); }
         .de-chart-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
-        .de-dirty-badge { display: inline-block; background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+        .de-dirty-badge { display: inline-block; background: var(--olmnp-warning-bg-strong); color: var(--olmnp-warning-fg); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
 
         @media (max-width: 1024px) {
             .de-grid-4 { grid-template-columns: repeat(2, 1fr); }
@@ -63,7 +63,7 @@
 
     @if($data['empty'] ?? true)
         <div class="de-card" style="text-align:center;padding:48px;">
-            <p style="font-size:18px;color:#6b7280;">Aucun bien enregistré. Ajoutez un bien dans Mes biens pour configurer les composants d'amortissement.</p>
+            <p style="font-size:18px;color:var(--olmnp-fg-muted);">Aucun bien enregistré. Ajoutez un bien dans Mes biens pour configurer les composants d'amortissement.</p>
         </div>
     @else
         <div
