@@ -87,6 +87,10 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            // Jetons de couleur du panel (clair/sombre) — source unique des couleurs des
+            // `<style>` scopés des vues. Doit être posé sur TOUTES les pages, y compris
+            // celles d'authentification, d'où le hook `head.end` et non un layout.
+            ->renderHook(\Filament\View\PanelsRenderHook::HEAD_END, fn () => view('filament.partials.theme-tokens'))
             ->renderHook('panels::sidebar.footer', fn () => view('livewire.nav-mode-toggle-hook'))
             ->renderHook('panels::body.end', fn () => view('livewire.contextual-help-hook'))
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))

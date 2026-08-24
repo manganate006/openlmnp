@@ -1,35 +1,35 @@
 <x-filament-panels::page>
     <style>
-        .help-section { background: var(--fi-body-bg, white); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
-        .help-intro { background: #ecfdf5; border: 1px solid #86efac; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
-        .help-intro h2 { font-size: 20px; font-weight: 700; color: #065f46; margin-bottom: 8px; }
-        .help-intro p { color: #047857; font-size: 14px; }
+        .help-section { background: var(--olmnp-surface); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--olmnp-border); margin-bottom: 16px; }
+        .help-intro { background: var(--olmnp-success-bg); border: 1px solid var(--olmnp-success-border); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .help-intro h2 { font-size: 20px; font-weight: 700; color: var(--olmnp-success-fg); margin-bottom: 8px; }
+        .help-intro p { color: var(--olmnp-success-accent); font-size: 14px; }
         .help-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
         .help-section h3 svg { width: 20px; height: 20px; }
-        .help-section p, .help-section li { font-size: 14px; color: var(--fi-fg, #374151); line-height: 1.6; }
+        .help-section p, .help-section li { font-size: 14px; color: var(--olmnp-fg); line-height: 1.6; }
         .help-section p { margin-bottom: 12px; }
-        .help-section strong { color: var(--fi-fg, #111827); }
+        .help-section strong { color: var(--olmnp-fg); }
         .help-section ul { list-style: none; padding: 0; margin: 0 0 12px 0; }
-        .help-section ul li { padding: 8px 0; padding-left: 28px; position: relative; border-bottom: 1px solid var(--fi-border-color, #f3f4f6); }
+        .help-section ul li { padding: 8px 0; padding-left: 28px; position: relative; border-bottom: 1px solid var(--olmnp-border); }
         .help-section ul li:last-child { border-bottom: none; }
         .help-section ul li::before { content: attr(data-icon); position: absolute; left: 0; top: 8px; font-size: 16px; }
         .help-step { display: flex; gap: 12px; margin-bottom: 12px; }
-        .help-step-num { flex-shrink: 0; width: 28px; height: 28px; background: #d1fae5; color: #065f46; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
-        .help-step-text { font-size: 14px; color: var(--fi-fg, #374151); }
+        .help-step-num { flex-shrink: 0; width: 28px; height: 28px; background: var(--olmnp-success-bg-strong); color: var(--olmnp-success-fg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+        .help-step-text { font-size: 14px; color: var(--olmnp-fg); }
         .help-badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .help-badge-once { background: #dbeafe; color: #1e40af; }
-        .help-badge-regular { background: #fef3c7; color: #92400e; }
-        .help-badge-annual { background: #fce7f3; color: #9d174d; }
+        .help-badge-once { background: var(--olmnp-info-bg-strong); color: var(--olmnp-info-fg); }
+        .help-badge-regular { background: var(--olmnp-warning-bg-strong); color: var(--olmnp-warning-fg); }
+        .help-badge-annual { background: var(--olmnp-pink-bg); color: var(--olmnp-pink-fg); }
         .help-category-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid; }
-        .help-category-once { border-color: #3b82f6; }
-        .help-category-once h3 { color: #1e40af; }
-        .help-category-regular { border-color: #f59e0b; }
-        .help-category-regular h3 { color: #92400e; }
-        .help-category-annual { border-color: #ec4899; }
-        .help-category-annual h3 { color: #9d174d; }
-        .help-faq dt { font-weight: 500; color: var(--fi-fg, #111827); margin-bottom: 4px; font-size: 14px; }
-        .help-faq dd { color: var(--fi-fg-muted, #6b7280); margin-bottom: 16px; font-size: 14px; }
-        .help-tip { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #92400e; margin-top: 8px; }
+        .help-category-once { border-color: var(--olmnp-info-solid); }
+        .help-category-once h3 { color: var(--olmnp-info-fg); }
+        .help-category-regular { border-color: var(--olmnp-warning-solid); }
+        .help-category-regular h3 { color: var(--olmnp-warning-fg); }
+        .help-category-annual { border-color: var(--olmnp-pink-solid); }
+        .help-category-annual h3 { color: var(--olmnp-pink-fg); }
+        .help-faq dt { font-weight: 500; color: var(--olmnp-fg); margin-bottom: 4px; font-size: 14px; }
+        .help-faq dd { color: var(--olmnp-fg-muted); margin-bottom: 16px; font-size: 14px; }
+        .help-tip { background: var(--olmnp-warning-bg); border: 1px solid var(--olmnp-warning-border); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--olmnp-warning-fg); margin-top: 8px; }
     </style>
 
     <div style="max-width: 800px;">
@@ -46,7 +46,7 @@
         <div class="help-section">
             <div class="help-category-header help-category-once">
                 <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;color:#3b82f6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;color:var(--olmnp-info-accent)"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                     &Agrave; faire une seule fois <span class="help-badge help-badge-once">mise en route</span>
                 </h3>
             </div>
@@ -64,7 +64,7 @@
             <div class="help-step"><span class="help-step-num">6</span><div class="help-step-text"><strong>Saisissez vos meubles</strong> &mdash; Les meubles d'une valeur sup&eacute;rieure &agrave; 600&nbsp;&euro; sont amortis (g&eacute;n&eacute;ralement sur 5 &agrave; 10 ans). En dessous, ils passent directement en charges.</div></div>
 
             <div class="help-tip">
-                <strong>Astuce :</strong> Si vous n'avez pas encore ajout&eacute; de bien, l'assistant <a href="/onboarding-wizard" style="color:#2563eb;text-decoration:underline;font-weight:600;">Premier lancement</a> appara&icirc;t automatiquement dans le menu Param&egrave;tres et vous guide pas &agrave; pas.
+                <strong>Astuce :</strong> Si vous n'avez pas encore ajout&eacute; de bien, l'assistant <a href="/onboarding-wizard" style="color:var(--olmnp-info-accent);text-decoration:underline;font-weight:600;">Premier lancement</a> appara&icirc;t automatiquement dans le menu Param&egrave;tres et vous guide pas &agrave; pas.
             </div>
         </div>
 
@@ -75,7 +75,7 @@
         <div class="help-section">
             <div class="help-category-header help-category-regular">
                 <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;color:#f59e0b"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;color:var(--olmnp-warning-accent)"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" /></svg>
                     &Agrave; faire r&eacute;guli&egrave;rement <span class="help-badge help-badge-regular">en cours d'ann&eacute;e</span>
                 </h3>
             </div>
@@ -83,7 +83,7 @@
             <p>Id&eacute;alement chaque mois, ou au minimum chaque trimestre, pour ne rien oublier :</p>
 
             <ul>
-                <li data-icon="&#x1F4B0;"><strong>Saisir les recettes</strong> &mdash; Ajoutez vos loyers manuellement ou importez un fichier CSV depuis Airbnb/Booking (menu <a href="/import-airbnb" style="color:#2563eb;text-decoration:underline;font-weight:600;">Import Airbnb</a>). La commission plateforme (~3&nbsp;%) est d&eacute;duite automatiquement. La taxe de s&eacute;jour n'est pas &agrave; inclure.</li>
+                <li data-icon="&#x1F4B0;"><strong>Saisir les recettes</strong> &mdash; Ajoutez vos loyers manuellement ou importez un fichier CSV depuis Airbnb/Booking (menu <a href="/import-airbnb" style="color:var(--olmnp-info-accent);text-decoration:underline;font-weight:600;">Import Airbnb</a>). La commission plateforme (~3&nbsp;%) est d&eacute;duite automatiquement. La taxe de s&eacute;jour n'est pas &agrave; inclure.</li>
                 <li data-icon="&#x1F4C4;"><strong>Enregistrer les charges</strong> &mdash; Taxe fonci&egrave;re, assurance, &eacute;nergie, entretien, m&eacute;nage&hellip; Indiquez si la charge est 100&nbsp;% d&eacute;di&eacute;e (m&eacute;nage Airbnb) ou partag&eacute;e (la quote-part s'applique automatiquement).</li>
                 <li data-icon="&#x1F4CE;"><strong>Joindre les justificatifs</strong> &mdash; Photo ou PDF de chaque facture/re&ccedil;u. Conservation obligatoire : <strong>6 ans minimum</strong> (10 ans recommand&eacute;s).</li>
                 <li data-icon="&#x1F6CB;"><strong>Ajouter les meubles achet&eacute;s</strong> &mdash; Nouveau mobilier, &eacute;lectrom&eacute;nager, &eacute;quipements. Si &gt; 600&nbsp;&euro; TTC : amortissement. Sinon : charge directe.</li>
@@ -102,7 +102,7 @@
         <div class="help-section">
             <div class="help-category-header help-category-annual">
                 <h3>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;color:#ec4899"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v9.75" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:24px;height:24px;color:var(--olmnp-pink-accent)"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v9.75" /></svg>
                     Chaque ann&eacute;e avant la d&eacute;claration <span class="help-badge help-badge-annual">avril&ndash;juin</span>
                 </h3>
             </div>
@@ -111,20 +111,20 @@
 
             <div class="help-step"><span class="help-step-num">1</span><div class="help-step-text"><strong>V&eacute;rifiez l'exhaustivit&eacute; des donn&eacute;es</strong> &mdash; Assurez-vous que toutes les recettes, charges et meubles de l'ann&eacute;e &eacute;coul&eacute;e sont bien saisis. Comparez avec vos relev&eacute;s bancaires.</div></div>
 
-            <div class="help-step"><span class="help-step-num">2</span><div class="help-step-text"><strong>Cr&eacute;ez l'exercice fiscal</strong> &mdash; Allez dans <a href="/fiscal-year-wizard" style="color:#2563eb;text-decoration:underline;font-weight:600;">Fiscal &gt; Nouvel exercice</a> et s&eacute;lectionnez l'ann&eacute;e. L'assistant v&eacute;rifie la coh&eacute;rence de vos donn&eacute;es.</div></div>
+            <div class="help-step"><span class="help-step-num">2</span><div class="help-step-text"><strong>Cr&eacute;ez l'exercice fiscal</strong> &mdash; Allez dans <a href="/fiscal-year-wizard" style="color:var(--olmnp-info-accent);text-decoration:underline;font-weight:600;">Fiscal &gt; Nouvel exercice</a> et s&eacute;lectionnez l'ann&eacute;e. L'assistant v&eacute;rifie la coh&eacute;rence de vos donn&eacute;es.</div></div>
 
             <div class="help-step"><span class="help-step-num">3</span><div class="help-step-text"><strong>Calculez le r&eacute;sultat fiscal</strong> &mdash; Cliquez sur <strong>&laquo;&nbsp;Calculer&nbsp;&raquo;</strong> dans l'exercice. OpenLMNP calcule : recettes &minus; charges &minus; amortissements (plafonn&eacute;s pour ne pas cr&eacute;er de d&eacute;ficit). L'exc&eacute;dent d'amortissement est report&eacute; ind&eacute;finiment.</div></div>
 
-            <div class="help-step"><span class="help-step-num">4</span><div class="help-step-text"><strong>Consultez le <a href="/simulator" style="color:#2563eb;text-decoration:underline;font-weight:600;">simulateur</a></strong> &mdash; Comparez le r&eacute;gime r&eacute;el avec le micro-BIC pour v&eacute;rifier que le r&eacute;el reste avantageux. Micro-BIC 2026 : abattement 50&nbsp;% (class&eacute;) ou 30&nbsp;% (non class&eacute;).</div></div>
+            <div class="help-step"><span class="help-step-num">4</span><div class="help-step-text"><strong>Consultez le <a href="/simulator" style="color:var(--olmnp-info-accent);text-decoration:underline;font-weight:600;">simulateur</a></strong> &mdash; Comparez le r&eacute;gime r&eacute;el avec le micro-BIC pour v&eacute;rifier que le r&eacute;el reste avantageux. Micro-BIC 2026 : abattement 50&nbsp;% (class&eacute;) ou 30&nbsp;% (non class&eacute;).</div></div>
 
             <div class="help-step"><span class="help-step-num">5</span><div class="help-step-text"><strong>G&eacute;n&eacute;rez la liasse fiscale PDF</strong> &mdash; Cliquez sur <strong>&laquo;&nbsp;PDF&nbsp;&raquo;</strong>. Le document contient les formulaires 2031, 2033-B et 2033-C pr&eacute;remplis.</div></div>
 
             <div class="help-step"><span class="help-step-num">6</span><div class="help-step-text"><strong>G&eacute;n&eacute;rez le FEC</strong> &mdash; Le Fichier des &Eacute;critures Comptables (18 colonnes norm&eacute;es) est obligatoire en cas de contr&ocirc;le fiscal. Conservez-le pr&eacute;cieusement.</div></div>
 
-            <div class="help-step"><span class="help-step-num">7</span><div class="help-step-text"><strong>D&eacute;clarez sur impots.gouv.fr</strong> &mdash; Reportez le r&eacute;sultat dans la <strong>2042-C-PRO</strong> : case <strong>5NA</strong> si b&eacute;n&eacute;fice, case <strong>5NK</strong> si d&eacute;ficit. Consultez la page <a href="/teledeclaration" style="color:#2563eb;text-decoration:underline;font-weight:600;">T&eacute;l&eacute;d&eacute;claration</a> pour un guide d&eacute;taill&eacute;.</div></div>
+            <div class="help-step"><span class="help-step-num">7</span><div class="help-step-text"><strong>D&eacute;clarez sur impots.gouv.fr</strong> &mdash; Reportez le r&eacute;sultat dans la <strong>2042-C-PRO</strong> : case <strong>5NA</strong> si b&eacute;n&eacute;fice, case <strong>5NK</strong> si d&eacute;ficit. Consultez la page <a href="/teledeclaration" style="color:var(--olmnp-info-accent);text-decoration:underline;font-weight:600;">T&eacute;l&eacute;d&eacute;claration</a> pour un guide d&eacute;taill&eacute;.</div></div>
 
             <div class="help-tip">
-                <strong>Astuce :</strong> Utilisez la <a href="/projection" style="color:#2563eb;text-decoration:underline;font-weight:600;">Projection pluriannuelle</a> (menu Fiscal) pour anticiper l'&eacute;volution de votre r&eacute;sultat fiscal sur les prochaines ann&eacute;es et savoir quand le micro-BIC redeviendra plus int&eacute;ressant.
+                <strong>Astuce :</strong> Utilisez la <a href="/projection" style="color:var(--olmnp-info-accent);text-decoration:underline;font-weight:600;">Projection pluriannuelle</a> (menu Fiscal) pour anticiper l'&eacute;volution de votre r&eacute;sultat fiscal sur les prochaines ann&eacute;es et savoir quand le micro-BIC redeviendra plus int&eacute;ressant.
             </div>
         </div>
 
@@ -134,7 +134,7 @@
 
         <div class="help-section">
             <h3>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="color:#6b7280"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="color:var(--olmnp-fg-muted)"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
                 M&eacute;mo : les notions cl&eacute;s
             </h3>
             <dl class="help-faq">
@@ -155,7 +155,7 @@
 
         <div class="help-section">
             <h3>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="color:#6b7280"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="color:var(--olmnp-fg-muted)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" /></svg>
                 Questions fr&eacute;quentes
             </h3>
             <dl class="help-faq">
@@ -172,6 +172,6 @@
             </dl>
         </div>
 
-        <p style="text-align:center;font-size:12px;color:#9ca3af;padding:16px;">OpenLMNP &mdash; Logiciel libre sous licence AGPLv3</p>
+        <p style="text-align:center;font-size:12px;color:var(--olmnp-fg-subtle);padding:16px;">OpenLMNP &mdash; Logiciel libre sous licence AGPLv3</p>
     </div>
 </x-filament-panels::page>

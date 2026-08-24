@@ -19,6 +19,21 @@ const PANEL_VIEW_DIRS = ['filament', 'livewire', 'components', 'help'];
 /** CSS publié par `php artisan filament:assets` (gitignoré, présent en CI). */
 const PANEL_CSS = 'css/filament/filament/app.css';
 
+/**
+ * Jetons de couleur du panel : seule vue autorisée à écrire une couleur en dur.
+ *
+ * @see resources/views/filament/partials/theme-tokens.blade.php
+ */
+const THEME_TOKENS_VIEW = 'filament/partials/theme-tokens.blade.php';
+
+/**
+ * Custom properties injectées à l'EXÉCUTION par `->colors()` — absentes du CSS publié.
+ *
+ * Filament génère `--{couleur}-{ton}` pour chaque palette déclarée dans le panel, plus la
+ * palette `gray` (Zinc par défaut, cf. `ColorManager::$colors`).
+ */
+const RUNTIME_COLOR_PALETTES = ['primary', 'danger', 'warning', 'success', 'info', 'gray'];
+
 /** @return list<string> */
 function panelBladeFiles(): array
 {
@@ -154,4 +169,133 @@ it('only uses Filament component classes that the published stylesheet defines',
     }
 
     expect($unknown)->toBe([]);
+});
+
+// ---------------------------------------------------------------------------------------
+// Couleurs : même piège que les classes, en pire — il est INVISIBLE en thème clair.
+//
+// Vingt vues stylaient leurs cartes avec `var(--fi-body-bg, white)`, `var(--fi-fg-muted, …)`,
+// `var(--fi-border-color, …)` — 173 occurrences. Or Filament 5 (Tailwind 4) n'expose AUCUNE
+// variable `--fi-*` : chaque `var()` retombait toujours sur son repli clair. En thème sombre
+// la carte restait donc blanche, avec le texte clair de Filament par-dessus : blanc sur blanc
+// (issue #5, signalée par un utilisateur self-hosted, jamais vue par un test).
+//
+// Les couleurs vivent désormais dans `theme-tokens.blade.php`, décliné clair/sombre.
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Contenu des `<style>` d'une vue, blocs `<script>` exclus.
+ *
+ * Chart.js peint dans un canvas et ne résout pas les custom properties : les palettes de
+ * séries restent légitimement en hexadécimal, elles ne concernent pas ce test.
+ */
+function panelStyleBlocks(string $contents): string
+{
+    $withoutScripts = preg_replace('/<script[^>]*>.*?<\/script>/s', '', $contents) ?? $contents;
+
+    preg_match_all('/<style>(.*?)<\/style>/s', $withoutScripts, $blocks);
+
+    return implode("\n", $blocks[1]);
+}
+
+/**
+ * Contenu d'une vue, commentaires et blocs `<script>` retirés.
+ *
+ * - Les commentaires Blade et CSS citent des noms et des couleurs à titre d'explication
+ *   (le partial de jetons documente justement le bug des `--fi-*`) : les scanner
+ *   transformerait la documentation en échec.
+ * - Chart.js peint dans un canvas et ne résout pas les custom properties : les palettes de
+ *   séries restent légitimement en hexadécimal dans le JS.
+ */
+function scannableMarkup(string $contents): string
+{
+    foreach (['/<script[^>]*>.*?<\/script>/s', '/\{\{--.*?--\}\}/s', '/\/\*.*?\*\//s'] as $pattern) {
+        $contents = preg_replace($pattern, '', $contents) ?? $contents;
+    }
+
+    return $contents;
+}
+
+it('never reads a CSS custom property that nothing defines', function () {
+    $files = panelBladeFiles();
+
+    // Tout ce que les `<style>` du panel définissent (`--x: …`), pool global comme les classes.
+    $defined = [];
+
+    foreach ($files as $file) {
+        preg_match_all('/(--[\w-]+)\s*:/', panelStyleBlocks(scannableMarkup(file_get_contents($file))), $matches);
+
+        foreach ($matches[1] as $property) {
+            $defined[$property] = true;
+        }
+    }
+
+    $stylesheet = public_path(PANEL_CSS);
+    $css = file_exists($stylesheet) ? file_get_contents($stylesheet) : '';
+
+    $dead = [];
+
+    foreach ($files as $file) {
+        // Les `var()` des attributs `style="…"` comptent autant que celles des `<style>` :
+        // c'est là que vivaient les icônes de badges, grises depuis toujours.
+        $scanned = scannableMarkup(file_get_contents($file));
+
+        preg_match_all('/var\(\s*(--[\w-]+)/', $scanned, $matches);
+
+        foreach (array_unique($matches[1]) as $property) {
+            if (isset($defined[$property])) {
+                continue;
+            }
+
+            // Palettes générées à l'exécution : `--primary-500`, `--gray-900`…
+            if (preg_match('/^--('.implode('|', RUNTIME_COLOR_PALETTES).')-\d+$/', $property)) {
+                continue;
+            }
+
+            if ($css !== '' && str_contains($css, $property.':')) {
+                continue;
+            }
+
+            $dead[] = str_replace(resource_path('views').'/', '', $file)." → var({$property})";
+        }
+    }
+
+    expect($dead)->toBe([]);
+});
+
+it('only spells out colours in the theme token view', function () {
+    $offenders = [];
+
+    foreach (panelBladeFiles() as $file) {
+        $relative = str_replace(resource_path('views').'/', '', $file);
+
+        if ($relative === THEME_TOKENS_VIEW) {
+            continue;
+        }
+
+        $scanned = scannableMarkup(file_get_contents($file));
+
+        // Une couleur en dur ne peut pas se décliner en thème sombre : elle doit passer par
+        // un jeton. Seules exceptions : les rgba NEUTRES (ombres, voiles blancs des règles
+        // `.dark`), qui se comportent correctement sur les deux fonds.
+        preg_match_all('/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/', $scanned, $hex);
+
+        foreach (array_unique($hex[0]) as $colour) {
+            $offenders[] = "{$relative} → {$colour}";
+        }
+
+        preg_match_all('/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/', $scanned, $rgb, PREG_SET_ORDER);
+
+        foreach ($rgb as $match) {
+            [, $r, $g, $b] = $match;
+
+            if ($r === $g && $g === $b) {
+                continue;
+            }
+
+            $offenders[] = "{$relative} → rgb({$r},{$g},{$b})";
+        }
+    }
+
+    expect($offenders)->toBe([]);
 });

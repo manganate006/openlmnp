@@ -1,34 +1,34 @@
 <x-filament-panels::page>
     <style>
         .mt-section { margin-bottom: 28px; }
-        .mt-section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
-        .mt-table-wrap { overflow: hidden; border-radius: 12px; border: 1px solid var(--fi-border-color, #e5e7eb); }
+        .mt-section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--olmnp-border); }
+        .mt-table-wrap { overflow: hidden; border-radius: 12px; border: 1px solid var(--olmnp-border); }
         .mt-table { width: 100%; font-size: 13px; border-collapse: collapse; }
-        .mt-table th { text-align: left; padding: 10px 14px; background: var(--fi-sidebar-item-bg, #f9fafb); font-weight: 600; color: #374151; white-space: nowrap; }
-        .mt-table td { padding: 10px 14px; border-top: 1px solid #f3f4f6; vertical-align: middle; }
-        .mt-muted { color: #6b7280; font-size: 12px; }
+        .mt-table th { text-align: left; padding: 10px 14px; background: var(--olmnp-surface-muted); font-weight: 600; color: var(--olmnp-fg); white-space: nowrap; }
+        .mt-table td { padding: 10px 14px; border-top: 1px solid var(--olmnp-surface-alt); vertical-align: middle; }
+        .mt-muted { color: var(--olmnp-fg-muted); font-size: 12px; }
         .mt-mono { font-family: monospace; font-size: 12px; }
         .mt-btn-sm { padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; }
-        .mt-btn-danger { background: #fee2e2; color: #991b1b; }
-        .mt-btn-danger:hover { background: #fca5a5; }
+        .mt-btn-danger { background: var(--olmnp-danger-bg-strong); color: var(--olmnp-danger-fg); }
+        .mt-btn-danger:hover { background: var(--olmnp-danger-border); }
         .mt-alert { border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        .mt-alert-warning { background: #fffbeb; border: 1px solid #fcd34d; }
-        .mt-alert-title { font-size: 15px; font-weight: 600; color: #92400e; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-        .mt-alert-body { font-size: 13px; color: #78350f; margin-bottom: 12px; }
+        .mt-alert-warning { background: var(--olmnp-warning-bg); border: 1px solid var(--olmnp-warning-border); }
+        .mt-alert-title { font-size: 15px; font-weight: 600; color: var(--olmnp-warning-fg); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .mt-alert-body { font-size: 13px; color: var(--olmnp-warning-fg); margin-bottom: 12px; }
         .mt-token-box { display: flex; align-items: center; gap: 10px; }
-        .mt-token-value { flex: 1; background: white; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 13px; word-break: break-all; user-select: all; }
-        .mt-btn-copy { padding: 8px 16px; border-radius: 8px; background: #2563eb; color: white; border: none; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
-        .mt-btn-copy:hover { background: #1d4ed8; }
+        .mt-token-value { flex: 1; background: var(--olmnp-surface); border: 1px solid var(--olmnp-border-strong); border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 13px; word-break: break-all; user-select: all; }
+        .mt-btn-copy { padding: 8px 16px; border-radius: 8px; background: var(--olmnp-info-solid); color: var(--olmnp-on-solid); border: none; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+        .mt-btn-copy:hover { background: var(--olmnp-info-solid-hover); }
         .mt-dismiss { text-align: right; margin-top: 8px; }
-        .mt-dismiss button { background: none; border: none; color: #6b7280; font-size: 12px; cursor: pointer; text-decoration: underline; }
-        .mt-dismiss button:hover { color: #374151; }
-        .mt-empty { text-align: center; padding: 40px 20px; color: #6b7280; font-size: 14px; }
+        .mt-dismiss button { background: none; border: none; color: var(--olmnp-fg-muted); font-size: 12px; cursor: pointer; text-decoration: underline; }
+        .mt-dismiss button:hover { color: var(--olmnp-fg); }
+        .mt-empty { text-align: center; padding: 40px 20px; color: var(--olmnp-fg-muted); font-size: 14px; }
         .mt-snippet { position: relative; }
-        .mt-snippet pre { background: var(--fi-body-bg, #f9fafb); border: 1px solid var(--fi-border-color, #e5e7eb); border-radius: 12px; padding: 16px; font-size: 12px; font-family: monospace; overflow-x: auto; line-height: 1.6; }
-        .mt-snippet-copy { position: absolute; top: 10px; right: 10px; padding: 4px 12px; border-radius: 6px; background: #e5e7eb; border: none; font-size: 11px; font-weight: 500; cursor: pointer; }
-        .mt-snippet-copy:hover { background: #d1d5db; }
-        .mt-snippet-desc { font-size: 13px; color: #6b7280; margin-bottom: 10px; }
-        .mt-snippet-desc code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+        .mt-snippet pre { background: var(--olmnp-surface); border: 1px solid var(--olmnp-border); border-radius: 12px; padding: 16px; font-size: 12px; font-family: monospace; overflow-x: auto; line-height: 1.6; }
+        .mt-snippet-copy { position: absolute; top: 10px; right: 10px; padding: 4px 12px; border-radius: 6px; background: var(--olmnp-border); border: none; font-size: 11px; font-weight: 500; cursor: pointer; }
+        .mt-snippet-copy:hover { background: var(--olmnp-border-strong); }
+        .mt-snippet-desc { font-size: 13px; color: var(--olmnp-fg-muted); margin-bottom: 10px; }
+        .mt-snippet-desc code { background: var(--olmnp-surface-alt); padding: 2px 6px; border-radius: 4px; font-size: 11px; }
     </style>
 
     {{-- Nouveau token créé --}}

@@ -1,51 +1,51 @@
 <x-filament-panels::page>
     <style>
-        .import-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--fi-border-color, #e5e7eb); }
+        .import-card { background: var(--olmnp-surface); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--olmnp-border); }
         .import-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .import-table th { background: var(--fi-bg-muted, #f3f4f6); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .import-table th, .import-table td { padding: 10px 14px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); text-align: left; }
+        .import-table th { background: var(--olmnp-surface-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .import-table th, .import-table td { padding: 10px 14px; border-bottom: 1px solid var(--olmnp-border); text-align: left; }
         .import-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
         .import-table th.num { text-align: right; }
         .import-table th.center, .import-table td.center { text-align: center; }
         .import-table tr.dup { opacity: 0.55; }
         .import-table tr.skipped { opacity: 0.45; }
-        .import-table tr.skipped td { color: var(--fi-fg-muted, #9ca3af); }
-        .import-badge-skip { background: #f3f4f6; color: #6b7280; }
-        .import-sep td { padding: 6px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fi-fg-muted, #9ca3af); background: var(--fi-bg-muted, #f9fafb); }
-        .import-table tbody tr:hover { background: var(--fi-bg-muted, #f9fafb); }
+        .import-table tr.skipped td { color: var(--olmnp-fg-muted); }
+        .import-badge-skip { background: var(--olmnp-surface-alt); color: var(--olmnp-fg-muted); }
+        .import-sep td { padding: 6px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--olmnp-fg-muted); background: var(--olmnp-surface-muted); }
+        .import-table tbody tr:hover { background: var(--olmnp-surface-muted); }
         .import-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-        .import-badge-new { background: #d1fae5; color: #065f46; }
-        .import-badge-dup { background: #fef3c7; color: #92400e; }
+        .import-badge-new { background: var(--olmnp-success-bg-strong); color: var(--olmnp-success-fg); }
+        .import-badge-dup { background: var(--olmnp-warning-bg-strong); color: var(--olmnp-warning-fg); }
         .import-stats { display: flex; gap: 10px; flex-wrap: wrap; }
         .import-stat { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
-        .import-stat-ok { background: #d1fae5; color: #065f46; }
-        .import-stat-dup { background: #fef3c7; color: #92400e; }
-        .import-stat-skip { background: var(--fi-bg-muted, #f3f4f6); color: var(--fi-fg-muted, #6b7280); }
+        .import-stat-ok { background: var(--olmnp-success-bg-strong); color: var(--olmnp-success-fg); }
+        .import-stat-dup { background: var(--olmnp-warning-bg-strong); color: var(--olmnp-warning-fg); }
+        .import-stat-skip { background: var(--olmnp-surface-muted); color: var(--olmnp-fg-muted); }
         .import-actions { display: flex; gap: 10px; margin-top: 16px; }
         .import-btn { display: inline-flex; align-items: center; padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background 0.15s; }
-        .import-btn-confirm { background: #059669; color: white; }
-        .import-btn-confirm:hover { background: #047857; }
-        .import-btn-cancel { background: var(--fi-bg-muted, #f3f4f6); color: var(--fi-fg, #374151); }
-        .import-btn-cancel:hover { background: #e5e7eb; }
+        .import-btn-confirm { background: var(--olmnp-success-solid-hover); color: var(--olmnp-on-solid); }
+        .import-btn-confirm:hover { background: var(--olmnp-success-solid-hover); }
+        .import-btn-cancel { background: var(--olmnp-surface-muted); color: var(--olmnp-fg); }
+        .import-btn-cancel:hover { background: var(--olmnp-border); }
         .import-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .import-result { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .import-result-item { border-radius: 10px; padding: 16px; }
-        .import-result-ok { background: #ecfdf5; }
-        .import-result-skip { background: #fffbeb; }
+        .import-result-ok { background: var(--olmnp-success-bg); }
+        .import-result-skip { background: var(--olmnp-warning-bg); }
         .import-result-val { font-size: 28px; font-weight: 700; }
-        .import-result-ok .import-result-val { color: #059669; }
-        .import-result-skip .import-result-val { color: #d97706; }
-        .import-result-label { font-size: 13px; color: #6b7280; margin-top: 2px; }
-        .import-errors { margin-top: 16px; padding: 12px 16px; background: #fef2f2; border-radius: 10px; }
-        .import-errors-title { font-size: 13px; font-weight: 600; color: #b91c1c; margin-bottom: 6px; }
-        .import-errors ul { margin: 0; padding-left: 20px; font-size: 13px; color: #dc2626; }
-        .import-info { background: #eff6ff; border-radius: 12px; padding: 20px; border: 1px solid #bfdbfe; margin-top: 16px; }
-        .import-info h4 { font-weight: 600; color: #1e40af; margin: 0 0 8px; font-size: 14px; }
-        .import-info ul { margin: 0; padding: 0; list-style: none; font-size: 13px; color: #1d4ed8; }
+        .import-result-ok .import-result-val { color: var(--olmnp-success-accent); }
+        .import-result-skip .import-result-val { color: var(--olmnp-warning-fg); }
+        .import-result-label { font-size: 13px; color: var(--olmnp-fg-muted); margin-top: 2px; }
+        .import-errors { margin-top: 16px; padding: 12px 16px; background: var(--olmnp-danger-bg); border-radius: 10px; }
+        .import-errors-title { font-size: 13px; font-weight: 600; color: var(--olmnp-danger-fg); margin-bottom: 6px; }
+        .import-errors ul { margin: 0; padding-left: 20px; font-size: 13px; color: var(--olmnp-danger-accent); }
+        .import-info { background: var(--olmnp-info-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--olmnp-info-border); margin-top: 16px; }
+        .import-info h4 { font-weight: 600; color: var(--olmnp-info-fg); margin: 0 0 8px; font-size: 14px; }
+        .import-info ul { margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--olmnp-info-fg); }
         .import-info li { padding: 2px 0; }
         .import-info li::before { content: "•"; margin-right: 8px; }
-        .import-mono { font-family: ui-monospace, monospace; font-size: 11px; color: var(--fi-fg-muted, #6b7280); }
-        .import-warning { margin-bottom: 16px; padding: 12px 16px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; font-size: 13px; color: #92400e; }
+        .import-mono { font-family: ui-monospace, monospace; font-size: 11px; color: var(--olmnp-fg-muted); }
+        .import-warning { margin-bottom: 16px; padding: 12px 16px; background: var(--olmnp-warning-bg); border: 1px solid var(--olmnp-warning-border); border-radius: 10px; font-size: 13px; color: var(--olmnp-warning-fg); }
     </style>
 
     @if(!$previewData)
@@ -110,7 +110,7 @@
                 $colCount = $isTvaLiable ? 9 : 7;
             @endphp
             @if(count($previewData['rows']) > 0)
-                <div style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--fi-border-color, #e5e7eb);">
+                <div style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--olmnp-border);">
                     <table class="import-table">
                         <thead>
                             <tr>
@@ -178,7 +178,7 @@
                     </table>
                 </div>
             @else
-                <p style="font-size: 14px; color: var(--fi-fg-muted, #6b7280);">Aucune ligne importable trouvée dans le fichier.</p>
+                <p style="font-size: 14px; color: var(--olmnp-fg-muted);">Aucune ligne importable trouvée dans le fichier.</p>
             @endif
 
             <div class="import-actions">

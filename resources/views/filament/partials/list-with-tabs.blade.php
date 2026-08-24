@@ -16,8 +16,8 @@
     .lwt-crumbs { margin-bottom: 0.5rem; }
     .lwt-crumbs a:hover { text-decoration: underline; }
     /* Met en valeur le niveau courant : `.fi-breadcrumbs ol li` le laisse en gris 500 */
-    .lwt-crumb-current { color: #030712; }
-    .dark .lwt-crumb-current { color: #fff; }
+    .lwt-crumb-current { color: var(--olmnp-fg-strong); }
+    .dark .lwt-crumb-current { color: var(--olmnp-on-solid); }
 </style>
 
 <div>
@@ -57,11 +57,11 @@
     <x-property-tabs :propertyId="$propertyId" :active="$active" />
 @elseif(!empty($properties) && !empty($currentUrl))
     {{-- Sélecteur de bien --}}
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:16px 20px;background:var(--fi-body-bg,white);border:1px solid var(--fi-border-color,#e5e7eb);border-radius:12px;">
-        <label style="font-weight:600;font-size:14px;color:var(--fi-fg,#374151);">Sélectionner un bien :</label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:16px 20px;background:var(--olmnp-surface);border:1px solid var(--olmnp-border);border-radius:12px;">
+        <label style="font-weight:600;font-size:14px;color:var(--olmnp-fg);">Sélectionner un bien :</label>
         <select
             onchange="if(this.value) window.location.href='{{ $currentUrl }}/' + this.value"
-            style="padding:6px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:var(--fi-body-bg,white);color:var(--fi-fg,#374151);"
+            style="padding:6px 12px;border:1px solid var(--olmnp-border-strong);border-radius:8px;font-size:14px;background:var(--olmnp-surface);color:var(--olmnp-fg);"
         >
             <option value="">— Choisir —</option>
             @foreach($properties as $prop)

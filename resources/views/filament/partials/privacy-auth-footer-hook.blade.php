@@ -15,13 +15,13 @@
         padding: 0.75rem 0;
         font-size: 0.75rem;
         line-height: 1rem;
-        color: #9ca3af;
+        color: var(--olmnp-fg-subtle);
     }
     .olmnp-privacy-footer a { color: inherit; text-decoration: none; }
-    .olmnp-privacy-footer a:hover { color: var(--primary-600, #059669); }
+    .olmnp-privacy-footer a:hover { color: var(--primary-600, var(--olmnp-success-accent)); }
 
-    .dark .olmnp-privacy-footer { color: #6b7280; }
-    .dark .olmnp-privacy-footer a:hover { color: var(--primary-400, #34d399); }
+    .dark .olmnp-privacy-footer { color: var(--olmnp-fg-muted); }
+    .dark .olmnp-privacy-footer a:hover { color: var(--primary-400, var(--olmnp-success-accent)); }
 </style>
 
 <div class="olmnp-privacy-footer">

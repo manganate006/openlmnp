@@ -1,37 +1,37 @@
 <x-filament-panels::page>
     <style>
-        .ld-card { background: var(--fi-body-bg, white); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--fi-border-color, #e5e7eb); margin-bottom: 16px; }
+        .ld-card { background: var(--olmnp-surface); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--olmnp-border); margin-bottom: 16px; }
         .ld-grid { display: grid; gap: 12px; }
         .ld-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .ld-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .ld-grid-2 { grid-template-columns: repeat(2, 1fr); }
         .ld-stat { text-align: center; }
         .ld-stat-value { font-size: 22px; font-weight: 700; }
-        .ld-stat-label { font-size: 11px; color: var(--fi-fg-muted, #6b7280); margin-top: 4px; }
-        .ld-stat-green .ld-stat-value { color: #065f46; }
-        .ld-stat-amber .ld-stat-value { color: #92400e; }
-        .ld-stat-blue .ld-stat-value { color: #1e40af; }
-        .ld-bar { width: 100%; background: #e5e7eb; border-radius: 8px; height: 16px; margin: 8px 0; }
-        .ld-bar-fill { height: 16px; border-radius: 8px; background: #10b981; transition: width 0.5s; }
+        .ld-stat-label { font-size: 11px; color: var(--olmnp-fg-muted); margin-top: 4px; }
+        .ld-stat-green .ld-stat-value { color: var(--olmnp-success-fg); }
+        .ld-stat-amber .ld-stat-value { color: var(--olmnp-warning-fg); }
+        .ld-stat-blue .ld-stat-value { color: var(--olmnp-info-fg); }
+        .ld-bar { width: 100%; background: var(--olmnp-border); border-radius: 8px; height: 16px; margin: 8px 0; }
+        .ld-bar-fill { height: 16px; border-radius: 8px; background: var(--olmnp-success-solid); transition: width 0.5s; }
         .ld-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .ld-table th, .ld-table td { padding: 6px 8px; border-bottom: 1px solid var(--fi-border-color, #e5e7eb); }
-        .ld-table th { background: var(--fi-bg-muted, #f9fafb); text-align: center; font-weight: 600; font-size: 11px; position: sticky; top: 0; }
+        .ld-table th, .ld-table td { padding: 6px 8px; border-bottom: 1px solid var(--olmnp-border); }
+        .ld-table th { background: var(--olmnp-surface-muted); text-align: center; font-weight: 600; font-size: 11px; position: sticky; top: 0; }
         .ld-table .r { text-align: right; font-family: monospace; }
         .ld-table .c { text-align: center; }
-        .ld-table .past { color: var(--fi-fg-muted, #9ca3af); }
-        .ld-table .current { background: #ecfdf5; font-weight: 600; }
+        .ld-table .past { color: var(--olmnp-fg-muted); }
+        .ld-table .current { background: var(--olmnp-success-bg); font-weight: 600; }
         .ld-table .future { }
         .ld-scroll { max-height: 500px; overflow-y: auto; overflow-x: auto; }
-        .ld-select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+        .ld-select { padding: 6px 10px; border: 1px solid var(--olmnp-border-strong); border-radius: 8px; font-size: 14px; }
         .ld-pagination { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
-        .ld-pagination button { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: var(--fi-body-bg, white); cursor: pointer; font-size: 12px; color: var(--fi-fg, #374151); }
-        .ld-pagination button:hover { background: #f3f4f6; }
+        .ld-pagination button { padding: 6px 14px; border: 1px solid var(--olmnp-border-strong); border-radius: 6px; background: var(--olmnp-surface); cursor: pointer; font-size: 12px; color: var(--olmnp-fg); }
+        .ld-pagination button:hover { background: var(--olmnp-surface-alt); }
         .ld-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
-        .ld-pagination span { padding: 6px 10px; font-size: 12px; color: var(--fi-fg-muted, #6b7280); }
-        .ld-tabs { display: flex; gap: 0; margin-bottom: 20px; background: var(--fi-bg-muted, #f3f4f6); border-radius: 10px; padding: 4px; width: fit-content; }
-        .ld-tab { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--fi-fg-muted, #6b7280); transition: all 0.2s; }
-        .ld-tab:hover { color: var(--fi-fg, #374151); }
-        .ld-tab-active { background: var(--fi-body-bg, white); color: #10b981; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .ld-pagination span { padding: 6px 10px; font-size: 12px; color: var(--olmnp-fg-muted); }
+        .ld-tabs { display: flex; gap: 0; margin-bottom: 20px; background: var(--olmnp-surface-muted); border-radius: 10px; padding: 4px; width: fit-content; }
+        .ld-tab { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--olmnp-fg-muted); transition: all 0.2s; }
+        .ld-tab:hover { color: var(--olmnp-fg); }
+        .ld-tab-active { background: var(--olmnp-surface); color: var(--olmnp-success-accent); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
         @media (max-width: 768px) { .ld-grid-4 { grid-template-columns: repeat(2, 1fr); } .ld-grid-3, .ld-grid-2 { grid-template-columns: 1fr; } .ld-tabs { width: 100%; } .ld-tab { flex: 1; text-align: center; padding: 8px 12px; font-size: 12px; } }
     </style>
 
@@ -43,7 +43,7 @@
 
     @if(!$data)
         <div class="ld-card" style="text-align:center;padding:48px;">
-            <p style="font-size:18px;color:#6b7280;">Aucun emprunt trouvé. Ajoutez-en un dans Comptabilité → Emprunts.</p>
+            <p style="font-size:18px;color:var(--olmnp-fg-muted);">Aucun emprunt trouvé. Ajoutez-en un dans Comptabilité → Emprunts.</p>
         </div>
     @else
         @php $loan = $data['loan']; @endphp
@@ -53,7 +53,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
                 <div>
                     <h3 style="font-size:18px;font-weight:700;">{{ $loan->bank_name ?? 'Emprunt' }}</h3>
-                    <p style="font-size:13px;color:#6b7280;">{{ $data['property']?->name ?? 'Bien non rattaché' }} · Taux {{ $loan->annual_rate }}% · {{ $loan->duration_months / 12 }} ans</p>
+                    <p style="font-size:13px;color:var(--olmnp-fg-muted);">{{ $data['property']?->name ?? 'Bien non rattaché' }} · Taux {{ $loan->annual_rate }}% · {{ $loan->duration_months / 12 }} ans</p>
                 </div>
                 @if(\App\Models\Loan::count() > 1)
                     <select wire:model.live="loanId" class="ld-select">
@@ -321,7 +321,7 @@
                             <td class="c">{{ $year }}</td>
                             <td class="r">{{ $fmt($yData['interest']) }} €</td>
                             <td class="r">{{ $fmt($yData['insurance']) }} €</td>
-                            <td class="r" style="font-weight:600;color:#065f46;">{{ $fmt($yData['deductible']) }} €</td>
+                            <td class="r" style="font-weight:600;color:var(--olmnp-success-fg);">{{ $fmt($yData['deductible']) }} €</td>
                         </tr>
                     @endforeach
                 </table>
@@ -332,7 +332,7 @@
         <div class="ld-card" x-data="{ page: 1, perPage: 12, total: {{ $data['total_months'] }} }">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <h3 style="font-size:16px;font-weight:600;">Tableau d'amortissement ({{ $data['total_months'] }} mois)</h3>
-                <select x-model="perPage" @change="page=1" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">
+                <select x-model="perPage" @change="page=1" style="padding:4px 8px;border:1px solid var(--olmnp-border-strong);border-radius:6px;font-size:12px;">
                     <option value="12">12/page</option>
                     <option value="24">24/page</option>
                     <option value="60">60/page</option>
