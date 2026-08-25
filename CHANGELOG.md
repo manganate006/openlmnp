@@ -2,6 +2,36 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.1.3] — 2026-08-25
+
+### Améliorations
+
+- **Image Docker allégée** : build multi-étapes sur base Alpine, images de base épinglées
+  par digest — l'image passe d'environ 1 Go à environ 230 Mo (#4, merci @cocool97)
+- **Mise à jour des instances Docker** : l'image officielle étant immuable (ni `rsync`, ni
+  Composer, ni npm dans le runtime), la mise à jour en place est désormais explicitement
+  neutralisée et la page *Mises à jour* indique la marche à suivre — `docker pull` puis
+  recréation du conteneur, les données des volumes étant conservées. La détection de
+  nouvelle version reste active
+
+### Corrections
+
+- **Thème sombre** : de nombreux textes s'affichaient en blanc sur fond blanc, donc
+  illisibles (simulateur, télédéclaration, état du système, projection, aides…). Les vues
+  du panel s'appuyaient sur des variables CSS `--fi-*` que Filament 5 n'expose pas : elles
+  retombaient toujours sur leur repli clair, laissant les cartes blanches en thème sombre.
+  Les couleurs de l'interface proviennent maintenant d'un jeu de jetons unique, décliné en
+  clair et en sombre (#5, merci @cocool97)
+- **Icônes des badges** : affichées en gris au lieu de leur couleur, pour la même raison
+- **Format des dates** : les champs date se saisissaient au format ISO (AAAA-MM-JJ) alors
+  que les tableaux affichaient JJ/MM/AAAA. Les sélecteurs de date utilisent désormais le
+  calendrier français (JJ/MM/AAAA, semaine commençant le lundi) sur tous les formulaires
+  (#6, merci @cocool97)
+- **État du système** : le bouton « Lancer les tests » échouait sur les installations Docker
+  avec `vendor/bin/pest: not found`. Pest est une dépendance de développement, absente des
+  images de production : le bouton est maintenant désactivé, avec une explication, au lieu
+  de présenter l'erreur comme un échec des tests (#7, merci @cocool97)
+
 ## [1.1.2] — 2026-08-18
 
 ### Corrections
