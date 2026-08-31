@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\LifecycleSignalsController;
 use App\Http\Controllers\Api\ProvisioningController;
 use App\Http\Middleware\ProvisioningGuard;
 use Illuminate\Support\Facades\Route;
@@ -12,3 +13,8 @@ Route::middleware([ProvisioningGuard::class, 'throttle:30,1'])
         Route::post('/suspend', [ProvisioningController::class, 'suspend']);
         Route::post('/unsuspend', [ProvisioningController::class, 'unsuspend']);
     });
+
+// Signaux d'usage agrégés (lecture seule) — même garde, donc 404 en self-hosted.
+// L'app expose, elle n'appelle personne : c'est le site qui vient les chercher.
+Route::middleware([ProvisioningGuard::class, 'throttle:30,1'])
+    ->get('admin/lifecycle-signals', [LifecycleSignalsController::class, 'index']);
