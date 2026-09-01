@@ -12,6 +12,7 @@ décrites ici sont incluses dans le logiciel libre, sans limitation.
 - [Emprunts](#emprunts)
 - [Recettes et import CSV Airbnb / Booking](#recettes-et-import-csv-airbnb--booking)
 - [Charges et pièces justificatives](#charges-et-pièces-justificatives)
+- [Estimation de la valeur vénale (données DVF)](#estimation-de-la-valeur-vénale-données-dvf)
 - [Simulateur micro-BIC vs régime réel](#simulateur-micro-bic-vs-régime-réel)
 - [Projection pluriannuelle](#projection-pluriannuelle)
 - [Liasse fiscale 2031 / 2033](#liasse-fiscale-2031--2033)
@@ -76,6 +77,40 @@ prix d'achat ou valeur vénale, frais de notaire, et part du terrain.
 - **Récurrence** (mensuelle, trimestrielle, annuelle) pour les charges répétitives
 - **Pièces justificatives** : dépôt de fichiers (PDF, JPG, PNG) attachés aux charges,
   travaux et mobilier ; export groupé des justificatifs d'un exercice
+
+## Estimation de la valeur vénale (données DVF)
+
+Quand vous mettez en location un bien que vous possédiez déjà, la base amortissable n'est pas
+votre prix d'achat : c'est la **valeur vénale à la date de mise en location**. Sur un bien acheté
+dix ans plus tôt, l'écart se compte souvent en dizaines de milliers d'euros d'amortissement.
+
+Le bouton **« Estimer (DVF) »**, à côté du champ *Valeur vénale* de la fiche d'un bien, calcule
+ce chiffre à partir des **ventes réelles de votre commune** : le fichier communal des
+[Demandes de valeurs foncières](https://www.data.gouv.fr/datasets/demandes-de-valeurs-foncieres-geolocalisees)
+publié par la DGFiP sur data.gouv.fr sous **Licence Ouverte 2.0**.
+
+**Méthode.** Seules les ventes **mono-lot** du type de bien demandé sont retenues, leur prix au m²
+est calculé, et on en prend la **médiane**. Le filtre mono-lot est essentiel : dans DVF, le prix
+d'une vente est répété sur chacune de ses lignes, et le rapporter à la surface d'un seul lot d'une
+vente qui en compte trois fausse le calcul. En dessous de cinq ventes exploitables, aucune valeur
+n'est proposée — les millésimes voisins sont d'abord ajoutés.
+
+**Ce n'est pas une expertise** : une médiane communale ignore l'étage, l'état, l'exposition et le
+DPE. L'écran restitue l'échantillon (nombre de ventes, millésimes) pour que le chiffre soit
+justifiable.
+
+**Limites de la source** : DVF ne couvre ni l'Alsace-Moselle ni Mayotte, et ne remonte que cinq
+ans. À Paris, Lyon et Marseille, l'estimation se fait par arrondissement.
+
+**Vie privée et auto-hébergement.** C'est la seule fonctionnalité qui interroge un service
+externe. Elle ne part **que sur un clic explicite** — ouvrir la fiche d'un bien n'envoie rien —
+et transmet uniquement la commune, le type de bien et la surface : ni adresse, ni montant. Une
+fois une commune consultée, le résultat est conservé sur disque, donc l'instance refonctionne
+hors ligne. Pour la couper entièrement :
+
+```bash
+DVF_ENABLED=false
+```
 
 ## Simulateur micro-BIC vs régime réel
 
