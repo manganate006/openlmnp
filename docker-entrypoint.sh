@@ -99,5 +99,24 @@ fi
 echo "[entrypoint] Démarrage du scheduler en arrière-plan..."
 while true; do php artisan schedule:run --quiet 2>/dev/null; sleep 60; done &
 
-echo "[entrypoint] Démarrage du serveur..."
-exec php artisan serve --host=0.0.0.0 --port=8000
+# Le serveur HTTP intégré de PHP est MONO-PROCESSUS par défaut : il sert une
+# requête à la fois et met les autres en file. Mesuré le 2026-09-01 sur 10 requêtes
+# parallèles, temps par requête : 0,049 → 0,324 s avec 1 worker (escalier régulier
+# de ~31 ms, la signature d'une sérialisation) contre 0,071 → 0,170 s avec 4.
+#
+# 4 et pas davantage : le LXC 147 n'a que 2 cœurs et 1 Go, partagés avec le
+# conteneur de la vitrine. Chaque worker est un processus PHP complet. Une instance
+# auto-hébergée plus grosse peut surcharger la valeur par `-e PHP_CLI_SERVER_WORKERS`.
+#
+# ⚠️ DEUX pièges, tous deux silencieux :
+#  1. La variable se règle ICI, pas dans l'allowlist ci-dessus : elle est lue par le
+#     binaire PHP au démarrage du serveur et n'a rien à faire dans le `.env`.
+#  2. `--no-reload` est OBLIGATOIRE : sans lui, `artisan serve` surveille les
+#     fichiers, refuse de forker, et se contente d'écrire « Unable to respect the
+#     PHP_CLI_SERVER_WORKERS environment variable » dans un log que personne ne lit.
+#     Le réglage semblerait actif sans l'être. Sans inconvénient ici : le code est
+#     figé dans l'image (`opcache.validate_timestamps=0`), il ne change pas à chaud.
+export PHP_CLI_SERVER_WORKERS="${PHP_CLI_SERVER_WORKERS:-4}"
+
+echo "[entrypoint] Démarrage du serveur (${PHP_CLI_SERVER_WORKERS} workers)..."
+exec php artisan serve --host=0.0.0.0 --port=8000 --no-reload
