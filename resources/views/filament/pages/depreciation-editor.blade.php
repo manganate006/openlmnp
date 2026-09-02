@@ -474,7 +474,7 @@
                                 data: enabled.map(c => c.percentage),
                                 backgroundColor: this.chartColors.slice(0, enabled.length),
                                 borderWidth: 2,
-                                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--fi-body-bg') || '#fff',
+                                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--olmnp-surface').trim() || '#fff',
                             }]
                         };
                     },
