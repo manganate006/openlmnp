@@ -24,12 +24,22 @@ class RepairComponentsCommand extends Command
 {
     protected $signature = 'openlmnp:repair-components
                             {--fix : Applique les corrections (sinon simple rapport)}
+                            {--all : Répare aussi les écarts modérés, potentiellement volontaires}
                             {--property= : Limite le traitement à un bien}';
 
     protected $description = 'Détecte et répare les composants d\'amortissement désynchronisés du prix du bien';
 
     /** Au-delà, un prix relève presque sûrement du bug de double conversion. */
     private const SUSPICIOUS_PRICE_CENTS = 2_000_000_000; // 20 M€
+
+    /**
+     * base_amount et annual_depreciation sont modifiables à la main dans l'onglet
+     * Composants : un écart avec le calcul théorique peut donc être VOLONTAIRE.
+     * Seul un facteur d'au moins 10 signe une corruption — aucun ajustement
+     * délibéré ne multiplie une base par 10. En dessous, on se contente de
+     * signaler, sauf --all.
+     */
+    private const CORRUPTION_FACTOR = 10;
 
     public function handle(): int
     {
@@ -49,8 +59,10 @@ class RepairComponentsCommand extends Command
             return self::SUCCESS;
         }
 
+        $repairAll = (bool) $this->option('all');
         $repaired = 0;
-        $rows = [];
+        $rows = [];       // écarts d'un facteur >= 10 : corruption certaine
+        $moderate = [];   // écarts faibles : possiblement volontaires
         $suspicious = [];
 
         foreach ($properties as $property) {
@@ -74,7 +86,9 @@ class RepairComponentsCommand extends Command
                     continue;
                 }
 
-                $rows[] = [
+                $isCorruption = $this->looksCorrupted((int) $component->base_amount, $expectedBase);
+
+                $row = [
                     $property->id,
                     mb_strimwidth($property->name, 0, 22, '…'),
                     mb_strimwidth($component->name, 0, 22, '…'),
@@ -82,7 +96,13 @@ class RepairComponentsCommand extends Command
                     number_format($expectedBase / 100, 0, ',', ' '),
                 ];
 
-                if ($apply) {
+                if ($isCorruption) {
+                    $rows[] = $row;
+                } else {
+                    $moderate[] = $row;
+                }
+
+                if ($apply && ($isCorruption || $repairAll)) {
                     $component->forceFill([
                         'base_amount' => $expectedBase,
                         'annual_depreciation' => $expectedAnnual,
@@ -101,20 +121,31 @@ class RepairComponentsCommand extends Command
             $this->line('  puis relancer cette commande pour resynchroniser les composants.');
         }
 
+        $headers = ['Bien', 'Nom', 'Composant', 'Base actuelle (€)', 'Base attendue (€)'];
+
+        if ($moderate) {
+            $this->newLine();
+            $this->warn('Écarts modérés (facteur < ' . self::CORRUPTION_FACTOR . ') — possiblement volontaires :');
+            $this->table($headers, $moderate);
+            $this->line('  base_amount est modifiable à la main : ces écarts peuvent être délibérés.');
+            $this->line('  Ils ne sont PAS corrigés sans --all.');
+        }
+
         if (! $rows) {
             $this->newLine();
-            $this->info('Composants cohérents : aucune réparation nécessaire.');
+            $this->info('Aucune corruption manifeste : rien à réparer d\'office.');
 
             return self::SUCCESS;
         }
 
         $this->newLine();
-        $this->table(['Bien', 'Nom', 'Composant', 'Base actuelle (€)', 'Base attendue (€)'], $rows);
+        $this->error('Corruption manifeste (facteur >= ' . self::CORRUPTION_FACTOR . ') :');
+        $this->table($headers, $rows);
 
         if ($apply) {
             $this->info("{$repaired} composant(s) réparé(s).");
         } else {
-            $this->warn(count($rows) . ' composant(s) désynchronisé(s). Relancer avec --fix pour corriger.');
+            $this->warn(count($rows) . ' composant(s) corrompu(s). Relancer avec --fix pour corriger.');
         }
 
         return self::SUCCESS;
@@ -132,5 +163,24 @@ class RepairComponentsCommand extends Command
         $expectedAnnual = bcdiv($expectedBase, (string) $duration, 0);
 
         return [(int) $expectedBase, (int) $expectedAnnual];
+    }
+
+    /**
+     * Un écart d'au moins un facteur 10 (dans un sens ou dans l'autre) ne peut pas
+     * résulter d'un ajustement manuel raisonnable.
+     */
+    private function looksCorrupted(int $stored, int $expected): bool
+    {
+        if ($expected === 0) {
+            return $stored !== 0;
+        }
+
+        if ($stored === 0) {
+            return true;
+        }
+
+        $ratio = $stored / $expected;
+
+        return $ratio >= self::CORRUPTION_FACTOR || $ratio <= 1 / self::CORRUPTION_FACTOR;
     }
 }
