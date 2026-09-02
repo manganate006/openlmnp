@@ -62,6 +62,10 @@ class OnboardingWizard extends Page implements HasForms
             'is_primary_residence' => false,
             'land_percentage' => 15,
             'insurance_type' => 'fixed',
+            // fill() avec un argument n'applique PAS les ->default() des champs :
+            // sans cette ligne le toggle s'affiche désactivé et aucun composant
+            // d'amortissement n'est généré.
+            'generate_default_components' => true,
         ]);
     }
 
@@ -527,12 +531,13 @@ class OnboardingWizard extends Page implements HasForms
             'total_area' => (int) $data['total_area'],
             'rented_area' => (int) $data['rented_area'],
             'is_primary_residence' => (bool) ($data['is_primary_residence'] ?? false),
-            'acquisition_price' => (int) round(((float) ($data['acquisition_price'] ?? 0)) * 100),
-            'notary_fees' => (int) round(((float) ($data['notary_fees'] ?? 0)) * 100),
-            'agency_fees' => (int) round(((float) ($data['agency_fees'] ?? 0)) * 100),
+            // Déjà en centimes : dehydrateStateUsing() a converti les euros saisis
+            // lors du getState() ci-dessus. Ne pas multiplier une seconde fois.
+            'acquisition_price' => (int) ($data['acquisition_price'] ?? 0),
+            'notary_fees' => (int) ($data['notary_fees'] ?? 0),
+            'agency_fees' => (int) ($data['agency_fees'] ?? 0),
             'acquisition_date' => $data['acquisition_date'],
-            'market_value' => isset($data['market_value']) && $data['market_value']
-                ? (int) round(((float) $data['market_value']) * 100) : null,
+            'market_value' => $data['market_value'] ?? null,
             'market_value_date' => $data['market_value_date'] ?? null,
             'land_percentage' => (int) ($data['land_percentage'] ?? 15),
             'rental_start_date' => $data['rental_start_date'],
