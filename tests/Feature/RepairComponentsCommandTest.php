@@ -56,7 +56,7 @@ it('leaves consistent components untouched and reports nothing to fix', function
         ->pluck('base_amount', 'id')->toArray();
 
     $this->artisan('openlmnp:repair-components', ['--fix' => true])
-        ->expectsOutputToContain('aucune réparation nécessaire')
+        ->expectsOutputToContain('Aucune corruption manifeste')
         ->assertSuccessful();
 
     $after = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)
@@ -99,4 +99,34 @@ it('preserves custom percentages when repairing', function () {
     expect($component->percentage)->toBe(40)
         ->and((int) $component->base_amount)->toBe(8_500_000)
         ->and((int) $component->annual_depreciation)->toBe(425_000);
+});
+
+it('reports but does not repair a moderate divergence without --all', function () {
+    $user = User::factory()->create();
+    $property = makeRepairTestProperty($user, 25_000_000);
+
+    // Base attendue : 212 500 € x 50 % = 106 250 €. On stocke 100 000 € :
+    // un ajustement plausible, pas une corruption.
+    PropertyComponent::forceCreate([
+        'property_id' => $property->id,
+        'name' => 'Gros œuvre ajusté',
+        'percentage' => 50,
+        'duration_years' => 50,
+        'base_amount' => 10_000_000,
+        'annual_depreciation' => 200_000,
+        'sort_order' => 1,
+    ]);
+
+    $this->artisan('openlmnp:repair-components', ['--fix' => true])
+        ->expectsOutputToContain('Écarts modérés')
+        ->assertSuccessful();
+
+    $component = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->firstOrFail();
+    expect((int) $component->base_amount)->toBe(10_000_000); // inchangé
+
+    // --all force la resynchronisation
+    $this->artisan('openlmnp:repair-components', ['--fix' => true, '--all' => true])->assertSuccessful();
+
+    $component->refresh();
+    expect((int) $component->base_amount)->toBe(10_625_000);
 });
