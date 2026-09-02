@@ -2,6 +2,24 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.1.7] - 2026-09-03
+
+### Corrections
+
+- **Thème sombre : un dernier reste de blanc sur la bordure du graphique d'amortissement.**
+  La refonte des couleurs du 25 août avait remplacé les 173 `var(--fi-*)` des vues, mais
+  l'éditeur d'amortissements lisait le sien depuis JavaScript
+  (`getPropertyValue('--fi-body-bg')`), là où le garde-fou ne regardait pas : le test retire
+  les blocs `<script>` avant de scanner. La bordure des segments du donut retombait donc sur
+  son repli blanc en thème sombre. Elle suit désormais le jeu de jetons, comme le reste (#5)
+
+### Interne
+
+- `PanelStylesheetTest` couvre à présent les propriétés CSS lues depuis JavaScript, l'angle
+  mort qui avait laissé passer le cas ci-dessus — vérifié en réintroduisant la régression
+- `server.json`, le manifeste publié au registre MCP officiel, était resté à la version 1.1.4
+  alors que deux versions étaient sorties depuis : il est resynchronisé
+
 ## [1.1.6] - 2026-09-02
 
 ### Corrections
