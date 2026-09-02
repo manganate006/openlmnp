@@ -31,8 +31,9 @@ return [
 
         'timeout' => (int) env('DVF_TIMEOUT', 8),
 
-        // Millésimes publiés. ⚠️ À bumper à chaque publication (semestrielle) : l'écran
-        // affiche les années réellement utilisées, donc un oubli finit par se voir.
+        // Repli hors ligne UNIQUEMENT : la liste réelle est relevée chaque semaine sur l'index
+        // de data.gouv.fr par `dvf:refresh-years` et stockée dans
+        // `storage/app/private/dvf/years.json`, qui fait foi dès qu'il existe.
         'years' => [2021, 2022, 2023, 2024, 2025],
 
         // En deçà, on refuse d'afficher une médiane plutôt que d'en proposer une fragile
