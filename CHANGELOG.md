@@ -2,6 +2,27 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.1.6] - 2026-09-02
+
+### Corrections
+
+- **L'assurance d'emprunt à taux variable était comptée cent fois trop cher.** Le taux
+  d'assurance est un pourcentage annuel, au même titre que le taux d'intérêt, mais la
+  division par 100 manquait au calcul du tableau d'amortissement. Sur un prêt de 242 000 €
+  assuré à 2,21 %, l'assurance ressortait à près de 44 000 € par mois au lieu de 447 €, et
+  gonflait d'autant les charges déductibles - jusqu'à afficher plus de 500 000 € de charges
+  sur un exercice. Les intérêts, eux, étaient corrects. Seuls les emprunts en assurance
+  « variable » sont concernés ; l'assurance à montant fixe ne passait pas par ce calcul
+
+### Interne
+
+- Nouvelle commande `php artisan openlmnp:repair-loan-insurance`. Le tableau d'amortissement
+  et les totaux d'un exercice sont **stockés** : corriger le calcul ne suffit pas à réparer
+  les données déjà enregistrées. La commande régénère les tableaux concernés puis recalcule
+  les exercices, en laissant de côté les exercices clôturés - une déclaration déposée ne se
+  réécrit pas en silence, elle est signalée pour décision. Rapport seul par défaut, `--fix`
+  pour appliquer
+
 ## [1.1.5] - 2026-09-02
 
 ### Corrections

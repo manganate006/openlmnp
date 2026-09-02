@@ -31,7 +31,9 @@ class LoanService
         }
 
         $startDate = $loan->start_date->copy();
-        $insuranceRate = (float) ($loan->insurance_rate ?? 0);
+        // Pourcentage annuel, comme annual_rate ci-dessus : la division par 100
+        // manquait ici, ce qui rendait l'assurance variable 100 fois trop chère.
+        $insuranceRate = (float) ($loan->insurance_rate ?? 0) / 100;
 
         for ($i = 1; $i <= $months; $i++) {
             $paymentDate = $startDate->copy()->addMonths($i);

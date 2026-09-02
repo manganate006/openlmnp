@@ -90,3 +90,36 @@ it('calculates deductible interest with quota share', function () {
     $expected = (int) bcmul((string) $totalInterest, '0.5', 0);
     expect($deductible)->toBe($expected);
 });
+
+// === Régression : assurance variable calculée 100x trop cher ===
+// insurance_rate est un POURCENTAGE (2.21 = 2,21 %), comme annual_rate.
+// La division par 100 manquait, gonflant les charges déductibles d'un facteur 100.
+
+it('computes variable insurance from a percentage rate', function () {
+    $loan = Loan::create([
+        'property_id' => $this->property->id,
+        'amount' => 24_257_300, // 242 573 €
+        'annual_rate' => 1.95,
+        'duration_months' => 240,
+        'start_date' => '2023-01-01',
+        'monthly_payment' => 122_100,
+        'insurance_type' => Loan::INSURANCE_VARIABLE,
+        'insurance_rate' => 2.21,
+        'insurance_monthly' => 0,
+    ]);
+
+    $this->service->generateSchedule($loan);
+
+    // Première échéance : 242 573 € x 2,21 % / 12 = 446,74 € (et non 44 673,86 €)
+    $first = $loan->payments()->orderBy('month_number')->first();
+    expect($first->insurance_amount)->toBe(44_674);
+
+    // Sur l'année, l'assurance reste de l'ordre de 4 800 € et non de 520 000 €.
+    // (11 échéances seulement en 2023 : la première tombe un mois après start_date.)
+    $firstYear = $loan->payments()
+        ->whereBetween('payment_date', ['2023-01-01', '2023-12-31'])
+        ->sum('insurance_amount');
+
+    expect($firstYear)->toBeLessThan(600_000)   // < 6 000 €
+        ->and($firstYear)->toBeGreaterThan(400_000); // > 4 000 €
+});
