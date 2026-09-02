@@ -189,3 +189,34 @@ it('rejects a request without any email', function () {
     $this->getJson('/api/admin/lifecycle-signals', signalsHeaders())
         ->assertUnprocessable();
 });
+
+it('expose les trois signaux ajoutes pour le sequenceur', function () {
+    // Ils debloquent des scenarios qui attendaient faute de donnee : relance
+    // interets d'emprunt, anteriorite manquante, charges incompletes.
+    $user = User::factory()->create(['email' => 'signaux@example.com']);
+    signalsProperty($user)->update(['rental_start_date' => '2024-07-01']);
+
+    $signal = $this->getJson('/api/admin/lifecycle-signals?emails[]=signaux@example.com&year=2025', signalsHeaders())
+        ->assertOk()->json('signals.0');
+
+    expect($signal)->toHaveKeys(['has_loan', 'first_rental_start', 'expense_categories_missing'])
+        ->and($signal['has_loan'])->toBeFalse()
+        ->and($signal['first_rental_start'])->toContain('2024-07-01')
+        // Aucune charge saisie : toutes les categories manquent.
+        ->and($signal['expense_categories_missing'])->not->toBeEmpty();
+});
+
+it('ne renvoie jamais un montant dans les categories manquantes', function () {
+    // Garde-fou sur la limite que s'impose l'endpoint : des libelles, jamais
+    // un chiffre du dossier.
+    $user = User::factory()->create(['email' => 'limites@example.com']);
+    signalsProperty($user);
+
+    $signal = $this->getJson('/api/admin/lifecycle-signals?emails[]=limites@example.com&year=2025', signalsHeaders())
+        ->assertOk()->json('signals.0');
+
+    foreach ($signal['expense_categories_missing'] as $categorie) {
+        expect($categorie)->toBeString()
+            ->and($categorie)->not->toMatch('/[0-9]/');
+    }
+});
