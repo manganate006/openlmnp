@@ -2,6 +2,31 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.1.5] - 2026-09-02
+
+### Corrections
+
+- **Les montants saisis dans l'assistant de configuration étaient enregistrés cent fois trop
+  grands.** Un bien déclaré à 250 000 € partait en base à 25 000 000 €, et les composants
+  d'amortissement étaient calculés sur ce montant. La conversion des euros en centimes était
+  appliquée deux fois : une première par le formulaire lui-même, une seconde à
+  l'enregistrement. Prix d'achat, frais de notaire, honoraires d'agence et valeur vénale
+  étaient concernés ; les montants d'emprunt, qui suivent un autre chemin, ne l'étaient pas
+- **Aucun composant d'amortissement n'était créé par l'assistant.** L'option « Générer les
+  6 composants par défaut » s'affichait désactivée alors que l'étape annonce le contraire :
+  sa valeur par défaut n'était pas appliquée au remplissage du formulaire. Sans composants,
+  le bien n'était pas amorti du tout
+
+### Interne
+
+- Nouvelle commande `php artisan openlmnp:repair-components`. Elle resynchronise les
+  composants d'amortissement restés calculés sur un ancien montant - typiquement après la
+  correction manuelle d'un prix, qui laissait derrière elle des composants périmés sans que
+  rien ne le signale sur la fiche du bien. Elle se contente d'un rapport par défaut, `--fix`
+  applique les corrections. La base d'un composant étant modifiable à la main, seuls les
+  écarts d'un facteur dix ou plus sont corrigés d'office ; les écarts plus faibles sont
+  signalés et ne sont repris qu'avec `--all`
+
 ## [1.1.4] - 2026-09-02
 
 ### Améliorations
