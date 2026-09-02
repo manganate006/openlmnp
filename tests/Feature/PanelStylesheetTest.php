@@ -263,6 +263,58 @@ it('never reads a CSS custom property that nothing defines', function () {
     expect($dead)->toBe([]);
 });
 
+it('never reads a CSS custom property from JavaScript that nothing defines', function () {
+    $files = panelBladeFiles();
+
+    // Même pool que le test précédent : ce que les `<style>` du panel déclarent.
+    $defined = [];
+
+    foreach ($files as $file) {
+        preg_match_all('/(--[\w-]+)\s*:/', panelStyleBlocks(scannableMarkup(file_get_contents($file))), $matches);
+
+        foreach ($matches[1] as $property) {
+            $defined[$property] = true;
+        }
+    }
+
+    $stylesheet = public_path(PANEL_CSS);
+    $css = file_exists($stylesheet) ? file_get_contents($stylesheet) : '';
+
+    $dead = [];
+
+    foreach ($files as $file) {
+        // `scannableMarkup()` retire les `<script>`, à raison : les palettes Chart.js y restent
+        // légitimement en hexadécimal. Mais un `getPropertyValue('--x')` reste du CSS lu depuis
+        // JS — si le jeton n'existe pas, la valeur est la chaîne vide et le repli s'applique en
+        // silence, identiquement sur les deux thèmes. C'est ce trou qui a laissé passer
+        // `--fi-body-bg` sur la bordure du donut de l'éditeur d'amortissements, alors même que
+        // le test des `var()` avait nettoyé les 173 autres occurrences.
+        preg_match_all('/<script[^>]*>.*?<\/script>/s', file_get_contents($file), $scripts);
+
+        foreach ($scripts[0] as $script) {
+            preg_match_all('/getPropertyValue\(\s*[\'"](--[\w-]+)[\'"]/', $script, $matches);
+
+            foreach (array_unique($matches[1]) as $property) {
+                if (isset($defined[$property])) {
+                    continue;
+                }
+
+                if (preg_match('/^--('.implode('|', RUNTIME_COLOR_PALETTES).')-\d+$/', $property)) {
+                    continue;
+                }
+
+                if ($css !== '' && str_contains($css, $property.':')) {
+                    continue;
+                }
+
+                $dead[] = str_replace(resource_path('views').'/', '', $file)." → getPropertyValue({$property})";
+            }
+        }
+    }
+
+    expect($dead)->toBe([]);
+});
+
 it('only spells out colours in the theme token view', function () {
     $offenders = [];
 
