@@ -2,6 +2,38 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.3.1] - 2026-09-03
+
+### Corrections
+
+- **La liasse signalait elle-même que son tableau d'amortissements ne bouclait pas.**
+  Le formulaire 2033-C porte un contrôle de cohérence « ligne 572 = ligne 254 du 2033-B ».
+  Il échouait, et imprimait un avertissement sur le document destiné à l'administration.
+  Trois causes cumulées : la ligne 572 sommait les dotations **brutes**, sans prorata de
+  première année ni prise en compte des plans arrivés à terme, quand la 254 somme les
+  dotations effectives ; les **frais de notaire et d'agence n'avaient aucune ligne** dans
+  ce tableau alors que la 254 les compte ; et le cumul des amortissements était écrasé
+  d'un bien à l'autre, puis approximé par « dotation × nombre d'années ». Les deux lignes
+  proviennent désormais des mêmes calculs : l'égalité est vraie par construction
+- **La colonne « amortissements à la fin de l'exercice » manquait au formulaire**, ainsi
+  que son total, la ligne 570. Elle était calculée puis jetée — c'est aussi pour cette
+  raison que deux des trois défauts ci-dessus étaient passés inaperçus
+- **Les travaux réalisés avant la mise en location n'étaient comptés nulle part** dans les
+  amortissements cumulés du bilan (ligne 030) : le calcul démarrait à la date de mise en
+  location du bien, et non à celle de chaque actif. Une rénovation faite en 2022 pour une
+  location ouverte en 2023 disparaissait
+
+> ⚠️ **Ces corrections déplacent des montants imprimés.** Régénérer la liasse d'un exercice
+> déjà déposé produira un document différent de celui transmis à l'administration.
+
+### Interne
+
+- `DepreciationService::depreciationDetailForYear()` rend, actif par actif, l'assiette
+  brute, la dotation de l'exercice et le cumul — alimenté par les mêmes méthodes que la
+  ligne 254, ce qui rend l'écart structurellement impossible
+- Le cumul est un rejeu année par année, et non plus une approximation linéaire
+- 8 tests neufs, qui échouent tous les huit sur le code précédent
+
 ## [1.3.0] - 2026-09-03
 
 ### Ajouts
