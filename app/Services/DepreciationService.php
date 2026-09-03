@@ -6,6 +6,7 @@ use App\Models\Furniture;
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\PropertyWork;
+use Carbon\CarbonInterface;
 
 /**
  * Service de calcul des amortissements LMNP.
@@ -183,9 +184,7 @@ class DepreciationService
 
         // Prorata temporis la 1ère année
         if ($year === $startYear) {
-            $daysInYear = $startDate->isLeapYear() ? 366 : 365;
-            $remainingDays = $startDate->diffInDays($startDate->copy()->endOfYear()) + 1;
-            $annual = bcmul($annual, bcdiv((string) $remainingDays, (string) $daysInYear, 10), 0);
+            $annual = $this->prorateFirstYear($annual, $startDate);
         }
 
         return $annual;
@@ -212,9 +211,7 @@ class DepreciationService
 
         // Prorata temporis la 1ère année
         if ($year === $startYear) {
-            $daysInYear = $workDate->isLeapYear() ? 366 : 365;
-            $remainingDays = $workDate->diffInDays($workDate->copy()->endOfYear()) + 1;
-            $annual = bcmul($annual, bcdiv((string) $remainingDays, (string) $daysInYear, 10), 0);
+            $annual = $this->prorateFirstYear($annual, $workDate);
         }
 
         return $annual;
@@ -240,9 +237,7 @@ class DepreciationService
 
         // Prorata temporis
         if ($year === $startYear) {
-            $daysInYear = $purchaseDate->isLeapYear() ? 366 : 365;
-            $remainingDays = $purchaseDate->diffInDays($purchaseDate->copy()->endOfYear()) + 1;
-            $annual = bcmul($annual, bcdiv((string) $remainingDays, (string) $daysInYear, 10), 0);
+            $annual = $this->prorateFirstYear($annual, $purchaseDate);
         }
 
         return $annual;
@@ -272,11 +267,32 @@ class DepreciationService
 
         // Prorata temporis la 1ère année
         if ($year === $startYear) {
-            $daysInYear = $startDate->isLeapYear() ? 366 : 365;
-            $remainingDays = $startDate->diffInDays($startDate->copy()->endOfYear()) + 1;
-            $annual = bcmul($annual, bcdiv((string) $remainingDays, (string) $daysInYear, 10), 0);
+            $annual = $this->prorateFirstYear($annual, $startDate);
         }
 
         return $annual;
+    }
+
+    /**
+     * Réduit une dotation annuelle au prorata des jours restants dans l'année,
+     * la journée de départ comprise (BOI-BIC-AMT-20-10 § 20).
+     *
+     * ⚠️ Ne pas revenir à `diffInDays(...) + 1`, la formule d'avant le 2026-09-03 :
+     * `Carbon::diffInDays()` rend un flottant qui inclut DÉJÀ la journée en cours
+     * (du 1er janvier au 31 décembre 23 h 59 : 364,999…), donc le « + 1 » la comptait
+     * une seconde fois. Toute première année était majorée de 1/365, soit +0,27 % —
+     * un bien loué au 1er janvier amortissait 100,27 % de sa dotation.
+     *
+     * `dayOfYear` est un entier exact et ne dépend pas du comportement de Carbon.
+     *
+     * @param  string  $annual  Dotation annuelle pleine, en centimes (chaîne bcmath)
+     * @return string           Dotation proratisée, en centimes
+     */
+    private function prorateFirstYear(string $annual, CarbonInterface $start): string
+    {
+        $daysInYear = $start->isLeapYear() ? 366 : 365;
+        $remainingDays = $daysInYear - $start->dayOfYear + 1;
+
+        return bcmul($annual, bcdiv((string) $remainingDays, (string) $daysInYear, 10), 0);
     }
 }
