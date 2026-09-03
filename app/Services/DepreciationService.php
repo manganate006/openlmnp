@@ -415,6 +415,116 @@ class DepreciationService
     }
 
     /**
+     * Détaille, actif par actif, l'assiette brute, la dotation de l'exercice et le
+     * cumul des amortissements à sa clôture. C'est ce qui alimente le tableau 2033-C.
+     *
+     * ⚠️ Les dotations proviennent des MÊMES méthodes que `calculateAnnualDepreciation()`,
+     * qui alimente la ligne 254 du 2033-B. C'est ce qui rend l'égalité 572 = 254 vraie par
+     * construction, et non plus par coïncidence : jusqu'au 2026-09-03 le 2033-C sommait les
+     * `annual_depreciation` BRUTS — sans prorata, sans fin de plan, et sans aucune ligne
+     * pour les frais d'acquisition — si bien que la liasse imprimait « ⚠ Écart » dès qu'un
+     * bien portait des frais de notaire ou entamait sa première année.
+     *
+     * Le cumul est un vrai rejeu année par année, et non l'ancien `dotation × années`, qui
+     * ignorait le prorata de première année comme les plans arrivés à terme.
+     *
+     * @return list<array{type: string, name: string, base: string, annual: string, cumul: string}>
+     */
+    public function depreciationDetailForYear(Property $property, int $year): array
+    {
+        $lines = [];
+
+        foreach ($property->components as $component) {
+            $lines[] = [
+                'type'   => 'building',
+                'name'   => $component->name,
+                'base'   => (string) $component->base_amount,
+                'annual' => $this->calculateComponentForYear($component, $property, $year),
+                'cumul'  => $this->replay(
+                    fn (int $y) => $this->calculateComponentForYear($component, $property, $y),
+                    (int) $property->rental_start_date->format('Y'),
+                    $year,
+                ),
+            ];
+        }
+
+        foreach ($property->works as $work) {
+            $lines[] = [
+                'type'   => 'work',
+                'name'   => $work->description,
+                'base'   => $this->grossAmount((string) $work->amount, $work->is_dedicated, $property),
+                'annual' => $this->calculateWorkForYear($work, $property, $year),
+                'cumul'  => $this->replay(
+                    fn (int $y) => $this->calculateWorkForYear($work, $property, $y),
+                    (int) $work->work_date->format('Y'),
+                    $year,
+                ),
+            ];
+        }
+
+        foreach ($property->furniture as $item) {
+            $lines[] = [
+                'type'   => 'furniture',
+                'name'   => $item->description,
+                'base'   => $this->grossAmount((string) $item->amount, $item->is_dedicated, $property),
+                'annual' => $this->calculateFurnitureForYear($item, $property, $year),
+                'cumul'  => $this->replay(
+                    fn (int $y) => $this->calculateFurnitureForYear($item, $property, $y),
+                    (int) $item->purchase_date->format('Y'),
+                    $year,
+                ),
+            ];
+        }
+
+        foreach (['notary_fees' => 'Frais de notaire', 'agency_fees' => 'Honoraires agence'] as $field => $label) {
+            if ((int) $property->$field <= 0) {
+                continue;
+            }
+
+            // Émise même à dotation nulle, contrairement à calculateAnnualDepreciation() :
+            // sans quoi la valeur BRUTE des frais disparaîtrait du bilan une fois amortis.
+            // La somme des dotations n'en est pas affectée, une ligne à zéro ajoute zéro.
+            $lines[] = [
+                'type'   => 'notary',
+                'name'   => $label,
+                'base'   => $property->is_primary_residence
+                    ? bcmul((string) $property->$field, $property->quota_share, 0)
+                    : (string) $property->$field,
+                'annual' => $this->calculateAcquisitionFeesForYear($property, $field, $year),
+                'cumul'  => $this->replay(
+                    fn (int $y) => $this->calculateAcquisitionFeesForYear($property, $field, $y),
+                    (int) $property->rental_start_date->format('Y'),
+                    $year,
+                ),
+            ];
+        }
+
+        return $lines;
+    }
+
+    /** Assiette brute d'un actif, quote-part appliquée s'il n'est pas dédié à la location. */
+    private function grossAmount(string $amount, bool $isDedicated, Property $property): string
+    {
+        return $isDedicated ? $amount : bcmul($amount, $property->quota_share, 0);
+    }
+
+    /**
+     * Rejoue une dotation de $from à $to inclus et en rend le cumul.
+     *
+     * Aucune requête dans la boucle : les relations sont déjà chargées.
+     */
+    private function replay(callable $annualFor, int $from, int $to): string
+    {
+        $cumul = '0';
+
+        for ($y = $from; $y <= $to; $y++) {
+            $cumul = bcadd($cumul, $annualFor($y), 0);
+        }
+
+        return $cumul;
+    }
+
+    /**
      * Calcule l'amortissement d'un composant immeuble pour une année.
      */
     private function calculateComponentForYear(PropertyComponent $component, Property $property, int $year): string
