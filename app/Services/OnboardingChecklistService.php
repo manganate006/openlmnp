@@ -59,7 +59,7 @@ class OnboardingChecklistService
                 'description' => 'Composants du bien, travaux et mobilier.',
                 'icon' => 'heroicon-o-building-library',
                 'done' => $allPropertiesHaveComponents,
-                'url' => '/property-components',
+                'url' => '/depreciation-editor',
             ],
             [
                 'key' => 'fiscal_year',

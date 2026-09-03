@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\BelongsToUserScope;
+use App\Services\FiscalYearService;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -217,6 +218,28 @@ class Property extends Model
     public function getDepreciableBaseEurosAttribute(): string
     {
         return bcdiv($this->depreciable_base, '100', 2);
+    }
+
+    protected static function booted(): void
+    {
+        // Supprimer un bien emporte en cascade ses revenus, charges, meubles, travaux,
+        // composants et emprunts — mais laissait les EXERCICES intacts, avec des totaux
+        // calculés sur des données qui n'existent plus. `fiscal_years` ne porte aucun
+        // lien vers `properties` (un exercice agrège tous les biens de l'année), donc
+        // aucune contrainte de clé étrangère ne pouvait s'en charger.
+        //
+        // Rien ne signalait l'incohérence : l'exercice continuait d'alimenter
+        // `/fiscal-years` et le tableau de bord avec ses montants figés, et son
+        // amortissement différé se propageait aux exercices suivants.
+        //
+        // Seuls les BROUILLONS sont recalculés. Un exercice clôturé est la trace de ce
+        // qui a été déclaré : le réécrire sans le dire effacerait un fait. Il est
+        // signalé par `openlmnp:repair-orphan-fiscal-years`, qui laisse l'arbitrage à
+        // l'utilisateur. Le recalcul des brouillons corrige tout de même la chaîne des
+        // reports en aval, `FiscalYearService` propageant déjà `previous_deferred`.
+        static::deleted(function (self $property) {
+            app(FiscalYearService::class)->recalculateDrafts($property->user_id);
+        });
     }
 
     // -------------------------------------------------------------------------

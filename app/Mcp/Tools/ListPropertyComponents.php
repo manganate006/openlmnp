@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Models\Property;
 use App\Models\PropertyComponent;
+use App\Services\DepreciationService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -26,9 +27,14 @@ class ListPropertyComponents extends Tool
             ->orderBy('sort_order')
             ->get();
 
-        $totalPercentage   = $components->sum('percentage');
-        $totalBase         = $components->sum('base_amount');
+        $totalBase         = (string) $components->sum('base_amount');
         $totalDepreciation = $components->sum('annual_depreciation');
+        $depreciableBase   = $property->depreciable_base;
+
+        // La complétude se mesure en CENTIMES, pas en additionnant des pourcentages :
+        // une ventilation 33,33 / 33,33 / 33,34 couvre exactement la base sans que la
+        // somme des pourcentages arrondis ne fasse 100.
+        $remainder = bcsub($depreciableBase, $totalBase, 0);
 
         $data = $components->map(function (PropertyComponent $component) {
             return [
@@ -39,6 +45,9 @@ class ListPropertyComponents extends Tool
                 'duration_years'          => $component->duration_years,
                 'base_amount_eur'         => $component->base_amount_euros,
                 'annual_depreciation_eur' => $component->annual_depreciation_euros,
+                // `manual` = base fixée à la main (reprise d'une comptabilité existante) :
+                // elle ne suit plus le prix du bien et n'est pas resynchronisée.
+                'base_source'             => $component->base_source,
                 'sort_order'              => $component->sort_order,
             ];
         });
@@ -48,10 +57,11 @@ class ListPropertyComponents extends Tool
             'property_name'                 => $property->name,
             'depreciable_base_eur'          => $property->depreciable_base_euros,
             'count'                         => $components->count(),
-            'total_percentage'              => $totalPercentage,
-            'total_base_eur'                => bcdiv((string) $totalBase, '100', 2),
+            'total_percentage'              => (float) DepreciationService::percentageFromBase($depreciableBase, $totalBase),
+            'total_base_eur'                => bcdiv($totalBase, '100', 2),
             'total_annual_depreciation_eur' => bcdiv((string) $totalDepreciation, '100', 2),
-            'percentage_complete'           => $totalPercentage >= 100,
+            'unallocated_base_eur'          => bcdiv($remainder, '100', 2),
+            'percentage_complete'           => bccomp($remainder, (string) max(1, $components->count()), 0) <= 0,
             'components'                    => $data,
         ]);
     }

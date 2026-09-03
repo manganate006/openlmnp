@@ -443,7 +443,7 @@ class OnboardingWizard extends Page implements HasForms
             ->schema([
                 Toggle::make('generate_default_components')
                     ->label('Générer les 6 composants d\'amortissement par défaut')
-                    ->helperText('Gros oeuvre (50 ans), Toiture (25 ans), Installation électrique (25 ans), Plomberie (25 ans), Agencements (15 ans), Revêtements (15 ans)')
+                    ->helperText('Gros œuvre (50 ans), Toiture (25 ans), Installations électriques (25 ans), Étanchéité (15 ans), Agencements intérieurs (15 ans), Plomberie / sanitaire (15 ans)')
                     ->default(true),
                 Placeholder::make('depreciation_info')
                     ->label('')

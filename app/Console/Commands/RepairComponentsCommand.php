@@ -4,42 +4,43 @@ namespace App\Console\Commands;
 
 use App\Models\Property;
 use App\Models\PropertyComponent;
+use App\Services\DepreciationService;
 use Illuminate\Console\Command;
 
 /**
  * Répare les composants d'amortissement désynchronisés du bien qui les porte.
  *
- * Contexte : jusqu'au correctif du wizard d'onboarding, les montants saisis
- * étaient stockés 100 fois trop grands (double conversion euros -> centimes).
- * Un utilisateur qui corrigeait ensuite le prix à la main laissait derrière lui
- * des composants calculés sur l'ancienne valeur : l'amortissement annuel restait
- * 100 fois trop élevé, ce qui fausse le résultat fiscal sans rien afficher
- * d'anormal sur la fiche du bien.
+ * Contexte : jusqu'au correctif du wizard d'onboarding, les montants saisis étaient
+ * stockés 100 fois trop grands (double conversion euros -> centimes). Un utilisateur qui
+ * corrigeait ensuite le prix à la main laissait derrière lui des composants calculés sur
+ * l'ancienne valeur : l'amortissement annuel restait 100 fois trop élevé, ce qui fausse
+ * le résultat fiscal sans rien afficher d'anormal sur la fiche du bien.
  *
- * base_amount et annual_depreciation sont des données DÉRIVÉES (base
- * amortissable x pourcentage du composant) : les recalculer est sans risque et
- * idempotent. Les pourcentages et durées personnalisés sont préservés.
+ * Depuis le 2026-09-03, `base_source` dit qui pilote la base d'un composant, ce qui
+ * simplifie beaucoup cette commande :
+ *
+ *   - `percentage` : la base est DÉRIVÉE de la base amortissable du bien. Tout écart est
+ *     une désynchronisation, corrigée par `--fix`, sans seuil ni arbitrage.
+ *   - `manual`     : la base a été fixée à la main, typiquement pour reproduire le plan
+ *     d'un comptable. Elle n'est JAMAIS touchée, sauf `--all` — qui devient donc une
+ *     option destructrice, et non plus un simple assouplissement.
+ *
+ * Avant `base_source`, rien ne distinguait un réglage volontaire d'une corruption : d'où
+ * l'ancien seuil « facteur 10 », qui laissait passer les corruptions modestes et menaçait
+ * les ajustements importants. Il ne sert plus qu'au rétro-classement des bases créées
+ * avant la colonne (DepreciationService::classifyLegacyBaseSource()).
  */
 class RepairComponentsCommand extends Command
 {
     protected $signature = 'openlmnp:repair-components
                             {--fix : Applique les corrections (sinon simple rapport)}
-                            {--all : Répare aussi les écarts modérés, potentiellement volontaires}
+                            {--all : Resynchronise AUSSI les bases saisies à la main (destructeur)}
                             {--property= : Limite le traitement à un bien}';
 
     protected $description = 'Détecte et répare les composants d\'amortissement désynchronisés du prix du bien';
 
     /** Au-delà, un prix relève presque sûrement du bug de double conversion. */
     private const SUSPICIOUS_PRICE_CENTS = 2_000_000_000; // 20 M€
-
-    /**
-     * base_amount et annual_depreciation sont modifiables à la main dans l'onglet
-     * Composants : un écart avec le calcul théorique peut donc être VOLONTAIRE.
-     * Seul un facteur d'au moins 10 signe une corruption — aucun ajustement
-     * délibéré ne multiplie une base par 10. En dessous, on se contente de
-     * signaler, sauf --all.
-     */
-    private const CORRUPTION_FACTOR = 10;
 
     public function handle(): int
     {
@@ -61,8 +62,8 @@ class RepairComponentsCommand extends Command
 
         $repairAll = (bool) $this->option('all');
         $repaired = 0;
-        $rows = [];       // écarts d'un facteur >= 10 : corruption certaine
-        $moderate = [];   // écarts faibles : possiblement volontaires
+        $rows = [];       // bases dérivées désynchronisées : à corriger
+        $manual = [];     // bases saisies à la main : à ne pas toucher
         $suspicious = [];
 
         foreach ($properties as $property) {
@@ -86,7 +87,7 @@ class RepairComponentsCommand extends Command
                     continue;
                 }
 
-                $isCorruption = $this->looksCorrupted((int) $component->base_amount, $expectedBase);
+                $isManual = $component->base_source === PropertyComponent::BASE_SOURCE_MANUAL;
 
                 $row = [
                     $property->id,
@@ -96,13 +97,16 @@ class RepairComponentsCommand extends Command
                     number_format($expectedBase / 100, 0, ',', ' '),
                 ];
 
-                if ($isCorruption) {
-                    $rows[] = $row;
+                if ($isManual) {
+                    $manual[] = $row;
                 } else {
-                    $moderate[] = $row;
+                    $rows[] = $row;
                 }
 
-                if ($apply && ($isCorruption || $repairAll)) {
+                if ($apply && (! $isManual || $repairAll)) {
+                    // `percentage` n'est pas recalculé : pour un composant ventilé il EST
+                    // l'entrée du calcul, et le redériver de la base réintroduirait la
+                    // troncature qu'on vient d'appliquer.
                     $component->forceFill([
                         'base_amount' => $expectedBase,
                         'annual_depreciation' => $expectedAnnual,
@@ -123,64 +127,52 @@ class RepairComponentsCommand extends Command
 
         $headers = ['Bien', 'Nom', 'Composant', 'Base actuelle (€)', 'Base attendue (€)'];
 
-        if ($moderate) {
+        if ($manual) {
             $this->newLine();
-            $this->warn('Écarts modérés (facteur < ' . self::CORRUPTION_FACTOR . ') — possiblement volontaires :');
-            $this->table($headers, $moderate);
-            $this->line('  base_amount est modifiable à la main : ces écarts peuvent être délibérés.');
-            $this->line('  Ils ne sont PAS corrigés sans --all.');
+            $this->warn('Bases saisies à la main — ' . ($repairAll ? 'RESYNCHRONISÉES par --all :' : 'non touchées :'));
+            $this->table($headers, $manual);
+            $this->line($repairAll
+                ? '  --all a écrasé ces montants par la ventilation théorique. Si l\'un d\'eux'
+                    . ' reproduisait le plan d\'un comptable, il est perdu.'
+                : '  Ces montants sont volontaires (reprise d\'une comptabilité existante).'
+                    . ' Utiliser --all pour les écraser quand même.');
         }
 
         if (! $rows) {
             $this->newLine();
-            $this->info('Aucune corruption manifeste : rien à réparer d\'office.');
+            $this->info('Aucune désynchronisation : les bases dérivées suivent le prix du bien.');
 
             return self::SUCCESS;
         }
 
         $this->newLine();
-        $this->error('Corruption manifeste (facteur >= ' . self::CORRUPTION_FACTOR . ') :');
+        $this->error('Composants désynchronisés du prix du bien :');
         $this->table($headers, $rows);
 
         if ($apply) {
             $this->info("{$repaired} composant(s) réparé(s).");
         } else {
-            $this->warn(count($rows) . ' composant(s) corrompu(s). Relancer avec --fix pour corriger.');
+            $this->warn(count($rows) . ' composant(s) désynchronisé(s). Relancer avec --fix pour corriger.');
         }
 
         return self::SUCCESS;
     }
 
     /**
-     * Reproduit exactement le calcul de DepreciationService::generateDefaultComponents().
+     * Ce que valent la base et la dotation d'un composant ventilé.
+     *
+     * La formule vit dans DepreciationService, et nulle part ailleurs.
      *
      * @return array{0: int, 1: int}
      */
     private function expectedAmounts(string $base, PropertyComponent $component): array
     {
-        $expectedBase = bcmul($base, bcdiv((string) $component->percentage, '100', 10), 0);
+        $expectedBase = DepreciationService::baseFromPercentage($base, (string) $component->percentage);
         $duration = max(1, (int) $component->duration_years);
-        $expectedAnnual = bcdiv($expectedBase, (string) $duration, 0);
 
-        return [(int) $expectedBase, (int) $expectedAnnual];
-    }
-
-    /**
-     * Un écart d'au moins un facteur 10 (dans un sens ou dans l'autre) ne peut pas
-     * résulter d'un ajustement manuel raisonnable.
-     */
-    private function looksCorrupted(int $stored, int $expected): bool
-    {
-        if ($expected === 0) {
-            return $stored !== 0;
-        }
-
-        if ($stored === 0) {
-            return true;
-        }
-
-        $ratio = $stored / $expected;
-
-        return $ratio >= self::CORRUPTION_FACTOR || $ratio <= 1 / self::CORRUPTION_FACTOR;
+        return [
+            (int) $expectedBase,
+            (int) DepreciationService::annualFromBase($expectedBase, $duration),
+        ];
     }
 }

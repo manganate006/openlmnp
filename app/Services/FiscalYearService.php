@@ -41,6 +41,28 @@ class FiscalYearService
             );
         }
 
+        $fiscalYear->update($this->computeTotals($fiscalYear));
+
+        // 7. Générer les écritures comptables (pour le FEC)
+        $this->accountingEntryService->generateForFiscalYear($fiscalYear);
+
+        // 8. Recalcul en cascade : si N+1 existe et que son previous_deferred est désynchronisé
+        $this->cascadeRecalculate($fiscalYear);
+
+        return $fiscalYear->refresh();
+    }
+
+    /**
+     * Calcule les totaux d'un exercice SANS rien écrire.
+     *
+     * Extrait de `calculate()` pour que `openlmnp:repair-orphan-fiscal-years` puisse
+     * comparer ce qui est stocké à ce qu'un recalcul donnerait : un mode « rapport » qui
+     * persisterait au passage corrigerait ce qu'il prétend seulement décrire.
+     *
+     * @return array<string, int> Les colonnes dérivées, en centimes
+     */
+    public function computeTotals(FiscalYear $fiscalYear): array
+    {
         $user = $fiscalYear->user;
         $year = $fiscalYear->year;
         $properties = Property::withoutGlobalScopes()->where('user_id', $user->id)->get();
@@ -171,8 +193,7 @@ class FiscalYearService
         // 7. Calcul TVA
         $tvaBalance = bcsub($totalTvaCollected, $totalTvaDeductible, 0);
 
-        // Mise à jour
-        $fiscalYear->update([
+        return [
             'total_income'                  => (int) $totalIncome,
             'total_expenses'                => (int) $totalExpenses,
             'total_depreciation'            => (int) $totalDepreciation,
@@ -183,15 +204,7 @@ class FiscalYearService
             'total_tva_collected'           => (int) $totalTvaCollected,
             'total_tva_deductible'          => (int) $totalTvaDeductible,
             'tva_balance'                   => (int) $tvaBalance,
-        ]);
-
-        // 7. Générer les écritures comptables (pour le FEC)
-        $this->accountingEntryService->generateForFiscalYear($fiscalYear);
-
-        // 8. Recalcul en cascade : si N+1 existe et que son previous_deferred est désynchronisé
-        $this->cascadeRecalculate($fiscalYear);
-
-        return $fiscalYear->refresh();
+        ];
     }
 
     /**
@@ -234,6 +247,35 @@ class FiscalYearService
         }
 
         return $this->calculate($fiscalYear);
+    }
+
+    /**
+     * Recalcule les exercices en BROUILLON d'un utilisateur, du plus ancien au plus récent.
+     *
+     * Appelée à la suppression d'un bien (`Property::booted()`) : les totaux d'un exercice
+     * sont dérivés des biens au moment du calcul, et rien ne les rafraîchit quand la source
+     * disparaît. Prend un identifiant plutôt qu'un `User` : à ce moment-là on ne tient que
+     * la clé étrangère du bien supprimé.
+     *
+     * Les exercices clôturés sont laissés tels quels — ils portent ce qui a été déclaré.
+     * Le recalcul des brouillons met tout de même à jour les reports d'amortissement en
+     * aval, `calculate()` propageant `previous_deferred` de proche en proche.
+     *
+     * @return int Nombre d'exercices recalculés
+     */
+    public function recalculateDrafts(int $userId): int
+    {
+        $drafts = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', $userId)
+            ->where('status', FiscalYear::STATUS_DRAFT)
+            ->orderBy('year')
+            ->get();
+
+        foreach ($drafts as $draft) {
+            $this->calculate($draft);
+        }
+
+        return $drafts->count();
     }
 
     /**
