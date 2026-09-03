@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\DemoDataService;
+use App\Support\FeedbackEligibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
@@ -63,6 +64,14 @@ class DemoLoginController extends Controller
         // consommé par l'événement sign_up (paramètre from_demo) pour mesurer
         // la conversion démo → inscription même après purge du compte sandbox.
         Cookie::queue('olmnp_demo_seen', '1', 60 * 24 * 30);
+
+        // Date du PREMIER passage, écrite une seule fois. Un sandbox ne vivant que
+        // config('demo.ttl_hours'), c'est le seul moyen de savoir qu'un visiteur est
+        // revenu plusieurs jours plus tard : son compte d'alors n'existe plus.
+        // Cookie distinct de `olmnp_demo_seen`, dont la valeur `'1'` est lue ailleurs.
+        if (! $request->hasCookie(FeedbackEligibility::COOKIE_FIRST_SEEN)) {
+            Cookie::queue(FeedbackEligibility::COOKIE_FIRST_SEEN, now()->toDateString(), 60 * 24 * 30);
+        }
 
         return redirect('/');
     }

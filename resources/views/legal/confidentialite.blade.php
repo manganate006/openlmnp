@@ -115,6 +115,19 @@
             <li>Des journaux techniques de connexion (horodatage, adresse IP)</li>
         </ul>
 
+        <h2>Retours et avis sur le logiciel</h2>
+        <p>
+            Après un moment d'utilisation, l'application vous propose une fois de donner votre
+            avis. Y répondre est facultatif, et ne pas y répondre n'a aucune conséquence.
+        </p>
+        <ul>
+            <li><strong>Ce qui est enregistré</strong> : votre appréciation (positive ou négative), le message que vous écrivez s'il y en a un, le prénom et l'adresse email que vous saisissez s'il y en a, ainsi que le contexte technique (page, version du logiciel). Jamais un montant, jamais une donnée fiscale.</li>
+            <li><strong>Publication</strong> : votre message n'est publié nulle part sans la case de consentement explicite du formulaire. Sans elle, il reste un retour privé.</li>
+            <li><strong>En auto-hébergement</strong> : le retour est enregistré dans <em>votre</em> base et <strong>rien n'est transmis à l'extérieur</strong>. L'écran de confirmation vous propose de l'envoyer vous-même par votre client mail, si vous le souhaitez. La fonctionnalité s'éteint avec <code>FEEDBACK_ENABLED=false</code>.</li>
+            <li><strong>En Cloud Pro</strong> : le retour est transmis par email à l'auteur du logiciel, qui le traite comme une demande de support.</li>
+            <li><strong>Conservation</strong> : les retours sont conservés sans limite de durée, car ils servent à faire évoluer le logiciel. Ils sont détachés de votre compte si celui-ci est supprimé. Vous pouvez en demander l'effacement à l'adresse ci-dessous.</li>
+        </ul>
+
         <h2>Sécurité</h2>
         <p>
             Les mots de passe sont hachés (bcrypt) et ne sont jamais stockés en clair.

@@ -186,6 +186,27 @@ Ajoutez ensuite votre SIREN dans votre profil pour les documents fiscaux.
 | `DB_DATABASE` | Chemin SQLite | `database/database.sqlite` |
 | `APP_LOCALE` | Langue | `fr` |
 | `ALLOW_REGISTRATION` | Inscription : `auto` (jusqu'au premier compte), `true` (toujours), `false` (jamais) | `auto` |
+| `FEEDBACK_ENABLED` | Invitation ponctuelle à donner son avis sur le logiciel (voir ci-dessous) | `true` |
+
+### Donner son avis (et comment l'éteindre)
+
+Après un moment d'utilisation réelle, l'application propose **une fois** de dire ce que vous
+pensez du logiciel : un pouce, et si vous le souhaitez un mot. C'est le seul retour que reçoit
+un projet développé sur du temps libre.
+
+**Rien ne quitte votre instance.** Sans `FEEDBACK_FORWARD_EMAIL`, votre retour est simplement
+enregistré dans votre propre base ; l'écran de confirmation vous propose alors de l'envoyer
+vous-même, par votre client mail, si vous en avez envie. Aucun envoi automatique, aucun appel
+sortant.
+
+Pour la désactiver complètement :
+
+```bash
+FEEDBACK_ENABLED=false
+```
+
+Les seuils sont réglables sans toucher au code : `FEEDBACK_MIN_SECONDS` (240),
+`FEEDBACK_MIN_ACTIONS` (1), `FEEDBACK_COOLDOWN_DAYS` (30), `FEEDBACK_AUDIENCES`.
 
 ### Emails (optionnel)
 
