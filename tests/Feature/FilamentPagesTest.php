@@ -194,49 +194,13 @@ it('shows furniture edit page', function () {
         ->assertOk();
 });
 
-it('shows property components list page', function () {
-    $this->actingAs($this->user)
-        ->get('/property-components')
-        ->assertOk();
-});
-
-it('shows property component creation form', function () {
-    $this->actingAs($this->user)
-        ->get('/property-components/create')
-        ->assertOk();
-});
-
-it('shows property component edit page', function () {
-    $property = Property::forceCreate([
-        'user_id' => $this->user->id,
-        'name' => 'Bien test composant',
-        'address' => '1 rue Test',
-        'city' => 'Paris',
-        'postal_code' => '75001',
-        'type' => 'apartment',
-        'total_area' => 100,
-        'rented_area' => 100,
-        'acquisition_date' => '2020-01-01',
-        'acquisition_price' => 30000000,
-        'notary_fees' => 0,
-        'land_percentage' => 15,
-        'rental_start_date' => '2023-01-01',
-        'rental_type' => 'seasonal',
-        'is_primary_residence' => false,
-    ]);
-    $component = PropertyComponent::forceCreate([
-        'property_id' => $property->id,
-        'name' => 'Gros œuvre',
-        'percentage' => 50,
-        'duration_years' => 40,
-        'base_amount' => 1000000,
-        'annual_depreciation' => 25000,
-        'sort_order' => 0,
-    ]);
-
-    $this->actingAs($this->user)
-        ->get("/property-components/{$component->id}/edit")
-        ->assertOk();
+it('no longer exposes the legacy property-components routes', function () {
+    // Trois éditeurs se disputaient la même donnée. Celui-ci était invisible au menu mais
+    // toujours routé, et sa saisie était en CENTIMES BRUTS alors que sa propre table
+    // affichait des euros — la checklist du tableau de bord y envoyait pourtant.
+    // Tout passe désormais par /depreciation-editor.
+    $this->actingAs($this->user)->get('/property-components')->assertNotFound();
+    $this->actingAs($this->user)->get('/property-components/create')->assertNotFound();
 });
 
 it('shows fiscal years page', function () {

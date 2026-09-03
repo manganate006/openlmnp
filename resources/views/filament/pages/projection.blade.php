@@ -260,7 +260,7 @@
                                     @foreach($a['depreciation']['components'] as $comp)
                                         <tr>
                                             <td style="padding:4px 10px;">{{ $comp['name'] }}</td>
-                                            <td style="padding:4px 10px;text-align:right;">{{ $comp['percentage'] }}%</td>
+                                            <td style="padding:4px 10px;text-align:right;">{{ rtrim(rtrim(number_format($comp['percentage'], 2, ',', ' '), '0'), ',') }} %</td>
                                             <td style="padding:4px 10px;text-align:right;">{{ $comp['duration'] }} ans</td>
                                             <td style="padding:4px 10px;text-align:right;">{{ number_format($comp['annual'] / 100, 0, ',', ' ') }} &euro;</td>
                                         </tr>

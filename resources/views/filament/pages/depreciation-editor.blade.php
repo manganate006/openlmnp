@@ -57,6 +57,26 @@
             .de-comp-row { flex-direction: column; align-items: stretch; }
             .de-slider-container { min-width: 100%; }
         }
+
+        /* Bascule ventilation / montants — toutes ces classes doivent être déclarées
+           ici : aucun utilitaire Tailwind ne fonctionne dans le panel Filament. */
+        .de-modes { display: inline-flex; gap: 0; background: var(--olmnp-surface-muted); border-radius: 10px; padding: 4px; margin-bottom: 16px; }
+        .de-mode-btn { padding: 8px 18px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--olmnp-fg-muted); cursor: pointer; }
+        .de-mode-btn:hover { color: var(--olmnp-fg); }
+        .de-mode-btn-active { background: var(--olmnp-surface); color: var(--olmnp-success-accent); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .de-amounts { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .de-amounts th { text-align: left; font-size: 12px; font-weight: 700; color: var(--olmnp-fg-muted); text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--olmnp-border); }
+        .de-amounts td { padding: 8px 10px; border-bottom: 1px solid var(--olmnp-border); vertical-align: middle; }
+        .de-amounts tr:last-child td { border-bottom: none; }
+        .de-amounts-num { text-align: right; font-family: monospace; }
+        .de-amount-input { width: 130px; padding: 6px 8px; border: 1px solid var(--olmnp-border-strong); border-radius: 6px; font-size: 13px; text-align: right; font-family: monospace; background: var(--olmnp-surface); color: var(--olmnp-fg); }
+        .de-amount-input:focus { outline: 2px solid var(--olmnp-success-solid); outline-offset: -1px; }
+        .de-manual-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--olmnp-info-bg); color: var(--olmnp-info-fg); border: 1px solid var(--olmnp-info-border); }
+        .de-remainder { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+        .de-remainder-ok { background: var(--olmnp-success-bg); color: var(--olmnp-success-fg); border: 1px solid var(--olmnp-success-border); }
+        .de-remainder-under { background: var(--olmnp-warning-bg); color: var(--olmnp-warning-fg); border: 1px solid var(--olmnp-warning-border); }
+        .de-remainder-over { background: var(--olmnp-danger-bg); color: var(--olmnp-danger-fg); border: 1px solid var(--olmnp-danger-border); }
+        .de-hint { font-size: 12px; color: var(--olmnp-fg-muted); margin-bottom: 12px; line-height: 1.5; }
     </style>
 
     @php $data = $this->editorData; @endphp
@@ -88,6 +108,16 @@
                 </div>
             @endif
 
+            {{-- Bascule ventilation / montants --}}
+            <div class="de-modes">
+                <button class="de-mode-btn" :class="mode === 'ventilation' && 'de-mode-btn-active'" @click="setMode('ventilation')">
+                    Ventilation
+                </button>
+                <button class="de-mode-btn" :class="mode === 'amounts' && 'de-mode-btn-active'" @click="setMode('amounts')">
+                    Montants
+                </button>
+            </div>
+
             {{-- KPIs --}}
             <div class="de-grid de-grid-4">
                 <div class="de-card de-stat de-stat-blue">
@@ -95,8 +125,8 @@
                     <div class="de-stat-label">Base amortissable</div>
                 </div>
                 <div class="de-card de-stat" :class="getTotalClass()">
-                    <div class="de-stat-value" x-text="formatPct(getTotalPercentage())"></div>
-                    <div class="de-stat-label">Total alloué</div>
+                    <div class="de-stat-value" x-text="formatEuros(getAllocatedCents() / 100)"></div>
+                    <div class="de-stat-label">Ventilé</div>
                 </div>
                 <div class="de-card de-stat de-stat-green">
                     <div class="de-stat-value" x-text="formatEuros(getTotalAnnualDepreciation())"></div>
@@ -109,7 +139,7 @@
             </div>
 
             {{-- Layout principal --}}
-            <div class="de-grid de-grid-main">
+            <div class="de-grid de-grid-main" x-show="mode === 'ventilation'">
                 {{-- Colonne gauche : composants --}}
                 <div>
                     {{-- Standards --}}
@@ -150,7 +180,7 @@
                                             :disabled="!comp.enabled"
                                         >
                                         <span class="de-duration-label">ans</span>
-                                        <span class="de-amount" x-text="formatEuros(depreciableBase * comp.percentage / 100) + ' €'"></span>
+                                        <span class="de-amount" x-text="formatEuros(baseCentsOf(comp) / 100)"></span>
                                     </div>
                                 </div>
                             </div>
@@ -195,29 +225,13 @@
                                             :disabled="!comp.enabled"
                                         >
                                         <span class="de-duration-label">ans</span>
-                                        <span class="de-amount" x-text="comp.enabled ? formatEuros(depreciableBase * comp.percentage / 100) + ' €' : '—'"></span>
+                                        <span class="de-amount" x-text="comp.enabled ? formatEuros(baseCentsOf(comp) / 100) : '—'"></span>
                                     </div>
                                 </div>
                             </div>
                         </template>
                     </div>
 
-                    {{-- Actions --}}
-                    <div class="de-card de-actions">
-                        <button class="de-btn de-btn-secondary" @click="$wire.resetToDefaults()">
-                            Réinitialiser par défaut
-                        </button>
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <span class="de-dirty-badge" x-show="isDirty" x-cloak>Modifications non enregistrées</span>
-                            <button
-                                class="de-btn de-btn-primary"
-                                @click="save()"
-                                :disabled="Math.round(getTotalPercentage()) !== 100"
-                            >
-                                Enregistrer
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 {{-- Colonne droite : camembert --}}
@@ -231,13 +245,85 @@
                                     <span class="de-chart-legend-dot" :style="'background:' + chartColors[i % chartColors.length]"></span>
                                     <span x-text="getEmoji(item.name)"></span>
                                     <span x-text="item.name"></span>
-                                    <span style="margin-left:auto;font-weight:600;font-family:monospace;" x-text="formatPct(item.percentage)"></span>
+                                    <span style="margin-left:auto;font-weight:600;font-family:monospace;" x-text="formatPct(pctOf(item))"></span>
                                 </div>
                             </template>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {{-- Mode montants : saisie directe des bases, pour reprendre une comptabilité existante --}}
+            <div class="de-card" x-show="mode === 'amounts'" x-cloak>
+                <div class="de-section-title">Montants par composant</div>
+                <p class="de-hint">
+                    Saisissez la base amortissable de chaque composant telle qu'elle figure dans votre
+                    comptabilité. Les montants sont en euros, <strong>quote-part déjà appliquée</strong> :
+                    c'est la part réellement louée qui s'amortit. La dotation annuelle se calcule
+                    automatiquement, mais reste modifiable si votre cabinet arrondissait autrement.
+                </p>
+                <table class="de-amounts">
+                    <thead>
+                        <tr>
+                            <th>Composant</th>
+                            <th class="de-amounts-num">Base (&euro;)</th>
+                            <th class="de-amounts-num">Durée</th>
+                            <th class="de-amounts-num">Dotation annuelle (&euro;)</th>
+                            <th class="de-amounts-num">Part</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(comp, idx) in components" :key="idx">
+                            <tr x-show="comp.enabled || comp.baseAmount > 0">
+                                <td>
+                                    <span x-text="getEmoji(comp.name)"></span>
+                                    <span x-text="comp.name"></span>
+                                    <span class="de-manual-badge" x-show="comp.baseSource === 'manual'" x-cloak>saisi</span>
+                                </td>
+                                <td class="de-amounts-num">
+                                    <input
+                                        type="number" class="de-amount-input" min="0" step="0.01"
+                                        :value="(baseCentsOf(comp) / 100).toFixed(2)"
+                                        @change="setBaseEuros(idx, $event.target.value)"
+                                    >
+                                </td>
+                                <td class="de-amounts-num">
+                                    <input
+                                        type="number" class="de-duration-input" min="1" max="100"
+                                        :value="comp.duration"
+                                        @change="comp.duration = parseInt($event.target.value) || 1; syncAnnual(idx); markDirty()"
+                                    >
+                                </td>
+                                <td class="de-amounts-num">
+                                    <input
+                                        type="number" class="de-amount-input" min="0" step="0.01"
+                                        :value="(annualCentsOf(comp) / 100).toFixed(2)"
+                                        @change="setAnnualEuros(idx, $event.target.value)"
+                                    >
+                                </td>
+                                <td class="de-amounts-num" x-text="formatPct(pctOf(comp))"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+
+                <div class="de-remainder" :class="remainderClass()" x-text="remainderLabel()"></div>
+            </div>
+
+            {{-- Actions --}}
+                    <div class="de-card de-actions">
+                        <button class="de-btn de-btn-secondary" @click="confirmReset()">
+                            Réinitialiser par défaut
+                        </button>
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <span class="de-dirty-badge" x-show="isDirty" x-cloak>Modifications non enregistrées</span>
+                            {{-- Plus jamais désactivé : sous-ventiler est légitime, et le
+                                 serveur refuse la sur-ventilation avec un message explicite. --}}
+                            <button class="de-btn de-btn-primary" @click="save()">
+                                Enregistrer
+                            </button>
+                        </div>
+                    </div>
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -245,7 +331,12 @@
             document.addEventListener('alpine:init', () => {
                 Alpine.data('depreciationEditor', (initialData) => ({
                     components: [],
+                    mode: 'ventilation',
                     depreciableBase: 0,
+                    // Tout le raisonnement de ventilation se fait en CENTIMES ENTIERS.
+                    // Les euros flottants perdaient des centimes dès que la base n'était
+                    // pas divisible par 100, et l'écart se voyait à l'enregistrement.
+                    depreciableBaseCents: 0,
                     chart: null,
                     isDirty: false,
                     savedState: '',
@@ -284,6 +375,11 @@
                     loadData(data) {
                         this.components = JSON.parse(JSON.stringify(data.components));
                         this.depreciableBase = data.depreciableBase;
+                        this.depreciableBaseCents = data.depreciableBaseCents;
+                        // On ouvre sur le mode qui correspond aux données : quelqu'un qui a
+                        // saisi ses montants ne doit pas retomber sur les curseurs.
+                        this.mode = this.components.some(c => c.baseSource === 'manual')
+                            ? 'amounts' : 'ventilation';
                         this.savedState = JSON.stringify(this.components);
                         this.isDirty = false;
                     },
@@ -292,8 +388,97 @@
                         return this.emojiMap[name] || '\u{1F4E6}';
                     },
 
+                    setMode(next) {
+                        this.mode = next;
+                        // Chart.js ne supporte pas d'etre mis a jour sur un canvas masque :
+                        // on attend que l'onglet Ventilation soit reellement visible.
+                        if (next === 'ventilation') {
+                            this.$nextTick(() => this.updateChart());
+                        }
+                    },
+
+                    baseCentsOf(comp) {
+                        return comp.baseSource === 'manual'
+                            ? (comp.baseAmount || 0)
+                            : Math.round(this.depreciableBaseCents * comp.percentage / 100);
+                    },
+
+                    annualCentsOf(comp) {
+                        if (comp.baseSource === 'manual' && comp.annualDepreciation != null) {
+                            return comp.annualDepreciation;
+                        }
+                        return comp.duration > 0 ? Math.floor(this.baseCentsOf(comp) / comp.duration) : 0;
+                    },
+
+                    pctOf(comp) {
+                        if (!this.depreciableBaseCents) return 0;
+                        return this.baseCentsOf(comp) * 100 / this.depreciableBaseCents;
+                    },
+
+                    setBaseEuros(idx, value) {
+                        const comp = this.components[idx];
+                        comp.baseAmount = Math.max(0, Math.round(parseFloat(value || 0) * 100));
+                        comp.baseSource = 'manual';
+                        comp.enabled = comp.baseAmount > 0;
+                        comp.percentage = this.pctOf(comp);
+                        comp.annualDepreciation = null;
+                        this.markDirty();
+                    },
+
+                    setAnnualEuros(idx, value) {
+                        const comp = this.components[idx];
+                        comp.baseSource = 'manual';
+                        if (comp.baseAmount == null) comp.baseAmount = this.baseCentsOf(comp);
+                        comp.annualDepreciation = Math.max(0, Math.round(parseFloat(value || 0) * 100));
+                        this.markDirty();
+                    },
+
+                    syncAnnual(idx) {
+                        this.components[idx].annualDepreciation = null;
+                    },
+
+                    getAllocatedCents() {
+                        return this.components
+                            .filter(c => c.enabled)
+                            .reduce((s, c) => s + this.baseCentsOf(c), 0);
+                    },
+
+                    getRemainderCents() {
+                        return this.depreciableBaseCents - this.getAllocatedCents();
+                    },
+
+                    remainderClass() {
+                        const r = this.getRemainderCents();
+                        if (r < 0) return 'de-remainder-over';
+                        // Quelques centimes d'écart ne sont que de la poussière de troncature.
+                        return r <= this.components.length ? 'de-remainder-ok' : 'de-remainder-under';
+                    },
+
+                    remainderLabel() {
+                        const r = this.getRemainderCents();
+                        if (r < 0) {
+                            return 'Sur-ventilation de ' + this.formatEuros(-r / 100)
+                                + ' : l\'enregistrement sera refusé.';
+                        }
+                        if (r <= this.components.length) {
+                            return 'La ventilation couvre exactement la base amortissable.';
+                        }
+                        return 'Reste à ventiler : ' + this.formatEuros(r / 100)
+                            + '. C\'est permis, mais cette part ne s\'amortira pas.';
+                    },
+
+                    confirmReset() {
+                        const manual = this.components.filter(c => c.baseSource === 'manual').length;
+                        const message = manual > 0
+                            ? 'Réinitialiser effacera ' + manual + ' base(s) saisie(s) à la main. Continuer ?'
+                            : 'Restaurer les 6 composants standards ?';
+                        if (window.confirm(message)) {
+                            this.$wire.resetToDefaults();
+                        }
+                    },
+
                     getEnabledComponents() {
-                        return this.components.filter(c => c.enabled && c.percentage > 0);
+                        return this.components.filter(c => c.enabled && this.baseCentsOf(c) > 0);
                     },
 
                     getTotalPercentage() {
@@ -303,13 +488,14 @@
                     },
 
                     getTotalClass() {
-                        const t = Math.round(this.getTotalPercentage());
-                        return t === 100 ? 'de-stat-green' : (t < 100 ? 'de-stat-amber' : 'de-stat-red');
+                        const r = this.getRemainderCents();
+                        if (r < 0) return 'de-stat-red';
+                        return r <= this.components.length ? 'de-stat-green' : 'de-stat-amber';
                     },
 
                     getTotalAnnualDepreciation() {
                         return this.getEnabledComponents().reduce((s, c) => {
-                            return s + (c.duration > 0 ? (this.depreciableBase * c.percentage / 100) / c.duration : 0);
+                            return s + this.annualCentsOf(c) / 100;
                         }, 0);
                     },
 
@@ -471,7 +657,7 @@
                         return {
                             labels: enabled.map(c => this.getEmoji(c.name) + ' ' + c.name),
                             datasets: [{
-                                data: enabled.map(c => c.percentage),
+                                data: enabled.map(c => this.baseCentsOf(c)),
                                 backgroundColor: this.chartColors.slice(0, enabled.length),
                                 borderWidth: 2,
                                 borderColor: getComputedStyle(document.documentElement).getPropertyValue('--olmnp-surface').trim() || '#fff',
@@ -480,7 +666,11 @@
                     },
 
                     updateChart() {
-                        if (!this.chart) return;
+                        // Chart.js casse quand on le met a jour sur un canvas masque par
+                        // x-show (« Cannot set properties of undefined »). Le camembert
+                        // vit dans l'onglet Ventilation : ailleurs, on ne fait rien, et
+                        // setMode() le rafraichit au retour.
+                        if (!this.chart || this.mode !== 'ventilation') return;
                         const data = this.getChartData();
                         this.chart.data.labels = data.labels;
                         this.chart.data.datasets[0].data = data.datasets[0].data;
@@ -489,28 +679,23 @@
                     },
 
                     save() {
-                        const total = this.getTotalPercentage();
-                        if (Math.round(total) !== 100) return;
-
-                        // Arrondir à l'entier avec Hamilton (plus forts restes)
-                        const payload = JSON.parse(JSON.stringify(this.components));
-                        const enabled = payload.filter(c => c.enabled && c.percentage > 0);
-                        const shares = enabled.map(c => ({
-                            comp: c,
-                            floor: Math.floor(c.percentage),
-                            remainder: c.percentage - Math.floor(c.percentage),
+                        // Plus d'arrondi de Hamilton ici : l'invariant se vérifie en
+                        // centimes côté serveur, qui refuse la sur-ventilation et absorbe
+                        // lui-même la poussière de troncature. Le JS n'a plus à corriger
+                        // des pourcentages avant l'envoi.
+                        const payload = this.components.map(c => ({
+                            id: c.id,
+                            name: c.name,
+                            percentage: c.percentage,
+                            baseAmount: this.baseCentsOf(c),
+                            baseSource: c.baseSource,
+                            annualDepreciation: c.baseSource === 'manual' ? this.annualCentsOf(c) : null,
+                            duration: c.duration,
+                            sortOrder: c.sortOrder,
+                            enabled: c.enabled,
                         }));
-                        shares.forEach(s => { s.comp.percentage = s.floor; });
-                        let leftover = 100 - shares.reduce((s, sh) => s + sh.floor, 0);
-                        shares.sort((a, b) => b.remainder - a.remainder);
-                        for (let i = 0; i < leftover && i < shares.length; i++) {
-                            shares[i].comp.percentage++;
-                        }
 
                         this.$wire.saveComponents(payload).then(() => {
-                            // Mettre à jour l'affichage avec les valeurs arrondies
-                            this.components.forEach((c, i) => { c.percentage = payload[i].percentage; });
-                            this.components = this.components.map(c => ({...c}));
                             this.savedState = JSON.stringify(this.components);
                             this.isDirty = false;
                             this._dragIdx = null;

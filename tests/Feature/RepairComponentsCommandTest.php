@@ -56,7 +56,7 @@ it('leaves consistent components untouched and reports nothing to fix', function
         ->pluck('base_amount', 'id')->toArray();
 
     $this->artisan('openlmnp:repair-components', ['--fix' => true])
-        ->expectsOutputToContain('Aucune corruption manifeste')
+        ->expectsOutputToContain('Aucune désynchronisation')
         ->assertSuccessful();
 
     $after = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)
@@ -96,37 +96,64 @@ it('preserves custom percentages when repairing', function () {
     $component = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->firstOrFail();
 
     // Base amortissable 212 500 € x 40 % = 85 000 €, sur 20 ans = 4 250 €/an
-    expect($component->percentage)->toBe(40)
+    // `percentage` est un decimal(7,4) casté en float depuis le 2026-09-03.
+    expect($component->percentage)->toBe(40.0)
         ->and((int) $component->base_amount)->toBe(8_500_000)
         ->and((int) $component->annual_depreciation)->toBe(425_000);
 });
 
-it('reports but does not repair a moderate divergence without --all', function () {
+it('never repairs a base that was set by hand', function () {
     $user = User::factory()->create();
     $property = makeRepairTestProperty($user, 25_000_000);
 
-    // Base attendue : 212 500 € x 50 % = 106 250 €. On stocke 100 000 € :
-    // un ajustement plausible, pas une corruption.
+    // Base théorique : 212 500 € x 50 % = 106 250 €. L'utilisateur a saisi 100 000 €
+    // pour reproduire le plan de son comptable — c'est volontaire, pas une dérive.
     PropertyComponent::forceCreate([
         'property_id' => $property->id,
-        'name' => 'Gros œuvre ajusté',
+        'name' => 'Gros œuvre repris',
         'percentage' => 50,
         'duration_years' => 50,
         'base_amount' => 10_000_000,
         'annual_depreciation' => 200_000,
+        'base_source' => PropertyComponent::BASE_SOURCE_MANUAL,
         'sort_order' => 1,
     ]);
 
     $this->artisan('openlmnp:repair-components', ['--fix' => true])
-        ->expectsOutputToContain('Écarts modérés')
+        ->expectsOutputToContain('Bases saisies à la main')
         ->assertSuccessful();
 
     $component = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->firstOrFail();
-    expect((int) $component->base_amount)->toBe(10_000_000); // inchangé
+    expect((int) $component->base_amount)->toBe(10_000_000)  // intacte
+        ->and((int) $component->annual_depreciation)->toBe(200_000);
 
-    // --all force la resynchronisation
+    // --all est la seule porte de sortie, et elle est destructrice.
     $this->artisan('openlmnp:repair-components', ['--fix' => true, '--all' => true])->assertSuccessful();
 
     $component->refresh();
     expect((int) $component->base_amount)->toBe(10_625_000);
+});
+
+it('repairs a small divergence on a ventilated base, without needing --all', function () {
+    $user = User::factory()->create();
+    $property = makeRepairTestProperty($user, 25_000_000);
+
+    // Même écart que ci-dessus, mais sur une base DÉRIVÉE : rien ne le justifie.
+    // Avant `base_source`, le seuil « facteur 10 » laissait passer ce cas.
+    PropertyComponent::forceCreate([
+        'property_id' => $property->id,
+        'name' => 'Gros œuvre',
+        'percentage' => 50,
+        'duration_years' => 50,
+        'base_amount' => 10_000_000,
+        'annual_depreciation' => 200_000,
+        'base_source' => PropertyComponent::BASE_SOURCE_PERCENTAGE,
+        'sort_order' => 1,
+    ]);
+
+    $this->artisan('openlmnp:repair-components', ['--fix' => true])->assertSuccessful();
+
+    $component = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->firstOrFail();
+    expect((int) $component->base_amount)->toBe(10_625_000)
+        ->and((int) $component->annual_depreciation)->toBe(212_500);
 });

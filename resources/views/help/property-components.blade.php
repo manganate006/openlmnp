@@ -26,7 +26,20 @@
     <p>Pour un appartement en copropriété, les composants par défaut sont généralement suffisants. La toiture, les parties communes et le ravalement sont gérés par le syndic (provisions déductibles en charges).</p>
 
     <h3>Personnalisation</h3>
-    <p>Vous pouvez ajuster les pourcentages et les durées. Le total des pourcentages doit faire <strong>100 %</strong>. Quand vous ajoutez un composant optionnel, réduisez principalement le gros &oelig;uvre. Si le coût réel d'un composant est connu (travaux, facture), utilisez-le plutôt que le pourcentage par défaut.</p>
+    <p>Vous pouvez ajuster les pourcentages et les durées. Quand vous ajoutez un composant optionnel, réduisez principalement le gros &oelig;uvre. Si le coût réel d'un composant est connu (travaux, facture), utilisez-le plutôt que le pourcentage par défaut.</p>
+
+    <h3>Saisir un montant exact</h3>
+    <p>L'onglet <strong>Montants</strong> permet d'entrer directement la base amortissable de chaque composant, en euros. C'est le mode à utiliser pour <strong>reprendre une comptabilité déjà tenue ailleurs</strong> : un pourcentage entier ne permet pas de retomber à l'euro près sur les amortissements pratiqués par un cabinet.</p>
+    <ul>
+        <li data-icon="&#x1F4B6;">Les montants sont <strong>quote-part déjà appliquée</strong> : saisissez la part réellement louée, pas la valeur totale du bien.</li>
+        <li data-icon="&#x1F512;">Une base saisie à la main est <strong>verrouillée</strong> : elle ne suit plus le prix du bien et n'est jamais recalculée automatiquement.</li>
+        <li data-icon="&#x1F4C9;">La dotation annuelle se calcule seule, mais reste modifiable si votre cabinet arrondissait autrement.</li>
+    </ul>
+    <p>Ventiler <strong>moins</strong> que la base amortissable est permis, et signalé : la part non rattachée à un composant ne s'amortit simplement pas. Ventiler <strong>plus</strong> est refusé.</p>
+
+    <div class="ctx-warning" style="margin-top:12px;">
+        <strong>Après modification :</strong> les exercices déjà enregistrés gardent leurs totaux figés. Lancez « Recalculer la chaîne » depuis la page Exercices pour qu'ils reprennent les nouvelles valeurs.
+    </div>
 
     <div class="ctx-warning">
         <strong>Attention :</strong> Le terrain n'est pas amortissable. Sa part (15-20 % en général, parfois plus en zone urbaine) est déduite avant le calcul des composants. Sources : DVF (app.dvf.etalab.gouv.fr), MeilleursAgents, notaire.
