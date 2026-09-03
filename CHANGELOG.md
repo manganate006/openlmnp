@@ -2,6 +2,57 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.2.0] - 2026-09-03
+
+### Ajouts
+
+- **Les amortissements se règlent enfin au montant, et plus seulement au pourcentage.**
+  L'écran *Amortissements* gagne un onglet **Montants** : base amortissable, durée et
+  dotation annuelle en euros, composant par composant. Jusqu'ici seuls des curseurs en
+  pourcentages entiers étaient proposés, ce qui rendait quasi impossible de basculer une
+  comptabilité LMNP existante — les montants d'OpenLMNP ne pouvaient pas coïncider avec
+  ceux déjà pratiqués par un comptable. Merci à @ovrtn de l'avoir signalé (#8)
+- Une base saisie à la main est **verrouillée** : ni les curseurs, ni la commande de
+  réparation ne la recalculent. Ventiler moins que la base amortissable devient permis, et
+  signalé ; ventiler plus reste refusé
+
+### Corrections
+
+- **Le prorata de première année comptait un jour de trop, sur tous les amortissements.**
+  Composants, travaux, mobilier et frais d'acquisition calculaient les jours restants par
+  `diffInDays(...) + 1`, alors que cette fonction inclut déjà la journée en cours : toute
+  première année était majorée de 1/365, soit **+0,27 %**. Un bien mis en location le
+  1er janvier amortissait 100,27 % de sa dotation. ⚠️ **Les exercices déjà enregistrés
+  gardent l'ancien calcul** : lancez « Recalculer la chaîne » depuis la page Exercices, ou
+  `php artisan openlmnp:repair-orphan-fiscal-years --fix`
+- **Supprimer un bien laissait ses montants dans les exercices déjà calculés.** Aucune clé
+  étrangère ne pouvait s'en charger — un exercice agrège tous les biens d'une année — et
+  rien ne le signalait. Nouvelle commande `openlmnp:repair-orphan-fiscal-years` (rapport
+  par défaut, `--fix` pour agir, `--closed` en plus pour un exercice clôturé)
+- **L'écran de saisie des composants demandait des centimes bruts** — `50000` pour 500 €,
+  sans libellé ni symbole — alors que sa propre table affichait des euros. Il était masqué
+  du menu mais toujours accessible, et la checklist du tableau de bord y envoyait. Il est
+  supprimé, tout passe par l'écran *Amortissements*
+- La fiche d'aide des composants n'était atteignable que depuis cet écran masqué : l'écran
+  réellement utilisé n'avait donc aucune aide contextuelle
+- Le montant de chaque composant s'affichait avec un symbole euro en double
+- L'assistant de premier lancement annonçait des durées fausses (« Plomberie 25 ans »,
+  « Revêtements ») qui ne correspondaient à aucun des composants réellement créés
+
+### Interne
+
+- `base_amount` devient la source de vérité d'un composant ; `percentage` est dérivé, et
+  l'invariant « total = 100 % » se vérifie en centimes contre la base amortissable — c'est
+  ce qui rend représentable une ventilation exacte du type 33,33 / 33,33 / 33,34
+- La formule de ventilation, écrite à cinq endroits, vit désormais dans `DepreciationService`
+- `saveComponents()` met à jour les composants au lieu de tout supprimer et recréer : les
+  identifiants sont stables et l'appariement se fait par id, plus par nom
+- Validation côté serveur de la ventilation, qui ne reposait que sur du JavaScript
+- Trois méthodes mortes retirées du modèle, dont un calcul de prorata **mensuel** qui
+  contredisait le calcul **journalier** réellement utilisé
+- 32 tests supplémentaires, dont un jeu de valeurs d'or qui verrouille le calcul complet
+  d'un bien (quote-part, prorata, travaux antérieurs, mobilier, frais, fin de plan)
+
 ## [1.1.7] - 2026-09-03
 
 ### Corrections
