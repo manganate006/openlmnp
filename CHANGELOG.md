@@ -2,6 +2,23 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.3.0] - 2026-09-03
+
+### Ajouts
+
+- **OpenLMNP vous demande votre avis, une fois.** Après un moment d'utilisation réelle,
+  une invitation propose de dire ce que vous pensez du logiciel : un pouce, et si vous le
+  souhaitez un mot. Elle n'apparaît qu'une seule fois, et seulement une fois qu'une action
+  concrète a été faite — demander son avis à quelqu'un qui vient d'arriver ne renseigne
+  sur rien. Si vous appréciez le logiciel, elle propose les trois gestes qui le font
+  vivre : une étoile, un parrainage, un mot dans les Discussions
+- **Rien ne quitte votre instance.** Sans `FEEDBACK_FORWARD_EMAIL`, votre retour est
+  enregistré dans votre propre base et l'écran de confirmation vous propose de l'envoyer
+  vous-même, par votre client mail, si vous en avez envie. Aucun envoi automatique, aucun
+  appel sortant. `FEEDBACK_ENABLED=false` désactive tout, et les seuils
+  (`FEEDBACK_MIN_SECONDS`, `FEEDBACK_MIN_ACTIONS`, `FEEDBACK_COOLDOWN_DAYS`…) se règlent
+  sans toucher au code. La politique de confidentialité décrit ce qui est collecté
+
 ## [1.2.0] - 2026-09-03
 
 ### Ajouts
