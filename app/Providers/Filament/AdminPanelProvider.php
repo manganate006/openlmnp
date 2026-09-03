@@ -93,6 +93,10 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(\Filament\View\PanelsRenderHook::HEAD_END, fn () => view('filament.partials.theme-tokens'))
             ->renderHook('panels::sidebar.footer', fn () => view('livewire.nav-mode-toggle-hook'))
             ->renderHook('panels::body.end', fn () => view('livewire.contextual-help-hook'))
+            // Invitation à donner son avis. Conditionnée ici plutôt que dans la vue : à
+            // `FEEDBACK_ENABLED=false`, le composant n'est même pas monté — une instance
+            // auto-hébergée qui l'éteint ne paie pas un aller-retour Livewire par page.
+            ->renderHook('panels::body.end', fn () => config('feedback.enabled') ? view('livewire.feedback-prompt-hook') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
             ->renderHook(\Filament\View\PanelsRenderHook::HEAD_START, fn () => config('services.gtm.id') ? view('partials.gtm-head') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::BODY_START, fn () => config('services.gtm.id') ? view('partials.gtm-body') : '')
