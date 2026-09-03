@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\BelongsToUserThroughPropertyScope;
+use App\Services\DepreciationService;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,57 +23,32 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *   - Agencements      : 15 %, 15 ans
  *   - Plomberie        : 10 %, 15 ans
  *
+ * ⚠️ Depuis le 2026-09-03, c'est `base_amount` qui fait foi, plus `percentage`.
+ * Un pourcentage ne peut pas représenter une base au centime près (il y faudrait
+ * neuf décimales), ce qui rendait impossible de reproduire un plan d'amortissement
+ * déjà pratiqué par un comptable — c'est l'objet de l'issue #8. `percentage` est
+ * désormais DÉRIVÉ de la base, et n'entre plus jamais dans un calcul de montant.
+ *
+ * `base_source` dit qui pilote la base :
+ *   - `percentage` : ventilée depuis la base amortissable du bien. Les curseurs la
+ *     pilotent, `openlmnp:repair-components` la resynchronise.
+ *   - `manual`     : fixée à la main. Plus rien ne la recalcule.
+ *
  * @property int    $id
  * @property int    $property_id
  * @property string $name
- * @property int    $percentage          % de la base amortissable
+ * @property float  $percentage          % de la base amortissable (DÉRIVÉ)
  * @property int    $duration_years      durée d'amortissement
- * @property int    $base_amount         centimes
+ * @property int    $base_amount         centimes — source de vérité
  * @property int    $annual_depreciation centimes
+ * @property string $base_source         percentage|manual
  * @property int    $sort_order
  */
 #[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class PropertyComponent extends Model
 {
-    // Composants standards avec leurs paramètres par défaut
-    public const STANDARD_COMPONENTS = [
-        [
-            'name'           => 'Gros œuvre',
-            'percentage'     => 50,
-            'duration_years' => 50,
-            'sort_order'     => 1,
-        ],
-        [
-            'name'           => 'Toiture',
-            'percentage'     => 10,
-            'duration_years' => 25,
-            'sort_order'     => 2,
-        ],
-        [
-            'name'           => 'Électricité',
-            'percentage'     => 10,
-            'duration_years' => 25,
-            'sort_order'     => 3,
-        ],
-        [
-            'name'           => 'Étanchéité',
-            'percentage'     => 5,
-            'duration_years' => 15,
-            'sort_order'     => 4,
-        ],
-        [
-            'name'           => 'Agencements intérieurs',
-            'percentage'     => 15,
-            'duration_years' => 15,
-            'sort_order'     => 5,
-        ],
-        [
-            'name'           => 'Plomberie',
-            'percentage'     => 10,
-            'duration_years' => 15,
-            'sort_order'     => 6,
-        ],
-    ];
+    public const BASE_SOURCE_PERCENTAGE = 'percentage';
+    public const BASE_SOURCE_MANUAL = 'manual';
 
     protected $fillable = [
         'property_id',
@@ -81,14 +57,37 @@ class PropertyComponent extends Model
         'duration_years',
         'base_amount',
         'annual_depreciation',
+        'base_source',
         'sort_order',
     ];
 
     protected function casts(): array
     {
         return [
-            // Pas de casts spéciaux ; les entiers sont nativement entiers
+            // `percentage` est un decimal(7,4) en base : sans ce cast, Eloquent rendrait
+            // la chaîne "50.0000" et polluerait les sorties JSON du serveur MCP.
+            'percentage' => 'float',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (PropertyComponent $component) {
+            // Même contrat que PropertyWork et Furniture : la dotation est dérivée du
+            // montant et de la durée. Seule exception, le mode manuel — un utilisateur
+            // qui reprend une comptabilité existante fixe sa dotation au centime près,
+            // et l'arrondi de son cabinet n'est pas forcément le nôtre.
+            if ($component->base_source === self::BASE_SOURCE_MANUAL && $component->annual_depreciation) {
+                return;
+            }
+
+            if ($component->base_amount > 0 && $component->duration_years > 0) {
+                $component->annual_depreciation = (int) DepreciationService::annualFromBase(
+                    (string) $component->base_amount,
+                    (int) $component->duration_years,
+                );
+            }
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -108,62 +107,6 @@ class PropertyComponent extends Model
     // -------------------------------------------------------------------------
     // Méthodes de calcul
     // -------------------------------------------------------------------------
-
-    /**
-     * Calcule et met à jour base_amount et annual_depreciation
-     * à partir de la base amortissable du bien parent.
-     *
-     * @param  string $depreciableBase  Base amortissable en centimes (bcmath string)
-     */
-    public function computeFromBase(string $depreciableBase): void
-    {
-        $base = bcmul(
-            $depreciableBase,
-            bcdiv((string) $this->percentage, '100', 10),
-            0
-        );
-
-        $this->base_amount = (int) $base;
-
-        $this->annual_depreciation = $this->duration_years > 0
-            ? (int) bcdiv($base, (string) $this->duration_years, 0)
-            : 0;
-    }
-
-    /**
-     * Retourne l'amortissement pour une année donnée (pro-rata si première année).
-     *
-     * @param  int    $year       Année fiscale
-     * @param  \Carbon\Carbon $startDate  Date de début de location
-     */
-    public function getDepreciationForYear(int $year, \Carbon\Carbon $startDate): int
-    {
-        $startYear = (int) $startDate->format('Y');
-
-        if ($year < $startYear) {
-            return 0;
-        }
-
-        // Première année : prorata temporis (mois restants / 12)
-        if ($year === $startYear) {
-            $monthsInYear = 12 - (int) $startDate->format('n') + 1;
-
-            return (int) bcmul(
-                (string) $this->annual_depreciation,
-                bcdiv((string) $monthsInYear, '12', 10),
-                0
-            );
-        }
-
-        // Années complètes dans la durée d'amortissement
-        $endYear = $startYear + $this->duration_years - 1;
-
-        if ($year > $endYear) {
-            return 0;
-        }
-
-        return $this->annual_depreciation;
-    }
 
     // -------------------------------------------------------------------------
     // Relations
