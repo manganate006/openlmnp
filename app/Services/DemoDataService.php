@@ -66,14 +66,15 @@ class DemoDataService
             ['Plomberie / sanitaire', 10, 15, 6],
         ];
         foreach ($components as [$name, $pct, $dur, $sort]) {
-            $base = bcmul($depBase, bcdiv((string) $pct, '100', 10), 0);
+            $base = DepreciationService::baseFromPercentage($depBase, (string) $pct);
             PropertyComponent::create([
                 'property_id' => $property->id,
                 'name' => $name,
                 'percentage' => $pct,
                 'duration_years' => $dur,
                 'base_amount' => (int) $base,
-                'annual_depreciation' => (int) bcdiv($base, (string) $dur, 0),
+                'annual_depreciation' => (int) DepreciationService::annualFromBase($base, $dur),
+                'base_source' => PropertyComponent::BASE_SOURCE_PERCENTAGE,
                 'sort_order' => $sort,
             ]);
         }
