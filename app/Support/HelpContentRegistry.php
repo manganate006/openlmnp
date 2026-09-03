@@ -15,6 +15,7 @@ class HelpContentRegistry
         'filament.admin.pages.loan-detail' => ['view' => 'loan-detail', 'title' => 'Détail emprunt'],
         'filament.admin.pages.teledeclaration' => ['view' => 'teledeclaration', 'title' => 'Télédéclaration'],
         'filament.admin.pages.badges' => ['view' => 'badges', 'title' => 'Badges'],
+        'filament.admin.pages.depreciation-editor' => ['view' => 'property-components', 'title' => 'Composants'],
         'filament.admin.pages.help-page' => ['view' => 'help-page', 'title' => 'Aide'],
         'filament.admin.pages.admin-stats' => ['view' => 'admin-stats', 'title' => 'Statistiques'],
         'filament.admin.pages.admin-update' => ['view' => 'admin-update', 'title' => 'Mises à jour'],
@@ -27,7 +28,6 @@ class HelpContentRegistry
         'filament.admin.resources.expenses' => ['view' => 'expenses', 'title' => 'Charges'],
         'filament.admin.resources.loans' => ['view' => 'loans', 'title' => 'Emprunts'],
         'filament.admin.resources.furniture' => ['view' => 'furniture', 'title' => 'Mobilier'],
-        'filament.admin.resources.property-components' => ['view' => 'property-components', 'title' => 'Composants'],
         'filament.admin.resources.property-works' => ['view' => 'property-works', 'title' => 'Travaux'],
         'filament.admin.resources.fiscal-years' => ['view' => 'fiscal-years', 'title' => 'Exercices fiscaux'],
     ];
@@ -37,6 +37,14 @@ class HelpContentRegistry
         if (! $routeName) {
             return ['view' => 'help._fallback', 'title' => 'Aide'];
         }
+
+        // Filament dérive le nom d'une Page de son slug, SEGMENT DE PARAMÈTRE COMPRIS :
+        // le slug `depreciation-editor/{propertyId?}` donne la route
+        // `filament.admin.pages.depreciation-editor.{propertyId?}`. Sans cette
+        // normalisation, une telle page ne peut pas être recensée ici — et l'échec est
+        // muet, `resolve()` retombant sur le fallback. C'est ce qui avait prive
+        // l'éditeur d'amortissements de toute aide contextuelle.
+        $routeName = preg_replace('/\.\{[^}]*\}$/', '', $routeName);
 
         // Direct match for pages
         if (isset(self::$pages[$routeName])) {

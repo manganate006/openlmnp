@@ -89,29 +89,28 @@ class DepreciationEditor extends Page
             return ['empty' => true];
         }
 
-        $depreciableBase = $property->depreciable_base;
-        $depreciableBaseEuros = (int) $depreciableBase / 100;
+        $depreciableBase = (int) $property->depreciable_base;
 
-        $existing = $property->components->keyBy('name');
+        // groupBy et non keyBy : deux composants homonymes existent (un utilisateur peut
+        // renommer, ou ajouter « Toiture » deux fois). keyBy en écrasait un en silence,
+        // ce qui, maintenant que l'écriture se fait par id, aurait perdu des données.
+        $existing = $property->components->groupBy('name');
+        $matchedIds = [];
 
         $components = [];
         foreach (DepreciationService::FULL_CATALOG as $catalog) {
-            $match = $existing->get($catalog['name']);
+            $match = $existing->get($catalog['name'])?->first();
 
             if ($match) {
-                $components[] = [
-                    'name'                => $match->name,
-                    'percentage'          => $match->percentage,
-                    'duration'            => $match->duration_years,
-                    'suggestedPercentage' => $catalog['percentage'],
-                    'optional'            => $catalog['optional'],
-                    'enabled'             => true,
-                    'sortOrder'           => $match->sort_order,
-                ];
+                $matchedIds[] = $match->id;
+                $components[] = self::lineFromComponent($match, $catalog['percentage'], $catalog['optional']);
             } else {
                 $components[] = [
+                    'id'                  => null,
                     'name'                => $catalog['name'],
                     'percentage'          => 0,
+                    'baseAmount'          => 0,
+                    'baseSource'          => PropertyComponent::BASE_SOURCE_PERCENTAGE,
                     'duration'            => $catalog['duration_years'],
                     'suggestedPercentage' => $catalog['percentage'],
                     'optional'            => $catalog['optional'],
@@ -121,28 +120,41 @@ class DepreciationEditor extends Page
             }
         }
 
-        // Composants en base qui ne sont pas dans le catalogue (personnalisés)
-        foreach ($existing as $name => $comp) {
-            $inCatalog = collect(DepreciationService::FULL_CATALOG)->contains('name', $name);
-            if (! $inCatalog) {
-                $components[] = [
-                    'name'                => $comp->name,
-                    'percentage'          => $comp->percentage,
-                    'duration'            => $comp->duration_years,
-                    'suggestedPercentage' => $comp->percentage,
-                    'optional'            => true,
-                    'enabled'             => true,
-                    'sortOrder'           => $comp->sort_order,
-                ];
+        // Composants en base qui ne correspondent à aucune entrée du catalogue,
+        // et les doublons d'un même nom : tous « personnalisés ».
+        foreach ($property->components as $comp) {
+            if (! in_array($comp->id, $matchedIds, true)) {
+                $components[] = self::lineFromComponent($comp, (float) $comp->percentage, true);
             }
         }
 
         usort($components, fn ($a, $b) => $a['sortOrder'] <=> $b['sortOrder']);
 
         return [
-            'empty'              => false,
-            'depreciableBase'    => $depreciableBaseEuros,
-            'components'         => $components,
+            'empty'           => false,
+            'depreciableBase' => $depreciableBase / 100,
+            // En centimes : c'est en centimes que se vérifie l'invariant de ventilation.
+            // Le raisonnement en euros flottants perdait des centimes dès que la base
+            // n'était pas divisible par 100.
+            'depreciableBaseCents' => $depreciableBase,
+            'components'           => $components,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function lineFromComponent(PropertyComponent $component, float $suggested, bool $optional): array
+    {
+        return [
+            'id'                  => $component->id,
+            'name'                => $component->name,
+            'percentage'          => (float) $component->percentage,
+            'baseAmount'          => (int) $component->base_amount,
+            'baseSource'          => $component->base_source,
+            'duration'            => $component->duration_years,
+            'suggestedPercentage' => $suggested,
+            'optional'            => $optional,
+            'enabled'             => true,
+            'sortOrder'           => $component->sort_order,
         ];
     }
 
@@ -153,6 +165,14 @@ class DepreciationEditor extends Page
         $this->dispatch('components-loaded', data: $this->editorData);
     }
 
+    /**
+     * Enregistre la ventilation.
+     *
+     * ⚠️ Méthode Livewire PUBLIQUE : tout ce qui arrive ici vient du navigateur et doit
+     * être validé côté serveur. Jusqu'au 2026-09-03, la seule garde était l'arrondi de
+     * Hamilton appliqué en JavaScript, et un `(int)` tronquait ensuite chaque pourcentage
+     * — six composants à 16,67 % s'enregistraient donc à 96 % de la base.
+     */
     public function saveComponents(array $components): void
     {
         if (! $this->propertyId) {
@@ -160,46 +180,70 @@ class DepreciationEditor extends Page
         }
 
         $property = Property::findOrFail($this->propertyId);
-        $depreciableBase = $property->depreciable_base;
 
-        $enabled = array_filter($components, fn ($c) => $c['enabled'] && $c['percentage'] > 0);
-        $total = (int) round(array_sum(array_column($enabled, 'percentage')));
+        $lines = [];
+        foreach ($components as $comp) {
+            $source = ($comp['baseSource'] ?? null) === PropertyComponent::BASE_SOURCE_MANUAL
+                ? PropertyComponent::BASE_SOURCE_MANUAL
+                : PropertyComponent::BASE_SOURCE_PERCENTAGE;
 
-        if ($total !== 100) {
-            Notification::make()
-                ->danger()
-                ->title('Le total des pourcentages doit faire 100 %')
-                ->body("Total actuel : {$total} %")
-                ->persistent()
-                ->send();
-            return;
+            $percentage = (float) ($comp['percentage'] ?? 0);
+            $baseAmount = (int) ($comp['baseAmount'] ?? 0);
+
+            // Une ligne décochée, ou vide dans son propre mode, n'est pas conservée.
+            $keeps = ($comp['enabled'] ?? false)
+                && ($source === PropertyComponent::BASE_SOURCE_MANUAL ? $baseAmount > 0 : $percentage > 0);
+
+            if (! $keeps) {
+                continue;
+            }
+
+            $lines[] = [
+                'id'                  => isset($comp['id']) ? (int) $comp['id'] : null,
+                'name'                => (string) $comp['name'],
+                'duration_years'      => max(1, (int) ($comp['duration'] ?? 1)),
+                'sort_order'          => (int) ($comp['sortOrder'] ?? 0),
+                'base_source'         => $source,
+                'percentage'          => $percentage,
+                'base_amount'         => $baseAmount,
+                'annual_depreciation' => isset($comp['annualDepreciation'])
+                    ? (int) $comp['annualDepreciation']
+                    : null,
+            ];
         }
 
-        PropertyComponent::where('property_id', $this->propertyId)->delete();
+        try {
+            $result = app(DepreciationService::class)->syncComponents($property, $lines);
+        } catch (\RuntimeException $e) {
+            Notification::make()
+                ->danger()
+                ->title('Ventilation impossible')
+                ->body($e->getMessage()
+                    . ' Ajustez la part du terrain ou la valeur retenue sur la fiche du bien.')
+                ->persistent()
+                ->send();
 
-        foreach ($enabled as $comp) {
-            $baseAmount = bcmul($depreciableBase, bcdiv((string) $comp['percentage'], '100', 10), 0);
-            $annualDep = (int) $comp['duration'] > 0
-                ? bcdiv($baseAmount, (string) $comp['duration'], 0)
-                : '0';
-
-            PropertyComponent::create([
-                'property_id'         => $this->propertyId,
-                'name'                => $comp['name'],
-                'percentage'          => (int) $comp['percentage'],
-                'duration_years'      => (int) $comp['duration'],
-                'base_amount'         => (int) $baseAmount,
-                'annual_depreciation' => (int) $annualDep,
-                'sort_order'          => (int) $comp['sortOrder'],
-            ]);
+            return;
         }
 
         unset($this->editorData);
 
-        Notification::make()
-            ->success()
-            ->title('Composants enregistrés')
-            ->send();
+        $remainder = (int) $result['remainder'];
+
+        $notification = Notification::make()->title('Composants enregistrés');
+
+        if ($remainder > 0) {
+            // Sous-ventiler est légitime — un comptable peut n'avoir réparti qu'une part
+            // de la base. On l'accepte, mais jamais en silence.
+            $notification->warning()->body(sprintf(
+                '%s € de base amortissable ne sont rattachés à aucun composant.',
+                number_format($remainder / 100, 0, ',', ' '),
+            ));
+        } else {
+            $notification->success();
+        }
+
+        $notification->send();
     }
 
     public function resetToDefaults(): void
@@ -209,6 +253,10 @@ class DepreciationEditor extends Page
         }
 
         $property = Property::findOrFail($this->propertyId);
+
+        $manualCount = $property->components()
+            ->where('base_source', PropertyComponent::BASE_SOURCE_MANUAL)
+            ->count();
 
         PropertyComponent::where('property_id', $this->propertyId)->delete();
 
@@ -220,7 +268,12 @@ class DepreciationEditor extends Page
         Notification::make()
             ->success()
             ->title('Composants réinitialisés')
-            ->body('Les 6 composants standards ont été restaurés.')
+            ->body($manualCount > 0
+                ? sprintf(
+                    'Les 6 composants standards ont été restaurés. %d base(s) saisie(s) à la main ont été perdues.',
+                    $manualCount,
+                )
+                : 'Les 6 composants standards ont été restaurés.')
             ->send();
     }
 }

@@ -6,7 +6,6 @@ use App\Filament\Resources\Furniture\FurnitureResource;
 use App\Filament\Resources\Incomes\IncomeResource;
 use App\Filament\Resources\Loans\LoanResource;
 use App\Filament\Resources\Properties\PropertyResource;
-use App\Filament\Resources\PropertyComponents\PropertyComponentResource;
 use App\Filament\Resources\PropertyWorks\PropertyWorkResource;
 use App\Models\Expense;
 use App\Models\FiscalYear;
@@ -126,7 +125,6 @@ it('scopes all navigation badges to the authenticated user', function () {
         ->and(LoanResource::getNavigationBadge())->toBe('1')
         ->and(FurnitureResource::getNavigationBadge())->toBe('1')
         ->and(PropertyWorkResource::getNavigationBadge())->toBe('1')
-        ->and(PropertyComponentResource::getNavigationBadge())->toBe('1')
         ->and(FiscalYearResource::getNavigationBadge())->toBe('1');
 });
 
@@ -140,7 +138,6 @@ it('shows no badge for a user without data even when other users have data', fun
         ->and(LoanResource::getNavigationBadge())->toBeNull()
         ->and(FurnitureResource::getNavigationBadge())->toBeNull()
         ->and(PropertyWorkResource::getNavigationBadge())->toBeNull()
-        ->and(PropertyComponentResource::getNavigationBadge())->toBeNull()
         ->and(FiscalYearResource::getNavigationBadge())->toBeNull();
 });
 

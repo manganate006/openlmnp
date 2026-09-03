@@ -25,7 +25,9 @@ L'amortissement est le cœur de l'intérêt fiscal du régime réel. OpenLMNP d�
 en **composants** (gros œuvre, toiture, installations électriques, étanchéité, agencements
 intérieurs, plomberie/sanitaire…), chacun avec sa propre durée d'amortissement.
 
-- Ventilation **standard pré-remplie** modifiable ligne par ligne (le total doit faire 100 %)
+- Ventilation **standard pré-remplie** modifiable ligne par ligne, au curseur (en pourcentage)
+  ou **en euros**, base amortissable par base amortissable — c'est ce second mode qui permet
+  de reprendre à l'identique un plan d'amortissement déjà tenu par un comptable
 - Calcul de la **base amortissable** : valeur du bâti hors terrain (le terrain n'est jamais amortissable)
 - **Quote-part** appliquée automatiquement lorsque seule une partie du bien est louée
   (ratio surface louée / surface totale)
