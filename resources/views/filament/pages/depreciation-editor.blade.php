@@ -110,10 +110,10 @@
 
             {{-- Bascule ventilation / montants --}}
             <div class="de-modes">
-                <button class="de-mode-btn" :class="mode === 'ventilation' && 'de-mode-btn-active'" @click="mode = 'ventilation'">
+                <button class="de-mode-btn" :class="mode === 'ventilation' && 'de-mode-btn-active'" @click="setMode('ventilation')">
                     Ventilation
                 </button>
-                <button class="de-mode-btn" :class="mode === 'amounts' && 'de-mode-btn-active'" @click="mode = 'amounts'">
+                <button class="de-mode-btn" :class="mode === 'amounts' && 'de-mode-btn-active'" @click="setMode('amounts')">
                     Montants
                 </button>
             </div>
@@ -180,7 +180,7 @@
                                             :disabled="!comp.enabled"
                                         >
                                         <span class="de-duration-label">ans</span>
-                                        <span class="de-amount" x-text="formatEuros(depreciableBase * comp.percentage / 100) + ' €'"></span>
+                                        <span class="de-amount" x-text="formatEuros(baseCentsOf(comp) / 100)"></span>
                                     </div>
                                 </div>
                             </div>
@@ -225,7 +225,7 @@
                                             :disabled="!comp.enabled"
                                         >
                                         <span class="de-duration-label">ans</span>
-                                        <span class="de-amount" x-text="comp.enabled ? formatEuros(depreciableBase * comp.percentage / 100) + ' €' : '—'"></span>
+                                        <span class="de-amount" x-text="comp.enabled ? formatEuros(baseCentsOf(comp) / 100) : '—'"></span>
                                     </div>
                                 </div>
                             </div>
@@ -388,6 +388,15 @@
                         return this.emojiMap[name] || '\u{1F4E6}';
                     },
 
+                    setMode(next) {
+                        this.mode = next;
+                        // Chart.js ne supporte pas d'etre mis a jour sur un canvas masque :
+                        // on attend que l'onglet Ventilation soit reellement visible.
+                        if (next === 'ventilation') {
+                            this.$nextTick(() => this.updateChart());
+                        }
+                    },
+
                     baseCentsOf(comp) {
                         return comp.baseSource === 'manual'
                             ? (comp.baseAmount || 0)
@@ -414,7 +423,6 @@
                         comp.percentage = this.pctOf(comp);
                         comp.annualDepreciation = null;
                         this.markDirty();
-                        this.updateChart();
                     },
 
                     setAnnualEuros(idx, value) {
@@ -658,7 +666,11 @@
                     },
 
                     updateChart() {
-                        if (!this.chart) return;
+                        // Chart.js casse quand on le met a jour sur un canvas masque par
+                        // x-show (« Cannot set properties of undefined »). Le camembert
+                        // vit dans l'onglet Ventilation : ailleurs, on ne fait rien, et
+                        // setMode() le rafraichit au retour.
+                        if (!this.chart || this.mode !== 'ventilation') return;
                         const data = this.getChartData();
                         this.chart.data.labels = data.labels;
                         this.chart.data.datasets[0].data = data.datasets[0].data;

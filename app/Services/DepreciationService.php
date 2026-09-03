@@ -92,18 +92,23 @@ class DepreciationService
         return $durationYears > 0 ? bcdiv($baseCents, (string) $durationYears, 0) : '0';
     }
 
-    /** Pourcentage qu'une base représente — valeur d'AFFICHAGE, jamais une entrée de calcul. */
+    /**
+     * Pourcentage qu'une base représente — valeur d'AFFICHAGE, jamais une entrée de calcul.
+     *
+     * Arrondi et non tronqué : `bcdiv` seul rendait 9,9999 % pour une part qui vaut
+     * très exactement 10 %, ce qui donne l'air d'un bug dans les sorties du serveur MCP.
+     */
     public static function percentageFromBase(string $depreciableBaseCents, string $baseCents): string
     {
         if (bccomp($depreciableBaseCents, '0', 0) <= 0) {
             return '0';
         }
 
-        return bcdiv(
-            bcmul($baseCents, '100', self::PERCENTAGE_SCALE),
-            $depreciableBaseCents,
-            self::PERCENTAGE_SCALE,
-        );
+        $scale = self::PERCENTAGE_SCALE;
+        $raw = bcdiv(bcmul($baseCents, '100', $scale + 2), $depreciableBaseCents, $scale + 2);
+        $half = bcdiv('5', bcpow('10', (string) ($scale + 1)), $scale + 2);
+
+        return bcadd($raw, bccomp($raw, '0', $scale + 2) >= 0 ? $half : "-{$half}", $scale);
     }
 
     /**
