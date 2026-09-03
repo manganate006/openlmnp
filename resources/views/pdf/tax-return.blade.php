@@ -103,22 +103,30 @@
 
     <h2 style="font-size:10px;">Cadre I — Immobilisations (valeurs brutes)</h2>
     <table>
-        <tr><th class="line-num">Ligne</th><th>Catégorie</th><th class="r">Valeur brute</th><th class="r">Dotation annuelle</th></tr>
+        <tr>
+            <th class="line-num">Ligne</th>
+            <th>Catégorie</th>
+            <th class="r">Valeur brute</th>
+            <th class="r">Dotation annuelle</th>
+            <th class="r">Amort. à la fin de l'exercice</th>
+        </tr>
         @foreach($form2033C['categories'] as $catName => $cat)
             @if($cat['brut'] > 0)
                 <tr>
-                    <td class="c">{{ $cat['lines']['immo'] }}</td>
+                    <td class="c">{{ $cat['lines']['immo'] }} / {{ $cat['lines']['amort'] }}</td>
                     <td>{{ ucfirst($catName) }}</td>
                     <td class="r">{{ $fmtInt($cat['brut']) }} €</td>
                     <td class="r">{{ $fmtInt($cat['dotation']) }} €</td>
+                    <td class="r">{{ $fmtInt($cat['cumul']) }} €</td>
                 </tr>
             @endif
         @endforeach
         <tr class="total">
-            <td class="c">490/572</td>
+            <td class="c">490/572/570</td>
             <td><strong>TOTAL</strong></td>
             <td class="r"><strong>{{ $fmtInt($form2033C['total_brut']) }} €</strong></td>
             <td class="r"><strong>{{ $fmtInt($form2033C['total_dotation']) }} €</strong></td>
+            <td class="r"><strong>{{ $fmtInt($form2033C['total_cumul']) }} €</strong></td>
         </tr>
     </table>
 

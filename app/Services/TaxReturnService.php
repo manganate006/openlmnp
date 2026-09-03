@@ -161,12 +161,12 @@ class TaxReturnService
             $refValue = $prop->market_value ?? $prop->acquisition_price;
             $immoBrut += (int) bcmul((string) $refValue, $prop->quota_share, 0);
 
-            // Amortissements cumulés (estimation simplifiée)
-            $startYear = (int) $prop->rental_start_date->format('Y');
-            $yearsActive = max(0, $year - $startYear + 1);
-            for ($y = $startYear; $y <= $year; $y++) {
-                $dep = $this->depreciationService->calculateAnnualDepreciation($prop, $y);
-                $immoAmort += (int) $dep['total'];
+            // Amortissements cumulés — même source que la colonne « amortissements à la
+            // fin de l'exercice » du 2033-C, donc les deux tableaux ne peuvent plus diverger.
+            // Le rejeu partait auparavant de la mise en location du BIEN, ce qui perdait les
+            // dotations des travaux réalisés avant elle (rénovation en 2022, location en 2023).
+            foreach ($this->depreciationService->depreciationDetailForYear($prop, $year) as $line) {
+                $immoAmort += (int) $line['cumul'];
             }
 
             // Emprunts : capital restant dû
@@ -192,6 +192,17 @@ class TaxReturnService
 
     /**
      * 2033-C — Immobilisations et amortissements
+     *
+     * ⚠️ Les dotations viennent de `DepreciationService::depreciationDetailForYear()`,
+     * qui s'appuie sur les mêmes calculs que la ligne 254 du 2033-B. L'égalité 572 = 254
+     * est donc vraie PAR CONSTRUCTION.
+     *
+     * Elle ne l'était pas jusqu'au 2026-09-03, et la liasse imprimait « ⚠ Écart » sur trois
+     * défauts cumulés : la ligne 572 sommait les `annual_depreciation` bruts (sans prorata
+     * de première année, sans tenir compte des plans arrivés à terme), les frais de notaire
+     * et d'agence n'avaient AUCUNE ligne dans ce tableau alors que la 254 les compte, et le
+     * cumul était écrasé d'un bien à l'autre (`=` au lieu de `+=`) puis approximé par
+     * `dotation × années`.
      */
     public function compute2033C($properties, int $year): array
     {
@@ -202,6 +213,9 @@ class TaxReturnService
             'autres'        => ['lines' => ['immo' => '470', 'amort' => '560'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
         ];
 
+        // Mappage par NOM, conservé à l'identique : les composants optionnels et ceux
+        // renommés tombent en « autres ». Le corriger déplacerait des montants entre
+        // lignes Cerfa d'un exercice à l'autre — chantier distinct.
         $componentCategoryMap = [
             'Gros œuvre' => 'constructions',
             'Toiture' => 'constructions',
@@ -212,46 +226,25 @@ class TaxReturnService
         ];
 
         foreach ($properties as $prop) {
-            // Composants immeuble
-            foreach ($prop->components as $comp) {
-                $cat = $componentCategoryMap[$comp->name] ?? 'autres';
-                $categories[$cat]['brut'] += $comp->base_amount;
-                $categories[$cat]['dotation'] += $comp->annual_depreciation;
-            }
+            foreach ($this->depreciationService->depreciationDetailForYear($prop, $year) as $line) {
+                $category = match ($line['type']) {
+                    'building'  => $componentCategoryMap[$line['name']] ?? 'autres',
+                    'work'      => 'agencements',
+                    'furniture' => 'autres',
+                    // Les frais d'acquisition sont incorporés au coût du bâtiment.
+                    'notary'    => 'constructions',
+                };
 
-            // Travaux
-            foreach ($prop->works as $work) {
-                $amount = $work->is_dedicated ? $work->amount : (int) bcmul((string) $work->amount, $prop->quota_share, 0);
-                $categories['agencements']['brut'] += $amount;
-                $annualDep = $work->is_dedicated ? $work->annual_depreciation : (int) bcmul((string) $work->annual_depreciation, $prop->quota_share, 0);
-                $categories['agencements']['dotation'] += $annualDep;
-            }
-
-            // Mobilier
-            foreach ($prop->furniture as $item) {
-                $amount = $item->is_dedicated ? $item->amount : (int) bcmul((string) $item->amount, $prop->quota_share, 0);
-                $categories['autres']['brut'] += $amount;
-                $annualDep = $item->is_dedicated ? $item->annual_depreciation : (int) bcmul((string) $item->annual_depreciation, $prop->quota_share, 0);
-                $categories['autres']['dotation'] += $annualDep;
+                $categories[$category]['brut'] += (int) $line['base'];
+                $categories[$category]['dotation'] += (int) $line['annual'];
+                $categories[$category]['cumul'] += (int) $line['cumul'];
             }
         }
-
-        // Calculer cumuls approximatifs
-        foreach ($properties as $prop) {
-            $startYear = (int) $prop->rental_start_date->format('Y');
-            $yearsActive = max(0, $year - $startYear);
-            foreach ($categories as $cat => &$data) {
-                $data['cumul'] = $data['dotation'] * $yearsActive; // Approximation linéaire
-            }
-        }
-
-        // Total ligne 572 (dotations) doit = ligne 254 du 2033-B
-        $totalDotation = array_sum(array_column($categories, 'dotation'));
 
         return [
             'categories' => $categories,
             'total_brut' => array_sum(array_column($categories, 'brut')),
-            'total_dotation' => $totalDotation,
+            'total_dotation' => array_sum(array_column($categories, 'dotation')),
             'total_cumul' => array_sum(array_column($categories, 'cumul')),
         ];
     }
