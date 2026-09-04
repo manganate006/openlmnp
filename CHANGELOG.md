@@ -2,6 +2,26 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.4.2] - 2026-09-05
+
+### Ajouts
+
+- **Le visiteur de la démonstration qui apprécie le produit s'entend proposer de le garder.**
+  L'écran « j'aime » ne proposait que de mettre une étoile, de parrainer ou d'écrire dans les
+  Discussions — soit de soutenir un logiciel qu'on n'a pas adopté. En démonstration, il ouvre
+  désormais sur un bloc « Gardez tout ça », les trois gestes de soutien passant dessous, sous
+  « Ou, si vous préférez l'héberger vous-même ». Taire l'auto-hébergement au moment de
+  proposer l'offre payante serait malhonnête sur un produit AGPL
+- La durée annoncée avant l'effacement du bac à sable vient de la configuration, jamais d'un
+  texte en dur : elle reste juste sur n'importe quelle instance
+
+### Notes d'exploitation
+
+- Deux conditions cumulatives pour que ce bloc existe : l'audience doit être la démonstration,
+  et `FEEDBACK_URL_PRO` doit être renseignée. **Cette variable est vide par défaut**, et ce
+  défaut est le point important : une instance auto-hébergée n'affiche aucune sollicitation
+  commerciale, sans avoir rien à désactiver
+
 ## [1.4.1] - 2026-09-04
 
 ### Corrections
