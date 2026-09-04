@@ -47,6 +47,7 @@ class ReprisesCheckService
     public const TOLERANCE_RATIO = '0.01';
 
     public const LINE_GROSS_ASSETS = 'gross_assets';
+    public const LINE_INTANGIBLE_ASSETS = 'intangible_assets';
     public const LINE_ACCUMULATED_DEPRECIATION = 'accumulated_depreciation';
     public const LINE_DEFERRED_DEPRECIATION = 'deferred_depreciation';
     public const LINE_DEFICIT_CARRYFORWARD = 'deficit_carryforward';
@@ -121,6 +122,7 @@ class ReprisesCheckService
 
         $computed = [
             self::LINE_GROSS_ASSETS             => (int) $form2033A['028'],
+            self::LINE_INTANGIBLE_ASSETS        => (int) $form2033A['014'],
             self::LINE_ACCUMULATED_DEPRECIATION => (int) $form2033A['030'],
             self::LINE_DEFERRED_DEPRECIATION    => (int) $repriseYear->opening_deferred_depreciation,
             self::LINE_DEFICIT_CARRYFORWARD     => $repriseYear->openingDeficitsTotal(),
@@ -153,6 +155,16 @@ class ReprisesCheckService
             self::LINE_ACCUMULATED_DEPRECIATION => [
                 'cerfa' => '2033-A case 030',
                 'label' => 'Amortissements cumulés',
+                'reconstituted' => true,
+            ],
+            // ⚠️ Cette ligne existe pour une raison précise. Depuis que la case 030 ne porte
+            // plus l'amortissement des frais d'acquisition (2026-09-05), plus rien ne révélait
+            // le cas — fréquent — du comptable qui les avait passés en CHARGES l'année de
+            // l'acquisition : son bilan porte alors 0 en 014 quand nous en amortissons encore.
+            // L'écart était auparavant détecté par accident, à travers une case 030 fausse.
+            self::LINE_INTANGIBLE_ASSETS => [
+                'cerfa' => '2033-A case 014',
+                'label' => 'Immobilisations incorporelles (frais d\'acquisition)',
                 'reconstituted' => true,
             ],
             self::LINE_DEFERRED_DEPRECIATION => [

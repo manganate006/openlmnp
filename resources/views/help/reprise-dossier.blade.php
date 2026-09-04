@@ -20,6 +20,11 @@
         <li data-icon="&#x1F522;"><strong>Amortissements diff&eacute;r&eacute;s</strong> &mdash; 2033-D case 870 (&agrave; d&eacute;faut&nbsp;: 2033-B case 318 cumul&eacute;e)</li>
         <li data-icon="&#x1F522;"><strong>Cumul d'amortissements</strong> &mdash; 2033-A case 030</li>
         <li data-icon="&#x1F522;"><strong>Immobilisations brutes</strong> &mdash; 2033-A case 028</li>
+        <li data-icon="&#x1F522;"><strong>Immobilisations incorporelles</strong> &mdash; 2033-A case 014&nbsp;:
+            vos frais de notaire et d'agence, s'ils y figurent. <strong>Z&eacute;ro si votre comptable les a
+            pass&eacute;s en charges</strong> l'ann&eacute;e de l'acquisition&nbsp;: l'&eacute;cart vous sera
+            signal&eacute;, et l'&eacute;cran de contr&ocirc;le vous proposera d'aligner l'application sur ce
+            traitement.</li>
         <li data-icon="&#x1F522;"><strong>D&eacute;ficits reportables</strong> &mdash; 2033-D cases 980 &agrave; 984</li>
     </ul>
 

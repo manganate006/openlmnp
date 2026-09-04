@@ -581,6 +581,22 @@
                                     <span class="rp-error">{{ $this->stepErrors['declaredGrossAssets'] }}</span>
                                 @endisset
                             </div>
+                            <div class="rp-field">
+                                <label for="rp-intangible">Immobilisations incorporelles</label>
+                                <div @class(['rp-input', 'rp-input-bad' => isset($this->stepErrors['declaredIntangibleAssets'])])>
+                                    <input id="rp-intangible" type="text" inputmode="decimal" wire:model="declaredIntangibleAssets">
+                                    <i>€</i>
+                                </div>
+                                <span class="rp-hint">
+                                    Liasse <span class="rp-cerfa">2033-A, case 014</span> : vos frais de notaire et
+                                    d'agence, s'ils y figurent. <strong>Zéro si votre comptable les a passés en
+                                    charges</strong> l'année de l'acquisition — c'est précisément ce que cette ligne
+                                    sert à détecter. Facultatif.
+                                </span>
+                                @isset($this->stepErrors['declaredIntangibleAssets'])
+                                    <span class="rp-error">{{ $this->stepErrors['declaredIntangibleAssets'] }}</span>
+                                @endisset
+                            </div>
                         </div>
 
                         <div class="rp-field" style="margin-top:16px">
