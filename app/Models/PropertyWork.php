@@ -24,11 +24,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int         $duration_years      durée d'amortissement (défaut : 10)
  * @property bool        $is_dedicated        100 % dédié à la location ou au prorata
  * @property int         $annual_depreciation centimes
+ * @property string      $depreciation_source computed|manual
+ * @property int         $opening_accumulated_depreciation centimes, cumuls affichés UNIQUEMENT
  */
 #[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class PropertyWork extends Model
 {
     use HasDocuments;
+
+    /**
+     * Symétrique du `base_source` des composants : `manual` protège une dotation recopiée
+     * d'une liasse. Sans elle, `montant ÷ durée` reprenait toujours la main et l'arrondi
+     * du cabinet précédent était impossible à conserver.
+     */
+    public const DEPRECIATION_SOURCE_COMPUTED = 'computed';
+    public const DEPRECIATION_SOURCE_MANUAL = 'manual';
 
     protected $fillable = [
         'property_id',
@@ -41,6 +51,8 @@ class PropertyWork extends Model
         'duration_years',
         'is_dedicated',
         'annual_depreciation',
+        'depreciation_source',
+        'opening_accumulated_depreciation',
     ];
 
     protected static function booted(): void
@@ -51,10 +63,23 @@ class PropertyWork extends Model
             $work->amount_ht = $result['ht'];
             $work->amount_tva = $result['tva'];
 
+            // Une dotation recopiée d'une liasse ne se recalcule pas : c'est tout l'objet
+            // du mode manuel. Elle reste dérivée tant qu'aucun montant n'a été saisi.
+            if ($work->hasManualDepreciation()) {
+                return;
+            }
+
             if ($work->amount > 0 && $work->duration_years > 0) {
                 $work->computeAnnualDepreciation();
             }
         });
+    }
+
+    /** Vrai si la dotation a été fixée à la main et ne doit plus être recalculée. */
+    public function hasManualDepreciation(): bool
+    {
+        return $this->depreciation_source === self::DEPRECIATION_SOURCE_MANUAL
+            && (int) $this->annual_depreciation > 0;
     }
 
     protected function casts(): array
@@ -101,6 +126,17 @@ class PropertyWork extends Model
      */
     public function computeAnnualDepreciation(): void
     {
+        $this->annual_depreciation = $this->expectedAnnualDepreciation();
+    }
+
+    /**
+     * Dotation que la règle actuelle donnerait, SANS rien écrire.
+     *
+     * C'est ce qui permet à `openlmnp:recompute-depreciation` de décrire un écart sans
+     * le corriger : la formule reste écrite une seule fois.
+     */
+    public function expectedAnnualDepreciation(): int
+    {
         $property = $this->property;
 
         // Si TVA-liable, amortir sur le HT (TVA récupérée)
@@ -112,7 +148,7 @@ class PropertyWork extends Model
             $base = bcmul($base, $property->quota_share, 0);
         }
 
-        $this->annual_depreciation = $this->duration_years > 0
+        return $this->duration_years > 0
             ? (int) bcdiv($base, (string) $this->duration_years, 0)
             : 0;
     }

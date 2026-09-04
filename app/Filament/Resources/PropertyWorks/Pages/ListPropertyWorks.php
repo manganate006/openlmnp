@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PropertyWorks\Pages;
 
 use App\Filament\Resources\PropertyWorks\PropertyWorkResource;
 use App\Models\Property;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\View\View;
@@ -61,6 +62,11 @@ class ListPropertyWorks extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('import_csv')
+                ->label('Import CSV')
+                ->icon('heroicon-o-table-cells')
+                ->color('gray')
+                ->url('/import-csv'),
             CreateAction::make(),
         ];
     }

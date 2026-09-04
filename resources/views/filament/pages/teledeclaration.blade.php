@@ -96,6 +96,24 @@
 
             <p style="font-size:12px;color:var(--olmnp-fg-muted);margin-bottom:16px;">Cliquez sur « Copier » pour copier une valeur dans le presse-papier, puis collez-la dans le formulaire en ligne.</p>
 
+            @if($this->showsDeficitCorrectionNotice)
+                <div class="td-card" style="margin-bottom:16px;background:var(--olmnp-warning-bg);border-color:var(--olmnp-warning-border);">
+                    <h3 style="font-size:15px;font-weight:600;color:var(--olmnp-warning-fg);margin-bottom:8px;">Le tableau 2033-D a changé de règle</h3>
+                    <p style="font-size:14px;color:var(--olmnp-warning-fg);margin-bottom:8px;">
+                        Jusqu'à la version 1.3.2, les cases <strong>982</strong>, <strong>983</strong> et <strong>984</strong>
+                        — qui suivent vos <strong>déficits reportables</strong> — recevaient en réalité le montant de vos
+                        <strong>amortissements réputés différés</strong>. Ce sont deux choses différentes : l'amortissement
+                        différé se reporte sans limite de durée, le déficit s'impute sur les dix années suivantes.
+                    </p>
+                    <p style="font-size:14px;color:var(--olmnp-warning-fg);">
+                        Les liasses que vous avez déjà téléchargées ou transmises portent l'ancienne valeur : elles affichent
+                        des déficits que vous n'aviez pas. Les valeurs ci-dessous sont les valeurs corrigées. Si une
+                        déclaration déjà déposée est concernée, votre suivi de déficits peut être reconstitué
+                        (<code>php artisan openlmnp:repair-deficits</code>), puis la liasse régénérée.
+                    </p>
+                </div>
+            @endif
+
             {{-- Sections par formulaire --}}
             @foreach($data['forms'] as $formKey => $form)
                 <details class="td-section" @if($form['open']) open @endif>

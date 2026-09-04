@@ -56,6 +56,25 @@ class Property extends Model
     public const TVA_EXEMPT  = 'exempt';
     public const TVA_LIABLE  = 'liable';
 
+    /**
+     * Traitement des frais d'acquisition (notaire + agence).
+     *
+     * Le contribuable a le choix, à l'acquisition, entre les incorporer au coût de
+     * revient — donc les amortir — et les déduire immédiatement en charges
+     * (BOI-BIC-CHG-20-20-10). L'option est prise une fois pour toutes et vaut pour la
+     * totalité des frais de l'exercice.
+     *
+     * Jusqu'au 2026-09-04, OpenLMNP imposait l'amortissement sur 25 ans. Un bailleur dont
+     * le cabinet avait passé ces frais en charges l'année de l'acquisition les voyait donc
+     * amortis une SECONDE fois : écart garanti avec sa liasse, sans rien pour le corriger.
+     */
+    public const ACQUISITION_FEES_AMORTIZED = 'amortized';
+    public const ACQUISITION_FEES_EXPENSED  = 'expensed';
+    public const ACQUISITION_FEES_EXCLUDED  = 'excluded';
+
+    /** Durée retenue quand rien n'est précisé — la pratique dominante en LMNP. */
+    public const ACQUISITION_FEES_DEFAULT_DURATION = 25;
+
     protected $fillable = [
         'user_id',
         'name',
@@ -70,6 +89,8 @@ class Property extends Model
         'acquisition_price',
         'notary_fees',
         'agency_fees',
+        'acquisition_fees_treatment',
+        'acquisition_fees_duration',
         'market_value',
         'market_value_date',
         'land_percentage',
@@ -139,6 +160,31 @@ class Property extends Model
     public function isTvaLiable(): bool
     {
         return $this->tva_regime === self::TVA_LIABLE;
+    }
+
+    /** @return array<string, string> */
+    public static function acquisitionFeesTreatmentLabels(): array
+    {
+        return [
+            self::ACQUISITION_FEES_AMORTIZED => 'Amortis (incorporés au coût du bien)',
+            self::ACQUISITION_FEES_EXPENSED  => 'Passés en charges l\'année de l\'acquisition',
+            self::ACQUISITION_FEES_EXCLUDED  => 'Non repris (hors comptabilité)',
+        ];
+    }
+
+    /** Vrai si les frais de notaire et d'agence doivent encore être amortis. */
+    public function amortizesAcquisitionFees(): bool
+    {
+        // Une valeur absente vaut l'ancien comportement : les instances qui n'ont jamais
+        // vu ce réglage continuent d'amortir, comme avant l'ajout de la colonne.
+        return ($this->acquisition_fees_treatment ?? self::ACQUISITION_FEES_AMORTIZED)
+            === self::ACQUISITION_FEES_AMORTIZED;
+    }
+
+    /** Durée d'amortissement des frais d'acquisition, en années. */
+    public function acquisitionFeesDurationYears(): int
+    {
+        return max(1, (int) ($this->acquisition_fees_duration ?: self::ACQUISITION_FEES_DEFAULT_DURATION));
     }
 
     // -------------------------------------------------------------------------

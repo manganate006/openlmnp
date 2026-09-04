@@ -21,6 +21,11 @@ class ListIncomes extends ListRecords
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('gray')
                 ->url('/import-airbnb'),
+            Action::make('import_csv')
+                ->label('Import CSV')
+                ->icon('heroicon-o-table-cells')
+                ->color('gray')
+                ->url('/import-csv'),
             Action::make('export_csv')
                 ->label('Exporter CSV')
                 ->icon('heroicon-o-arrow-down-tray')

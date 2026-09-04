@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Income;
 use App\Models\Property;
+use App\Services\Csv\CsvValues;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 
@@ -196,14 +197,13 @@ class AirbnbImportService
 
     /**
      * Normalise les caractères Unicode problématiques dans le contenu CSV.
+     *
+     * Délégué à `CsvValues`/`CsvReader` depuis le 2026-09-04 : la règle est la même pour
+     * tous les imports, et l'écrire deux fois la ferait diverger.
      */
     private function normalizeUnicode(string $content): string
     {
-        // Remplacer les espaces insécables et variantes par des espaces normaux
-        // U+00A0 (NBSP), U+202F (NNBSP), U+2007 (Figure space), U+2009 (Thin space)
-        $content = preg_replace('/[\x{00A0}\x{202F}\x{2007}\x{2009}]/u', ' ', $content);
-
-        return $content;
+        return \App\Services\Csv\CsvReader::normalizeUnicode($content);
     }
 
     /**
@@ -396,48 +396,29 @@ class AirbnbImportService
 
     /**
      * Parse un montant monétaire vers des centimes.
-     * Gère : "1,234.56", "1234.56", "1 234,56", "252,26 €", "-56.78"
+     *
+     * ⚠️ La règle vit dans `CsvValues::money()`, partagée avec l'import générique.
+     * Seule différence conservée ici : un montant illisible vaut 0 plutôt qu'une
+     * exception — l'import Airbnb ignore silencieusement ces lignes depuis toujours,
+     * et les faire échouer changerait le comportement d'un import déjà en production.
      */
     private function parseMoney(string $raw): int
     {
-        $raw = trim($raw);
-        // Remove currency symbols and unicode spaces
-        $raw = preg_replace('/[€$£\x{00A0}\x{202F}]/u', '', $raw);
-        $raw = trim($raw);
-
-        // Detect format: if last separator is comma and has 2 digits after → European
-        if (preg_match('/,\d{2}$/', $raw)) {
-            // European format: 1.234,56 or 1 234,56
-            $raw = str_replace(['.', ' '], '', $raw);
-            $raw = str_replace(',', '.', $raw);
-        } else {
-            // US format: 1,234.56
-            $raw = str_replace([',', ' '], '', $raw);
+        try {
+            return CsvValues::money($raw);
+        } catch (\RuntimeException) {
+            return 0;
         }
-
-        return (int) bcmul($raw, '100', 0);
     }
 
     /**
      * Parse une date depuis divers formats.
+     *
+     * ⚠️ La règle vit dans `CsvValues::date()`, partagée avec l'import générique
+     * (`d/m/Y` avant `m/d/Y` : les exports français sont majoritaires).
      */
     private function parseDate(string $raw): string
     {
-        $raw = trim($raw);
-
-        // Try common formats (d/m/Y avant m/d/Y car CSV Airbnb FR)
-        foreach (['Y-m-d', 'd/m/Y', 'm/d/Y', 'Y/m/d', 'M d, Y', 'd M Y'] as $format) {
-            try {
-                $date = Carbon::createFromFormat($format, $raw);
-                if ($date && $date->month <= 12 && $date->day <= 31) {
-                    return $date->format('Y-m-d');
-                }
-            } catch (\Exception $e) {
-                continue;
-            }
-        }
-
-        // Fallback: let Carbon guess
-        return Carbon::parse($raw)->format('Y-m-d');
+        return CsvValues::date($raw);
     }
 }

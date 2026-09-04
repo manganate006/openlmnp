@@ -4,6 +4,7 @@ namespace App\Filament\Resources\FiscalYears\Pages;
 
 use App\Filament\Pages\FiscalYearWizard;
 use App\Filament\Pages\Projection;
+use App\Filament\Pages\RepriseDossier;
 use App\Filament\Pages\Simulator;
 use App\Filament\Pages\Teledeclaration;
 use App\Filament\Resources\FiscalYears\FiscalYearResource;
@@ -92,6 +93,13 @@ class ListFiscalYears extends ListRecords
                         'justificatifs' . ($data['year'] ? "-{$data['year']}" : '') . '.zip',
                     )->deleteFileAfterSend();
                 }),
+            // Deuxième porte de l'assistant de reprise : c'est en regardant ses exercices
+            // qu'on découvre qu'il en manque, pas au premier lancement.
+            Action::make('reprise')
+                ->label('Reprendre un dossier')
+                ->icon(Heroicon::OutlinedArrowUturnLeft)
+                ->color('gray')
+                ->url(RepriseDossier::getUrl()),
             Action::make('create_fiscal_year')
                 ->label('Nouvel exercice')
                 ->icon('heroicon-o-plus-circle')
