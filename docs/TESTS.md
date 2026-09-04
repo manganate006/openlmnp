@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **571 tests automatisés (1 571 assertions)** écrits avec
+OpenLMNP est couvert par **577 tests automatisés (1 584 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -58,8 +58,9 @@ vendor/bin/pest --filter="Filament"
 | Écran d'import CSV | 5 | Aperçu qui n'écrit rien, mappage réparé à la main, isolation entre utilisateurs y compris hors formulaire |
 | Export / import du dossier | 13 | Aller-retour identique, `schema_version` refusée si trop récente, contrôle d'appartenance, archive antérieure relisible, transaction annulée en cas d'échec |
 | Assistant de reprise (`/reprise`) | 30 | Les cinq étapes, la case Cerfa à côté de chaque montant, euros→centimes une seule fois, choix de méthode et réemploi de l'éditeur existant, contrôle branché sur `ReprisesCheckService`, rien écrit dans `fiscal_years` avant la fin, exercice clôturé protégé, isolation entre comptes, les deux portes d'entrée |
+| Couverture de l'aide contextuelle | 6 | Toute fiche d'aide recensée (l'index de l'assistant part du registre, pas du dossier des vues), aucune entrée sans vue, libellés cités par l'aide vérifiés dans l'écran, 2033-D expliqué comme le code le calcule |
 | Suites ajoutées depuis (détail non ventilé) | 193 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel, estimation DVF de la valeur vénale, justificatifs restés à la racine d'avant Laravel 11… |
-| **Total** | **571** | **1 571 assertions** |
+| **Total** | **577** | **1 584 assertions** |
 
 > Le détail par suite est tenu à jour lot par lot ; la ligne « suites ajoutées depuis »
 > absorbe les suites fusionnées sans ventilation, pour que le tableau reste juste au total.
