@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **234 tests automatisés (629 assertions)** écrits avec
+OpenLMNP est couvert par **440 tests automatisés (1 191 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
