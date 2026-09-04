@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **419 tests automatisés (1 103 assertions)** écrits avec
+OpenLMNP est couvert par **434 tests automatisés (1 130 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -50,8 +50,9 @@ vendor/bin/pest --filter="Filament"
 | Smoke (framework) | 2 | Amorçage de l'application |
 | Soldes d'ouverture (reprise) | 15 | Report repris d'une liasse N-1, N-1 réel prioritaire, N-1 vide signalé, cumul de contrôle inerte, exposition MCP |
 | Déficits reportables et 2033-D | 22 | Imputation FIFO par millésime, péremption à 10 ans, ordre amortissements différés → déficits, cases 982/983/984, commande de réparation, encart d'information |
+| Contrôle de reprise | 15 | Seuils 1 € / 1 %, un cas par diagnostic, lignes recopiées vs reconstituées, exercice N-1 vide |
 | Suites ajoutées depuis (détail non ventilé) | 148 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel… |
-| **Total** | **419** | **1 103 assertions** |
+| **Total** | **434** | **1 130 assertions** |
 
 > Le détail par suite est tenu à jour lot par lot ; la ligne « suites ajoutées depuis »
 > absorbe les suites fusionnées sans ventilation, pour que le tableau reste juste au total.
