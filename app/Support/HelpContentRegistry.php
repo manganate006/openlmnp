@@ -9,6 +9,7 @@ class HelpContentRegistry
         'filament.admin.pages.simulator' => ['view' => 'simulator', 'title' => 'Simulateur'],
         'filament.admin.pages.projection' => ['view' => 'projection', 'title' => 'Projection pluriannuelle'],
         'filament.admin.pages.import-airbnb' => ['view' => 'import-airbnb', 'title' => 'Import Airbnb'],
+        'filament.admin.pages.import-csv' => ['view' => 'import-csv', 'title' => 'Import CSV'],
         'filament.admin.pages.annual-import-wizard' => ['view' => 'annual-import-wizard', 'title' => 'Import annuel'],
         'filament.admin.pages.fiscal-year-wizard' => ['view' => 'fiscal-year-wizard', 'title' => 'Assistant exercice fiscal'],
         'filament.admin.pages.onboarding-wizard' => ['view' => 'onboarding-wizard', 'title' => 'Premier lancement'],
