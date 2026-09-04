@@ -2,7 +2,7 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
-## [1.5.0] - à paraître
+## [1.5.0] - 2026-09-06
 
 > ⚠️ **Cette version change des liasses fiscales déjà générées.** La correction du tableau
 > 2033-D (cases 982/983/984, détaillée plus bas) modifie ce que l'application imprime pour
