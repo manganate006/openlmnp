@@ -119,6 +119,9 @@ class RepriseDossier extends Page
     public ?string $openingAccumulated = null;
     public ?string $declaredGrossAssets = null;
 
+    /** Case 014 : révèle le comptable qui a passé les frais d'acquisition en charges. */
+    public ?string $declaredIntangibleAssets = null;
+
     /** @var list<array{origin_year: string|int|null, amount: string|null}> */
     public array $deficits = [];
 
@@ -428,6 +431,7 @@ class RepriseDossier extends Page
             'openingDeferred' => 'Montant illisible (2033-D case 870).',
             'openingAccumulated' => 'Montant illisible (2033-A case 030).',
             'declaredGrossAssets' => 'Montant illisible (2033-A case 028).',
+            'declaredIntangibleAssets' => 'Montant illisible (2033-A case 014).',
         ] as $field => $message) {
             $raw = trim((string) $this->{$field});
 
@@ -671,6 +675,7 @@ class RepriseDossier extends Page
     {
         $declared = [
             ReprisesCheckService::LINE_GROSS_ASSETS => self::centsFromEuros($this->declaredGrossAssets),
+            ReprisesCheckService::LINE_INTANGIBLE_ASSETS => self::centsFromEuros($this->declaredIntangibleAssets),
             ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION => self::centsFromEuros($this->openingAccumulated),
             ReprisesCheckService::LINE_DEFERRED_DEPRECIATION => self::centsFromEuros($this->openingDeferred),
             ReprisesCheckService::LINE_DEFICIT_CARRYFORWARD => $this->openingDeficitsPayload() === []

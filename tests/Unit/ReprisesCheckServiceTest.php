@@ -339,3 +339,37 @@ it('exposes the amortisable base and the acquisition fees behind the diagnosis',
     expect($report['context']['acquisition_fees'])->toBe(2000000)
         ->and($report['context']['amortisable_base'])->toBeGreaterThan(0);
 });
+
+it('flags acquisition fees the accountant had expensed, on case 014', function () {
+    // Le cas que la case 030 assainie ne révèle plus : un comptable qui a passé les frais en
+    // charges l'année de l'acquisition porte 0 en case 014, alors que l'application les amortit
+    // encore. Avant le 2026-09-05 l'écart se voyait par accident, à travers une case 030 qui
+    // mélangeait corporel et incorporel ; il se voit désormais là où il appartient.
+    makeCheckProperty($this->user, ['notary_fees' => 1600000]);
+
+    $repriseYear = makeRepriseYear($this->user, 2025);
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_INTANGIBLE_ASSETS => 0,
+    ]);
+
+    $line = collect($report['lines'])->firstWhere('key', ReprisesCheckService::LINE_INTANGIBLE_ASSETS);
+
+    expect($line['computed'])->toBe(1600000)
+        ->and($line['declared'])->toBe(0)
+        ->and($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MISMATCH);
+});
+
+it('says nothing when the accountant capitalised the fees like we do', function () {
+    makeCheckProperty($this->user, ['notary_fees' => 1600000]);
+
+    $repriseYear = makeRepriseYear($this->user, 2025);
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_INTANGIBLE_ASSETS => 1600000,
+    ]);
+
+    $line = collect($report['lines'])->firstWhere('key', ReprisesCheckService::LINE_INTANGIBLE_ASSETS);
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MATCH);
+});
