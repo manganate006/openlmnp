@@ -2,6 +2,39 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.4.0] - 2026-09-04
+
+### Ajouts
+
+- **Estimation de la valeur vénale d'un bien, à partir des ventes réelles.** La fiche
+  d'un bien propose désormais d'estimer sa valeur de marché depuis les **demandes de
+  valeurs foncières** (DVF) publiées par la DGFiP : les ventes de la commune, filtrées
+  par type de bien, ramenées à un prix au mètre carré dont on prend la **médiane**. La
+  taille de l'échantillon et les millésimes retenus sont affichés avec le résultat -
+  sans quoi une médiane calculée sur trois ventes se lirait comme une vérité
+- **Une estimation trop mince n'est pas affichée du tout.** Si la commune ne fournit
+  pas `DVF_MIN_SAMPLE` ventes comparables (5 par défaut), la recherche s'élargit aux
+  millésimes voisins, jusqu'à trois. Si le compte n'y est toujours pas, l'écran dit
+  combien de ventes il a trouvées et s'arrête là, plutôt que d'habiller un chiffre
+  d'une réserve que personne ne lit
+- **La valeur vénale sert la répartition par composants.** C'est son usage : la base
+  amortissable se répartit sur la valeur du bien hors terrain, et cette valeur devait
+  jusqu'ici être saisie de mémoire ou cherchée ailleurs
+- **45ᵉ outil MCP** - `estimate_market_value`, qui expose la même estimation à un
+  assistant IA, avec les mêmes garde-fous d'échantillon
+- **Commande `openlmnp:refresh-dvf-years`** - les millésimes DVF disponibles sont
+  relevés auprès de la source au lieu d'être figés dans la configuration : un nouveau
+  millésime est pris en compte sans mise à jour de l'application
+
+### Notes d'exploitation
+
+- La fonction est **active par défaut** (`DVF_ENABLED=true`) et n'exige aucune clé :
+  l'API DVF est publique. Elle s'éteint par `DVF_ENABLED=false`
+- Aucune donnée du bien n'est transmise : seule la **commune** (code INSEE) et le type
+  de bien partent à l'API. Les propriétés gagnent une colonne `insee_code`
+- Les réponses sont mises en cache `DVF_CACHE_DAYS` jours et l'appel est limité par
+  `DVF_RATE_LIMIT` - une instance auto-hébergée ne martèle pas un service public
+
 ## [1.3.2] - 2026-09-04
 
 ### Corrections
