@@ -99,3 +99,47 @@ it('removes the action entirely when DVF is disabled', function () {
     Livewire::test(CreateProperty::class)
         ->assertActionDoesNotExist(TestAction::make('estimateMarketValue')->schemaComponent('market_value'));
 });
+
+it('names the missing surface instead of blaming the sample', function () {
+    // L'assistant de création permet de sauter l'étape des surfaces. On arrivait alors sur
+    // l'estimation, on choisissait sa commune, et l'application répondait « pas assez de ventes
+    // comparables » — envoyant chercher un problème de données là où il manquait un champ.
+    Http::fake([
+        'geo.api.gouv.fr/*' => Http::response([[
+            'nom' => 'Bordeaux', 'code' => '33063', 'codesPostaux' => ['33000'], 'departement' => ['nom' => 'Gironde'],
+        ]]),
+        'files.data.gouv.fr/*' => Http::response('', 500),
+    ]);
+    $this->actingAs($this->user);
+
+    Livewire::test(CreateProperty::class)
+        ->fillForm(['city' => 'Bordeaux', 'postal_code' => '33000', 'type' => 'apartment'])
+        ->mountAction(TestAction::make('estimateMarketValue')->schemaComponent('market_value'))
+        ->setActionData(['insee' => '33063', 'query' => 'Bordeaux', 'year' => 2025, 'area' => 0, 'property_type' => 'apartment'])
+        ->callMountedAction()
+        ->assertHasNoActionErrors()
+        ->assertNotified('Estimation impossible');
+
+    // Le fichier DVF n'est jamais téléchargé : sans surface, il n'y a rien à calculer.
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), 'files.data.gouv.fr'));
+});
+
+it('still blames the sample when the surface is there', function () {
+    // Non-régression : le message d'échantillon trop mince doit rester celui d'un vrai
+    // manque de ventes comparables.
+    $header = 'id_mutation,date_mutation,nature_mutation,valeur_fonciere,code_postal,code_commune,nom_commune,code_departement,id_parcelle,nombre_lots,code_type_local,type_local,surface_reelle_bati,nombre_pieces_principales,surface_terrain';
+    Http::fake([
+        'geo.api.gouv.fr/*' => Http::response([[
+            'nom' => 'Bordeaux', 'code' => '33063', 'codesPostaux' => ['33000'], 'departement' => ['nom' => 'Gironde'],
+        ]]),
+        'files.data.gouv.fr/*' => Http::response($header."\nA1,2025-03-14,Vente,200000.00,33000,33063,Bordeaux,33,33063000A0001,1,2,Appartement,50,3,\n"),
+    ]);
+    $this->actingAs($this->user);
+
+    Livewire::test(CreateProperty::class)
+        ->fillForm(['city' => 'Bordeaux', 'postal_code' => '33000', 'type' => 'apartment', 'total_area' => 40])
+        ->mountAction(TestAction::make('estimateMarketValue')->schemaComponent('market_value'))
+        ->setActionData(['insee' => '33063', 'year' => 2025, 'area' => 40, 'property_type' => 'apartment'])
+        ->callMountedAction()
+        ->assertNotified('Aucune estimation exploitable');
+});
