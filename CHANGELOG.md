@@ -2,6 +2,25 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.4.4] - 2026-09-04
+
+### Corrections
+
+- **L'assistant d'import annuel n'importait jamais les recettes Airbnb.** Son étape
+  « Recettes Airbnb » acceptait un fichier, ne le lisait pas, et affichait « Import
+  terminé » — sans erreur, sans avertissement, et sans avoir créé la moindre recette.
+  L'état d'un champ de dépôt de fichier est une structure, jamais un simple chemin : le
+  test qui gardait le bloc d'import était donc toujours faux, et tout l'import sauté.
+  Un bailleur pouvait croire ses recettes de l'année enregistrées alors qu'elles
+  manquaient — dans une déclaration fiscale
+- **La date de télédéclaration d'un exercice devient une vraie colonne.**
+  `fiscal_years.transmitted_at` était déclarée dans le modèle et exposée par deux outils
+  MCP, mais aucune migration ne l'avait jamais créée. Elle rendait `null` à la lecture,
+  ce qui la rendait invisible. ⚠️ Plus gênant : SQLite traite un nom de colonne inconnu
+  entre guillemets comme du texte, donc un filtre sur cette colonne rendait **toutes**
+  les lignes au lieu d'aucune, sans jamais signaler d'erreur. Elle reste vide pour les
+  exercices existants : rien ne permet de reconstituer après coup ce qui a été déposé
+
 ## [1.4.3] - 2026-09-04
 
 ### Corrections
