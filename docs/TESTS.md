@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **408 tests automatisés (1 078 assertions)** écrits avec
+OpenLMNP est couvert par **442 tests automatisés (1 176 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -27,7 +27,7 @@ vendor/bin/pest --filter="Filament"
 | FiscalYearService | 6 | Résultat fiscal, plafonnement, quote-part charges, micro-BIC |
 | FiscalYearChain | 12 | Chaîne d'exercices : première année, année proposée, validation N−1 |
 | LoanService | 3 | Tableau amortissement, capital restant, intérêts déductibles |
-| AirbnbImportService | 7 | CSV FR/EN, doublons, montants négatifs, format européen, plafond de taille |
+| AirbnbImportService | 7 | CSV FR/EN, doublons, montants négatifs, format européen, plafond de taille (lecture des montants et dates déléguée à `Csv\CsvValues`) |
 | FecService | 2 | 18 colonnes, format légal |
 | TaxReturnService | 1 | Génération PDF liasse fiscale |
 | AccountingEntryService | 3 | Écritures équilibrées, comptes PCG, quote-part |
@@ -51,7 +51,10 @@ vendor/bin/pest --filter="Filament"
 | Fidélité du plan d'amortissement | 15 | Date de départ par composant, catégorie Cerfa explicite (et rétro-classement qui ne déplace rien), traitement et durée des frais d'acquisition, dotations recopiées d'une liasse, cumuls d'ouverture qui n'entrent jamais dans la dotation |
 | Éditeur d'amortissements — reprise | 5 | Composant à nom libre, refus d'un composant sans nom, colonnes de reprise préservées par un enregistrement de ventilation |
 | Commande recompute-depreciation | 6 | Rapport puis `--fix`, dotations manuelles jamais écrasées, cumul d'ouverture aberrant signalé sans correction |
-| **Total** | **408** | **1 078 assertions** |
+| Import CSV générique | 17 | Détection du séparateur, montants FR/EN, intitulés sans accents, mappage corrigeable, doublons sur les quatre cibles, mobilier et travaux, lignes illisibles isolées |
+| Écran d'import CSV | 5 | Aperçu qui n'écrit rien, mappage réparé à la main, isolation entre utilisateurs y compris hors formulaire |
+| Export / import du dossier | 12 | Aller-retour identique, `schema_version` refusée si trop récente, contrôle d'appartenance, archive antérieure relisible, transaction annulée en cas d'échec |
+| **Total** | **442** | **1 176 assertions** |
 
 ## Principes
 

@@ -17,6 +17,11 @@ class ListExpenses extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('import_csv')
+                ->label('Import CSV')
+                ->icon('heroicon-o-table-cells')
+                ->color('gray')
+                ->url('/import-csv'),
             Action::make('export_csv')
                 ->label('Exporter CSV')
                 ->icon('heroicon-o-arrow-down-tray')
