@@ -117,6 +117,26 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 - `openlmnp:recompute-depreciation` : signale (et corrige sur demande) les dotations qui ne
   reflètent plus le plan, sans jamais toucher une dotation saisie à la main ni un cumul
   d'ouverture aberrant, qu'elle se contente de nommer
+## [1.4.5] - 2026-09-04
+
+### Corrections
+
+- **L'estimation de la valeur vénale réclamait une commune déjà choisie.** L'assistant de
+  création d'un bien permet de passer l'étape des surfaces. On arrivait alors sur
+  l'estimation DVF, on choisissait sa commune — elle s'affichait — et l'encart continuait
+  d'annoncer « choisissez une commune pour lancer l'estimation ». Au clic, l'application
+  répondait « pas assez de ventes comparables », envoyant chercher un défaut dans les
+  données publiques là où il manquait simplement une surface. Deux préconditions
+  distinctes étaient confondues sous un seul message. La surface manquante est désormais
+  nommée, dans l'encart comme dans la notification, et le fichier DVF n'est plus
+  téléchargé puisqu'il n'y a rien à calculer
+
+### Interne
+
+- 2 tests sur les deux préconditions, dont 1 vérifié en échec sur le code précédent ;
+  le second fige le message légitime d'échantillon trop mince
+- `docs/TESTS.md` annonçait encore 234 tests : remis à 440
+
 ## [1.4.4] - 2026-09-04
 
 ### Corrections

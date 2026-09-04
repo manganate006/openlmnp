@@ -77,6 +77,19 @@ class MarketValueEstimate
             ->action(function (array $data, Set $set) {
                 $estimate = self::estimate($data);
 
+                // Une précondition manquante n'est pas un échantillon trop mince : annoncer
+                // « pas assez de ventes comparables » à qui n'a pas saisi de surface l'envoie
+                // chercher un problème de données là où il manque un champ.
+                if (isset($estimate['error'])) {
+                    Notification::make()
+                        ->title('Estimation impossible')
+                        ->body($estimate['error'])
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
                 if ($estimate === null || ! ($estimate['enough'] ?? false)) {
                     Notification::make()
                         ->title('Aucune estimation exploitable')
@@ -135,7 +148,15 @@ class MarketValueEstimate
         $insee = (string) ($data['insee'] ?? '');
         $area = (int) ($data['area'] ?? 0);
 
-        if ($insee === '' || $area <= 0) {
+        // Deux préconditions, deux messages. Elles étaient confondues sous un seul « choisissez
+        // une commune » : sur le formulaire de création, dont l'assistant permet de sauter
+        // l'étape des surfaces, l'utilisateur choisissait sa commune et l'écran continuait de
+        // la réclamer, sans jamais nommer la surface qui manquait vraiment.
+        if ($area <= 0) {
+            return ['error' => 'Renseignez d\'abord la surface du bien : l\'estimation part d\'un prix au mètre carré.'];
+        }
+
+        if ($insee === '') {
             return null;
         }
 
