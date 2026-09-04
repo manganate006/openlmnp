@@ -500,13 +500,20 @@
                                 </span>
                             </div>
 
-                            @include('filament.partials.depreciation-editor-core', [
-                                'data' => array_merge($this->editorData, ['initialMode' => $this->editorInitialMode()]),
-                                'properties' => [],
-                                'propertyId' => $this->propertyId,
-                                'showReset' => false,
-                                'saveLabel' => 'Enregistrer mon plan',
-                            ])
+                            {{-- ⚠️ `wire:key` OBLIGATOIRE. L'éditeur porte un `wire:ignore` : Livewire
+                                 ne touche pas à son contenu, et lors d'un morphing il CONSERVE le
+                                 nœud au lieu de le retirer. Sans clé variable, cliquer sur
+                                 « Changer de méthode » affichait les deux cartes de choix ET
+                                 l'ancien éditeur, l'un sous l'autre. --}}
+                            <div wire:key="reprise-editor-{{ $this->method }}-{{ $this->propertyId }}">
+                                @include('filament.partials.depreciation-editor-core', [
+                                    'data' => array_merge($this->editorData, ['initialMode' => $this->editorInitialMode()]),
+                                    'properties' => [],
+                                    'propertyId' => $this->propertyId,
+                                    'showReset' => false,
+                                    'saveLabel' => 'Enregistrer mon plan',
+                                ])
+                            </div>
 
                             <div class="rp-note rp-note-info">
                                 <b>Enregistrez votre plan avant de continuer.</b>

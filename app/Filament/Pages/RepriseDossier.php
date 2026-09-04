@@ -227,7 +227,9 @@ class RepriseDossier extends Page
             return '—';
         }
 
-        if ($cents === 0) {
+        // Un écart de quelques centimes s'arrondit à zéro à l'affichage : « + 0 € » se lit
+        // comme un défaut d'affichage, alors que la ligne est justement déclarée identique.
+        if (abs($cents) < 50) {
             return '0 €';
         }
 
