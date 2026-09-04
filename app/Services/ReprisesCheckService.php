@@ -255,8 +255,17 @@ class ReprisesCheckService
             'land_share' => $context['properties_without_land_share'] > 0,
             // Écart du même ordre que les frais d'acquisition amortis ici : la piste la plus
             // parlante de toutes, parce qu'elle se chiffre.
-            'acquisition_fees' => $context['acquisition_fees'] > 0
-                && $this->withinOnePercent(abs($difference), $context['acquisition_fees']),
+            //
+            // DEUX références, et il en faut deux : sur la case 028 (valeur BRUTE) l'écart
+            // vaut les frais entiers, mais sur la case 030 (amortissements CUMULÉS) il ne
+            // vaut que ce qui en a été amorti à ce jour — 4 213 € pour 16 000 € de frais
+            // sur un bien loué depuis 2019. Ne comparer qu'aux frais bruts laissait donc
+            // la piste NON corroborée sur la ligne 030, c'est-à-dire précisément dans le
+            // cas que la maquette donne comme le plus fréquent.
+            'acquisition_fees' => ($context['acquisition_fees'] > 0
+                    && $this->withinOnePercent(abs($difference), $context['acquisition_fees']))
+                || ($context['acquisition_fees_depreciated'] > 0
+                    && $this->withinOnePercent(abs($difference), $context['acquisition_fees_depreciated'])),
             // Le cabinet déclare PLUS que ce qu'on reconstitue : il nous manque quelque chose.
             'missing_component' => $difference > 0,
             'market_value' => $context['properties_using_market_value'] > 0,
@@ -312,6 +321,7 @@ class ReprisesCheckService
     {
         $amortisableBase = '0';
         $acquisitionFees = '0';
+        $feesDepreciated = '0';
         $withoutLandShare = 0;
         $usingMarketValue = 0;
         $startedRecently = 0;
@@ -319,6 +329,11 @@ class ReprisesCheckService
         foreach ($properties as $property) {
             foreach ($this->depreciationService->depreciationDetailForYear($property, $comparedYear) as $detail) {
                 $amortisableBase = bcadd($amortisableBase, (string) $detail['base'], 0);
+
+                // Part des frais d'acquisition DÉJÀ AMORTIE à la clôture comparée.
+                if (($detail['type'] ?? null) === 'notary') {
+                    $feesDepreciated = bcadd($feesDepreciated, (string) $detail['cumul'], 0);
+                }
             }
 
             $fees = bcadd((string) $property->notary_fees, (string) $property->agency_fees, 0);
@@ -344,6 +359,7 @@ class ReprisesCheckService
         return [
             'amortisable_base'                => (int) $amortisableBase,
             'acquisition_fees'                => (int) $acquisitionFees,
+            'acquisition_fees_depreciated'    => (int) $feesDepreciated,
             'properties_without_land_share'   => $withoutLandShare,
             'properties_using_market_value'   => $usingMarketValue,
             'properties_started_recently'     => $startedRecently,

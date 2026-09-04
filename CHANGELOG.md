@@ -2,10 +2,36 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
-## [Non publié]
+## [1.4.0] - à paraître
+
+> ⚠️ **Cette version change des liasses fiscales déjà générées.** La correction du tableau
+> 2033-D (cases 982/983/984, détaillée plus bas) modifie ce que l'application imprime pour
+> des exercices **déjà déposés**. Régénérer une liasse antérieure produira un document
+> différent de celui transmis à l'administration — c'est voulu, l'ancien était faux.
+> `php artisan openlmnp:repair-deficits` reconstitue le suivi sur les dossiers déjà tenus,
+> en mode rapport par défaut.
 
 ### Ajouts
 
+- **Un assistant « Reprendre un dossier existant », en cinq étapes.** Accessible depuis
+  l'écran de premier lancement (« J'ai déjà une comptabilité LMNP ») et depuis les exercices
+  fiscaux, il reprend un dossier tenu par un cabinet **à partir de la seule dernière liasse**,
+  sans ressaisir un exercice passé : votre situation, votre bien, vos amortissements, vos
+  reports, puis un contrôle. **Chaque montant demandé porte le numéro de la case Cerfa où le
+  lire** — 2033-D case 870 pour les amortissements différés, 2033-A case 030 pour le cumul,
+  2033-A case 028 pour les immobilisations brutes, 2033-D cases 980 à 984 pour les déficits
+- L'étape des amortissements commence par un **choix de méthode**, avantages et inconvénients
+  affichés : *recopier les lignes de sa liasse* (une dizaine de champs, mais les chiffres
+  restent exactement ceux du comptable) ou *répartir automatiquement la base* (un clic, mais
+  un plan différent du sien). La grille qui suit est l'éditeur d'amortissements existant, avec
+  ses deux modes — la reprise ne les réinvente pas, elle les propose au bon moment
+- **L'étape de contrôle est la fonctionnalité.** Elle met face à face ce que dit la liasse et
+  ce que l'application reconstitue, ligne par ligne, et nomme les causes probables d'un écart
+  par ordre de fréquence. Quand l'écart correspond aux frais d'acquisition, un bouton les
+  bascule en charges et rejoue le contrôle sur place
+- Rien n'est écrit dans les exercices fiscaux avant la fin du parcours : un assistant
+  abandonné en route ne laisse pas derrière lui un exercice dont toute la chaîne de reports
+  lirait les montants
 - **Reprendre une comptabilité tenue par un cabinet, sans ressaisir les exercices passés.**
   Un exercice peut désormais porter des **soldes d'ouverture** recopiés de la liasse N-1 :
   amortissements réputés différés (2033-D case 870 ou 2033-B case 318), déficits reportables
@@ -41,6 +67,21 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   L'écran qui l'affiche arrive avec l'assistant de reprise
 - L'outil MCP `get_fiscal_year` expose les soldes d'ouverture et le suivi des déficits
   (lecture seule : aucun outil MCP ne les écrit)
+- **Un plan d'amortissement fidèle à celui du cabinet.** Date de départ par composant (pour
+  un passage au réel plusieurs années après la mise en location, ou une toiture refaite en
+  cours de route), composants à nom libre hors catalogue, ligne Cerfa explicite par composant,
+  dotations recopiées telles quelles et cumuls d'amortissements d'ouverture par actif. Les
+  frais d'acquisition peuvent être **amortis, passés en charges ou non repris** : c'est le
+  choix le plus fréquemment divergent d'un cabinet à l'autre, et il fallait pouvoir le suivre
+- **Import CSV générique** (recettes, charges, mobilier, travaux) : séparateur, montants et
+  dates reconnus automatiquement, correspondance des colonnes corrigeable, aperçu avant
+  écriture, doublons écartés. L'import Airbnb reste l'écran à préférer pour un export Airbnb :
+  lui seul reconstitue le brut depuis le net
+- **Export et import du dossier complet** (`openlmnp:export-dossier`, `openlmnp:import-dossier`)
+  : un JSON versionné qui fait l'aller-retour à l'identique, pour changer d'instance sans
+  ressaisie
+- `list_property_components` (MCP) expose la ligne Cerfa, la date de départ et le cumul
+  d'ouverture de chaque composant
 
 ### Corrections
 
@@ -63,6 +104,19 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   reconstitue le suivi sur les dossiers déjà tenus (rapport par défaut, `--fix` pour écrire).
   Elle ne réécrit que les colonnes de déficit — le résultat fiscal déclaré ne bouge pas. La
   page « Aide à la télédéclaration » avertit les utilisateurs concernés.
+
+- **Le contrôle de reprise ne voyait pas la cause d'écart la plus fréquente.** Il ne
+  rapprochait un écart que du montant **brut** des frais d'acquisition. Or sur la ligne des
+  amortissements **cumulés** (2033-A case 030), l'écart ne vaut pas les frais entiers mais
+  seulement ce qui en a été amorti à ce jour : la piste « frais passés en charges par le
+  cabinet » n'était donc jamais mise en avant là où elle est vraie. Les deux références sont
+  désormais comparées.
+
+### Interne
+
+- `openlmnp:recompute-depreciation` : signale (et corrige sur demande) les dotations qui ne
+  reflètent plus le plan, sans jamais toucher une dotation saisie à la main ni un cumul
+  d'ouverture aberrant, qu'elle se contente de nommer
 
 ## [1.3.2] - 2026-09-04
 

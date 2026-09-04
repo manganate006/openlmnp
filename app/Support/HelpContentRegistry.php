@@ -13,6 +13,7 @@ class HelpContentRegistry
         'filament.admin.pages.annual-import-wizard' => ['view' => 'annual-import-wizard', 'title' => 'Import annuel'],
         'filament.admin.pages.fiscal-year-wizard' => ['view' => 'fiscal-year-wizard', 'title' => 'Assistant exercice fiscal'],
         'filament.admin.pages.onboarding-wizard' => ['view' => 'onboarding-wizard', 'title' => 'Premier lancement'],
+        'filament.admin.pages.reprise-dossier' => ['view' => 'reprise-dossier', 'title' => 'Reprendre un dossier existant'],
         'filament.admin.pages.loan-detail' => ['view' => 'loan-detail', 'title' => 'Détail emprunt'],
         'filament.admin.pages.teledeclaration' => ['view' => 'teledeclaration', 'title' => 'Télédéclaration'],
         'filament.admin.pages.badges' => ['view' => 'badges', 'title' => 'Badges'],
