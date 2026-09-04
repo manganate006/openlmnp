@@ -172,6 +172,37 @@ it('corroborates the acquisition fees when the gap matches their amount', functi
         ->and($diagnostics['missing_component']['corroborated'])->toBeFalse();
 });
 
+it('corroborates the acquisition fees on the cumulated line, where the gap is only what is already depreciated', function () {
+    // LE cas de la maquette, et le plus fréquent : le cabinet a passé 16 000 € de frais de
+    // notaire en charges en 2019. Sur la case 028 l'écart vaut les frais ENTIERS, mais sur
+    // la case 030 il ne vaut que ce qui en a été amorti depuis — quelques milliers d'euros.
+    // Ne comparer qu'aux frais bruts laissait la piste NON corroborée là où elle est vraie.
+    $property = makeCheckProperty($this->user, ['notary_fees' => 1600000, 'agency_fees' => 0]);
+    $repriseYear = makeRepriseYear($this->user, 2026);
+
+    $depreciated = collect(app(DepreciationService::class)->depreciationDetailForYear($property, 2025))
+        ->where('type', 'notary')
+        ->sum(fn ($line) => (int) $line['cumul']);
+
+    // Le montant déjà amorti est bien une FRACTION des frais : sans quoi ce test ne
+    // distinguerait pas les deux références.
+    expect($depreciated)->toBeGreaterThan(0)->toBeLessThan(1600000);
+
+    $computed = computedFor($this->service, $repriseYear);
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION =>
+            $computed[ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION] - $depreciated,
+    ]);
+
+    $line = lineOf($report, ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+    $diagnostics = collect($line['diagnostics'])->keyBy('code');
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MISMATCH)
+        ->and($diagnostics['acquisition_fees']['corroborated'])->toBeTrue()
+        ->and($report['context']['acquisition_fees_depreciated'])->toBe($depreciated);
+});
+
 it('corroborates a missing component when the cabinet declares more than we rebuild', function () {
     $property = makeCheckProperty($this->user);
     // Le cabinet a une ligne de plus que la ventilation standard.
