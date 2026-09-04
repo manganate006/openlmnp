@@ -69,6 +69,13 @@ class PropertyComponent extends Model
     public const CERFA_CATEGORY_OTHER         = 'autres';
 
     /**
+     * ⚠️ Volontairement ABSENTE de `cerfaCategoryLabels()` : les frais d'acquisition portent
+     * cette catégorie, mais aucun composant d'immeuble ne doit pouvoir être classé incorporel
+     * depuis l'interface. Le sélecteur ne propose donc que les quatre lignes amortissables.
+     */
+    public const CERFA_CATEGORY_INTANGIBLE = 'incorporelles';
+
+    /**
      * Rattachement d'un composant du catalogue à sa ligne du 2033-C.
      *
      * ⚠️ Recopié à l'identique de la table qui vivait dans `TaxReturnService::compute2033C()`,
