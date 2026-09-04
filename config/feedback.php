@@ -106,6 +106,18 @@ return [
          * n'est configurée — c'est l'utilisateur qui envoie, depuis son propre client mail.
          */
         'contact' => env('FEEDBACK_CONTACT_EMAIL', 'contact@openlmnp.fr'),
+
+        /*
+         * Offre hébergée, proposée AUX SEULS visiteurs de la démonstration qui viennent de
+         * dire qu'ils apprécient le logiciel. Leur sandbox s'efface après `demo.ttl_hours` :
+         * c'est le moment où l'information leur est utile, et le seul.
+         *
+         * ⚠️ Vide par défaut, et ce défaut est un choix : sans URL, le bloc n'existe pas.
+         * Une instance auto-hébergée n'affiche donc aucune sollicitation commerciale, et le
+         * dépôt public ne porte ni tarif ni argumentaire — ceux-là vivent sur le site, qui
+         * en est la source de vérité et peut les changer sans release.
+         */
+        'pro' => env('FEEDBACK_URL_PRO', ''),
         'star' => env('FEEDBACK_URL_STAR', 'https://github.com/manganate006/openlmnp'),
         'sponsor' => env('FEEDBACK_URL_SPONSOR', 'https://github.com/sponsors/manganate006'),
         'discussions' => env('FEEDBACK_URL_DISCUSSIONS', 'https://github.com/manganate006/openlmnp/discussions/new?category=show-and-tell'),

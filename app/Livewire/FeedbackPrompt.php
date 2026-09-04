@@ -206,6 +206,29 @@ class FeedbackPrompt extends Component
         return filled(config('feedback.forward_email'));
     }
 
+    /**
+     * Propose-t-on l'offre hébergée ? Deux conditions, cumulatives :
+     *
+     *  - la personne est dans la DÉMONSTRATION — un compte réel est déjà client ou
+     *    auto-hébergé, lui vendre l'offre n'aurait aucun sens ;
+     *  - une URL est configurée — vide par défaut, donc rien ne s'affiche sur une instance
+     *    auto-hébergée, et le dépôt public ne porte aucun argumentaire commercial.
+     */
+    public function getShowsProCtaProperty(): bool
+    {
+        return $this->audience === Feedback::AUDIENCE_DEMO
+            && filled(config('feedback.links.pro'));
+    }
+
+    /**
+     * Durée de vie du bac à sable, telle qu'elle est réellement configurée sur CETTE
+     * instance : le texte du bloc l'annonce, autant qu'il dise vrai partout.
+     */
+    public function getDemoHoursProperty(): int
+    {
+        return max(1, (int) config('demo.ttl_hours'));
+    }
+
     public function render()
     {
         return view('livewire.feedback-prompt');
