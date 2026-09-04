@@ -284,6 +284,48 @@
         /* Corps : les gestes de soutien, puis le mot libre */
         .fb-body { margin-top: 0.875rem; }
 
+        /*
+            Offre hébergée — visible uniquement en démonstration, et seulement si une URL est
+            configurée. C'est le seul élément de la carte à porter un aplat plein : il doit
+            se distinguer des trois liens de soutien, qui sont l'alternative et non le
+            chemin principal pour un visiteur qui découvre le produit.
+
+            `success-solid-hover` AU REPOS et non `solid` : avec `--olmnp-on-solid` (blanc),
+            l'émeraude claire ne donne que ~2,5:1 de contraste contre ~4,0:1 pour la foncée.
+            Même parti pris que `.fb-submit` et que `.ctx-help-btn` du panneau d'aide.
+        */
+        .fb-cta-pro {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0.875rem;
+            margin-bottom: 0.875rem;
+            border-radius: 0.625rem;
+            background: var(--olmnp-success-solid-hover);
+            color: var(--olmnp-on-solid);
+            text-decoration: none;
+        }
+
+        .fb-cta-pro:hover { background: var(--olmnp-success-solid); }
+
+        .fb-cta-pro svg { flex: none; }
+
+        .fb-cta-pro-text { display: block; flex: 1; }
+
+        .fb-cta-pro-title {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .fb-cta-pro-sub {
+            display: block;
+            margin-top: 0.125rem;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            opacity: 0.9;
+        }
+
         .fb-links { display: flex; flex-direction: column; gap: 0.5rem; }
 
         .fb-link {
