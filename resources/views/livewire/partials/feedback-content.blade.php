@@ -32,8 +32,15 @@
 @if ($step === 'positive')
     <div class="fb-head">
         <div>
-            <p class="fb-title">Merci ! Voici comment nous aider</p>
-            <p class="fb-subtitle">OpenLMNP est développé sur du temps libre. Trois gestes qui changent tout :</p>
+            @if ($this->showsProCta)
+                {{-- En démonstration, la personne n'est pas encore utilisatrice : lui demander
+                     de soutenir le projet avant même qu'elle l'ait adopté serait à l'envers. --}}
+                <p class="fb-title">Merci ! Voici comment aller plus loin</p>
+                <p class="fb-subtitle">Cette démonstration s'efface dans {{ $this->demoHours }} heures.</p>
+            @else
+                <p class="fb-title">Merci ! Voici comment nous aider</p>
+                <p class="fb-subtitle">OpenLMNP est développé sur du temps libre. Trois gestes qui changent tout :</p>
+            @endif
         </div>
         <button type="button" class="fb-close" aria-label="Fermer" wire:click="dismiss">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true">
@@ -43,6 +50,34 @@
     </div>
 
     <div class="fb-body">
+        @if ($this->showsProCta)
+            {{--
+                Nouvel onglet : le bac à sable reste vivant derrière. Quelqu'un qui va lire les
+                tarifs et revient retrouve ses saisies — ce qui compte d'autant plus tant que la
+                reprise de données à la conversion n'existe pas.
+
+                L'événement part du NAVIGATEUR, pas de PHP : une action Livewire courrait contre
+                le traitement GTM. `$dispatch` émet sur l'élément, l'événement remonte à `window`
+                où `partials/gtm-head` l'écoute déjà.
+
+                ⚠️ Aucun tarif ici : un prix en dur dans un dépôt public est du contenu
+                commercial, et une valeur qui se périme. Il vit sur le site.
+            --}}
+            <a class="fb-cta-pro" href="{{ config('feedback.links.pro') }}"
+               target="_blank" rel="noopener noreferrer"
+               x-on:click="$dispatch('analytics', { event: 'feedback_cta_pro', feedback_variant: @js($variant) })">
+                <span class="fb-cta-pro-text">
+                    <span class="fb-cta-pro-title">Gardez tout ça avec Cloud Pro</span>
+                    <span class="fb-cta-pro-sub">Vos biens, vos justificatifs et vos exercices conservés, sauvegardés et accessibles partout</span>
+                </span>
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true">
+                    <path d="M7 4l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </a>
+
+            <p class="fb-separator">Ou, si vous préférez l'héberger vous-même</p>
+        @endif
+
         <div class="fb-links">
             <a class="fb-link" href="{{ config('feedback.links.star') }}" target="_blank" rel="noopener noreferrer">
                 <span class="fb-link-icon">
