@@ -114,8 +114,12 @@ class DepreciationEditor extends Page
                     'duration'            => $catalog['duration_years'],
                     'suggestedPercentage' => $catalog['percentage'],
                     'optional'            => $catalog['optional'],
+                    'custom'              => false,
                     'enabled'             => ! $catalog['optional'],
                     'sortOrder'           => $catalog['sort_order'],
+                    'cerfaCategory'       => PropertyComponent::cerfaCategoryForName($catalog['name']),
+                    'startDate'           => null,
+                    'openingCumul'        => 0,
                 ];
             }
         }
@@ -124,7 +128,7 @@ class DepreciationEditor extends Page
         // et les doublons d'un même nom : tous « personnalisés ».
         foreach ($property->components as $comp) {
             if (! in_array($comp->id, $matchedIds, true)) {
-                $components[] = self::lineFromComponent($comp, (float) $comp->percentage, true);
+                $components[] = self::lineFromComponent($comp, (float) $comp->percentage, true, true);
             }
         }
 
@@ -138,12 +142,19 @@ class DepreciationEditor extends Page
             // n'était pas divisible par 100.
             'depreciableBaseCents' => $depreciableBase,
             'components'           => $components,
+            'cerfaCategories'      => PropertyComponent::cerfaCategoryLabels(),
+            // Défaut affiché dans la colonne « Début » : la mise en location du bien.
+            'rentalStartDate'      => $property->rental_start_date?->format('Y-m-d'),
         ];
     }
 
     /** @return array<string, mixed> */
-    private static function lineFromComponent(PropertyComponent $component, float $suggested, bool $optional): array
-    {
+    private static function lineFromComponent(
+        PropertyComponent $component,
+        float $suggested,
+        bool $optional,
+        bool $custom = false,
+    ): array {
         return [
             'id'                  => $component->id,
             'name'                => $component->name,
@@ -153,8 +164,12 @@ class DepreciationEditor extends Page
             'duration'            => $component->duration_years,
             'suggestedPercentage' => $suggested,
             'optional'            => $optional,
+            'custom'              => $custom,
             'enabled'             => true,
             'sortOrder'           => $component->sort_order,
+            'cerfaCategory'       => $component->cerfaCategory(),
+            'startDate'           => $component->depreciation_start_date?->format('Y-m-d'),
+            'openingCumul'        => (int) $component->opening_accumulated_depreciation,
         ];
     }
 
@@ -190,6 +205,13 @@ class DepreciationEditor extends Page
             $percentage = (float) ($comp['percentage'] ?? 0);
             $baseAmount = (int) ($comp['baseAmount'] ?? 0);
 
+            // Un composant à nom libre reste possible, mais pas anonyme : sans nom, il
+            // serait indistinguable dans la liasse comme dans l'écran lui-même.
+            $name = trim((string) ($comp['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
             // Une ligne décochée, ou vide dans son propre mode, n'est pas conservée.
             $keeps = ($comp['enabled'] ?? false)
                 && ($source === PropertyComponent::BASE_SOURCE_MANUAL ? $baseAmount > 0 : $percentage > 0);
@@ -200,7 +222,7 @@ class DepreciationEditor extends Page
 
             $lines[] = [
                 'id'                  => isset($comp['id']) ? (int) $comp['id'] : null,
-                'name'                => (string) $comp['name'],
+                'name'                => mb_substr($name, 0, 120),
                 'duration_years'      => max(1, (int) ($comp['duration'] ?? 1)),
                 'sort_order'          => (int) ($comp['sortOrder'] ?? 0),
                 'base_source'         => $source,
@@ -208,6 +230,16 @@ class DepreciationEditor extends Page
                 'base_amount'         => $baseAmount,
                 'annual_depreciation' => isset($comp['annualDepreciation'])
                     ? (int) $comp['annualDepreciation']
+                    : null,
+                'cerfa_category'      => $comp['cerfaCategory'] ?? null,
+                // ⚠️ `null` signifie « le navigateur n'a pas envoyé ce champ », et la
+                // valeur en base est alors laissée telle quelle. La charge utile de
+                // l'onglet Ventilation ne porte AUCUNE des trois colonnes de reprise :
+                // convertir une absence en `0` effacerait un cumul repris à chaque
+                // passage sur les curseurs, sans rien afficher.
+                'depreciation_start_date' => self::sanitizeStartDate($comp['startDate'] ?? null),
+                'opening_accumulated_depreciation' => isset($comp['openingCumul'])
+                    ? max(0, (int) $comp['openingCumul'])
                     : null,
             ];
         }
@@ -244,6 +276,34 @@ class DepreciationEditor extends Page
         }
 
         $notification->send();
+    }
+
+    /**
+     * Normalise la date de départ d'un composant venue du navigateur.
+     *
+     * Trois retours, trois sens distincts — et c'est volontaire :
+     *   - `null`  : le champ n'a pas été envoyé, la valeur en base ne bouge pas ;
+     *   - `''`    : le champ a été VIDÉ, le composant retombe sur la date du bien ;
+     *   - `Y-m-d` : une date valide.
+     * Une saisie illisible est traitée comme absente plutôt que propagée en base.
+     */
+    private static function sanitizeStartDate(mixed $raw): ?string
+    {
+        if ($raw === null) {
+            return null;
+        }
+
+        $value = trim((string) $raw);
+
+        if ($value === '') {
+            return '';
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function resetToDefaults(): void

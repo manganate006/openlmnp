@@ -77,6 +77,17 @@
         .de-remainder-under { background: var(--olmnp-warning-bg); color: var(--olmnp-warning-fg); border: 1px solid var(--olmnp-warning-border); }
         .de-remainder-over { background: var(--olmnp-danger-bg); color: var(--olmnp-danger-fg); border: 1px solid var(--olmnp-danger-border); }
         .de-hint { font-size: 12px; color: var(--olmnp-fg-muted); margin-bottom: 12px; line-height: 1.5; }
+
+        /* Reprise d'un plan de cabinet : nom libre, ligne Cerfa, date de départ, cumul repris. */
+        .de-amounts-wrap { overflow-x: auto; }
+        .de-name-input { width: 190px; padding: 6px 8px; border: 1px solid var(--olmnp-border-strong); border-radius: 6px; font-size: 13px; background: var(--olmnp-surface); color: var(--olmnp-fg); }
+        .de-cerfa-select { width: 160px; padding: 6px 8px; border: 1px solid var(--olmnp-border-strong); border-radius: 6px; font-size: 12px; background: var(--olmnp-surface); color: var(--olmnp-fg); }
+        .de-date-input { width: 140px; padding: 6px 8px; border: 1px solid var(--olmnp-border-strong); border-radius: 6px; font-size: 13px; background: var(--olmnp-surface); color: var(--olmnp-fg); }
+        .de-row-remove { border: none; background: transparent; color: var(--olmnp-danger-accent); font-size: 16px; font-weight: 700; cursor: pointer; line-height: 1; padding: 0 6px; }
+        .de-add-row { margin-top: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .de-btn-add { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: var(--olmnp-success-accent); border: 1px dashed var(--olmnp-success-border); }
+        .de-btn-add:hover { background: var(--olmnp-success-bg); }
+        .de-custom-title { font-size: 13px; font-weight: 700; color: var(--olmnp-fg-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--olmnp-border); }
     </style>
 
     @php $data = $this->editorData; @endphp
@@ -191,7 +202,7 @@
                     <div class="de-card">
                         <div class="de-section-title">Composants optionnels (maison)</div>
                         <template x-for="(comp, idx) in components" :key="idx">
-                            <div x-show="comp.optional" class="de-comp" :class="!comp.enabled && 'de-comp-disabled'">
+                            <div x-show="comp.optional && !comp.custom" class="de-comp" :class="!comp.enabled && 'de-comp-disabled'">
                                 <input
                                     type="checkbox"
                                     class="de-comp-checkbox"
@@ -232,6 +243,70 @@
                         </template>
                     </div>
 
+                    {{-- Composants à nom libre : le plan d'un cabinet ne se limite pas au
+                         catalogue. Ils vivent dans leur propre carte pour que leur nom
+                         reste modifiable, ce que les lignes du catalogue ne sont pas. --}}
+                    <div class="de-card" x-show="components.some(c => c.custom)" x-cloak>
+                        <div class="de-custom-title">Composants personnalisés</div>
+                        <template x-for="(comp, idx) in components" :key="idx">
+                            <div x-show="comp.custom" class="de-comp" :class="!comp.enabled && 'de-comp-disabled'">
+                                <input
+                                    type="checkbox"
+                                    class="de-comp-checkbox"
+                                    :checked="comp.enabled"
+                                    @change="toggleStandard(idx)"
+                                >
+                                <div>
+                                    <div class="de-comp-name">
+                                        <input
+                                            type="text"
+                                            class="de-name-input"
+                                            :value="comp.name"
+                                            maxlength="120"
+                                            placeholder="Nom du composant"
+                                            @change="renameComponent(idx, $event.target.value)"
+                                        >
+                                        <button class="de-row-remove" title="Retirer ce composant" @click="removeComponent(idx)">&times;</button>
+                                    </div>
+                                    <div class="de-comp-row">
+                                        <div class="de-slider-container">
+                                            <input
+                                                type="range"
+                                                class="de-slider"
+                                                min="0" max="100" step="1"
+                                                :value="Math.round(comp.percentage)"
+                                                @pointerdown="startDrag(idx)"
+                                                @input="onSlider(idx, parseInt($event.target.value))"
+                                                :disabled="!comp.enabled"
+                                            >
+                                        </div>
+                                        <span class="de-pct" x-text="formatPct(comp.percentage)"></span>
+                                        <input
+                                            type="number"
+                                            class="de-duration-input"
+                                            min="1" max="100"
+                                            :value="comp.duration"
+                                            @change="comp.duration = parseInt($event.target.value); markDirty()"
+                                            :disabled="!comp.enabled"
+                                        >
+                                        <span class="de-duration-label">ans</span>
+                                        <span class="de-amount" x-text="comp.enabled ? formatEuros(baseCentsOf(comp) / 100) : '—'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="de-card de-add-row">
+                        <button class="de-btn-add" @click="addComponent()">+ Ajouter un composant</button>
+                        <span class="de-hint" style="margin-bottom:0;">
+                            Pour une ligne de votre liasse qui ne figure pas au catalogue
+                            (« Ascenseur », « Menuiseries extérieures »&hellip;). Vous choisissez son nom,
+                            sa durée et la ligne du 2033-C à laquelle elle se rattache, dans l'onglet
+                            <strong>Montants</strong>.
+                        </span>
+                    </div>
+
                 </div>
 
                 {{-- Colonne droite : camembert --}}
@@ -262,13 +337,25 @@
                     c'est la part réellement louée qui s'amortit. La dotation annuelle se calcule
                     automatiquement, mais reste modifiable si votre cabinet arrondissait autrement.
                 </p>
+                <p class="de-hint">
+                    <strong>Ligne 2033-C</strong> : la rubrique d'immobilisations à laquelle la ligne se
+                    rattache dans la liasse. <strong>Début</strong> : à ne renseigner que si le composant
+                    ne démarre pas à la mise en location du bien (passage du micro-BIC au réel, mise en
+                    service échelonnée). <strong>Cumul repris</strong> : les amortissements déjà pratiqués
+                    par votre cabinet sur des exercices que vous ne saisirez pas ici — ils s'ajoutent au
+                    cumul du bilan, jamais à la charge de l'exercice.
+                </p>
+                <div class="de-amounts-wrap">
                 <table class="de-amounts">
                     <thead>
                         <tr>
                             <th>Composant</th>
+                            <th>Ligne 2033-C</th>
                             <th class="de-amounts-num">Base (&euro;)</th>
                             <th class="de-amounts-num">Durée</th>
                             <th class="de-amounts-num">Dotation annuelle (&euro;)</th>
+                            <th>Début</th>
+                            <th class="de-amounts-num">Cumul repris (&euro;)</th>
                             <th class="de-amounts-num">Part</th>
                         </tr>
                     </thead>
@@ -276,9 +363,28 @@
                         <template x-for="(comp, idx) in components" :key="idx">
                             <tr x-show="comp.enabled || comp.baseAmount > 0">
                                 <td>
-                                    <span x-text="getEmoji(comp.name)"></span>
-                                    <span x-text="comp.name"></span>
+                                    <template x-if="!comp.custom">
+                                        <span>
+                                            <span x-text="getEmoji(comp.name)"></span>
+                                            <span x-text="comp.name"></span>
+                                        </span>
+                                    </template>
+                                    <template x-if="comp.custom">
+                                        <input
+                                            type="text" class="de-name-input" maxlength="120"
+                                            placeholder="Nom du composant"
+                                            :value="comp.name"
+                                            @change="renameComponent(idx, $event.target.value)"
+                                        >
+                                    </template>
                                     <span class="de-manual-badge" x-show="comp.baseSource === 'manual'" x-cloak>saisi</span>
+                                </td>
+                                <td>
+                                    <select class="de-cerfa-select" @change="setCerfaCategory(idx, $event.target.value)">
+                                        <template x-for="(label, key) in cerfaCategories" :key="key">
+                                            <option :value="key" :selected="key === comp.cerfaCategory" x-text="label"></option>
+                                        </template>
+                                    </select>
                                 </td>
                                 <td class="de-amounts-num">
                                     <input
@@ -301,11 +407,31 @@
                                         @change="setAnnualEuros(idx, $event.target.value)"
                                     >
                                 </td>
+                                <td>
+                                    <input
+                                        type="date" class="de-date-input"
+                                        :value="comp.startDate || ''"
+                                        :placeholder="rentalStartDate"
+                                        @change="setStartDate(idx, $event.target.value)"
+                                    >
+                                </td>
+                                <td class="de-amounts-num">
+                                    <input
+                                        type="number" class="de-amount-input" min="0" step="0.01"
+                                        :value="((comp.openingCumul || 0) / 100).toFixed(2)"
+                                        @change="setOpeningEuros(idx, $event.target.value)"
+                                    >
+                                </td>
                                 <td class="de-amounts-num" x-text="formatPct(pctOf(comp))"></td>
                             </tr>
                         </template>
                     </tbody>
                 </table>
+                </div>
+
+                <div class="de-add-row">
+                    <button class="de-btn-add" @click="addComponent()">+ Ajouter un composant</button>
+                </div>
 
                 <div class="de-remainder" :class="remainderClass()" x-text="remainderLabel()"></div>
             </div>
@@ -337,6 +463,8 @@
                     // Les euros flottants perdaient des centimes dès que la base n'était
                     // pas divisible par 100, et l'écart se voyait à l'enregistrement.
                     depreciableBaseCents: 0,
+                    cerfaCategories: {},
+                    rentalStartDate: '',
                     chart: null,
                     isDirty: false,
                     savedState: '',
@@ -376,6 +504,8 @@
                         this.components = JSON.parse(JSON.stringify(data.components));
                         this.depreciableBase = data.depreciableBase;
                         this.depreciableBaseCents = data.depreciableBaseCents;
+                        this.cerfaCategories = data.cerfaCategories || {};
+                        this.rentalStartDate = data.rentalStartDate || '';
                         // On ouvre sur le mode qui correspond aux données : quelqu'un qui a
                         // saisi ses montants ne doit pas retomber sur les curseurs.
                         this.mode = this.components.some(c => c.baseSource === 'manual')
@@ -435,6 +565,70 @@
 
                     syncAnnual(idx) {
                         this.components[idx].annualDepreciation = null;
+                    },
+
+                    setCerfaCategory(idx, value) {
+                        this.components[idx].cerfaCategory = value;
+                        this.markDirty();
+                    },
+
+                    setStartDate(idx, value) {
+                        // Chaîne vide et non null : le serveur distingue « vidé » (retour
+                        // au défaut du bien) de « champ non envoyé » (on ne touche à rien).
+                        this.components[idx].startDate = value || '';
+                        this.markDirty();
+                    },
+
+                    setOpeningEuros(idx, value) {
+                        this.components[idx].openingCumul = Math.max(0, Math.round(parseFloat(value || 0) * 100));
+                        this.markDirty();
+                    },
+
+                    renameComponent(idx, value) {
+                        const name = (value || '').trim();
+                        if (name === '') return;
+                        this.components[idx].name = name.slice(0, 120);
+                        this.markDirty();
+                    },
+
+                    /**
+                     * Ajoute une ligne à nom libre.
+                     *
+                     * Elle naît en mode « montants » : personne n'ajoute un composant hors
+                     * catalogue pour le ventiler au curseur — on le fait pour recopier une
+                     * ligne d'une liasse, avec son montant.
+                     */
+                    addComponent() {
+                        const maxSort = this.components.reduce((m, c) => Math.max(m, c.sortOrder || 0), 0);
+
+                        this.components.push({
+                            id: null,
+                            name: '',
+                            percentage: 0,
+                            baseAmount: 0,
+                            baseSource: 'manual',
+                            annualDepreciation: null,
+                            duration: 10,
+                            suggestedPercentage: 0,
+                            optional: true,
+                            custom: true,
+                            enabled: true,
+                            sortOrder: maxSort + 1,
+                            cerfaCategory: 'autres',
+                            startDate: null,
+                            openingCumul: 0,
+                        });
+
+                        this.mode = 'amounts';
+                        this.markDirty();
+                    },
+
+                    removeComponent(idx) {
+                        const comp = this.components[idx];
+                        const label = comp.name || 'ce composant';
+                        if (! window.confirm('Retirer « ' + label + ' » du plan d\'amortissement ?')) return;
+                        this.components.splice(idx, 1);
+                        this.markDirty();
                     },
 
                     getAllocatedCents() {
@@ -693,6 +887,9 @@
                             duration: c.duration,
                             sortOrder: c.sortOrder,
                             enabled: c.enabled,
+                            cerfaCategory: c.cerfaCategory,
+                            startDate: c.startDate,
+                            openingCumul: c.openingCumul || 0,
                         }));
 
                         this.$wire.saveComponents(payload).then(() => {

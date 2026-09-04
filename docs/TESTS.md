@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **234 tests automatisés (629 assertions)** écrits avec
+OpenLMNP est couvert par **408 tests automatisés (1 078 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -48,7 +48,10 @@ vendor/bin/pest --filter="Filament"
 | Page politique de confidentialité | 2 | Rendu et accessibilité de la page légale |
 | En-têtes de sécurité (F8) | 1 | X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy |
 | Smoke (framework) | 2 | Amorçage de l'application |
-| **Total** | **234** | **629 assertions** |
+| Fidélité du plan d'amortissement | 15 | Date de départ par composant, catégorie Cerfa explicite (et rétro-classement qui ne déplace rien), traitement et durée des frais d'acquisition, dotations recopiées d'une liasse, cumuls d'ouverture qui n'entrent jamais dans la dotation |
+| Éditeur d'amortissements — reprise | 5 | Composant à nom libre, refus d'un composant sans nom, colonnes de reprise préservées par un enregistrement de ventilation |
+| Commande recompute-depreciation | 6 | Rapport puis `--fix`, dotations manuelles jamais écrasées, cumul d'ouverture aberrant signalé sans correction |
+| **Total** | **408** | **1 078 assertions** |
 
 ## Principes
 
