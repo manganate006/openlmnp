@@ -7,8 +7,8 @@
         <h3>Informations essentielles</h3>
         <ul>
             <li data-icon="&#x1F3E0;"><strong>Adresse et surfaces</strong> &mdash; Surface totale du logement et surface louée. La quote-part est calculée automatiquement.</li>
-            <li data-icon="&#x1F4B5;"><strong>Valeur vénale</strong> &mdash; Valeur estimée du bien au début de l'activité. C'est cette valeur (pas le prix d'achat) qui sert de base à l'amortissement.</li>
-            <li data-icon="&#x1F3D7;"><strong>Part du terrain</strong> &mdash; Le terrain n'est pas amortissable. En général 15-20 %. Estimez via DVF, MeilleursAgents ou votre notaire.</li>
+            <li data-icon="&#x1F4B5;"><strong>Valeur vénale</strong> &mdash; Valeur estimée du bien au début de l'activité. C'est cette valeur (pas le prix d'achat) qui sert de base à l'amortissement. Le bouton <strong>« Estimer (DVF) »</strong>, à côté du champ, la calcule à partir des ventes réellement enregistrées dans votre commune.</li>
+            <li data-icon="&#x1F3D7;"><strong>Part du terrain</strong> &mdash; Le terrain n'est pas amortissable. En général 15-20 %. L'estimation DVF ne la donne pas : elle porte sur la valeur du bien entier. Pour le terrain seul, appuyez-vous sur MeilleursAgents, votre notaire ou l'acte d'acquisition.</li>
         </ul>
 
         <div class="ctx-tip">
@@ -44,12 +44,24 @@
         <h3>Acquisition et amortissement</h3>
         <ul>
             <li data-icon="&#x1F4B5;"><strong>Prix d'achat</strong> &mdash; Hors frais de notaire. Utilisé comme référence.</li>
-            <li data-icon="&#x1F4B0;"><strong>Valeur vénale</strong> &mdash; Si vous possédiez le bien avant de le louer, indiquez sa valeur estimée au début de l'activité. C'est cette valeur qui sert de base à l'amortissement.</li>
-            <li data-icon="&#x1F3D7;"><strong>Part du terrain</strong> &mdash; Le terrain n'est pas amortissable (15-20 % en général). Estimez via DVF, MeilleursAgents ou votre notaire.</li>
+            <li data-icon="&#x1F4B0;"><strong>Valeur vénale</strong> &mdash; Si vous possédiez le bien avant de le louer, indiquez sa valeur estimée au début de l'activité. C'est cette valeur qui sert de base à l'amortissement. Le bouton <strong>« Estimer (DVF) »</strong> propose un chiffre issu des ventes publiées pour votre commune, que vous pouvez reprendre ou ignorer.</li>
+            <li data-icon="&#x1F3D7;"><strong>Part du terrain</strong> &mdash; Le terrain n'est pas amortissable (15-20 % en général). L'estimation DVF porte sur le bien entier, terrain compris : elle ne remplace pas cette ventilation.</li>
         </ul>
 
         <div class="ctx-warning">
             <strong>Important :</strong> Si la valeur vénale n'est pas renseignée, c'est le prix d'achat + frais de notaire qui sera utilisé comme base d'amortissement.
+        </div>
+
+        <h3>Estimer la valeur vénale (DVF)</h3>
+        <p>Le bouton <strong>« Estimer (DVF) »</strong> interroge les <em>demandes de valeurs foncières</em> publiées par la DGFiP : les ventes réellement enregistrées dans votre commune, filtrées par type de bien, ramenées à un prix au mètre carré dont l'application prend la médiane.</p>
+        <ul>
+            <li data-icon="&#x1F50D;"><strong>Ce qui est envoyé</strong> &mdash; uniquement la commune et le type de bien. Ni l'adresse, ni le prix, ni aucune donnée de votre dossier.</li>
+            <li data-icon="&#x1F4CA;"><strong>Ce qui vous est montré</strong> &mdash; le prix au m², le nombre de ventes retenues et les millésimes utilisés. Lisez ce nombre : une médiane sur trois ventes ne vaut pas une médiane sur trois mille.</li>
+            <li data-icon="&#x26A0;"><strong>Quand rien ne s'affiche</strong> &mdash; si la commune ne fournit pas assez de ventes comparables, l'application élargit aux années voisines, puis renonce plutôt que d'afficher un chiffre trompeur. L'Alsace-Moselle et Mayotte ne sont pas couvertes par cette source : elles relèvent du livre foncier et d'un cadastre distinct.</li>
+        </ul>
+
+        <div class="ctx-tip">
+            <strong>À retenir :</strong> l'estimation est une aide à la saisie, pas une expertise. C'est vous qui reprenez ou non la valeur proposée, et c'est le détail de l'échantillon qui la justifie en cas de contrôle.
         </div>
     </div>
 

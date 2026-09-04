@@ -42,7 +42,7 @@
     </div>
 
     <div class="ctx-warning">
-        <strong>Attention :</strong> Le terrain n'est pas amortissable. Sa part (15-20 % en général, parfois plus en zone urbaine) est déduite avant le calcul des composants. Sources : DVF (app.dvf.etalab.gouv.fr), MeilleursAgents, notaire.
+        <strong>Attention :</strong> Le terrain n'est pas amortissable. Sa part (15-20 % en général, parfois plus en zone urbaine) est déduite avant le calcul des composants. Sources : MeilleursAgents, votre notaire, l'acte d'acquisition. Le bouton « Estimer (DVF) » de la fiche du bien ne répond pas à cette question : il estime la valeur du bien entier, terrain compris.
     </div>
 
     <div class="ctx-tip" style="margin-top:12px;">

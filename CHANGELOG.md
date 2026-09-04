@@ -22,6 +22,22 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   ne sera jamais lancée : un justificatif introuvable à la nouvelle racine est cherché à
   l'ancienne avant d'être déclaré perdu
 
+### Documentation
+
+- **L'aide de l'estimation DVF**, livrée avec la fonctionnalité en 1.4.0 mais oubliée dans
+  ses écrans d'aide. La fiche « Biens immobiliers » décrit désormais le bouton
+  « Estimer (DVF) » : ce qui est envoyé (la commune et le type de bien, rien d'autre), ce
+  qui est affiché, et pourquoi rien ne s'affiche quand l'échantillon est trop mince
+- **Trois renvois devenus faux ont disparu.** L'aide conseillait d'aller estimer sa valeur
+  vénale sur `app.dvf.etalab.gouv.fr`, alors que l'application le fait maintenant. Les
+  mentions restantes précisent l'inverse de ce qu'on pourrait croire : l'estimation DVF
+  porte sur le bien **entier**, terrain compris, et ne dispense donc pas de ventiler la
+  part du terrain, qui n'est pas amortissable
+- **`INSTALLATION.md` documente `openlmnp:migrate-document-storage`** dans la section
+  « Mise à jour », qui est le moment où l'on en a besoin. Une commande de maintenance se
+  lance depuis le serveur : sa place est dans le guide d'installation, pas dans l'aide
+  de l'interface
+
 ## [1.4.0] - 2026-09-04
 
 ### Ajouts
