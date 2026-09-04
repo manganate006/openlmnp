@@ -2,6 +2,26 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.4.1] - 2026-09-04
+
+### Corrections
+
+- **Les justificatifs déposés avant la montée en Laravel 11 redeviennent lisibles.**
+  Laravel 11 a déplacé la racine du disque `local` de `storage/app` vers
+  `storage/app/private`. Les chemins en base étant relatifs à cette racine, les fichiers
+  déposés avant la montée de version sont restés à l'ancien emplacement : l'application
+  ne les servait plus. Rien ne cassait, rien n'alertait - les pièces disparaissaient
+  simplement de l'interface. Toute instance ayant franchi cette montée de version est
+  concernée, pas seulement la nôtre
+- **Commande `openlmnp:migrate-document-storage`** - rapport par défaut, `--fix` pour
+  déplacer. Elle n'écrase jamais un fichier déjà présent à la nouvelle racine : ce cas
+  est signalé, pas exécuté. Elle énumère les dossiers à rapatrier (`documents`, `fec`,
+  `tax-returns`) plutôt que de parcourir `storage/app`, qui contient la nouvelle racine
+  et emporterait la clé d'instance au passage
+- **Repli de lecture** dans le contrôleur de documents, pour les instances où la commande
+  ne sera jamais lancée : un justificatif introuvable à la nouvelle racine est cherché à
+  l'ancienne avant d'être déclaré perdu
+
 ## [1.4.0] - 2026-09-04
 
 ### Ajouts
