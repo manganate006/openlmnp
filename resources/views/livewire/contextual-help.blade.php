@@ -17,7 +17,13 @@
         .ctx-help-btn { position: fixed; bottom: 24px; right: 24px; z-index: 40; width: 48px; height: 48px; border-radius: 50%; background: var(--olmnp-success-solid-hover); color: var(--olmnp-on-solid); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.2s; }
         .ctx-help-btn:hover { background: var(--olmnp-success-solid-hover); transform: scale(1.1); }
         .ctx-help-btn svg { width: 24px; height: 24px; }
-        .ctx-backdrop { position: fixed; inset: 0; z-index: 40; background: var(--olmnp-surface-muted); }
+        /* Voile : il ASSOMBRIT la page, il ne la remplace pas. `--olmnp-surface-muted` est un
+           aplat OPAQUE — en thème sombre, l'aide effaçait donc entièrement l'écran qu'elle décrit. */
+        .ctx-backdrop { position: fixed; inset: 0; z-index: 40; background: color-mix(in oklab, var(--olmnp-code-bg) 45%, transparent); }
+        /* Au-delà de 1024 px, l'aide et l'écran tiennent côte à côte : une aide contextuelle sert à
+           lire pendant qu'on remplit le formulaire. Ni voile, ni capture des clics — la page reste
+           utilisable. La fermeture passe par la croix ou la touche Échap, déjà câblées. */
+        @media (min-width: 1024px) { .ctx-backdrop { background: transparent; pointer-events: none; } }
         .ctx-panel { position: fixed; top: 0; right: 0; z-index: 50; height: 100%; width: 100%; max-width: 384px; background: var(--olmnp-surface); box-shadow: -4px 0 24px rgba(0,0,0,0.15); display: flex; flex-direction: column; transition: transform 0.3s ease-in-out; }
         .ctx-panel.ctx-closed { transform: translateX(100%); }
         .ctx-panel.ctx-open { transform: translateX(0); }

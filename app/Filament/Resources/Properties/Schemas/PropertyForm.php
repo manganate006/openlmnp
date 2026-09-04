@@ -221,6 +221,28 @@ class PropertyForm
                     ->required()
                     ->displayFormat('d/m/Y'),
             ]),
+            // Le traitement des frais d'acquisition est une OPTION du contribuable, prise
+            // à l'acquisition (BOI-BIC-CHG-20-20-10). Tant qu'elle était figée sur
+            // « amortis sur 25 ans », un bailleur dont le cabinet les avait passés en
+            // charges les voyait amortis une seconde fois, sans recours.
+            Grid::make(2)->schema([
+                Select::make('acquisition_fees_treatment')
+                    ->label('Traitement des frais d\'acquisition')
+                    ->options(Property::acquisitionFeesTreatmentLabels())
+                    ->default(Property::ACQUISITION_FEES_AMORTIZED)
+                    ->required()
+                    ->live()
+                    ->helperText('« Passés en charges » : votre comptable les a déduits en une fois l\'année de l\'achat. OpenLMNP ne les amortira donc plus.'),
+                TextInput::make('acquisition_fees_duration')
+                    ->label('Durée d\'amortissement des frais')
+                    ->suffix('ans')
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(50)
+                    ->default(Property::ACQUISITION_FEES_DEFAULT_DURATION)
+                    ->visible(fn (callable $get) => ($get('acquisition_fees_treatment') ?? Property::ACQUISITION_FEES_AMORTIZED) === Property::ACQUISITION_FEES_AMORTIZED)
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'La pratique dominante est 25 ans, alignée sur la durée du gros œuvre. Reprenez celle de votre liasse si elle diffère.'),
+            ]),
             Grid::make(3)->schema([
                 TextInput::make('market_value')
                     ->label('Valeur vénale')

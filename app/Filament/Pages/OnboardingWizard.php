@@ -121,7 +121,7 @@ class OnboardingWizard extends Page implements HasForms
             ->description('Présentation de l\'assistant')
             ->schema([
                 Placeholder::make('welcome_text')
-                    ->label('')
+                    ->hiddenLabel()
                     ->content(new HtmlString(
                         '<div class="rounded-xl border border-primary-200 bg-primary-50 p-6 dark:border-primary-700 dark:bg-primary-900/20">'
                         . '<h2 class="text-xl font-bold text-primary-700 dark:text-primary-300 mb-3">Bienvenue sur OpenLMNP !</h2>'
@@ -137,6 +137,31 @@ class OnboardingWizard extends Page implements HasForms
                         . '<li><strong>Les amortissements</strong> — composants par défaut</li>'
                         . '</ol>'
                         . '<p class="text-xs text-gray-500 dark:text-gray-500 mt-4">Vous pourrez modifier toutes ces informations plus tard.</p>'
+                        . '</div>'
+                    )),
+
+                // Deux portes, pas une. Quelqu'un qui arrive d'un cabinet ne doit pas
+                // dérouler l'assistant de premier lancement puis découvrir, une fois son
+                // bien créé, que ses amortissements passés ont disparu : la reprise se
+                // propose ICI, au premier écran, sinon personne ne la trouve.
+                // `->label('')` n'efface pas le libellé dans Filament 5 : il affiche le nom
+                // du champ (« Start choice »). `hiddenLabel()` est le seul qui le retire.
+                Placeholder::make('start_choice')
+                    ->hiddenLabel()
+                    ->content(new HtmlString(
+                        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px;margin-top:16px;">'
+                        . '<div style="padding:13px 14px;border-radius:12px;background:var(--olmnp-success-bg);border:1px solid var(--olmnp-success-solid);">'
+                        . '<b style="display:block;font-size:13.5px;color:var(--olmnp-success-fg);margin-bottom:3px;">Je démarre une nouvelle location</b>'
+                        . '<span style="font-size:12.5px;color:var(--olmnp-success-fg);">Vous n\'avez encore rien déclaré au réel pour ce bien. '
+                        . 'On part de zéro, l\'assistant vous guide — continuez simplement ci-dessous.</span>'
+                        . '</div>'
+                        . '<a href="' . RepriseDossier::getUrl() . '" '
+                        . 'style="display:block;padding:13px 14px;border-radius:12px;background:var(--olmnp-surface);'
+                        . 'border:1px solid var(--olmnp-border-strong);text-decoration:none;">'
+                        . '<b style="display:block;font-size:13.5px;color:var(--olmnp-fg-strong);margin-bottom:3px;">J\'ai déjà une comptabilité LMNP</b>'
+                        . '<span style="font-size:12.5px;color:var(--olmnp-fg-muted);">Vous avez une liasse 2033 d\'un expert-comptable ou d\'un autre '
+                        . 'logiciel. On reprend vos amortissements et vos reports en 5 étapes, sans ressaisir le passé.</span>'
+                        . '</a>'
                         . '</div>'
                     )),
             ]);

@@ -25,6 +25,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool        $is_dedicated        100 % dédié ou prorata
  * @property bool        $is_second_hand      mobilier d'occasion
  * @property int         $annual_depreciation centimes
+ * @property string      $depreciation_source computed|manual
+ * @property int         $opening_accumulated_depreciation centimes, cumuls affichés UNIQUEMENT
  */
 #[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Furniture extends Model
@@ -36,6 +38,10 @@ class Furniture extends Model
     public const DURATION_SECOND_HAND = 3; // mobilier d'occasion
     public const DURATION_EQUIPMENT = 7;   // gros équipements (cuisine équipée…)
     public const DURATION_LINEN     = 3;   // linge de maison
+
+    /** Symétrique du `base_source` des composants — voir PropertyWork. */
+    public const DEPRECIATION_SOURCE_COMPUTED = 'computed';
+    public const DEPRECIATION_SOURCE_MANUAL = 'manual';
 
     protected $fillable = [
         'property_id',
@@ -49,6 +55,8 @@ class Furniture extends Model
         'is_dedicated',
         'is_second_hand',
         'annual_depreciation',
+        'depreciation_source',
+        'opening_accumulated_depreciation',
     ];
 
     protected static function booted(): void
@@ -59,10 +67,22 @@ class Furniture extends Model
             $furniture->amount_ht = $result['ht'];
             $furniture->amount_tva = $result['tva'];
 
+            // Une dotation recopiée d'une liasse ne se recalcule pas.
+            if ($furniture->hasManualDepreciation()) {
+                return;
+            }
+
             if ($furniture->amount > 0 && $furniture->duration_years > 0) {
                 $furniture->computeAnnualDepreciation();
             }
         });
+    }
+
+    /** Vrai si la dotation a été fixée à la main et ne doit plus être recalculée. */
+    public function hasManualDepreciation(): bool
+    {
+        return $this->depreciation_source === self::DEPRECIATION_SOURCE_MANUAL
+            && (int) $this->annual_depreciation > 0;
     }
 
     protected function casts(): array
@@ -107,6 +127,12 @@ class Furniture extends Model
      */
     public function computeAnnualDepreciation(): void
     {
+        $this->annual_depreciation = $this->expectedAnnualDepreciation();
+    }
+
+    /** Dotation que la règle actuelle donnerait, SANS rien écrire (voir PropertyWork). */
+    public function expectedAnnualDepreciation(): int
+    {
         $property = $this->property;
 
         // Si TVA-liable, amortir sur le HT (TVA récupérée)
@@ -118,7 +144,7 @@ class Furniture extends Model
             $base = bcmul($base, $property->quota_share, 0);
         }
 
-        $this->annual_depreciation = $this->duration_years > 0
+        return $this->duration_years > 0
             ? (int) bcdiv($base, (string) $this->duration_years, 0)
             : 0;
     }

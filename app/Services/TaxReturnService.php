@@ -203,6 +203,13 @@ class TaxReturnService
      * et d'agence n'avaient AUCUNE ligne dans ce tableau alors que la 254 les compte, et le
      * cumul était écrasé d'un bien à l'autre (`=` au lieu de `+=`) puis approximé par
      * `dotation × années`.
+     *
+     * ⚠️ Depuis le 2026-09-04, la ligne Cerfa d'un composant est une DONNÉE
+     * (`property_components.cerfa_category`) et non plus une déduction faite sur son nom :
+     * un composant renommé « Toiture ardoise » ou créé à la main basculait en « autres »
+     * sans que rien ne le dise. La table de correspondance historique subsiste dans
+     * `PropertyComponent::LEGACY_NAME_TO_CATEGORY`, où elle sert de valeur par défaut —
+     * aucun montant n'a donc changé de ligne à la migration.
      */
     public function compute2033C($properties, int $year): array
     {
@@ -213,27 +220,11 @@ class TaxReturnService
             'autres'        => ['lines' => ['immo' => '470', 'amort' => '560'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
         ];
 
-        // Mappage par NOM, conservé à l'identique : les composants optionnels et ceux
-        // renommés tombent en « autres ». Le corriger déplacerait des montants entre
-        // lignes Cerfa d'un exercice à l'autre — chantier distinct.
-        $componentCategoryMap = [
-            'Gros œuvre' => 'constructions',
-            'Toiture' => 'constructions',
-            'Installations électriques' => 'installations',
-            'Plomberie / sanitaire' => 'installations',
-            'Étanchéité' => 'agencements',
-            'Agencements intérieurs' => 'agencements',
-        ];
-
         foreach ($properties as $prop) {
             foreach ($this->depreciationService->depreciationDetailForYear($prop, $year) as $line) {
-                $category = match ($line['type']) {
-                    'building'  => $componentCategoryMap[$line['name']] ?? 'autres',
-                    'work'      => 'agencements',
-                    'furniture' => 'autres',
-                    // Les frais d'acquisition sont incorporés au coût du bâtiment.
-                    'notary'    => 'constructions',
-                };
+                $category = isset($categories[$line['cerfa_category'] ?? null])
+                    ? $line['cerfa_category']
+                    : 'autres';
 
                 $categories[$category]['brut'] += (int) $line['base'];
                 $categories[$category]['dotation'] += (int) $line['annual'];
@@ -250,16 +241,33 @@ class TaxReturnService
     }
 
     /**
-     * 2033-D — Déficits reportables
+     * 2033-D — Déficits reportables et amortissements différés
+     *
+     * ⚠️ Correction de conformité (v1.4.0). Les cases 982/983/984 suivent les DÉFICITS
+     * reportables ; elles étaient alimentées par `previous_deferred`, c'est-à-dire par
+     * l'AMORTISSEMENT RÉPUTÉ DIFFÉRÉ. Toute liasse d'un bailleur ayant de l'amortissement
+     * différé déclarait donc des déficits qu'il n'avait pas — un défaut de conformité, pas
+     * une gêne d'affichage. Les liasses générées avant la correction portent l'ancienne
+     * valeur : le changement est annoncé au CHANGELOG et dans la page Liasse fiscale.
+     *
+     * Ce sont bien deux stocks distincts, que l'administration fait d'ailleurs suivre par
+     * deux états séparés (BOI-FORM-000038 pour les amortissements dont la déduction a été
+     * écartée, BOI-FORM-000039 pour les déficits) :
+     *   - 982/983/984 : déficits antérieurs, imputés, restants — reportables DIX ans
+     *     (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250) ;
+     *   - 870 : amortissements différés, reportables SANS limite de durée
+     *     (CGI art. 39 C, II-3 ; BOI-BIC-AMT-20-40-10-30 § 10).
+     *
+     * La case 984 porte le stock à la clôture, déficit de l'exercice (860) compris.
      */
     public function compute2033D(FiscalYear $fy): array
     {
         return [
-            '982' => $fy->previous_deferred, // Déficits N-1
-            '983' => min($fy->previous_deferred, max(0, $fy->fiscal_result)), // Imputés
-            '984' => max(0, $fy->previous_deferred - min($fy->previous_deferred, max(0, $fy->fiscal_result))),
-            '860' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0,
-            '870' => $fy->deferred_depreciation, // Total reportable
+            '982' => (int) $fy->previous_deficit,      // Déficits antérieurs à l'ouverture
+            '983' => (int) $fy->deficit_imputed,       // Imputés sur le bénéfice de l'exercice
+            '984' => (int) $fy->deficit_carryforward,  // Restant à reporter à la clôture
+            '860' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0, // Déficit de l'exercice
+            '870' => (int) $fy->deferred_depreciation, // Amortissements différés reportables
         ];
     }
 

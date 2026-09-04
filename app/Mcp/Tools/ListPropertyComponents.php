@@ -48,6 +48,14 @@ class ListPropertyComponents extends Tool
                 // `manual` = base fixée à la main (reprise d'une comptabilité existante) :
                 // elle ne suit plus le prix du bien et n'est pas resynchronisée.
                 'base_source'             => $component->base_source,
+                // Colonnes de reprise d'antériorité : la ligne du 2033-C, la date de
+                // départ propre au composant (null = mise en location du bien) et le
+                // cumul déjà pratiqué par un cabinet sur des exercices non repris.
+                'cerfa_category'          => $component->cerfaCategory(),
+                'depreciation_start_date' => $component->depreciation_start_date?->format('Y-m-d'),
+                'opening_accumulated_depreciation_eur' => bcdiv(
+                    (string) $component->opening_accumulated_depreciation, '100', 2,
+                ),
                 'sort_order'              => $component->sort_order,
             ];
         });
