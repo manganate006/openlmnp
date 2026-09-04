@@ -19,6 +19,7 @@ for var in APP_KEY APP_LOCALE APP_FALLBACK_LOCALE DEMO_MODE DEMO_TTL_HOURS DEMO_
     GITHUB_TOKEN GITHUB_REPO GTM_CONTAINER_ID GTM_SERVER_URL GTM_SCRIPT_PATH \
     ALLOW_REGISTRATION PROVISION_TOKEN APP_URL UPDATE_SELF_APPLY UPDATE_DOCKER_IMAGE \
     LOG_CHANNEL LOG_LEVEL LOG_DAILY_DAYS \
+    DB_JOURNAL_MODE DB_SYNCHRONOUS DB_BUSY_TIMEOUT DB_TRANSACTION_MODE \
     FEEDBACK_ENABLED FEEDBACK_AUDIENCES FEEDBACK_MIN_SECONDS FEEDBACK_MIN_ACTIONS FEEDBACK_ACTIONS \
     FEEDBACK_VARIANTS FEEDBACK_MIN_SAMPLE \
     FEEDBACK_RETURN_DAYS FEEDBACK_COOLDOWN_DAYS FEEDBACK_FORWARD_EMAIL FEEDBACK_CONTACT_EMAIL \
@@ -109,13 +110,24 @@ while true; do php artisan schedule:run --quiet 2>/dev/null; sleep 60; done &
 # parallèles, temps par requête : 0,049 → 0,324 s avec 1 worker (escalier régulier
 # de ~31 ms, la signature d'une sérialisation) contre 0,071 → 0,170 s avec 4.
 #
-# 4 et pas davantage : le LXC 147 n'a que 2 cœurs et 1 Go, partagés avec le
-# conteneur de la vitrine. Chaque worker est un processus PHP complet. Une instance
+# Ce que ça change quand une requête est longue (flux SSE de l'assistant, gros PDF,
+# déverrouillage du coffre) : mesuré avec une requête de 5 s en cours, les requêtes
+# rapides concurrentes répondent en 4,6 s avec 1 worker contre 0,04 s avec 4.
+#
+# 4 et pas davantage : la machine de référence n'a que 2 cœurs et 1 Go, partagés avec d'autres
+# conteneurs. Chaque worker est un processus PHP complet, mais l'essentiel de son
+# empreinte est partagé avec le maître par copie sur écriture : mesuré en production,
+# 44 Mo de RSS apparent par worker pour 4,5 Mo réellement privés. Une instance
 # auto-hébergée plus grosse peut surcharger la valeur par `-e PHP_CLI_SERVER_WORKERS`.
 #
+# ⚠️ NE JAMAIS augmenter ce nombre sans les réglages SQLite de config/database.php
+# (WAL + transaction_mode IMMEDIATE) : plusieurs workers sur les réglages par défaut,
+# c'est « database is locked » sur une écriture concurrente sur quatre.
+#
 # ⚠️ DEUX pièges, tous deux silencieux :
-#  1. La variable se règle ICI, pas dans l'allowlist ci-dessus : elle est lue par le
-#     binaire PHP au démarrage du serveur et n'a rien à faire dans le `.env`.
+#  1. CETTE variable-ci se règle ICI et pas dans l'allowlist ci-dessus, contrairement
+#     aux `DB_*` : elle est lue par le binaire PHP au démarrage du serveur (donc
+#     directement dans l'environnement du processus) et n'a rien à faire dans `.env`.
 #  2. `--no-reload` est OBLIGATOIRE : sans lui, `artisan serve` surveille les
 #     fichiers, refuse de forker, et se contente d'écrire « Unable to respect the
 #     PHP_CLI_SERVER_WORKERS environment variable » dans un log que personne ne lit.
