@@ -10,7 +10,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
-#[Description('Retourne le détail complet d\'un exercice fiscal par son année : résultat fiscal, recettes, charges, amortissements (total, plafonné, reporté), TVA, form_data du formulaire 2031/2033, et informations de télétransmission.')]
+#[Description('Retourne le détail complet d\'un exercice fiscal par son année : résultat fiscal, recettes, charges, amortissements (total, plafonné, reporté), soldes d\'ouverture d\'une reprise de dossier (amortissements différés, déficits par millésime, cumul d\'amortissements de contrôle, provenance), TVA, form_data du formulaire 2031/2033, et informations de télétransmission.')]
 #[IsReadOnly]
 class GetFiscalYear extends Tool
 {
@@ -35,6 +35,26 @@ class GetFiscalYear extends Tool
             'deferred_depreciation_eur' => bcdiv((string) $fy->deferred_depreciation, '100', 2),
             'previous_deferred_eur'     => bcdiv((string) $fy->previous_deferred, '100', 2),
             'fiscal_result_eur'         => $fy->fiscal_result_euros,
+            // Soldes d'ouverture d'un exercice de reprise (dossier repris d'un cabinet).
+            // En lecture seule : aucun outil MCP ne les écrit.
+            'opening'                   => [
+                'is_opening_year'                    => $fy->hasOpeningBalances(),
+                'source'                             => $fy->opening_source,
+                'source_label'                       => $fy->opening_source
+                    ? (FiscalYear::openingSourceLabels()[$fy->opening_source] ?? $fy->opening_source)
+                    : null,
+                'deferred_depreciation_eur'          => bcdiv((string) $fy->opening_deferred_depreciation, '100', 2),
+                'accumulated_depreciation_eur'       => bcdiv((string) $fy->opening_accumulated_depreciation, '100', 2),
+                'accumulated_depreciation_is_control' => true,
+                'deficits'                           => array_map(
+                    fn (array $deficit) => [
+                        'origin_year' => (int) ($deficit['origin_year'] ?? 0),
+                        'amount_eur'  => bcdiv((string) (int) ($deficit['amount'] ?? 0), '100', 2),
+                    ],
+                    $fy->opening_deficits ?? [],
+                ),
+                'deficits_total_eur'                 => bcdiv((string) $fy->openingDeficitsTotal(), '100', 2),
+            ],
             'tva'                       => [
                 'total_collected_eur'   => bcdiv((string) $fy->total_tva_collected, '100', 2),
                 'total_deductible_eur'  => bcdiv((string) $fy->total_tva_deductible, '100', 2),

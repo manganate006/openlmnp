@@ -14,6 +14,11 @@ class FiscalYear extends Model
     public const STATUS_DRAFT  = 'draft';
     public const STATUS_CLOSED = 'closed';
 
+    /** Provenance des soldes d'ouverture d'un exercice de reprise. */
+    public const OPENING_SOURCE_LIASSE = 'liasse';
+    public const OPENING_SOURCE_MANUAL = 'manuel';
+    public const OPENING_SOURCE_AI     = 'ia';
+
     protected $fillable = [
         'user_id',
         'year',
@@ -24,6 +29,10 @@ class FiscalYear extends Model
         'capped_depreciation',
         'deferred_depreciation',
         'previous_deferred',
+        'opening_deferred_depreciation',
+        'opening_deficits',
+        'opening_accumulated_depreciation',
+        'opening_source',
         'fiscal_result',
         'total_tva_collected',
         'total_tva_deductible',
@@ -38,8 +47,9 @@ class FiscalYear extends Model
     protected function casts(): array
     {
         return [
-            'form_data'      => 'array',
-            'transmitted_at' => 'datetime',
+            'form_data'        => 'array',
+            'opening_deficits' => 'array',
+            'transmitted_at'   => 'datetime',
         ];
     }
 
@@ -49,6 +59,55 @@ class FiscalYear extends Model
             self::STATUS_DRAFT  => 'Brouillon',
             self::STATUS_CLOSED => 'Clôturé',
         ];
+    }
+
+    public static function openingSourceLabels(): array
+    {
+        return [
+            self::OPENING_SOURCE_LIASSE => 'Liasse fiscale',
+            self::OPENING_SOURCE_MANUAL => 'Saisie manuelle',
+            self::OPENING_SOURCE_AI     => 'Lecture assistée',
+        ];
+    }
+
+    /**
+     * Soldes d'ouverture saisis : l'exercice est un exercice de REPRISE.
+     *
+     * `opening_accumulated_depreciation` n'entre pas dans ce test : c'est une donnée de
+     * contrôle, elle ne suffit pas à faire d'un exercice une reprise.
+     */
+    public function hasOpeningBalances(): bool
+    {
+        return (int) $this->opening_deferred_depreciation > 0
+            || $this->openingDeficitsTotal() > 0;
+    }
+
+    /** Somme des déficits d'ouverture, tous millésimes confondus (centimes). */
+    public function openingDeficitsTotal(): int
+    {
+        $total = '0';
+
+        foreach ($this->opening_deficits ?? [] as $deficit) {
+            $total = bcadd($total, (string) (int) ($deficit['amount'] ?? 0), 0);
+        }
+
+        return (int) $total;
+    }
+
+    /**
+     * Exercice sans aucune donnée calculée.
+     *
+     * Un tel exercice n'a pas « un report de 0 € » : il n'a PAS DE REPORT DU TOUT. La nuance
+     * décide du sort d'un solde d'ouverture — voir `FiscalYearService::carriedForwardDeferred()`.
+     */
+    public function hasNoComputedData(): bool
+    {
+        return (int) $this->total_income === 0
+            && (int) $this->total_expenses === 0
+            && (int) $this->total_depreciation === 0
+            && (int) $this->capped_depreciation === 0
+            && (int) $this->deferred_depreciation === 0
+            && (int) $this->fiscal_result === 0;
     }
 
     public function getFiscalResultEurosAttribute(): string

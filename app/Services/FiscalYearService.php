@@ -160,12 +160,12 @@ class FiscalYearService
             $totalDepreciation = bcadd($totalDepreciation, $depreciation['total'], 0);
         }
 
-        // 4. Report d'amortissements différés N-1
+        // 4. Report d'amortissements différés N-1, ou solde d'ouverture d'une reprise
         $previousYear = FiscalYear::withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->where('year', $year - 1)
             ->first();
-        $carriedForward = (string) ($previousYear?->deferred_depreciation ?? 0);
+        $carriedForward = $this->carriedForwardDeferred($fiscalYear, $previousYear);
 
         // 5. Plafonnement de l'amortissement
         // L'amortissement ne peut pas créer de déficit
@@ -205,6 +205,81 @@ class FiscalYearService
             'total_tva_deductible'          => (int) $totalTvaDeductible,
             'tva_balance'                   => (int) $tvaBalance,
         ];
+    }
+
+    /**
+     * Report d'amortissements différés à retenir pour un exercice.
+     *
+     * Règle : l'exercice N-1 réellement tenu dans l'application fait foi ; à défaut, le solde
+     * d'ouverture saisi depuis la liasse du cabinet (reprise de dossier) prend le relais.
+     *
+     * ⚠️ Le cas qui coûte cher : N-1 EXISTE mais n'a AUCUNE donnée (brouillon créé par erreur,
+     * exercice ouvert puis jamais alimenté). Son `deferred_depreciation = 0` n'est pas un report
+     * calculé, c'est l'absence de calcul — le laisser gagner effacerait en silence un report de
+     * 12 000 € que l'utilisateur a pris la peine de saisir. Dans ce cas seulement, et seulement
+     * si un solde d'ouverture a été saisi, le solde d'ouverture l'emporte. La situation est
+     * signalée par `openingBalanceWarning()`, qu'affichent la création d'exercice et l'écran
+     * de contrôle de reprise.
+     */
+    private function carriedForwardDeferred(FiscalYear $fiscalYear, ?FiscalYear $previousYear): string
+    {
+        $opening = (string) (int) $fiscalYear->opening_deferred_depreciation;
+
+        if ($previousYear === null) {
+            return $opening;
+        }
+
+        if (bccomp($opening, '0', 0) > 0 && $previousYear->hasNoComputedData()) {
+            return $opening;
+        }
+
+        return (string) (int) $previousYear->deferred_depreciation;
+    }
+
+    /**
+     * Alerte lorsqu'un solde d'ouverture cohabite avec un exercice N-1 vide.
+     *
+     * Prend l'année et les montants plutôt qu'un `FiscalYear` : l'assistant de reprise a besoin
+     * de ce contrôle AVANT que l'exercice n'existe.
+     *
+     * @param  int  $openingDeferred  ARD d'ouverture, en centimes
+     * @param  int  $openingDeficits  total des déficits d'ouverture, en centimes
+     */
+    public function emptyPreviousYearWarning(
+        User $user,
+        int $year,
+        int $openingDeferred,
+        int $openingDeficits = 0,
+    ): ?string {
+        if ($openingDeferred <= 0 && $openingDeficits <= 0) {
+            return null;
+        }
+
+        $previousYear = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where('year', $year - 1)
+            ->first();
+
+        if ($previousYear === null || ! $previousYear->hasNoComputedData()) {
+            return null;
+        }
+
+        return 'L\'exercice ' . ($year - 1) . ' existe mais ne contient aucune donnée. '
+            . 'Tant qu\'il reste en l\'état, c\'est lui qui devrait fournir le report de '
+            . $year . ' — et il vaut 0 €. Vos soldes d\'ouverture sont donc conservés, '
+            . 'mais l\'exercice ' . ($year - 1) . ' doit être supprimé ou complété pour que '
+            . 'la chaîne soit juste.';
+    }
+
+    /** Même contrôle, pour un exercice déjà enregistré. */
+    public function openingBalanceWarning(FiscalYear $fiscalYear): ?string
+    {
+        return $this->emptyPreviousYearWarning(
+            $fiscalYear->user,
+            $fiscalYear->year,
+            (int) $fiscalYear->opening_deferred_depreciation,
+            $fiscalYear->openingDeficitsTotal(),
+        );
     }
 
     /**
@@ -356,9 +431,19 @@ class FiscalYearService
      * Tout exercice antérieur ou égal à la première année d'activité peut
      * être créé sans N-1 : le report d'amortissements vaut alors 0.
      * Sans amortissement actif, la chaîne n'est pas indispensable non plus.
+     *
+     * Un exercice de REPRISE ne se voit pas non plus opposer l'absence de N-1 : c'est
+     * précisément le cas d'usage de quelqu'un qui arrive d'un cabinet et n'a aucun
+     * exercice antérieur dans l'application. Son report vient de ses soldes d'ouverture.
+     *
+     * @param  bool  $hasOpeningBalances  L'exercice porte (ou portera) des soldes d'ouverture
      */
-    public function missingPreviousYearError(User $user, int $year): ?string
+    public function missingPreviousYearError(User $user, int $year, bool $hasOpeningBalances = false): ?string
     {
+        if ($hasOpeningBalances) {
+            return null;
+        }
+
         $previousExists = FiscalYear::withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->where('year', $year - 1)

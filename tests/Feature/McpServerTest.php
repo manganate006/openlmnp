@@ -610,3 +610,72 @@ it('generates a FEC for a closed fiscal year without recalculating it', function
         ->first();
     expect($fiscalYear->total_income)->toBe(999999);
 });
+
+// === SOLDES D'OUVERTURE (reprise de dossier) ===
+
+it('exposes the opening balances of a reprise fiscal year through get_fiscal_year', function () {
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2026,
+        'status' => FiscalYear::STATUS_DRAFT,
+        'opening_deferred_depreciation' => 1200000,   // 12 000 €
+        'opening_accumulated_depreciation' => 4500000, // 45 000 €
+        'opening_source' => FiscalYear::OPENING_SOURCE_LIASSE,
+        'opening_deficits' => [
+            ['origin_year' => 2022, 'amount' => 120000],
+            ['origin_year' => 2023, 'amount' => 80000],
+        ],
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'get_fiscal_year',
+                'arguments' => ['year' => 2026],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->not->toBeTrue();
+
+    $result = json_decode($response->json('result.content.0.text', '{}'), true);
+
+    expect($result['opening']['is_opening_year'])->toBeTrue()
+        ->and($result['opening']['deferred_depreciation_eur'])->toBe('12000.00')
+        ->and($result['opening']['accumulated_depreciation_eur'])->toBe('45000.00')
+        ->and($result['opening']['accumulated_depreciation_is_control'])->toBeTrue()
+        ->and($result['opening']['source'])->toBe('liasse')
+        ->and($result['opening']['deficits'])->toHaveCount(2)
+        ->and($result['opening']['deficits'][0]['origin_year'])->toBe(2022)
+        ->and($result['opening']['deficits'][0]['amount_eur'])->toBe('1200.00')
+        ->and($result['opening']['deficits_total_eur'])->toBe('2000.00');
+});
+
+it('reports no opening balance on an ordinary fiscal year', function () {
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2024,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'total_income' => 999999,
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'get_fiscal_year',
+                'arguments' => ['year' => 2024],
+            ],
+        ]);
+
+    $result = json_decode($response->json('result.content.0.text', '{}'), true);
+
+    expect($result['opening']['is_opening_year'])->toBeFalse()
+        ->and($result['opening']['source'])->toBeNull()
+        ->and($result['opening']['deficits'])->toBe([]);
+});
