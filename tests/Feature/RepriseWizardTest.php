@@ -271,6 +271,28 @@ it('opens the shared editor on the amounts tab when the liasse is copied', funct
         ->assertSee('Cumul au 31/12');
 });
 
+it('keys the embedded editor on the chosen method, so changing method removes it', function () {
+    $property = repriseProperty($this->user);
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    $component = Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_COPY);
+
+    // L'éditeur porte un `wire:ignore` : Livewire CONSERVE le nœud lors d'un morphing au
+    // lieu de le retirer. Seule une clé qui change le fait disparaître — sans elle,
+    // « Changer de méthode » laissait les cartes de choix et l'éditeur à l'écran ensemble.
+    // Un test Pest ne voit pas le morphing du navigateur : il verrouille la clé.
+    $component->assertSee('wire:key="reprise-editor-' . RepriseDossier::METHOD_COPY . '-' . $property->id . '"', false)
+        ->set('method', null)
+        ->assertDontSee('wire:key="reprise-editor-' . RepriseDossier::METHOD_COPY . '-' . $property->id . '"', false)
+        ->assertSee('Recopier les lignes de ma liasse');
+});
+
 it('refuses a method that the browser invented', function () {
     repriseProperty($this->user);
 

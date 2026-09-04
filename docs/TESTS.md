@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **524 tests automatisés (1 423 assertions)** écrits avec
+OpenLMNP est couvert par **525 tests automatisés (1 426 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -57,9 +57,9 @@ vendor/bin/pest --filter="Filament"
 | Import CSV générique | 17 | Détection du séparateur, montants FR/EN, intitulés sans accents, mappage corrigeable, doublons sur les quatre cibles, mobilier et travaux, lignes illisibles isolées |
 | Écran d'import CSV | 5 | Aperçu qui n'écrit rien, mappage réparé à la main, isolation entre utilisateurs y compris hors formulaire |
 | Export / import du dossier | 12 | Aller-retour identique, `schema_version` refusée si trop récente, contrôle d'appartenance, archive antérieure relisible, transaction annulée en cas d'échec |
-| Assistant de reprise (`/reprise`) | 29 | Les cinq étapes, la case Cerfa à côté de chaque montant, euros→centimes une seule fois, choix de méthode et réemploi de l'éditeur existant, contrôle branché sur `ReprisesCheckService`, rien écrit dans `fiscal_years` avant la fin, exercice clôturé protégé, isolation entre comptes, les deux portes d'entrée |
+| Assistant de reprise (`/reprise`) | 30 | Les cinq étapes, la case Cerfa à côté de chaque montant, euros→centimes une seule fois, choix de méthode et réemploi de l'éditeur existant, contrôle branché sur `ReprisesCheckService`, rien écrit dans `fiscal_years` avant la fin, exercice clôturé protégé, isolation entre comptes, les deux portes d'entrée |
 | Suites ajoutées depuis (détail non ventilé) | 148 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel… |
-| **Total** | **524** | **1 423 assertions** |
+| **Total** | **525** | **1 426 assertions** |
 
 > Le détail par suite est tenu à jour lot par lot ; la ligne « suites ajoutées depuis »
 > absorbe les suites fusionnées sans ventilation, pour que le tableau reste juste au total.
