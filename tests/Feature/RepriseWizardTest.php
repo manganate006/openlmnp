@@ -451,30 +451,35 @@ it('shows the diagnostics in order when the cumulated depreciation does not tall
         ->assertSee('Terminer quand même');
 });
 
-it('switches the acquisition fees to charges and replays the check', function () {
+it('switches the acquisition fees to charges and stops amortising them', function () {
+    // ⚠️ Ce test vérifiait auparavant que le remède faisait TOMBER l'écart de la case 030,
+    // parce que celle-ci mélangeait l'amortissement des frais à celui du corporel. Depuis le
+    // 2026-09-05 les frais sont portés en 014/016, là où un cabinet les met : la case 030 ne
+    // bouge donc plus quand on les passe en charges — c'est le signe que le mélange a cessé.
+    // Ce qui reste vrai, et ce que ce test vérifie, c'est que le remède agit réellement.
     $property = repriseProperty($this->user);
 
     $component = repriseAtStepFour($this->user, $property)
         ->set('openingDeferred', '12480')
         ->call('nextStep');
 
-    $computed = collect($component->instance()->report['lines'])
+    $line = fn () => collect($component->instance()->report['lines'])
         ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION)['computed'];
 
-    $component->call('goToStep', 4)
-        ->set('openingAccumulated', RepriseDossier::eurosFromCents($computed - notaryCumulOf($property)))
-        ->call('nextStep')
-        ->call('expenseAcquisitionFees');
+    $before = $line();
+
+    expect(notaryCumulOf($property))->toBeGreaterThan(0);
+
+    $component->call('expenseAcquisitionFees');
 
     $property->refresh();
 
-    expect($property->acquisition_fees_treatment)->toBe(Property::ACQUISITION_FEES_EXPENSED);
-
-    $line = collect($component->instance()->report['lines'])
-        ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
-
-    // Le contrôle a été rejoué : l'écart a disparu, il n'a pas fallu recommencer le parcours.
-    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MATCH);
+    expect($property->acquisition_fees_treatment)->toBe(Property::ACQUISITION_FEES_EXPENSED)
+        // Les frais ne sont plus amortis du tout : c'est bien ce que demande l'utilisateur
+        // dont le comptable les avait passés en charges l'année de l'acquisition.
+        ->and(notaryCumulOf($property))->toBe(0)
+        // Et la case 030 n'a pas bougé d'un centime : elle ne portait déjà plus les frais.
+        ->and($line())->toBe($before);
 });
 
 // ─────────────────────────────────────────────────────────────────────

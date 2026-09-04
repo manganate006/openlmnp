@@ -536,8 +536,10 @@ class DepreciationService
                     (int) $property->rental_start_date->format('Y'),
                     $year,
                 ),
-                // Les frais d'acquisition sont incorporés au coût du bâtiment.
-                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_CONSTRUCTIONS,
+                // Les frais d'acquisition sont des immobilisations INCORPORELLES (410/500),
+                // pas des constructions : c'est ainsi qu'un cabinet les présente, et le bilan
+                // les distingue aussi (cases 014/016 du 2033-A).
+                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_INTANGIBLE,
             ];
         }
 
