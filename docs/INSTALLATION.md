@@ -270,6 +270,30 @@ docker rm -f openlmnp
 
 Les données restent intactes tant que vous montez les mêmes volumes `database` et `storage`.
 
+### Justificatifs déposés avant la version 1.1
+
+Si votre instance existait avant la montée en Laravel 11, une partie de vos
+justificatifs peut avoir cessé d'apparaître dans l'interface. Rien n'est perdu :
+Laravel 11 a déplacé la racine du disque de stockage de `storage/app` vers
+`storage/app/private`, et les fichiers déposés avant sont restés à l'ancien
+emplacement. Depuis la version 1.4.1, l'application va les y chercher toute seule,
+donc **vous n'avez rien à faire pour les revoir**.
+
+Pour ranger définitivement ces fichiers au bon endroit, et ne plus dépendre de ce
+repli :
+
+```bash
+# 1. Rapport : ce qui serait déplacé, sans rien modifier
+docker exec openlmnp php artisan openlmnp:migrate-document-storage
+
+# 2. Application, une fois le rapport lu
+docker exec openlmnp php artisan openlmnp:migrate-document-storage --fix
+```
+
+La commande ne touche jamais à la base de données et n'écrase jamais un fichier
+déjà présent à la nouvelle racine : ce cas est signalé, pas exécuté. Elle est sans
+effet si votre instance n'est pas concernée.
+
 ## Sauvegarde et restauration
 
 La sauvegarde est triviale : il suffit de copier deux répertoires.
