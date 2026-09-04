@@ -2,6 +2,29 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Ajouts
+
+- **Reprendre une comptabilité tenue par un cabinet, sans ressaisir les exercices passés.**
+  Un exercice peut désormais porter des **soldes d'ouverture** recopiés de la liasse N-1 :
+  amortissements réputés différés (2033-D case 870 ou 2033-B case 318), déficits reportables
+  par millésime (2033-D cases 980-984), cumul d'amortissements déclaré (2033-A case 030) et
+  provenance de la saisie. Jusqu'ici le report d'amortissements différés se lisait
+  **uniquement** dans l'exercice N-1 présent en base : celui qui arrivait d'un cabinet, et
+  n'avait donc aucun exercice antérieur dans l'application, perdait purement et simplement
+  son report. Créer un exercice sans son prédécesseur n'est plus refusé lorsque des soldes
+  d'ouverture sont saisis, et la liste des exercices porte un badge « Reprise »
+- Le cumul d'amortissements d'ouverture est une donnée de **contrôle** : il sert à comparer
+  ce que l'application reconstitue à ce que le cabinet a déclaré, et n'entre jamais dans un
+  calcul — l'y faire entrer reviendrait à compter deux fois le même amortissement
+- **Un exercice N-1 vide ne peut plus effacer un solde d'ouverture en silence.** Un exercice
+  créé par erreur puis jamais alimenté portait un report de 0 € qui l'emportait sur les
+  12 000 € recopiés de la liasse, sans aucun signal. Le solde saisi est désormais conservé,
+  et la situation est signalée dans la liste des exercices tant que l'exercice vide subsiste
+- L'outil MCP `get_fiscal_year` expose les soldes d'ouverture (lecture seule : aucun outil
+  MCP ne les écrit)
+
 ## [1.3.2] - 2026-09-04
 
 ### Corrections
