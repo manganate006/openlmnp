@@ -164,9 +164,45 @@ L'image utilise le fichier `.env.docker` fourni. Les variables non sensibles uti
 | `GTM_SCRIPT_PATH` | Chemin du script GTM (utile si renommé côté serveur) | `/gtm.js` |
 | `TELEMETRY_ENABLED` | Check-in anonyme quotidien (identifiant aléatoire + version) pour compter les instances installées. Aucune donnée comptable/personnelle. `false` = désactivé, aucune requête émise | `true` |
 | `TELEMETRY_URL` | Endpoint recevant le check-in de télémétrie | `https://openlmnp.fr/api/instances/checkin` |
+| `PHP_CLI_SERVER_WORKERS` | Nombre de requêtes servies simultanément (voir ci-dessous) | `4` |
+| `DB_JOURNAL_MODE` | Journal SQLite. `WAL` par défaut ; `delete` si la base est sur un stockage réseau | `WAL` |
+| `DB_SYNCHRONOUS` | Politique de `fsync` de SQLite | `NORMAL` |
+| `DB_BUSY_TIMEOUT` | Attente maximale d'un verrou, en millisecondes | `5000` |
+| `DB_TRANSACTION_MODE` | Mode d'ouverture des transactions SQLite | `IMMEDIATE` |
 
 > **Vie privée** : aucune mesure d'audience n'est active par défaut. L'intégration
 > Google Tag Manager ne s'active que si vous définissez explicitement `GTM_CONTAINER_ID`.
+
+### Requêtes simultanées et stockage de la base
+
+Le conteneur sert **4 requêtes en parallèle**. C'est ce qui évite qu'un traitement long
+(génération d'une liasse PDF, import d'un relevé, analyse d'un justificatif) ne fige
+l'instance pour les autres utilisateurs — et pour vos autres onglets.
+
+Les quatre réglages `DB_*` ci-dessus rendent cette simultanéité sûre pour SQLite ; ils
+vont **ensemble**. Vous n'avez normalement rien à changer. Deux exceptions :
+
+- **Base sur un stockage réseau** (NFS, SMB, partage d'un NAS) : le mode WAL a besoin de
+  mémoire partagée et **ne fonctionne pas** dans ce cas. Lancez le conteneur avec
+  `-e DB_JOURNAL_MODE=delete -e DB_SYNCHRONOUS=FULL`. Mieux encore, si vous le pouvez :
+  placez le fichier de la base sur un disque local et ne gardez le réseau que pour les
+  sauvegardes.
+- **Machine plus puissante** : `-e PHP_CLI_SERVER_WORKERS=8` (ou plus). Chaque worker est
+  un processus PHP, mais l'essentiel de son empreinte est partagé — mesuré sur l'instance
+  de référence, passer de 1 à 4 workers coûte 7 Mio, et de 1 à 8 workers, 25 Mio.
+
+> ⚠️ Si vous augmentez `PHP_CLI_SERVER_WORKERS`, ne désactivez pas `DB_JOURNAL_MODE=WAL`
+> ni `DB_TRANSACTION_MODE=IMMEDIATE` sans nécessité : plusieurs requêtes concurrentes sur
+> les réglages SQLite par défaut produisent des erreurs « database is locked ».
+
+**Sauvegarde en mode WAL** : le fichier `database.sqlite` s'accompagne désormais de
+fichiers `database.sqlite-wal` et `database.sqlite-shm`. Copier le seul `.sqlite` d'une
+instance en service peut donner une base **incomplète**. Utilisez toujours la commande de
+sauvegarde de SQLite, qui produit un instantané cohérent :
+
+```bash
+sqlite3 /opt/openlmnp-data/database/database.sqlite ".backup '/chemin/sauvegarde.sqlite'"
+```
 
 ### Télémétrie anonyme
 
@@ -296,15 +332,28 @@ effet si votre instance n'est pas concernée.
 
 ## Sauvegarde et restauration
 
-La sauvegarde est triviale : il suffit de copier deux répertoires.
+Tout tient dans deux répertoires : `database` (la base) et `storage` (vos justificatifs).
 
 ```bash
-# Sauvegarde (avec volumes montés sur /opt/openlmnp-data)
-tar czf openlmnp-backup-$(date +%F).tar.gz -C /opt/openlmnp-data database storage
+# 1. Instantané cohérent de la base, instance en service (avec volumes sur /opt/openlmnp-data)
+sqlite3 /opt/openlmnp-data/database/database.sqlite \
+        ".backup '/opt/openlmnp-data/database-snapshot.sqlite'"
+
+# 2. L'instantané + les justificatifs
+tar czf openlmnp-backup-$(date +%F).tar.gz \
+    -C /opt/openlmnp-data database-snapshot.sqlite storage
+rm /opt/openlmnp-data/database-snapshot.sqlite
 ```
 
-Pour restaurer, arrêtez le conteneur, remplacez le contenu de `/opt/openlmnp-data/`
-par votre archive, puis relancez le conteneur. Voir aussi la [FAQ](FAQ.md) sur les sauvegardes.
+> ⚠️ **Ne copiez pas `database.sqlite` directement pendant que l'instance tourne.** Depuis
+> la version 1.5.0 la base est en mode WAL : les écritures récentes vivent dans un fichier
+> `database.sqlite-wal` voisin, et copier le seul `.sqlite` donne une base **amputée de ses
+> dernières transactions**, sans le moindre message d'erreur. `.backup` (ci-dessus) règle la
+> question ; arrêter le conteneur avant de copier fonctionne aussi.
+
+Pour restaurer, arrêtez le conteneur, remplacez `/opt/openlmnp-data/database/database.sqlite`
+par l'instantané (renommé) et `storage` par le vôtre, supprimez d'éventuels `-wal`/`-shm`
+résiduels, puis relancez le conteneur. Voir aussi la [FAQ](FAQ.md) sur les sauvegardes.
 
 ---
 

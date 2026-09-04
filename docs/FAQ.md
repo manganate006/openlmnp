@@ -77,11 +77,20 @@ n'est transmis à un tiers ou à un service externe.
 ### Comment sauvegarder mes données ?
 
 Toutes vos données tiennent dans deux répertoires : la base (`database/`) et les fichiers
-(`storage/`). Une sauvegarde consiste simplement à archiver ces dossiers :
+(`storage/`). Une sauvegarde consiste à archiver ces dossiers — en prenant d'abord un
+**instantané cohérent** de la base, qui peut être en cours d'écriture :
 
 ```bash
-tar czf openlmnp-backup-$(date +%F).tar.gz -C /opt/openlmnp-data database storage
+sqlite3 /opt/openlmnp-data/database/database.sqlite \
+        ".backup '/opt/openlmnp-data/database-snapshot.sqlite'"
+tar czf openlmnp-backup-$(date +%F).tar.gz \
+    -C /opt/openlmnp-data database-snapshot.sqlite storage
+rm /opt/openlmnp-data/database-snapshot.sqlite
 ```
+
+Copier `database.sqlite` tel quel pendant que l'instance tourne peut donner une base
+**amputée de ses dernières écritures** : depuis la version 1.5.0 elles transitent par un
+fichier `database.sqlite-wal` voisin. Arrêter le conteneur avant de copier fonctionne aussi.
 
 En montant ces répertoires comme volumes Docker, vos données survivent aux mises à jour.
 Voir la section sauvegarde de [INSTALLATION.md](INSTALLATION.md).

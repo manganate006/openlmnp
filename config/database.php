@@ -38,10 +38,45 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+
+            // ── Concurrence (à lire avec docker-entrypoint.sh) ────────────────────────
+            // Le serveur HTTP sert 4 requêtes de front (PHP_CLI_SERVER_WORKERS, réglé
+            // dans l'entrypoint). Ces quatre lignes sont ce qui rend cette concurrence
+            // tenable pour SQLite : elles vont ENSEMBLE, et l'ordre dans lequel on les
+            // ajoute n'est pas neutre (voir la mesure sous `transaction_mode`).
+            //
+            //   journal_mode : WAL — un écrivain ne bloque plus les lecteurs, et la
+            //     transaction n'est plus payée d'un fsync du journal. Mesuré sur le
+            //     stockage de production, 200 écritures d'affilée : 7,30 ms par
+            //     transaction en `delete`+FULL contre 0,03 ms en WAL+NORMAL.
+            //     ⚠️ Le mode est une propriété PERSISTANTE du FICHIER, pas de la
+            //     connexion : la bascule a lieu une fois, à la première ouverture.
+            //   synchronous : NORMAL — sûr en WAL. Une coupure de courant peut coûter
+            //     les dernières transactions, jamais l'intégrité de la base.
+            //   busy_timeout : attendre un verrou jusqu'à 5 s au lieu d'échouer.
+            //     ⚠️ Ce n'est pas un ajout mais un PLAFOND : PDO_SQLITE impose déjà
+            //     60 s par défaut, soit un worker sur quatre immobilisé une minute.
+            //   transaction_mode : IMMEDIATE, et c'est la ligne qui fait tout le
+            //     travail. Une transaction DEFERRED commence en lecteur ; si elle
+            //     écrit ensuite alors qu'un autre a écrit entre-temps, SQLite rend
+            //     SQLITE_BUSY **sans jamais rappeler le busy handler** — réessayer ne
+            //     pourrait pas aboutir, le lecteur devant d'abord lâcher son instantané.
+            //     `busy_timeout` est donc sans effet sur ce cas précis, et WAL l'aggrave.
+            //     Mesuré, 4 processus × 50 transactions lecture-puis-écriture :
+            //       delete + DEFERRED (l'existant) ...... 55/200 perdues (27 %)
+            //       WAL    + DEFERRED .................. 133/200 perdues (66 %)
+            //       WAL    + IMMEDIATE .................   0/200 perdues
+            //     Passer en WAL sans passer en IMMEDIATE dégraderait la production.
+            //
+            // ⚠️ Échappatoire volontaire : WAL réclame de la mémoire partagée et ne
+            // fonctionne PAS sur un stockage réseau (NFS, SMB). Une instance
+            // auto-hébergée dont le volume vit sur un NAS doit pouvoir revenir au
+            // journal classique sans reconstruire son image — d'où les `env()`, et
+            // d'où la présence de ces variables dans l'allowlist de l'entrypoint.
+            'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
+            'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
+            'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000),
+            'transaction_mode' => env('DB_TRANSACTION_MODE', 'IMMEDIATE'),
         ],
 
         'mysql' => [
