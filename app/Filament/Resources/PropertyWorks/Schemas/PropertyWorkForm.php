@@ -111,7 +111,52 @@ class PropertyWorkForm
                             ->default(true),
                     ]),
 
+                static::repriseSection(),
+
                 DocumentsSection::make(),
+            ]);
+    }
+
+    /**
+     * Reprise d'une comptabilité tenue par un cabinet.
+     *
+     * Deux réglages, repliés par défaut parce qu'ils ne servent qu'une fois :
+     * la dotation recopiée telle quelle (l'arrondi du cabinet n'est pas forcément le
+     * nôtre) et le cumul déjà pratiqué sur les exercices non repris.
+     */
+    public static function repriseSection(): Section
+    {
+        return Section::make('Reprise d\'une comptabilité existante')
+            ->icon('heroicon-o-arrow-uturn-left')
+            ->description('À renseigner uniquement si ces travaux figuraient déjà dans le plan d\'amortissement de votre comptable.')
+            ->collapsed()
+            ->schema([
+                Select::make('depreciation_source')
+                    ->label('Dotation annuelle')
+                    ->options([
+                        \App\Models\PropertyWork::DEPRECIATION_SOURCE_COMPUTED => 'Calculée (montant ÷ durée)',
+                        \App\Models\PropertyWork::DEPRECIATION_SOURCE_MANUAL   => 'Recopiée de ma liasse',
+                    ])
+                    ->default(\App\Models\PropertyWork::DEPRECIATION_SOURCE_COMPUTED)
+                    ->live(),
+                TextInput::make('annual_depreciation')
+                    ->label('Dotation annuelle recopiée')
+                    ->suffix('€')
+                    ->numeric()
+                    ->step(0.01)
+                    ->visible(fn (callable $get) => $get('depreciation_source') === \App\Models\PropertyWork::DEPRECIATION_SOURCE_MANUAL)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
+                    ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                    ->helperText('Telle qu\'elle figure sur le tableau 2033-C de votre liasse.'),
+                TextInput::make('opening_accumulated_depreciation')
+                    ->label('Amortissements déjà pratiqués')
+                    ->suffix('€')
+                    ->numeric()
+                    ->step(0.01)
+                    ->default(0)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
+                    ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                    ->helperText('Cumul au 31/12 du dernier exercice tenu par votre comptable. Il s\'ajoute au cumul du bilan (2033-A case 030), jamais à la charge de l\'exercice.'),
             ]);
     }
 }

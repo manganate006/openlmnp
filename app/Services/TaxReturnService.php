@@ -203,6 +203,13 @@ class TaxReturnService
      * et d'agence n'avaient AUCUNE ligne dans ce tableau alors que la 254 les compte, et le
      * cumul était écrasé d'un bien à l'autre (`=` au lieu de `+=`) puis approximé par
      * `dotation × années`.
+     *
+     * ⚠️ Depuis le 2026-09-04, la ligne Cerfa d'un composant est une DONNÉE
+     * (`property_components.cerfa_category`) et non plus une déduction faite sur son nom :
+     * un composant renommé « Toiture ardoise » ou créé à la main basculait en « autres »
+     * sans que rien ne le dise. La table de correspondance historique subsiste dans
+     * `PropertyComponent::LEGACY_NAME_TO_CATEGORY`, où elle sert de valeur par défaut —
+     * aucun montant n'a donc changé de ligne à la migration.
      */
     public function compute2033C($properties, int $year): array
     {
@@ -213,27 +220,11 @@ class TaxReturnService
             'autres'        => ['lines' => ['immo' => '470', 'amort' => '560'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
         ];
 
-        // Mappage par NOM, conservé à l'identique : les composants optionnels et ceux
-        // renommés tombent en « autres ». Le corriger déplacerait des montants entre
-        // lignes Cerfa d'un exercice à l'autre — chantier distinct.
-        $componentCategoryMap = [
-            'Gros œuvre' => 'constructions',
-            'Toiture' => 'constructions',
-            'Installations électriques' => 'installations',
-            'Plomberie / sanitaire' => 'installations',
-            'Étanchéité' => 'agencements',
-            'Agencements intérieurs' => 'agencements',
-        ];
-
         foreach ($properties as $prop) {
             foreach ($this->depreciationService->depreciationDetailForYear($prop, $year) as $line) {
-                $category = match ($line['type']) {
-                    'building'  => $componentCategoryMap[$line['name']] ?? 'autres',
-                    'work'      => 'agencements',
-                    'furniture' => 'autres',
-                    // Les frais d'acquisition sont incorporés au coût du bâtiment.
-                    'notary'    => 'constructions',
-                };
+                $category = isset($categories[$line['cerfa_category'] ?? null])
+                    ? $line['cerfa_category']
+                    : 'autres';
 
                 $categories[$category]['brut'] += (int) $line['base'];
                 $categories[$category]['dotation'] += (int) $line['annual'];
