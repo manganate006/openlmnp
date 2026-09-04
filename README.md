@@ -78,7 +78,7 @@ reste recommandé.
 ### 🔌 Import & intégrations
 - **Import CSV Airbnb / Booking** — formats FR/EN, détection des doublons
 - **Export CSV** — recettes, charges, télédéclaration
-- **API MCP (44 outils)** — pilotez votre comptabilité depuis un assistant IA (Claude, etc.)
+- **API MCP (45 outils)** — pilotez votre comptabilité depuis un assistant IA (Claude, etc.)
 - **Mises à jour automatiques** — notification et déploiement depuis GitHub
 
 ### 🛡️ Confort & sécurité

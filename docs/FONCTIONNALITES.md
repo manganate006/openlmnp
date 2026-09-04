@@ -199,7 +199,7 @@ Deux transports sont disponibles :
 
 Pour permettre aux annuaires MCP et aux curieux d'**essayer** le serveur sans créer de compte,
 un **jeton démo partagé** peut être exposé, adossé au compte de démonstration à **données
-fictives**. Les 44 outils restent visibles, mais seuls les ~23 outils de **lecture/calcul**
+fictives**. Les 45 outils restent visibles, mais seuls les ~23 outils de **lecture/calcul**
 s'exécutent ; les outils d'écriture renvoient un message invitant à créer un compte. Un
 **rate-limiting par IP** protège l'instance.
 
