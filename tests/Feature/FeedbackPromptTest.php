@@ -222,6 +222,79 @@ it('never sends user_type as an event parameter', function () {
         ->assertDispatched('analytics', fn ($event, $params) => ! array_key_exists('user_type', $params[0]));
 });
 
+it('offers the hosted plan to nobody when no URL is configured', function () {
+    // LE test qui protège le dépôt public : sans URL, aucune sollicitation commerciale
+    // n'existe. C'est l'état par défaut, donc celui de toute instance auto-hébergée.
+    config()->set('feedback.links.pro', '');
+
+    $demo = User::factory()->create(['is_demo' => true]);
+
+    Livewire::actingAs($demo)
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSet('showsProCta', false)
+        ->assertDontSee('Cloud Pro')
+        // L'accroche reste celle du soutien au projet, pas celle de la conversion.
+        ->assertSee('Voici comment nous aider');
+});
+
+it('offers the hosted plan only from the demonstration, never to a real account', function () {
+    // Un compte réel est déjà client, ou auto-hébergé. Lui vendre l'offre n'a aucun sens.
+    config()->set('feedback.links.pro', 'https://openlmnp.fr/tarifs');
+
+    Livewire::actingAs($this->user)
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSet('audience', Feedback::AUDIENCE_USER)
+        ->assertSet('showsProCta', false)
+        ->assertDontSee('Cloud Pro');
+});
+
+it('offers the hosted plan to a demo visitor who likes the software', function () {
+    config()->set('feedback.links.pro', 'https://openlmnp.fr/tarifs?utm_source=app');
+    config()->set('demo.ttl_hours', 24);
+
+    $demo = User::factory()->create(['is_demo' => true]);
+
+    Livewire::actingAs($demo)
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSet('showsProCta', true)
+        ->assertSee('Gardez tout ça avec Cloud Pro')
+        ->assertSee('https://openlmnp.fr/tarifs?utm_source=app', false)
+        // Le compte d'heures vient de la config de l'instance, pas d'un texte figé.
+        ->assertSee('s\'efface dans 24 heures', false)
+        // L'hébergement par soi-même reste proposé : le produit est sous AGPL, taire
+        // cette voie au moment de vendre l'offre payante serait malhonnête.
+        ->assertSee('si vous préférez l\'héberger vous-même', false)
+        ->assertSee('Mettre une étoile sur GitHub');
+});
+
+it('annonce la vraie durée du bac à sable de cette instance', function () {
+    config()->set('feedback.links.pro', 'https://openlmnp.fr/tarifs');
+    config()->set('demo.ttl_hours', 72);
+
+    Livewire::actingAs(User::factory()->create(['is_demo' => true]))
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSee('s\'efface dans 72 heures', false);
+});
+
+it('never sells anything to someone who just said they were not convinced', function () {
+    config()->set('feedback.links.pro', 'https://openlmnp.fr/tarifs');
+
+    Livewire::actingAs(User::factory()->create(['is_demo' => true]))
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'negative')
+        ->assertSee('Désolé')
+        ->assertDontSee('Cloud Pro');
+});
+
 it('never publishes a testimonial written from the demonstration', function () {
     // Le retour est précieux, mais son auteur n'a pas tenu SA comptabilité dans le
     // logiciel : le publier comme retour d'usage serait un faux avis.
