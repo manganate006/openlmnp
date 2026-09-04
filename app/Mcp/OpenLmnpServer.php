@@ -60,6 +60,7 @@ class OpenLmnpServer extends Server
 
         // Calcul & export
         Tools\ComputeDepreciation::class,
+        Tools\EstimateMarketValue::class,
         Tools\ComputeFiscalYear::class,
         Tools\CompareMicroBic::class,
         Tools\ComputeLoanSchedule::class,

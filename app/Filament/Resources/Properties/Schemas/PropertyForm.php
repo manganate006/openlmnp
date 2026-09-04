@@ -2,20 +2,22 @@
 
 namespace App\Filament\Resources\Properties\Schemas;
 
+use App\Filament\Schemas\MarketValueEstimate;
 use App\Models\Property;
 use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class PropertyForm
@@ -227,10 +229,12 @@ class PropertyForm
                     ->step(1)
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
                     ->dehydrateStateUsing(fn ($state) => $state ? (int) round(((float) $state) * 100) : null)
+                    ->hintAction(MarketValueEstimate::action())
                     ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Si bien déjà possédé avant la location'),
                 DatePicker::make('market_value_date')
                     ->label('Date estimation')
                     ->displayFormat('d/m/Y'),
+                Hidden::make('insee_code'),
                 TextInput::make('land_percentage')
                     ->label('Terrain non amortissable')
                     ->suffix('%')
