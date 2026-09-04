@@ -21,6 +21,11 @@ permissions:
 jobs:
   build-push:
     runs-on: ubuntu-latest
+    # Le miroir privé `openlmnp-dev` reçoit les mêmes tags que le dépôt public, mais n'a pas
+    # les secrets Docker Hub : le job y échouait sur « Connexion Docker Hub » à chaque release,
+    # et GitHub envoyait un mail d'échec pour une image qu'on ne veut de toute façon pas
+    # publier depuis un miroir. Seul le dépôt public publie.
+    if: github.repository == 'manganate006/openlmnp'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
