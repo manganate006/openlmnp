@@ -29,6 +29,16 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250). L'amortissement réputé différé, lui,
   se reporte sans limite de durée (art. 39 C, II-3) — ce ne sont pas les mêmes règles, et ce
   n'était pas le même compteur
+- **Un contrôle de reprise, chiffre à chiffre.** Un service compare la liasse du dernier
+  exercice bouclé par le cabinet à ce que l'application reconstitue : immobilisations brutes
+  (2033-A case 028), amortissements cumulés (case 030), amortissements différés (2033-D case
+  870), déficits restants (case 984) et résultat (2033-B cases 352/354). Verdict par ligne :
+  vert jusqu'à 1 € d'écart — une liasse est arrondie à l'euro —, ambre jusqu'à 1 %, rouge
+  au-delà, avec les causes probables classées par fréquence : date de mise en location, part
+  du terrain, frais d'acquisition passés en charges, composant manquant, valeur vénale au
+  lieu du prix d'acquisition. Certaines pistes sont *corroborées* par les données du dossier
+  quand celles-ci les appuient — l'écart vaut exactement les frais de notaire, par exemple.
+  L'écran qui l'affiche arrive avec l'assistant de reprise
 - L'outil MCP `get_fiscal_year` expose les soldes d'ouverture et le suivi des déficits
   (lecture seule : aucun outil MCP ne les écrit)
 
