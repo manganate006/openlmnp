@@ -59,7 +59,8 @@ class FiscalYearService
      * comparer ce qui est stocké à ce qu'un recalcul donnerait : un mode « rapport » qui
      * persisterait au passage corrigerait ce qu'il prétend seulement décrire.
      *
-     * @return array<string, int> Les colonnes dérivées, en centimes
+     * @return array<string, mixed> Les colonnes dérivées, en centimes (sauf `deficit_detail`,
+     *                               tableau du stock de déficits par millésime)
      */
     public function computeTotals(FiscalYear $fiscalYear): array
     {
@@ -190,7 +191,10 @@ class FiscalYearService
         // 6. Résultat fiscal
         $fiscalResult = bcsub($resultBeforeDepreciation, $cappedDepreciation, 0);
 
-        // 7. Calcul TVA
+        // 7. Déficits reportables — APRÈS l'amortissement, jamais avant (cf. computeDeficits)
+        $deficits = $this->computeDeficits($fiscalYear, $previousYear, $year, $fiscalResult);
+
+        // 8. Calcul TVA
         $tvaBalance = bcsub($totalTvaCollected, $totalTvaDeductible, 0);
 
         return [
@@ -200,6 +204,10 @@ class FiscalYearService
             'capped_depreciation'           => (int) $cappedDepreciation,
             'deferred_depreciation'         => (int) $deferredDepreciation,
             'previous_deferred'             => (int) $carriedForward,
+            'previous_deficit'              => $deficits['previous_deficit'],
+            'deficit_imputed'               => $deficits['deficit_imputed'],
+            'deficit_carryforward'          => $deficits['deficit_carryforward'],
+            'deficit_detail'                => $deficits['deficit_detail'],
             'fiscal_result'                 => (int) $fiscalResult,
             'total_tva_collected'           => (int) $totalTvaCollected,
             'total_tva_deductible'          => (int) $totalTvaDeductible,
@@ -223,17 +231,178 @@ class FiscalYearService
      */
     private function carriedForwardDeferred(FiscalYear $fiscalYear, ?FiscalYear $previousYear): string
     {
-        $opening = (string) (int) $fiscalYear->opening_deferred_depreciation;
+        return $this->previousYearIsUsable($fiscalYear, $previousYear)
+            ? (string) (int) $previousYear->deferred_depreciation
+            : (string) (int) $fiscalYear->opening_deferred_depreciation;
+    }
 
+    /**
+     * L'exercice N-1 en base peut-il servir de source de report ?
+     *
+     * Non dans un seul cas, mais celui qui coûte cher : il existe, il est VIDE, et l'exercice
+     * courant porte des soldes d'ouverture. Ce sont alors les soldes d'ouverture qui font foi
+     * (voir `carriedForwardDeferred()`), pour les amortissements différés comme pour les déficits.
+     */
+    private function previousYearIsUsable(FiscalYear $fiscalYear, ?FiscalYear $previousYear): bool
+    {
         if ($previousYear === null) {
-            return $opening;
+            return false;
         }
 
-        if (bccomp($opening, '0', 0) > 0 && $previousYear->hasNoComputedData()) {
-            return $opening;
+        return ! ($fiscalYear->hasOpeningBalances() && $previousYear->hasNoComputedData());
+    }
+
+    /**
+     * Suivi des déficits reportables de l'exercice, par millésime (centimes).
+     *
+     * ORDRE D'IMPUTATION — sourcé, pas deviné. Les amortissements différés s'imputent D'ABORD,
+     * les déficits antérieurs ENSUITE :
+     *
+     *  - la reprise d'un amortissement dont la déduction avait été écartée par le 2 du II de
+     *    l'article 39 C du CGI est une déduction DU RÉSULTAT DE L'EXERCICE (CGI art. 39 C, II-3 ;
+     *    BOI-BIC-AMT-20-40-10-30 § 1 et § 10 : cette fraction « peut être déduite du résultat des
+     *    exercices suivants, en sus de l'annuité normale ») — elle intervient donc dans la
+     *    détermination même du résultat BIC ;
+     *  - le déficit antérieur, lui, s'impute sur un résultat DÉJÀ DÉTERMINÉ : le 1° ter du I de
+     *    l'article 156 « [a] trait aux seules modalités de détermination du revenu net global »,
+     *    le calcul du résultat BIC restant régi par les articles 38 et suivants
+     *    (BOI-BIC-DEF-20-10 § 70) ;
+     *  - le Conseil d'État l'a jugé explicitement : « un déficit ne peut s'imputer que sur le
+     *    bénéfice net de l'exercice sur lequel il est reporté, ce bénéfice ayant préalablement
+     *    été établi, après déduction de toutes charges, dont les amortissements »
+     *    (CE, 10 avril 2015, n° 369667, publié au recueil Lebon).
+     *
+     * L'ordre est donc mécanique dans ce service : `$fiscalResult` arrive ici APRÈS plafonnement
+     * et déduction des amortissements (étapes 5 et 6), et les déficits ne mordent que sur ce qu'il
+     * en reste. Corollaire à ne pas perdre de vue : tant qu'il reste du stock d'amortissement
+     * différé, le plafonnement ramène le résultat à 0 — aucun déficit antérieur n'est consommé
+     * cette année-là, alors que son délai de dix ans continue de courir.
+     *
+     * DURÉE : un déficit LMNP ne s'impute que sur les bénéfices de même nature des DIX années
+     * suivantes (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250, BOI-BIC-DEF-20-20 § 120),
+     * le millésime le plus ancien d'abord (BOI-BIC-DEF-20-10 § 50). L'amortissement différé, lui,
+     * n'est enfermé dans aucun délai (art. 39 C, II-3) : les deux stocks ne se gèrent pas pareil.
+     *
+     * @param  string  $fiscalResult  Résultat fiscal de l'exercice, en centimes, avant imputation
+     * @return array{previous_deficit: int, deficit_imputed: int, deficit_carryforward: int, deficit_detail: array}
+     */
+    private function computeDeficits(
+        FiscalYear $fiscalYear,
+        ?FiscalYear $previousYear,
+        int $year,
+        string $fiscalResult,
+    ): array {
+        $incoming = $this->previousYearIsUsable($fiscalYear, $previousYear)
+            ? self::normalizeDeficitVintages($previousYear->deficit_detail)
+            : self::normalizeDeficitVintages($fiscalYear->opening_deficits);
+
+        $rows = [];
+        $previousDeficit = '0';
+
+        foreach ($incoming as $vintage) {
+            $rows[] = [
+                'origin_year' => $vintage['origin_year'],
+                'opening'     => $vintage['remaining'],
+                'imputed'     => 0,
+                'expired'     => 0,
+                'remaining'   => $vintage['remaining'],
+            ];
+            $previousDeficit = bcadd($previousDeficit, (string) $vintage['remaining'], 0);
         }
 
-        return (string) (int) $previousYear->deferred_depreciation;
+        // 1. Péremption : un déficit né en N n'est imputable que jusqu'en N+10 inclus.
+        foreach ($rows as $index => $row) {
+            if ($year > $row['origin_year'] + FiscalYear::DEFICIT_CARRYFORWARD_YEARS) {
+                $rows[$index]['expired'] = $row['remaining'];
+                $rows[$index]['remaining'] = 0;
+            }
+        }
+
+        // 2. Imputation sur le bénéfice, du millésime le plus ancien au plus récent.
+        $available = bccomp($fiscalResult, '0', 0) > 0 ? $fiscalResult : '0';
+        $imputed = '0';
+
+        foreach ($rows as $index => $row) {
+            if (bccomp($available, '0', 0) <= 0 || $row['remaining'] <= 0) {
+                continue;
+            }
+
+            $take = bccomp((string) $row['remaining'], $available, 0) <= 0
+                ? (string) $row['remaining']
+                : $available;
+
+            $rows[$index]['imputed'] = (int) $take;
+            $rows[$index]['remaining'] = (int) bcsub((string) $row['remaining'], $take, 0);
+            $available = bcsub($available, $take, 0);
+            $imputed = bcadd($imputed, $take, 0);
+        }
+
+        // 3. Déficit de l'exercice : nouveau millésime, jamais imputable sur lui-même.
+        if (bccomp($fiscalResult, '0', 0) < 0) {
+            $rows[] = [
+                'origin_year' => $year,
+                'opening'     => 0,
+                'imputed'     => 0,
+                'expired'     => 0,
+                'remaining'   => (int) bcmul($fiscalResult, '-1', 0),
+            ];
+        }
+
+        $carryForward = '0';
+        foreach ($rows as $row) {
+            $carryForward = bcadd($carryForward, (string) $row['remaining'], 0);
+        }
+
+        // Un millésime sans rien à dire ne mérite pas d'être conservé.
+        $detail = array_values(array_filter(
+            $rows,
+            fn (array $row) => $row['opening'] > 0 || $row['remaining'] > 0 || $row['expired'] > 0,
+        ));
+
+        return [
+            'previous_deficit'     => (int) $previousDeficit,
+            'deficit_imputed'      => (int) $imputed,
+            'deficit_carryforward' => (int) $carryForward,
+            'deficit_detail'       => $detail,
+        ];
+    }
+
+    /**
+     * Ramène un stock de déficits à une liste ordonnée `[origin_year, remaining]`.
+     *
+     * Accepte les deux formes en circulation : celle des soldes d'ouverture recopiés d'une liasse
+     * (`amount`) et celle du détail calculé d'un exercice (`remaining`). Les millésimes soldés ou
+     * périmés disparaissent, les doublons de millésime sont fusionnés.
+     *
+     * @return array<int, array{origin_year: int, remaining: int}>
+     */
+    public static function normalizeDeficitVintages(?array $vintages): array
+    {
+        $byYear = [];
+
+        foreach ($vintages ?? [] as $vintage) {
+            if (! is_array($vintage)) {
+                continue;
+            }
+
+            $originYear = (int) ($vintage['origin_year'] ?? 0);
+            $amount = (int) ($vintage['remaining'] ?? $vintage['amount'] ?? 0);
+
+            if ($originYear <= 0 || $amount <= 0) {
+                continue;
+            }
+
+            $byYear[$originYear] = ($byYear[$originYear] ?? 0) + $amount;
+        }
+
+        ksort($byYear);
+
+        $normalized = [];
+        foreach ($byYear as $originYear => $amount) {
+            $normalized[] = ['origin_year' => $originYear, 'remaining' => $amount];
+        }
+
+        return $normalized;
     }
 
     /**
@@ -296,8 +465,16 @@ class FiscalYearService
             return;
         }
 
-        // Vérifier si le report N+1 est désynchronisé
-        if ((int) $nextYear->previous_deferred !== (int) $fiscalYear->deferred_depreciation) {
+        // Les deux stocks se propagent d'un exercice au suivant, et rien ne les rafraîchit seul.
+        $deferredOutOfSync = (int) $nextYear->previous_deferred !== (int) $fiscalYear->deferred_depreciation;
+        $deficitOutOfSync = (int) $nextYear->previous_deficit !== (int) $fiscalYear->deficit_carryforward;
+
+        // Un écart d'amortissement différé rouvre N+1 même clôturé : c'était déjà le cas, et la
+        // chaîne de report ne supporte pas le trou. Un écart de DÉFICIT, lui, ne rouvre pas un
+        // exercice clôturé : il porte une déclaration déposée, et le suivi de déficits vient
+        // seulement d'apparaître. `openlmnp:repair-deficits` le signale et le reconstitue à la
+        // demande, sans toucher au résultat déclaré.
+        if ($deferredOutOfSync || ($deficitOutOfSync && $nextYear->status !== FiscalYear::STATUS_CLOSED)) {
             // Recalcul de N+1 avec force=true (qui déclenchera récursivement N+2, etc.)
             $this->calculate($nextYear, force: true);
         }

@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Models\FiscalYear;
 use App\Models\Property;
 use App\Services\CsvExportService;
 use App\Services\FiscalYearService;
@@ -35,6 +36,26 @@ class Teledeclaration extends Page
     public function mount(): void
     {
         $this->year = (int) (request()->query('year', date('Y')));
+    }
+
+    /**
+     * Faut-il prévenir que le 2033-D a changé de règle ?
+     *
+     * Les cases 982/983/984 suivaient l'amortissement réputé différé au lieu des déficits :
+     * une liasse déjà téléchargée ou déjà transmise porte donc des déficits qui n'existent pas.
+     * Corriger sans le dire laisserait l'utilisateur devant deux liasses contradictoires sans
+     * savoir laquelle croire — l'encart n'apparaît que pour ceux qui sont concernés.
+     */
+    #[Computed]
+    public function showsDeficitCorrectionNotice(): bool
+    {
+        // BelongsToUserScope limite déjà la requête à l'utilisateur courant.
+        //
+        // ⚠️ On ne teste QUE `pdf_path`. `transmitted_at` serait le meilleur signal, mais la
+        // colonne n'existe pas en base : le modèle la déclare (`$fillable`, `casts`) et deux
+        // outils MCP la lisent, sans qu'aucune migration ne l'ait jamais créée. La lire sur un
+        // modèle rend `null` sans broncher ; l'interroger en SQL casserait la page.
+        return FiscalYear::query()->whereNotNull('pdf_path')->exists();
     }
 
     #[Computed]

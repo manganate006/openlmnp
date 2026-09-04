@@ -22,8 +22,37 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   créé par erreur puis jamais alimenté portait un report de 0 € qui l'emportait sur les
   12 000 € recopiés de la liasse, sans aucun signal. Le solde saisi est désormais conservé,
   et la situation est signalée dans la liste des exercices tant que l'exercice vide subsiste
-- L'outil MCP `get_fiscal_year` expose les soldes d'ouverture (lecture seule : aucun outil
-  MCP ne les écrit)
+- **Les déficits reportables sont enfin suivis pour eux-mêmes.** Chaque exercice porte son
+  stock de déficits antérieurs, ce qui en a été imputé sur le bénéfice, ce qui reste à
+  reporter, et le détail par millésime. L'imputation part du millésime le plus ancien et
+  s'arrête à dix ans : un déficit né en 2015 s'impute de 2016 à 2025, et disparaît en 2026
+  (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250). L'amortissement réputé différé, lui,
+  se reporte sans limite de durée (art. 39 C, II-3) — ce ne sont pas les mêmes règles, et ce
+  n'était pas le même compteur
+- L'outil MCP `get_fiscal_year` expose les soldes d'ouverture et le suivi des déficits
+  (lecture seule : aucun outil MCP ne les écrit)
+
+### Corrections
+
+- **⚠️ Le tableau 2033-D déclarait des déficits qui n'existaient pas.** Les cases 982, 983 et
+  984 suivent les **déficits reportables** ; elles étaient alimentées par le montant des
+  **amortissements réputés différés**. Tout bailleur ayant de l'amortissement différé — c'est
+  le cas le plus courant en LMNP — a donc déposé une liasse portant des déficits qu'il n'avait
+  pas. **Cette correction change des liasses déjà générées et déjà transmises.** Les cases
+  982/983/984 portent désormais les déficits, la case 860 le déficit de l'exercice et la case
+  870 le total d'amortissements différés reportables ; la case 360 du 2033-B reste
+  l'amortissement différé antérieur.
+
+  L'ordre d'imputation retenu est sourcé, pas déduit : les amortissements différés se
+  déduisent **du résultat de l'exercice** (BOI-BIC-AMT-20-40-10-30 § 10), le déficit antérieur
+  s'impute ensuite sur un résultat **déjà déterminé** (BOI-BIC-DEF-20-10 § 70 ; CE, 10 avril
+  2015, n° 369667). Conséquence : tant qu'il reste de l'amortissement différé, aucun déficit
+  antérieur n'est consommé — alors que son délai de dix ans continue de courir.
+
+  Les totaux d'exercice sont figés en base : la commande **`php artisan openlmnp:repair-deficits`**
+  reconstitue le suivi sur les dossiers déjà tenus (rapport par défaut, `--fix` pour écrire).
+  Elle ne réécrit que les colonnes de déficit — le résultat fiscal déclaré ne bouge pas. La
+  page « Aide à la télédéclaration » avertit les utilisateurs concernés.
 
 ## [1.3.2] - 2026-09-04
 
