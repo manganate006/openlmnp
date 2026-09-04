@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\Csv\DossierArchive;
+use App\Support\DocumentStorage;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 
@@ -117,13 +118,31 @@ class ExportDossierCommand extends Command
                 ->get();
 
             foreach ($documents as $document) {
-                if (! $document->file_path || ! Storage::disk()->exists($document->file_path)) {
+                if (! $document->file_path) {
+                    continue;
+                }
+
+                // ⚠️ Repli sur l'ancienne racine `storage/app`, comme le contrôleur de
+                // documents depuis la v1.4.1. Laravel 11 a déplacé le disque `local` vers
+                // `storage/app/private` : un justificatif déposé avant cette montée de
+                // version est INVISIBLE au disque courant. Sans ce repli, l'archive du
+                // dossier les sautait un par un — en silence, et en annonçant fièrement le
+                // nombre de fichiers copiés. Exporter son dossier pour changer d'instance
+                // et y perdre ses pièces les plus anciennes est le pire moment pour
+                // découvrir cette dette.
+                $disk = DocumentStorage::isLegacyOnly($document->file_path)
+                    ? DocumentStorage::legacyDisk()
+                    : Storage::disk();
+
+                if (! $disk->exists($document->file_path)) {
+                    $this->warn("  justificatif introuvable, ignoré : {$document->file_path}");
+
                     continue;
                 }
 
                 $destination = $target . '/' . basename($document->file_path);
 
-                if (@copy(Storage::disk()->path($document->file_path), $destination)) {
+                if (@copy($disk->path($document->file_path), $destination)) {
                     $copied++;
                 }
             }

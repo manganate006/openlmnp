@@ -9,6 +9,10 @@ use App\Models\PropertyWork;
 use App\Models\User;
 use App\Services\Csv\DossierArchive;
 use App\Services\DepreciationService;
+use App\Support\DocumentStorage;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Export / import du dossier complet (lot 5).
@@ -244,4 +248,63 @@ it('checks an archive without writing anything in dry-run', function () {
 it('fails cleanly on an unknown account or a missing file', function () {
     $this->artisan('openlmnp:export-dossier inconnu@example.test')->assertExitCode(1);
     $this->artisan('openlmnp:import-dossier source@example.test /tmp/nexiste-pas.json')->assertExitCode(1);
+});
+
+// === Justificatifs : la dette de la racine d'avant Laravel 11 ===
+//
+// `--documents` copie les pièces à côté du JSON. Laravel 11 ayant déplacé la racine du
+// disque `local` de `storage/app` vers `storage/app/private`, un justificatif déposé
+// AVANT cette montée de version est invisible au disque courant : l'export les sautait un
+// par un, en silence, tout en annonçant le nombre de fichiers copiés. Exporter son dossier
+// pour changer d'instance est le pire moment pour découvrir qu'il en manque.
+
+it('copies the documents that sit at the pre-Laravel-11 root as well', function () {
+    $storageRoot = sys_get_temp_dir() . '/olmnp-archive-docs-' . Str::random(12);
+    File::makeDirectory($storageRoot . '/app/private', 0755, true);
+
+    $this->app->useStoragePath($storageRoot);
+    config(['filesystems.disks.local.root' => $storageRoot . '/app/private']);
+    Storage::forgetDisk('local');
+
+    $expense = Expense::withoutGlobalScopes()->where('property_id', $this->property->id)->firstOrFail();
+
+    $current = "documents/{$this->user->id}/expenses/recente.pdf";
+    $legacy  = "documents/{$this->user->id}/expenses/ancienne.pdf";
+
+    Storage::disk('local')->put($current, 'pièce récente');
+    DocumentStorage::legacyDisk()->put($legacy, 'pièce héritée');
+
+    foreach ([$current, $legacy] as $index => $path) {
+        $expense->documents()->create([
+            'label' => 'Facture ' . $index,
+            'file_path' => $path,
+            'sort_order' => $index,
+        ]);
+    }
+
+    // Le socle du test : l'une des deux pièces est bien INVISIBLE au disque courant.
+    expect(Storage::disk('local')->exists($legacy))->toBeFalse()
+        ->and(DocumentStorage::isLegacyOnly($legacy))->toBeTrue();
+
+    // ⚠️ Répertoire d'export DÉDIÉ, et vidé d'abord. `--documents` écrit dans
+    // `dirname(--output)/documents` : viser `/tmp` directement ferait porter l'assertion
+    // sur les fichiers laissés par l'exécution précédente. Ce test passait des deux côtés
+    // avant qu'on s'en aperçoive.
+    $exportDir = sys_get_temp_dir() . '/olmnp-export-' . Str::random(12);
+    File::deleteDirectory($exportDir);
+    File::makeDirectory($exportDir, 0755, true);
+
+    $output = $exportDir . '/dossier.json';
+
+    $this->artisan("openlmnp:export-dossier source@example.test --output={$output} --documents")
+        ->assertExitCode(0);
+
+    $names = array_map('basename', glob($exportDir . '/documents/*') ?: []);
+
+    expect($names)->toContain('recente.pdf')
+        // La pièce restée à l'ancienne racine : sans repli, elle était sautée en silence.
+        ->and($names)->toContain('ancienne.pdf');
+
+    File::deleteDirectory($exportDir);
+    File::deleteDirectory($storageRoot);
 });

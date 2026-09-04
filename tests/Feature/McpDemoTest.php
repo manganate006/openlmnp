@@ -58,7 +58,7 @@ function demoCall(string $token, string $tool, array $args = [])
     ]);
 }
 
-// === VISIBILITÉ : les 44 outils restent visibles ===
+// === VISIBILITÉ : les 45 outils restent visibles ===
 
 it('keeps write tools visible in tools/list for the demo token', function () {
     $response = $this->withToken($this->demoToken)->postJson('/mcp', [

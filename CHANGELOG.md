@@ -2,7 +2,7 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
-## [1.4.0] - à paraître
+## [1.5.0] - à paraître
 
 > ⚠️ **Cette version change des liasses fiscales déjà générées.** La correction du tableau
 > 2033-D (cases 982/983/984, détaillée plus bas) modifie ce que l'application imprime pour
@@ -117,6 +117,59 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 - `openlmnp:recompute-depreciation` : signale (et corrige sur demande) les dotations qui ne
   reflètent plus le plan, sans jamais toucher une dotation saisie à la main ni un cumul
   d'ouverture aberrant, qu'elle se contente de nommer
+
+## [1.4.1] - 2026-09-04
+
+### Corrections
+
+- **Les justificatifs déposés avant la montée en Laravel 11 redeviennent lisibles.**
+  Laravel 11 a déplacé la racine du disque `local` de `storage/app` vers
+  `storage/app/private`. Les chemins en base étant relatifs à cette racine, les fichiers
+  déposés avant la montée de version sont restés à l'ancien emplacement : l'application
+  ne les servait plus. Rien ne cassait, rien n'alertait - les pièces disparaissaient
+  simplement de l'interface. Toute instance ayant franchi cette montée de version est
+  concernée, pas seulement la nôtre
+- **Commande `openlmnp:migrate-document-storage`** - rapport par défaut, `--fix` pour
+  déplacer. Elle n'écrase jamais un fichier déjà présent à la nouvelle racine : ce cas
+  est signalé, pas exécuté. Elle énumère les dossiers à rapatrier (`documents`, `fec`,
+  `tax-returns`) plutôt que de parcourir `storage/app`, qui contient la nouvelle racine
+  et emporterait la clé d'instance au passage
+- **Repli de lecture** dans le contrôleur de documents, pour les instances où la commande
+  ne sera jamais lancée : un justificatif introuvable à la nouvelle racine est cherché à
+  l'ancienne avant d'être déclaré perdu
+
+## [1.4.0] - 2026-09-04
+
+### Ajouts
+
+- **Estimation de la valeur vénale d'un bien, à partir des ventes réelles.** La fiche
+  d'un bien propose désormais d'estimer sa valeur de marché depuis les **demandes de
+  valeurs foncières** (DVF) publiées par la DGFiP : les ventes de la commune, filtrées
+  par type de bien, ramenées à un prix au mètre carré dont on prend la **médiane**. La
+  taille de l'échantillon et les millésimes retenus sont affichés avec le résultat -
+  sans quoi une médiane calculée sur trois ventes se lirait comme une vérité
+- **Une estimation trop mince n'est pas affichée du tout.** Si la commune ne fournit
+  pas `DVF_MIN_SAMPLE` ventes comparables (5 par défaut), la recherche s'élargit aux
+  millésimes voisins, jusqu'à trois. Si le compte n'y est toujours pas, l'écran dit
+  combien de ventes il a trouvées et s'arrête là, plutôt que d'habiller un chiffre
+  d'une réserve que personne ne lit
+- **La valeur vénale sert la répartition par composants.** C'est son usage : la base
+  amortissable se répartit sur la valeur du bien hors terrain, et cette valeur devait
+  jusqu'ici être saisie de mémoire ou cherchée ailleurs
+- **45ᵉ outil MCP** - `estimate_market_value`, qui expose la même estimation à un
+  assistant IA, avec les mêmes garde-fous d'échantillon
+- **Commande `openlmnp:refresh-dvf-years`** - les millésimes DVF disponibles sont
+  relevés auprès de la source au lieu d'être figés dans la configuration : un nouveau
+  millésime est pris en compte sans mise à jour de l'application
+
+### Notes d'exploitation
+
+- La fonction est **active par défaut** (`DVF_ENABLED=true`) et n'exige aucune clé :
+  l'API DVF est publique. Elle s'éteint par `DVF_ENABLED=false`
+- Aucune donnée du bien n'est transmise : seule la **commune** (code INSEE) et le type
+  de bien partent à l'API. Les propriétés gagnent une colonne `insee_code`
+- Les réponses sont mises en cache `DVF_CACHE_DAYS` jours et l'appel est limité par
+  `DVF_RATE_LIMIT` - une instance auto-hébergée ne martèle pas un service public
 
 ## [1.3.2] - 2026-09-04
 
