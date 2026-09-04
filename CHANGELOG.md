@@ -117,6 +117,53 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 - `openlmnp:recompute-depreciation` : signale (et corrige sur demande) les dotations qui ne
   reflètent plus le plan, sans jamais toucher une dotation saisie à la main ni un cumul
   d'ouverture aberrant, qu'elle se contente de nommer
+## [1.4.4] - 2026-09-04
+
+### Corrections
+
+- **L'assistant d'import annuel n'importait jamais les recettes Airbnb.** Son étape
+  « Recettes Airbnb » acceptait un fichier, ne le lisait pas, et affichait « Import
+  terminé » — sans erreur, sans avertissement, et sans avoir créé la moindre recette.
+  L'état d'un champ de dépôt de fichier est une structure, jamais un simple chemin : le
+  test qui gardait le bloc d'import était donc toujours faux, et tout l'import sauté.
+  Un bailleur pouvait croire ses recettes de l'année enregistrées alors qu'elles
+  manquaient — dans une déclaration fiscale
+- **La date de télédéclaration d'un exercice devient une vraie colonne.**
+  `fiscal_years.transmitted_at` était déclarée dans le modèle et exposée par deux outils
+  MCP, mais aucune migration ne l'avait jamais créée. Elle rendait `null` à la lecture,
+  ce qui la rendait invisible. ⚠️ Plus gênant : SQLite traite un nom de colonne inconnu
+  entre guillemets comme du texte, donc un filtre sur cette colonne rendait **toutes**
+  les lignes au lieu d'aucune, sans jamais signaler d'erreur. Elle reste vide pour les
+  exercices existants : rien ne permet de reconstituer après coup ce qui a été déposé
+
+## [1.4.3] - 2026-09-04
+
+### Corrections
+
+- **Une écriture sur quatre pouvait être perdue quand plusieurs requêtes se croisaient.**
+  Depuis la version 1.2.0 le serveur sert quatre requêtes de front, mais la base était
+  restée réglée pour un seul écrivain : mesuré à quatre requêtes simultanées, **27 % des
+  transactions échouaient sur « database is locked »**. La base passe en journal WAL, avec
+  des transactions ouvertes en mode `IMMEDIATE` et une attente de verrou bornée à 5 s —
+  plus aucune transaction perdue dans la même mesure, et une écriture 240 fois moins
+  coûteuse sur le disque (7,30 ms → 0,03 ms)
+
+  ⚠️ Le journal WAL seul n'aurait pas suffi, il aurait aggravé le défaut : une transaction
+  ouverte en lecture qui se met à écrire reçoit un refus **sans que le délai d'attente
+  soit consulté**, et le mode WAL rend ce cas plus fréquent (66 % de pertes dans la même
+  mesure). C'est l'ouverture en mode `IMMEDIATE` qui résout le problème
+
+  Les quatre réglages restent surchargeables (`DB_JOURNAL_MODE`, `DB_SYNCHRONOUS`,
+  `DB_BUSY_TIMEOUT`, `DB_TRANSACTION_MODE`) : **une base placée sur un stockage réseau**
+  (NFS, SMB, partage d'un NAS) ne supporte pas le mode WAL et doit être lancée avec
+  `-e DB_JOURNAL_MODE=delete -e DB_SYNCHRONOUS=FULL`
+
+- ⚠️ **Sauvegardes — à lire si vous sauvegardez vous-même.** En mode WAL, les dernières
+  écritures vivent dans un fichier `database.sqlite-wal` voisin. Copier le seul
+  `database.sqlite` d'une instance en service donne désormais une base **incomplète, sans
+  message d'erreur**. `INSTALLATION.md` et la FAQ décrivaient précisément cette méthode :
+  ils indiquent maintenant la commande d'instantané à utiliser à la place
+
 ## [1.4.2] - 2026-09-05
 
 ### Ajouts

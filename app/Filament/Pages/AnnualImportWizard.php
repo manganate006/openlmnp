@@ -300,14 +300,28 @@ class AnnualImportWizard extends Page implements HasForms
         $messages = [];
 
         // 1. Import CSV Airbnb
-        if (!empty($data['import_airbnb']) && !empty($data['csv_file'])) {
-            $tempFile = $data['csv_file'];
+        //
+        // ⚠️ L'état BRUT d'un `FileUpload` est un TABLEAU (`[clé => TemporaryUploadedFile]`), et
+        // le fichier n'atteint le disque qu'à la déshydratation (`beforeStateDehydrated` →
+        // `saveUploadedFiles()`). Cette page lit `$this->data`, jamais `$this->form->getState()` :
+        // le `is_string($data['csv_file'])` qui gardait ce bloc était donc TOUJOURS faux.
+        // L'étape « Recettes Airbnb » de l'assistant n'a jamais rien importé — sans erreur, sans
+        // message, et suivie d'une notification « Import terminé ». On passe donc par le
+        // composant, qui range le fichier là où il l'a déclaré et rend le chemin obtenu.
+        if (! empty($data['import_airbnb'])) {
+            $csvField = $this->form->getComponent(
+                fn ($component) => $component instanceof FileUpload && $component->getName() === 'csv_file',
+                withHidden: true,
+            );
 
-            if (is_string($tempFile)) {
-                $disk = \Illuminate\Support\Facades\Storage::disk();
-                $path = $disk->exists($tempFile) ? $disk->path($tempFile) : storage_path('app/public/' . $tempFile);
-                if (file_exists($path)) {
-                    $uploadedFile = new UploadedFile($path, basename($path));
+            $csvField?->saveUploadedFiles();
+            $tempFile = is_string($state = $csvField?->getState()) ? $state : null;
+
+            if ($tempFile !== null && $tempFile !== '') {
+                $disk = \Illuminate\Support\Facades\Storage::disk('local');
+
+                if ($disk->exists($tempFile)) {
+                    $uploadedFile = new UploadedFile($disk->path($tempFile), basename($tempFile));
                     $result = app(AirbnbImportService::class)->import($uploadedFile, $property);
                     $this->importResult = $result;
                     $messages[] = $result['imported'] . ' recette(s) importée(s)';
