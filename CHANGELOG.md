@@ -2,6 +2,36 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.3.2] - 2026-09-04
+
+### Corrections
+
+- **Le taux de commission Airbnb ne propose plus de valeur par défaut.** Le champ
+  « Taux commission Airbnb » d'un bien était pré-rempli à 3,6 %, et son infobulle
+  présentait le modèle des « frais partagés » (3 % + TVA) comme le seul existant.
+  Airbnb généralise en France les « frais hôte uniquement » le 13 octobre 2026 :
+  15,5 % hors taxes, soit 18,6 % TVA comprise. Ce taux sert à reconstituer le
+  montant brut depuis l'export « Réservations », qui ne détaille pas la commission ;
+  laissé à 3,6 % sur des réservations relevant du nouveau modèle, il minore la
+  recette déclarée de quinze points - sur une déclaration fiscale, pas sur un
+  tableau de bord
+- **L'import dit désormais ce qu'il ne peut pas savoir.** Le modèle de frais
+  applicable dépend de la date de **confirmation** de la réservation, que l'export
+  « Réservations » ne contient pas : un taux unique par bien est donc faux pour une
+  partie des lignes tant que des réservations antérieures à la bascule restent à
+  honorer. Sans taux configuré, l'import nomme les deux valeurs possibles au lieu de
+  réclamer « le taux » ; avec un taux, il rappelle cette limite. L'export
+  « Historique des transactions », qui porte la commission réellement prélevée ligne
+  par ligne, reste le seul à traverser la période sans approximation
+
+> Les taux déjà enregistrés ne sont pas modifiés : 3,6 % reste le bon taux pour les
+> réservations confirmées avant la bascule.
+
+### Interne
+
+- 3 tests sur la reconstitution du brut et les avertissements d'import, dont 2
+  vérifiés en échec sur le code précédent
+
 ## [1.3.1] - 2026-09-03
 
 ### Corrections
