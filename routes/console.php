@@ -12,3 +12,7 @@ Schedule::command('app:auto-update')->hourly();
 Schedule::command('openlmnp:demo-cleanup')->hourly();
 // Check-in anonyme quotidien (télémétrie opt-out) — compte les instances self-hosted.
 Schedule::command('app:instance-checkin')->daily();
+// Relève les millésimes DVF publiés (data.gouv.fr en republie deux par an). Hors requête :
+// `DvfClient::years()` ne fait AUCUN appel réseau, l'appel sortant reste déclenché par un clic.
+// Sans effet si DVF_ENABLED=false.
+Schedule::command('dvf:refresh-years')->weeklyOn(1, '05:00');

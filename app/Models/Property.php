@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string      $address
  * @property string      $city
  * @property string      $postal_code
+ * @property string|null $insee_code             code INSEE de la commune (estimation DVF)
  * @property string      $type
  * @property int         $total_area             m² total du logement
  * @property int         $rented_area            m² loués (quote-part)
@@ -61,6 +62,7 @@ class Property extends Model
         'address',
         'city',
         'postal_code',
+        'insee_code',
         'type',
         'total_area',
         'rented_area',
