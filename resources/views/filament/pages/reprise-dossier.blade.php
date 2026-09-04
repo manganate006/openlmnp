@@ -10,6 +10,10 @@
     l'éditeur d'amortissements existant, avec ses deux modes, et non un troisième éditeur.
 --}}
 <x-filament-panels::page>
+    {{-- Style + composant Alpine de l'éditeur : présents dès le premier rendu, sinon
+         l'étape 3 apparaîtrait par un morphing Livewire, qui n'exécute pas les <script>. --}}
+    @include('filament.partials.depreciation-editor-assets')
+
     <style>
         .rp-wizard { --rp-shadow: rgba(0, 0, 0, .10); }
 
@@ -137,10 +141,6 @@
             {{-- ============ Fin — ce qui a été repris, et ce qui ne l'a pas été ============ --}}
             @php $recap = $this->recap(); @endphp
             <div class="rp-screen">
-                <div class="rp-screen-head">
-                    <h2>Votre dossier est repris</h2>
-                    <p>Vous pouvez créer votre exercice {{ $this->firstYear }}. Vos reports sont en place.</p>
-                </div>
                 <div class="rp-body">
                     <div class="rp-recap">
                         <div class="rp-recap-card">
@@ -186,13 +186,6 @@
             </div>
         @else
             <div class="rp-screen">
-                @if($this->step === 1)
-                    <div class="rp-screen-head">
-                        <h2>Reprendre un dossier existant</h2>
-                        <p>Nous allons reprendre votre plan d'amortissement et vos reports à partir de votre dernière liasse fiscale.</p>
-                    </div>
-                @endif
-
                 {{-- ============ Fil des étapes ============ --}}
                 <nav class="rp-steps">
                     @foreach($this->steps() as $index => $stepDefinition)
@@ -218,7 +211,8 @@
                             <div class="rp-field">
                                 <label for="rp-rental-start">Depuis quand louez-vous ce bien ?</label>
                                 <div @class(['rp-input', 'rp-input-bad' => isset($this->stepErrors['rentalStartDate'])])>
-                                    <input id="rp-rental-start" type="date" wire:model="rentalStartDate">
+                                    <input id="rp-rental-start" type="text" inputmode="numeric" placeholder="jj/mm/aaaa" wire:model="rentalStartDate">
+                                    <i>jj/mm/aaaa</i>
                                 </div>
                                 <span class="rp-hint">C'est la date qui fait démarrer vos amortissements.</span>
                                 @isset($this->stepErrors['rentalStartDate'])
@@ -355,7 +349,8 @@
                                 <div class="rp-field">
                                     <label for="rp-acquisition-date">Date d'acquisition</label>
                                     <div class="rp-input">
-                                        <input id="rp-acquisition-date" type="date" wire:model="acquisitionDate">
+                                        <input id="rp-acquisition-date" type="text" inputmode="numeric" placeholder="jj/mm/aaaa" wire:model="acquisitionDate">
+                                        <i>jj/mm/aaaa</i>
                                     </div>
                                     <span class="rp-hint">Laissée vide, la date de mise en location est retenue.</span>
                                 </div>
@@ -366,7 +361,7 @@
                             <div class="rp-field">
                                 <label for="rp-price">Prix d'acquisition</label>
                                 <div @class(['rp-input', 'rp-input-bad' => isset($this->stepErrors['acquisitionPrice'])])>
-                                    <input id="rp-price" type="text" inputmode="decimal" wire:model="acquisitionPrice">
+                                    <input id="rp-price" type="text" inputmode="decimal" wire:model.live.debounce.600ms="acquisitionPrice">
                                     <i>€</i>
                                 </div>
                                 <span class="rp-hint">

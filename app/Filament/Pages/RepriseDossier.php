@@ -50,6 +50,19 @@ class RepriseDossier extends Page
 
     protected string $view = 'filament.pages.reprise-dossier';
 
+    public function getHeading(): string
+    {
+        return $this->finished ? 'Votre dossier est repris' : 'Reprendre un dossier existant';
+    }
+
+    public function getSubheading(): ?string
+    {
+        return $this->finished
+            ? 'Vous pouvez créer votre exercice ' . $this->firstYear . '. Vos reports sont en place.'
+            : 'Nous allons reprendre votre plan d\'amortissement et vos reports à partir de votre '
+              . 'dernière liasse fiscale.';
+    }
+
     /** Recopier les lignes de sa liasse : saisie en euros, `base_source = manual`. */
     public const METHOD_COPY = 'copy';
 
@@ -138,8 +151,8 @@ class RepriseDossier extends Page
         $this->propertyCity = (string) $property->city;
         $this->propertyPostalCode = (string) $property->postal_code;
         $this->propertyArea = (string) $property->total_area;
-        $this->acquisitionDate = $property->acquisition_date?->format('Y-m-d');
-        $this->rentalStartDate = $property->rental_start_date?->format('Y-m-d');
+        $this->acquisitionDate = self::displayDate($property->acquisition_date);
+        $this->rentalStartDate = self::displayDate($property->rental_start_date);
         $this->acquisitionPrice = self::eurosFromCents((int) $property->acquisition_price);
         $this->notaryFees = self::eurosFromCents((int) $property->notary_fees);
         $this->agencyFees = self::eurosFromCents((int) $property->agency_fees);
@@ -435,17 +448,46 @@ class RepriseDossier extends Page
         return $errors;
     }
 
+    /**
+     * Lit une date saisie.
+     *
+     * ⚠️ `Carbon::parse('01/06/2019')` rend le **6 janvier** : `strtotime` lit les dates
+     * séparées par des barres obliques à l'américaine. Sur un assistant où l'on recopie
+     * « loué depuis le 01/06/2019 », l'erreur décalerait tout le prorata de première année
+     * sans rien afficher d'anormal. Le format français est donc essayé EN PREMIER, et
+     * explicitement.
+     */
     private function parseDate(?string $raw): ?Carbon
     {
-        if ($raw === null || trim($raw) === '') {
+        $value = trim((string) ($raw ?? ''));
+
+        if ($value === '') {
             return null;
         }
 
-        try {
-            return Carbon::parse(trim($raw));
-        } catch (\Throwable) {
-            return null;
+        foreach (['d/m/Y', 'd-m-Y', 'Y-m-d'] as $format) {
+            try {
+                // Carbon 3 LÈVE une exception au lieu de rendre `false` : sans ce try, une
+                // saisie en cours (« 01/0 ») ferait planter le rendu de la page.
+                $date = Carbon::createFromFormat($format, $value);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            // Comparaison aller-retour : `createFromFormat` accepte « 32/13/2019 » en
+            // débordant sur le mois suivant. On refuse ce que l'utilisateur n'a pas écrit.
+            if ($date !== false && $date->format($format) === $value) {
+                return $date->startOfDay();
+            }
         }
+
+        return null;
+    }
+
+    /** Date d'un modèle, telle qu'elle doit s'afficher dans les champs de l'assistant. */
+    private static function displayDate(?\Carbon\CarbonInterface $date): ?string
+    {
+        return $date?->format('d/m/Y');
     }
 
     // -------------------------------------------------------------------------

@@ -121,7 +121,7 @@ class OnboardingWizard extends Page implements HasForms
             ->description('Présentation de l\'assistant')
             ->schema([
                 Placeholder::make('welcome_text')
-                    ->label('')
+                    ->hiddenLabel()
                     ->content(new HtmlString(
                         '<div class="rounded-xl border border-primary-200 bg-primary-50 p-6 dark:border-primary-700 dark:bg-primary-900/20">'
                         . '<h2 class="text-xl font-bold text-primary-700 dark:text-primary-300 mb-3">Bienvenue sur OpenLMNP !</h2>'
@@ -144,8 +144,10 @@ class OnboardingWizard extends Page implements HasForms
                 // dérouler l'assistant de premier lancement puis découvrir, une fois son
                 // bien créé, que ses amortissements passés ont disparu : la reprise se
                 // propose ICI, au premier écran, sinon personne ne la trouve.
+                // `->label('')` n'efface pas le libellé dans Filament 5 : il affiche le nom
+                // du champ (« Start choice »). `hiddenLabel()` est le seul qui le retire.
                 Placeholder::make('start_choice')
-                    ->label('')
+                    ->hiddenLabel()
                     ->content(new HtmlString(
                         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px;margin-top:16px;">'
                         . '<div style="padding:13px 14px;border-radius:12px;background:var(--olmnp-success-bg);border:1px solid var(--olmnp-success-solid);">'

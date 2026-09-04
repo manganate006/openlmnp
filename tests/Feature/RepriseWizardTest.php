@@ -137,6 +137,38 @@ it('creates the property at step 2 and converts euros to cents exactly once', fu
         ->and($property->acquisition_date->format('Y-m-d'))->toBe('2019-06-01');
 });
 
+it('reads a French date the French way', function () {
+    Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        // « 01/06/2019 » sur une liasse, c'est le 1er juin. `Carbon::parse()` y lirait le
+        // 6 janvier — strtotime lit les barres obliques à l'américaine — et tout le prorata
+        // de première année serait décalé sans que rien ne le signale.
+        ->set('rentalStartDate', '01/06/2019')
+        ->set('firstYear', 2026)
+        ->call('nextStep')
+        ->set('propertyName', 'Appartement repris')
+        ->set('propertyAddress', '12 rue de la Liasse')
+        ->set('propertyCity', 'Bordeaux')
+        ->set('propertyPostalCode', '33000')
+        ->set('propertyArea', '45')
+        ->set('acquisitionPrice', '200000')
+        ->call('nextStep')
+        ->assertSet('step', 3);
+
+    $property = Property::withoutGlobalScopes()->where('user_id', $this->user->id)->firstOrFail();
+
+    expect($property->rental_start_date->format('Y-m-d'))->toBe('2019-06-01');
+});
+
+it('refuses a date it cannot read rather than guessing', function () {
+    Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', 'juin 2019')
+        ->call('nextStep')
+        ->assertSet('step', 1)
+        ->assertSee('Indiquez la date de mise en location');
+});
+
 it('reads a decimal amount written with a comma', function () {
     expect(RepriseDossier::centsFromEuros('1 250,50'))->toBe(125_050)
         ->and(RepriseDossier::centsFromEuros('12480'))->toBe(1_248_000)
