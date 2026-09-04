@@ -266,9 +266,9 @@ class PropertyForm
                 ->step(0.01)
                 ->minValue(0)
                 ->maxValue(30)
-                ->default(3.6)
-                ->placeholder('3.6')
-                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Frais de service hôte + TVA. Modèle split fee = 3% + TVA (20%) = 3,6%. Utilisé pour recalculer le brut lors de l\'import CSV Réservations.'),
+                ->placeholder('18.6')
+                ->helperText('Frais de service hôte, TVA comprise. Frais partagés : 3 % + TVA = 3,6 %. Frais hôte uniquement (généralisé en France le 13/10/2026) : 15,5 % + TVA = 18,6 %. Le taux dépend de la date de confirmation de la réservation, pas du séjour.')
+                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Sert uniquement à reconstituer le brut depuis l\'export « Réservations », qui ne détaille pas la commission. L\'export « Historique des transactions » porte la commission réelle ligne par ligne : préférez-le dès que vos réservations relèvent des deux modèles.'),
             Repeater::make('listing_urls')
                 ->label('Liens d\'annonces')
                 ->schema([

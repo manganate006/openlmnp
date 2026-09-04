@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Income;
 use App\Models\Property;
 use App\Models\User;
 use App\Services\AirbnbImportService;
@@ -112,4 +113,65 @@ it('rejects csv files exceeding the maximum size on preview', function () {
     expect($result['rows'])->toBe([]);
     expect($result['errors'])->toHaveCount(1);
     expect($result['errors'][0])->toContain('taille maximum autorisée');
+});
+
+/**
+ * Bascule Airbnb du 13/10/2026 : les « frais partagés » (3 % HT, 3,6 % TTC côté hôte)
+ * laissent place aux « frais hôte uniquement » (15,5 % HT, 18,6 % TTC). L'export
+ * « Réservations » ne donnant que le net, la reconstitution du brut doit suivre le taux
+ * du bien - sinon la recette déclarée est minorée de quinze points.
+ */
+it('reconstructs gross and commission at the host-only fee rate', function () {
+    $this->property->update(['airbnb_commission_rate' => 18.6]);
+
+    // Export « Réservations » : aucune colonne de commission, le montant est déjà net.
+    $csv = "Date,Code de confirmation,Montant,Voyageur\n";
+    $csv .= "2026-11-04,HOSTONLY1,814.00,Marie Durand\n";
+
+    $file = UploadedFile::fake()->createWithContent('reservations.csv', $csv);
+    $result = $this->service->import($file, $this->property);
+
+    expect($result['imported'])->toBe(1);
+
+    $income = Income::where('reservation_ref', 'HOSTONLY1')->firstOrFail();
+    expect($income->amount)->toBe(100000);      // 1 000,00 € bruts
+    expect($income->platform_fee)->toBe(18600); // 186,00 € de commission
+});
+
+/**
+ * Le modèle applicable dépend de la date de CONFIRMATION de la réservation, absente de
+ * l'export « Réservations ». Un taux unique par bien est donc nécessairement faux pour une
+ * partie des lignes tant que des réservations d'avant la bascule restent à venir. L'import
+ * doit le dire au lieu de produire un brut faussement précis.
+ */
+it('warns that one commission rate cannot cover both airbnb fee models', function () {
+    $this->property->update(['airbnb_commission_rate' => 3.6]);
+
+    $csv = "Date,Code de confirmation,Montant\n";
+    $csv .= "2026-11-04,MIXED1,964.00\n";
+
+    $file = UploadedFile::fake()->createWithContent('reservations.csv', $csv);
+    $result = $this->service->preview($file, $this->property);
+
+    $warnings = implode(' | ', $result['warnings']);
+    expect($warnings)->toContain('date de confirmation');
+    expect($warnings)->toContain('3,60 %');
+});
+
+/**
+ * Sans taux configuré, l'import ne doit rien reconstituer en silence : il réclame le taux
+ * et nomme les deux valeurs possibles, puisque le lecteur n'a aucune raison de les connaître.
+ */
+it('asks for a commission rate and names both fee models when none is set', function () {
+    $this->property->update(['airbnb_commission_rate' => null]);
+
+    $csv = "Date,Code de confirmation,Montant\n";
+    $csv .= "2026-11-04,NORATE1,814.00\n";
+
+    $file = UploadedFile::fake()->createWithContent('reservations.csv', $csv);
+    $result = $this->service->preview($file, $this->property);
+
+    $warnings = implode(' | ', $result['warnings']);
+    expect($warnings)->toContain('3,6 %');
+    expect($warnings)->toContain('18,6 %');
 });

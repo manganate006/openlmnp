@@ -72,7 +72,19 @@ class AirbnbImportService
         if ($isNetFormat) {
             $warnings[] = 'Format « Réservations » détecté : la date utilisée est la date de début du séjour. Pour une comptabilité plus précise (date d\'encaissement, commission détaillée), préférez l\'export « Historique des transactions » depuis Airbnb.';
             if (! $property->airbnb_commission_rate) {
-                $warnings[] = 'Ce CSV ne contient pas la commission Airbnb. Configurez le taux de commission dans les paramètres du bien pour recalculer automatiquement le montant brut et la commission.';
+                $warnings[] = 'Ce CSV ne contient pas la commission Airbnb. Renseignez le taux de commission dans les paramètres du bien pour reconstituer le montant brut : 3,6 % pour les frais partagés, 18,6 % pour les frais hôte uniquement (TVA comprise).';
+            } else {
+                // Airbnb généralise les « frais hôte uniquement » en France le 13/10/2026 (15,5 % HT,
+                // 18,6 % TTC), contre 3 % HT / 3,6 % TTC en frais partagés. Le modèle applicable dépend
+                // de la date de CONFIRMATION de la réservation, que cet export ne contient pas : un taux
+                // unique est donc faux pour une partie des lignes pendant toute la période de cohabitation.
+                $warnings[] = sprintf(
+                    'Le brut est reconstitué avec un taux unique de %s %%. Depuis la bascule d\'Airbnb vers '
+                    .'les frais hôte uniquement (France, 13/10/2026), le taux dépend de la date de confirmation '
+                    .'de chaque réservation, que cet export ne contient pas. Si vos réservations relèvent des '
+                    .'deux modèles, seul l\'export « Historique des transactions » donne la commission réelle.',
+                    number_format((float) $property->airbnb_commission_rate, 2, ',', ' ')
+                );
             }
         }
 
