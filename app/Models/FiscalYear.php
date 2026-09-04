@@ -14,6 +14,16 @@ class FiscalYear extends Model
     public const STATUS_DRAFT  = 'draft';
     public const STATUS_CLOSED = 'closed';
 
+    /**
+     * Durée de report d'un déficit LMNP : les DIX années suivant celle de sa réalisation
+     * (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250 et BOI-BIC-DEF-20-20 § 120).
+     * Un déficit né en 2015 est imputable de 2016 à 2025 inclus, perdu à compter de 2026.
+     *
+     * ⚠️ Ne pas confondre avec le 1° bis du même article (BIC non professionnels en général),
+     * qui n'ouvre que SIX ans et ne concerne pas la location meublée.
+     */
+    public const DEFICIT_CARRYFORWARD_YEARS = 10;
+
     /** Provenance des soldes d'ouverture d'un exercice de reprise. */
     public const OPENING_SOURCE_LIASSE = 'liasse';
     public const OPENING_SOURCE_MANUAL = 'manuel';
@@ -33,6 +43,10 @@ class FiscalYear extends Model
         'opening_deficits',
         'opening_accumulated_depreciation',
         'opening_source',
+        'previous_deficit',
+        'deficit_imputed',
+        'deficit_carryforward',
+        'deficit_detail',
         'fiscal_result',
         'total_tva_collected',
         'total_tva_deductible',
@@ -49,6 +63,7 @@ class FiscalYear extends Model
         return [
             'form_data'        => 'array',
             'opening_deficits' => 'array',
+            'deficit_detail'   => 'array',
             'transmitted_at'   => 'datetime',
         ];
     }

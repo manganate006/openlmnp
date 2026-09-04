@@ -250,16 +250,33 @@ class TaxReturnService
     }
 
     /**
-     * 2033-D — Déficits reportables
+     * 2033-D — Déficits reportables et amortissements différés
+     *
+     * ⚠️ Correction de conformité (v1.4.0). Les cases 982/983/984 suivent les DÉFICITS
+     * reportables ; elles étaient alimentées par `previous_deferred`, c'est-à-dire par
+     * l'AMORTISSEMENT RÉPUTÉ DIFFÉRÉ. Toute liasse d'un bailleur ayant de l'amortissement
+     * différé déclarait donc des déficits qu'il n'avait pas — un défaut de conformité, pas
+     * une gêne d'affichage. Les liasses générées avant la correction portent l'ancienne
+     * valeur : le changement est annoncé au CHANGELOG et dans la page Liasse fiscale.
+     *
+     * Ce sont bien deux stocks distincts, que l'administration fait d'ailleurs suivre par
+     * deux états séparés (BOI-FORM-000038 pour les amortissements dont la déduction a été
+     * écartée, BOI-FORM-000039 pour les déficits) :
+     *   - 982/983/984 : déficits antérieurs, imputés, restants — reportables DIX ans
+     *     (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250) ;
+     *   - 870 : amortissements différés, reportables SANS limite de durée
+     *     (CGI art. 39 C, II-3 ; BOI-BIC-AMT-20-40-10-30 § 10).
+     *
+     * La case 984 porte le stock à la clôture, déficit de l'exercice (860) compris.
      */
     public function compute2033D(FiscalYear $fy): array
     {
         return [
-            '982' => $fy->previous_deferred, // Déficits N-1
-            '983' => min($fy->previous_deferred, max(0, $fy->fiscal_result)), // Imputés
-            '984' => max(0, $fy->previous_deferred - min($fy->previous_deferred, max(0, $fy->fiscal_result))),
-            '860' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0,
-            '870' => $fy->deferred_depreciation, // Total reportable
+            '982' => (int) $fy->previous_deficit,      // Déficits antérieurs à l'ouverture
+            '983' => (int) $fy->deficit_imputed,       // Imputés sur le bénéfice de l'exercice
+            '984' => (int) $fy->deficit_carryforward,  // Restant à reporter à la clôture
+            '860' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0, // Déficit de l'exercice
+            '870' => (int) $fy->deferred_depreciation, // Amortissements différés reportables
         ];
     }
 

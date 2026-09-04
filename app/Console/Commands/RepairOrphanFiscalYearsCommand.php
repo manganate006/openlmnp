@@ -39,6 +39,12 @@ class RepairOrphanFiscalYearsCommand extends Command
         'capped_depreciation',
         'deferred_depreciation',
         'previous_deferred',
+        // Le suivi des déficits dérive des mêmes données : le laisser hors de cette liste
+        // reviendrait à annoncer « tous les exercices reflètent les données saisies » alors
+        // que les cases 982/983/984 du 2033-D seraient périmées.
+        'previous_deficit',
+        'deficit_imputed',
+        'deficit_carryforward',
         'fiscal_result',
     ];
 
