@@ -164,7 +164,7 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   message d'erreur**. `INSTALLATION.md` et la FAQ décrivaient précisément cette méthode :
   ils indiquent maintenant la commande d'instantané à utiliser à la place
 
-## [1.4.2] - 2026-09-05
+## [1.4.2] - 2026-09-04
 
 ### Ajouts
 
