@@ -236,8 +236,11 @@ class DemoDataService
     /**
      * Supprime tous les biens (et données rattachées) de l'utilisateur,
      * afin de garantir l'idempotence du seed.
+     *
+     * Publique depuis l'écran des trois choix : c'est elle qui sert l'option « repartir de
+     * zéro » après une promotion. Rien de plus à écrire pour ce cas — il existait déjà.
      */
-    protected function purgeForUser(User $user): void
+    public function purgeForUser(User $user): void
     {
         // withoutGlobalScopes : la purge doit fonctionner quel que soit le
         // contexte d'authentification (seeder CLI, contrôleur /demo).

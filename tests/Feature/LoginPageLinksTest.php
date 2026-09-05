@@ -12,7 +12,9 @@ it('shows the demo card on /login when demo mode is enabled', function () {
     $this->get('/login')
         ->assertOk()
         ->assertSee('Essayez la démo')
-        ->assertSee('Sandbox sans inscription, données d\'exemple', false)
+        // La durée est annoncée AVANT d'entrer : c'est le seul des quatre endroits où le
+        // visiteur la voie forcément, et il n'y en avait aucun jusqu'au 2026-09-05.
+        ->assertSee('Sans inscription · données d\'exemple · effacé après 24 h', false)
         ->assertSee(route('demo.start'), false);
 });
 

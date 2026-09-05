@@ -134,7 +134,10 @@
                     Essayez la démo
                 </span>
                 <span class="olmnp-login-demo-subtitle">
-                    Sandbox sans inscription, données d'exemple
+                    {{-- La durée est annoncée ICI, avant d'entrer : c'est le premier des
+                         quatre endroits où le visiteur peut l'apprendre, et le seul qu'il
+                         voie forcément. --}}
+                    Sans inscription · données d'exemple · effacé après {{ config('demo.ttl_hours') }} h
                 </span>
             </span>
             <span class="olmnp-login-demo-arrow" aria-hidden="true">
