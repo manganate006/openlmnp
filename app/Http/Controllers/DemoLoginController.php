@@ -32,9 +32,16 @@ class DemoLoginController extends Controller
 
         // Limite le nombre de comptes démo actifs : on nettoie d'abord les
         // expirés, puis on refuse si la limite est toujours atteinte.
+        //
+        // ⚠️ Les bacs à sable PROLONGÉS sont exclus du plafond. Ils vivent 7 jours au lieu
+        // de 24 h : les compter reviendrait à laisser quelques dizaines de visiteurs fidèles
+        // occuper tout le quota pendant une semaine, et la démonstration renverrait des 503
+        // à tous les nouveaux venus. Ce sont justement les visiteurs les plus engagés — les
+        // sanctionner en fermant la porte derrière eux serait le contraire du but recherché.
         $activeDemoAccounts = fn () => User::query()
             ->where('is_demo', true)
             ->where('demo_expires_at', '>', now())
+            ->whereNull('demo_extended_at')
             ->count();
 
         if ($activeDemoAccounts() >= config('demo.max_accounts')) {
