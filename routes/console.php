@@ -9,6 +9,9 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('app:auto-update')->hourly();
+// ⚠️ AVANT la purge, pas après : dans l'ordre inverse, le compte serait supprimé avant que
+// son rappel ne parte. N'écrit qu'aux bacs à sable ayant laissé une adresse avec consentement.
+Schedule::command('openlmnp:demo-expiry-notify')->hourly();
 Schedule::command('openlmnp:demo-cleanup')->hourly();
 // Check-in anonyme quotidien (télémétrie opt-out) — compte les instances self-hosted.
 Schedule::command('app:instance-checkin')->daily();
