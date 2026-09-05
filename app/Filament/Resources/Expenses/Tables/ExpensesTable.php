@@ -8,6 +8,7 @@ use App\Filament\Actions\GenerateOccurrencesAction;
 use App\Filament\Tables\Filters\YearFilter;
 use App\Models\Expense;
 use App\Models\Property;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -73,10 +74,17 @@ class ExpensesTable
             ])
             ->persistFiltersInSession()
             ->recordActions([
-                GenerateOccurrencesAction::make(),
-                DuplicateExpenseAction::make(),
-
-                EditAction::make(),
+                // Regroupées derrière un « ⋮ » : à trois actions en clair, la colonne
+                // faisait 390 px et poussait le tableau à 1 134 px pour un écran de
+                // téléphone de 361 px — « Générer les échéances » sortait de l'écran.
+                // La découverte de la génération ne repose donc PAS sur cette colonne :
+                // elle passe par le helperText du formulaire, la fiche d'aide, et
+                // l'invitation posée à l'enregistrement.
+                ActionGroup::make([
+                    GenerateOccurrencesAction::make(),
+                    DuplicateExpenseAction::make(),
+                    EditAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
