@@ -3,7 +3,7 @@
   "name": "io.github.manganate006/openlmnp",
   "title": "OpenLMNP",
   "description": "Accounting MCP for French LMNP furnished rentals: income, expenses, depreciation, tax return & FEC",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "repository": {
     "url": "https://github.com/manganate006/openlmnp",
     "source": "github"
