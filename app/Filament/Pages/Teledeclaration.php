@@ -88,6 +88,9 @@ class Teledeclaration extends Page
             'fiscal_year' => $fy,
             'siren' => $user->siren ?? 'Non renseigné',
             'forms' => $this->buildFormSections($fy, $form2031, $form2033A, $form2033B, $form2033C, $form2033D, $form2042),
+            // Les contrôles viennent du service, jamais d'un calcul refait ici : le PDF les
+            // affiche à partir de la même source, sinon les deux écrans peuvent diverger.
+            'checks' => $tax->checks($form2033A, $form2033B, $form2033C, $properties),
         ];
     }
 
@@ -115,6 +118,11 @@ class Teledeclaration extends Page
                     ['line' => '016', 'desc' => 'Amortissements des incorporelles', 'value' => $fmt($f2033A['016']), 'raw' => $f2033A['016']],
                     ['line' => '028', 'desc' => 'Immobilisations corporelles (brut)', 'value' => $fmt($f2033A['028']), 'raw' => $f2033A['028']],
                     ['line' => '030', 'desc' => 'Amortissements cumulés', 'value' => $fmt($f2033A['030']), 'raw' => $f2033A['030']],
+                    // 044 et 048 étaient calculées sans être affichées nulle part. Ce sont de
+                    // vraies cases du Cerfa : les taire laissait l'utilisateur les remplir au
+                    // jugé, et rendait opaque le contrôle qui compare 044 à la ligne 490.
+                    ['line' => '044', 'desc' => 'Total immobilisations (brut)', 'value' => $fmt($f2033A['044']), 'raw' => $f2033A['044']],
+                    ['line' => '048', 'desc' => 'Total amortissements', 'value' => $fmt($f2033A['048']), 'raw' => $f2033A['048']],
                     ['line' => '112', 'desc' => 'Total actif', 'value' => $fmt($f2033A['112']), 'raw' => $f2033A['112']],
                     ['line' => '120', 'desc' => 'Compte de l\'exploitant', 'value' => $fmt($f2033A['120']), 'raw' => $f2033A['120']],
                     ['line' => '136', 'desc' => 'Résultat de l\'exercice', 'value' => $fmt($f2033A['136']), 'raw' => $f2033A['136']],
@@ -162,7 +170,6 @@ class Teledeclaration extends Page
                     ['line' => '490', 'desc' => 'Total immobilisations (brut)', 'value' => $fmt($f2033C['total_brut']), 'raw' => $f2033C['total_brut']],
                     ['line' => '572', 'desc' => 'Total dotations aux amortissements', 'value' => $fmt($f2033C['total_dotation']), 'raw' => $f2033C['total_dotation']],
                 ],
-                'check_572_254' => $f2033C['total_dotation'] === (int) ($f2033B['254'] ?? 0),
             ],
             '2033-D' => [
                 'title' => '2033-D — Déficits et amortissements différés',

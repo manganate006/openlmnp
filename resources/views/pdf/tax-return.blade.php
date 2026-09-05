@@ -20,6 +20,7 @@
         .result-box .amount { font-size: 20px; font-weight: bold; color: #065f46; }
         .line-num { color: #9ca3af; font-size: 8px; width: 35px; }
         .warn { color: #dc2626; font-weight: bold; }
+        .notice { color: #b45309; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -69,6 +70,16 @@
         </tr>
         <tr>
             <td>Amortissements (016)</td><td class="r">- {{ $fmtInt($form2033A['016']) }} €</td>
+            <td></td><td></td>
+        </tr>
+        {{-- 044 et 048 étaient calculées sans être affichées nulle part : un contrôle qui
+             nomme « case 044 » doit pouvoir se lire ici. --}}
+        <tr>
+            <td>Total immob. brut (044)</td><td class="r">{{ $fmtInt($form2033A['044']) }} €</td>
+            <td></td><td></td>
+        </tr>
+        <tr>
+            <td>Total amortissements (048)</td><td class="r">- {{ $fmtInt($form2033A['048']) }} €</td>
             <td></td><td></td>
         </tr>
         <tr class="total">
@@ -135,13 +146,19 @@
         </tr>
     </table>
 
-    <p class="small">
-        @if($form2033C['total_dotation'] != $form2033B['254'])
-            <span class="warn">⚠ Écart : ligne 572 ({{ $fmtInt($form2033C['total_dotation']) }} €) ≠ ligne 254 du 2033-B ({{ $fmtInt($form2033B['254']) }} €)</span>
-        @else
-            ✓ Cohérence vérifiée : ligne 572 = ligne 254 du 2033-B ({{ $fmtInt($form2033C['total_dotation']) }} €)
-        @endif
-    </p>
+    {{-- Contrôles de cohérence : calculés par TaxReturnService::checks(), jamais ici.
+         Une comparaison écrite dans la vue est une seconde règle qui dérive de la première. --}}
+    @foreach($checks as $check)
+        <p class="small">
+            @if($check['status'] === \App\Services\TaxReturnService::CHECK_OK)
+                ✓ {{ $check['message'] }}
+            @elseif($check['status'] === \App\Services\TaxReturnService::CHECK_WARNING)
+                <span class="notice">⚠ {{ $check['message'] }}</span>
+            @else
+                <span class="warn">⚠ {{ $check['message'] }}</span>
+            @endif
+        </p>
+    @endforeach
 
     {{-- 2033-D : DÉFICITS --}}
     <h2>Formulaire 2033-D — Déficits reportables</h2>
