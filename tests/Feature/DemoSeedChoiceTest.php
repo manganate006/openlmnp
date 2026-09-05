@@ -134,6 +134,18 @@ it('refuses a second choice, and an unknown one', function () {
         ->and(Property::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBe(2);
 });
 
+it('emits the analytics event the GTM wiring expects', function () {
+    // Même raison que dans DemoExpiryPromptTest : le tag `GA4 App - demo_seed_choice`
+    // forwarde `demo_choice`, et un renommage silencieux viderait le rapport.
+    promotedWithBoth();
+
+    Livewire::test(DemoSeedChoice::class)
+        ->set('choice', DemoSeedChoiceService::KEEP_ALL)
+        ->call('apply')
+        ->assertDispatched('analytics', fn ($e, $p) => $p[0]['event'] === 'demo_seed_choice'
+            && $p[0]['demo_choice'] === 'keep_all');
+});
+
 it('announces the real counts on each option', function () {
     promotedWithBoth();
 

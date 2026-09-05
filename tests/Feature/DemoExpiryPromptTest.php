@@ -182,6 +182,30 @@ it('refuses to extend twice', function () {
     Notification::assertNothingSent();
 });
 
+it('emits every analytics event the GTM wiring expects', function () {
+    // ⚠️ Un événement poussé dans le dataLayer sans trigger GTM est PERDU EN SILENCE : ni
+    // erreur JS, ni test rouge, ni alerte. Le mode de panne s'est produit cinq fois dans ce
+    // dépôt. Ce test fige les NOMS côté émetteur, pour qu'un renommage casse ici plutôt que
+    // de vider un rapport d'analyse sans prévenir. Sur une instance auto-hébergée sans
+    // conteneur de mesure, ces événements ne partent nulle part — et c'est très bien.
+    config()->set('demo.links.pro', 'https://openlmnp.fr/migrer');
+    actingOnSandbox(6);
+
+    Livewire::test(DemoExpiryPrompt::class)
+        ->call('reach', 6)
+        ->assertDispatched('analytics', fn ($e, $p) => $p[0]['event'] === 'demo_expiry_prompted'
+            && $p[0]['demo_threshold'] === 6
+            && $p[0]['demo_format'] === 'modal')
+        ->call('keepData')
+        ->assertDispatched('analytics', fn ($e, $p) => $p[0]['event'] === 'demo_claim_started')
+        ->call('declineOffer')
+        ->assertDispatched('analytics', fn ($e, $p) => $p[0]['event'] === 'demo_offer_declined')
+        ->set('email', 'visiteur@exemple.fr')
+        ->set('consent', true)
+        ->call('extend')
+        ->assertDispatched('analytics', fn ($e, $p) => $p[0]['event'] === 'demo_extended');
+});
+
 it('counts what is at risk on the visitor own data, ignoring the sample', function () {
     $user = actingOnSandbox(6);
     $sample = demoProperty($user, 'Exemple');
