@@ -76,7 +76,11 @@ prix d'achat ou valeur vénale, frais de notaire, et part du terrain.
   frais de gestion, télécommunications…)
 - **Prorata automatique** : une charge commune se voit appliquer la quote-part du bien,
   une charge 100 % dédiée est déduite intégralement, ou saisie d'une quote-part personnalisée
-- **Récurrence** (mensuelle, trimestrielle, annuelle) pour les charges répétitives
+- **Charges récurrentes** : une charge mensuelle ou trimestrielle porte une action
+  « Générer les échéances » qui crée les lignes manquantes jusqu'au 31 décembre de la même
+  année — chacune reste une charge à part entière, au montant ajustable et avec son propre
+  justificatif. La génération ne déborde pas sur l'exercice suivant, refuse un exercice
+  clôturé et ne crée jamais de doublon
 - **Pièces justificatives** : dépôt de fichiers (PDF, JPG, PNG) attachés aux charges,
   travaux et mobilier ; export groupé des justificatifs d'un exercice
 
