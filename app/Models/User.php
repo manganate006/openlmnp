@@ -15,7 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'siren', 'is_admin', 'nav_mode', 'timezone', 'onboarding_dismissed_at', 'mcp_enabled', 'is_demo', 'demo_expires_at', 'feedback_prompted_at', 'feedback_answered_at'])]
+#[Fillable(['name', 'email', 'password', 'siren', 'is_admin', 'nav_mode', 'timezone', 'onboarding_dismissed_at', 'mcp_enabled', 'is_demo', 'demo_expires_at', 'feedback_prompted_at', 'feedback_answered_at', 'demo_reminders_seen', 'demo_seed', 'demo_email', 'demo_email_consent_at', 'demo_extended_at', 'demo_claim_token', 'demo_promoted_at', 'demo_seed_choice'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -126,6 +126,11 @@ class User extends Authenticatable implements FilamentUser
             'suspended_at' => 'datetime',
             'feedback_prompted_at' => 'datetime',
             'feedback_answered_at' => 'datetime',
+            'demo_reminders_seen' => 'array',
+            'demo_seed' => 'array',
+            'demo_email_consent_at' => 'datetime',
+            'demo_extended_at' => 'datetime',
+            'demo_promoted_at' => 'datetime',
         ];
     }
 }
