@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\FiscalYear;
 use App\Models\Income;
+use App\Models\Loan;
 use App\Models\McpAuditLog;
 use App\Models\Property;
 use App\Models\PropertyComponent;
@@ -102,6 +103,23 @@ class LifecycleSignalsController extends Controller
 
             'mcp_used' => McpAuditLog::query()->where('user_id', $user->id)->exists(),
 
+            // Un emprunt enregistre : les interets sont deductibles, et leur
+            // absence est l'oubli le plus couteux du regime reel.
+            'has_loan' => $propertyIds->isNotEmpty() && Loan::query()
+                ->whereIn('property_id', $propertyIds)->exists(),
+
+            // Date de mise en location la plus ancienne : elle conditionne le
+            // prorata de la premiere annee, et revele une anteriorite non
+            // saisie (bien loue avant l'exercice le plus ancien du compte).
+            'first_rental_start' => Property::query()->where('user_id', $user->id)
+                ->whereNotNull('rental_start_date')
+                ->min('rental_start_date'),
+
+            // Categories de charges SANS aucune ligne sur l'exercice. Ce sont
+            // des libelles, jamais des montants : de quoi dire « il manque la
+            // taxe fonciere » sans rien reveler du dossier.
+            'expense_categories_missing' => $this->missingExpenseCategories($propertyIds, $year),
+
             // user_badges est le seul journal de jalons DATÉ du produit : il rend
             // faisables des déclencheurs qu'on croirait exiger une migration.
             'badges' => UserBadge::query()
@@ -115,6 +133,44 @@ class LifecycleSignalsController extends Controller
                     'fiscal_year' => $badge->fiscal_year,
                 ])->values()->all(),
         ];
+    }
+
+    /**
+     * Catégories de charges restées vides sur l'exercice.
+     *
+     * Renvoie des LIBELLÉS, pas des montants : l'appelant doit pouvoir écrire
+     * « il manque la taxe foncière » sans jamais connaître un chiffre du
+     * dossier. C'est la limite que s'impose tout cet endpoint.
+     *
+     * @return list<string>
+     */
+    private function missingExpenseCategories(mixed $propertyIds, int $year): array
+    {
+        if ($propertyIds->isEmpty()) {
+            return [];
+        }
+
+        // ⚠️ `expense_date`, pas `date`. SQLite ne lève AUCUNE erreur sur un nom de colonne
+        // inconnu entre guillemets : il le traite comme un littéral texte. `whereYear('date')`
+        // compilait donc en `strftime('%Y', "date")`, qui rend NULL, et la requête rendait
+        // ZÉRO ligne — sans exception, sans journal, sans test rouge.
+        //
+        // Mesuré sur la base de production : 8 catégories avec `expense_date`, 0 avec `date`.
+        // Conséquence en chaîne : toutes les catégories étaient déclarées absentes, pour tout
+        // le monde, et le scénario `SequenceCatalog.php:155` de la vitrine — qui se déclenche
+        // quand la liste contient `property_tax` et compte au moins deux virgules — se serait
+        // déclenché TOUJOURS. Un e-mail serait parti reprocher à chacun des charges qu'il a
+        // pourtant saisies. Même famille que le `has_loan ?? false` corrigé le même jour :
+        // un e-mail qui AFFIRME sur un signal faux.
+        $presentes = Expense::query()
+            ->whereIn('property_id', $propertyIds)
+            ->whereYear('expense_date', $year)
+            ->pluck('category')
+            ->unique()
+            ->filter()
+            ->all();
+
+        return array_values(array_diff(array_keys(Expense::categoryLabels()), $presentes));
     }
 
     /**
