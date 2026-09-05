@@ -93,6 +93,51 @@ it('résout la fiche de reprise depuis sa route, sans retomber sur le repli', fu
  * l'écran. Une aide qui documente un champ inexistant coûte plus cher qu'une aide absente ;
  * ces ancres échouent si l'écran correspondant est renommé sans que l'aide suive.
  */
+it('décrit les écrans du bac à sable avec leurs libellés réels', function () {
+    // L'expiration du bac à sable n'a pas de route à elle : ses deux composants sont montés
+    // par `renderHook` PAR-DESSUS n'importe quel écran. Le registre indexant par nom de
+    // route, l'aide vit donc dans une section conditionnelle de `help/dashboard.blade.php`
+    // — le seul écran que tout visiteur de démo traverse, et celui où atterrit un compte
+    // promu. Sans cette ancre, rien ne relierait cette aide aux écrans qu'elle décrit, et
+    // renommer un bouton la périmerait EN SILENCE.
+    $anchors = [
+        'resources/views/livewire/demo-seed-choice.blade.php' => [
+            'Ne garder que mes saisies', 'Tout garder', 'Repartir de zéro',
+        ],
+        'resources/views/livewire/demo-expiry-prompt.blade.php' => [
+            'Garder mes données', 'Continuer la démonstration',
+        ],
+    ];
+
+    $help = file_get_contents(resource_path('views/help/dashboard.blade.php'));
+    $missing = [];
+
+    foreach ($anchors as $screen => $labels) {
+        $source = file_get_contents(base_path($screen));
+
+        foreach ($labels as $label) {
+            if (! str_contains($help, $label)) {
+                $missing[] = "l'aide du tableau de bord ne cite plus « {$label} »";
+            }
+
+            if (! str_contains($source, $label)) {
+                $missing[] = "{$screen} ne porte plus « {$label} » — l'aide décrit un bouton inexistant";
+            }
+        }
+    }
+
+    expect($missing)->toBe([], implode(' | ', $missing));
+});
+
+it('avertit du caractère irréversible du choix des données d\'exemple', function () {
+    // Le seul écran irréversible de tout le chantier : une aide qui ne le DIT pas est pire
+    // qu'absente, puisqu'elle laisse croire que le sujet est couvert.
+    $help = file_get_contents(resource_path('views/help/dashboard.blade.php'));
+
+    expect($help)->toContain('ne se fait qu\'une fois');
+    expect($help)->toContain('rien n\'est récupérable');
+});
+
 it('décrit des libellés réellement présents à l\'écran', function () {
     $anchors = [
         // Éditeur d'amortissements : bascule de mode, colonnes du tableau, bouton d'ajout.

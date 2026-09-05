@@ -100,7 +100,7 @@ plus insistant :
 | Où | Quand |
 |---|---|
 | Sous-titre du bouton de connexion | Avant même d'entrer |
-| Pastille de compte à rebours (bas gauche) | En continu, dès la première seconde |
+| Pastille de compte à rebours (bas droite, au-dessus du bouton d'aide) | En continu, dès la première seconde |
 | Bandeau bas, non bloquant | Paliers « doux » |
 | Modale | Paliers graves |
 
