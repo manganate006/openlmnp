@@ -5,13 +5,43 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 ## [1.5.0] - 2026-09-06
 
 > ⚠️ **Cette version change des liasses fiscales déjà générées.** La correction du tableau
-> 2033-D (cases 982/983/984, détaillée plus bas) modifie ce que l'application imprime pour
-> des exercices **déjà déposés**. Régénérer une liasse antérieure produira un document
-> différent de celui transmis à l'administration — c'est voulu, l'ancien était faux.
-> `php artisan openlmnp:repair-deficits` reconstitue le suivi sur les dossiers déjà tenus,
-> en mode rapport par défaut.
+> 2033-D (cases 982/983/984, détaillée plus bas) modifie ce que l'application imprime :
+> régénérer une liasse produite par une version antérieure donnera un document différent —
+> c'est voulu, l'ancien était faux. `php artisan openlmnp:repair-deficits` reconstitue le
+> suivi sur les dossiers déjà tenus, en mode rapport par défaut.
+>
+> Ce que cet avertissement ne dit **pas** : qu'une liasse déjà déposée serait en cause. La
+> première version publiée de ce logiciel date du 2 juillet 2026, soit après la campagne de
+> dépôt du printemps 2026 — aucune liasse produite par une version publiée n'a donc pu partir
+> dans une campagne ordinaire. Si vous avez déposé une déclaration rectificative à partir
+> d'une liasse générée ici, en revanche, relisez-la.
 
 ### Ajouts
+
+- **La démonstration annonce sa durée de vie, et on peut en repartir avec ses données.** Un
+  bac à sable de démonstration s'efface au bout de quelques heures, mais rien ne le disait :
+  ni les boutons qui y mènent, ni l'application une fois dedans. Un compteur permanent affiche
+  désormais le temps restant, et des rappels s'échelonnent avant l'échéance — un bandeau
+  discret d'abord, une fenêtre au dernier moment
+- **On peut revenir sur sa démonstration.** La session se fermait bien avant le bac à sable :
+  qui revenait trois heures plus tard tombait sur l'écran de connexion et concluait que tout
+  était perdu, alors que ses données étaient intactes et simplement inaccessibles — le compte
+  de démonstration n'ayant aucun mot de passe connu de personne. Un **lien de reprise** est
+  désormais envoyé par e-mail et rouvre le bac à sable directement. Traitez-le comme une clé :
+  il n'authentifie pas, il ouvre
+- **Prolongation de la démonstration**, contre une adresse e-mail et un consentement explicite,
+  avec le lien de reprise dans le même envoi. Les rappels déjà vus sont remis à zéro : la
+  prolongation redonne un parcours complet, pas un décompte qui reprend où il en était
+- **Ce qui a été saisi pendant la démonstration survit à l'ouverture d'un compte.** Le compte
+  de démonstration *devient* le compte définitif : aucune donnée n'est déplacée, rien n'est à
+  réimporter. Si l'adresse est déjà rattachée à un compte existant, ou si le bac à sable a
+  expiré entre-temps, un compte neuf est créé comme avant — deux comptes ne sont jamais fusionnés
+- **Le sort des données d'exemple est demandé une fois**, à la première connexion du compte
+  ainsi ouvert : tout garder, ne garder que ses propres saisies (les totaux des exercices
+  conservés sont recalculés), ou repartir de zéro. Chaque option annonce le nombre réel de
+  biens et d'exercices qu'elle supprimerait, et **le choix ne se rejoue pas**
+- L'aide contextuelle du tableau de bord décrit le décompte, la prolongation, le lien de
+  reprise et le choix des données d'exemple, avec leurs deux pièges
 
 - **Un assistant « Reprendre un dossier existant », en cinq étapes.** Accessible depuis
   l'écran de premier lancement (« J'ai déjà une comptabilité LMNP ») et depuis les exercices
