@@ -23,8 +23,10 @@ use Livewire\Component;
  * avant de l'enregistrer. Sans cela, n'importe qui pourrait faire marquer les paliers
  * restants comme servis et se soustraire à toutes les relances suivantes.
  *
- * ⚠️ La pastille est en bas GAUCHE : le coin bas droit est déjà occupé par `.ctx-help-btn`
- * (48 px à 24 px des bords).
+ * ⚠️ La pastille est en bas DROITE, EMPILÉE au-dessus de `.ctx-help-btn` (48 px à 24 px des
+ * bords, donc 72 px au total). Le bas gauche paraissait libre puisqu'il évitait l'aide
+ * contextuelle, mais il tombe sur le sélecteur de mode de navigation du pied de barre
+ * latérale — vérifié au rendu, la pastille le recouvrait.
  */
 class DemoExpiryPrompt extends Component
 {

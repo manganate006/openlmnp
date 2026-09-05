@@ -9,7 +9,8 @@
 
     ⚠️ Aucun utilitaire Tailwind : le panel Filament ne sert que ses propres classes `fi-*`.
     Toute la mise en forme passe par ce <style> scopé et les jetons `--olmnp-*`.
-    ⚠️ La pastille est en bas GAUCHE : le coin bas droit est occupé par `.ctx-help-btn`.
+    ⚠️ La pastille est en bas DROITE, EMPILÉE au-dessus de `.ctx-help-btn` : le bas gauche
+    est occupé par le sélecteur de mode de navigation (`panels::sidebar.footer`).
 --}}
 <div>
     @if ($applies)
@@ -20,8 +21,17 @@
         idiome déjà employé par les widgets du panel.
     --}}
     <style>
+        /*
+            Coin bas DROIT, empilée AU-DESSUS de l'aide contextuelle.
+
+            Le bas gauche paraissait libre — il évitait `.ctx-help-btn` — mais il tombe sur
+            le sélecteur de mode de navigation du pied de barre latérale
+            (`panels::sidebar.footer`). Vérifié au rendu : la pastille le recouvrait.
+            `.ctx-help-btn` fait 48 px à 24 px du bord, donc 72 px au total : 84 px laissent
+            12 px de jeu.
+        */
         .dx-pill {
-            position: fixed; left: 24px; bottom: 24px; z-index: 30;
+            position: fixed; right: 24px; bottom: 84px; z-index: 30;
             display: inline-flex; align-items: center; gap: 8px;
             padding: 7px 13px 7px 10px; border-radius: 999px;
             font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
@@ -370,17 +380,48 @@
                                 cette modale — hors du cadre. C'est ce qui évite tout postMessage :
                                 le refus n'a jamais à traverser la frontière d'origine.
                             --}}
+                            {{--
+                                ⚠️ NE PAS se fier à l'événement `load` de l'iframe.
+
+                                Vérifié au rendu le 2026-09-05 contre une vitrine renvoyant
+                                `X-Frame-Options: SAMEORIGIN` : le navigateur refuse d'afficher
+                                le cadre, écrit son refus dans la console — et déclenche QUAND
+                                MÊME `load` sur la page d'erreur interne. Une garde
+                                `x-on:load="loaded = true"` se croit donc satisfaite, et le
+                                repli ne s'affiche jamais. Le cadre reste gris et muet : la
+                                protection contre ce bug était elle-même victime du bug.
+
+                                On attend donc un signal ÉMIS PAR LA PAGE ENCADRÉE. Un cadre
+                                refusé ne s'exécute pas, donc ne peut pas le poster.
+
+                                Ce message est unidirectionnel et ne porte qu'une constante :
+                                « je suis vivante ». Le refus de l'offre, lui, ne traverse
+                                toujours pas la frontière — il reste un bouton du pied de
+                                modale, côté app.
+                            --}}
                             <div
                                 class="dx-frame"
-                                x-data="{ loaded: false }"
-                                x-init="setTimeout(() => { if (! loaded) $refs.fallback.hidden = false }, @js($iframeTimeoutMs))"
+                                x-data="{
+                                    alive: false,
+                                    origin: @js(parse_url($offerUrl, PHP_URL_SCHEME).'://'.parse_url($offerUrl, PHP_URL_HOST)),
+
+                                    init() {
+                                        window.addEventListener('message', (e) => {
+                                            if (e.origin === this.origin && e.data === 'olmnp-migrer-ready') {
+                                                this.alive = true;
+                                            }
+                                        });
+
+                                        setTimeout(() => { if (! this.alive) this.$refs.fallback.hidden = false; }, @js($iframeTimeoutMs));
+                                    },
+                                }"
                             >
                                 <iframe
                                     src="{{ $offerUrl }}"
                                     title="Formules OpenLMNP Cloud"
                                     class="dx-frame-iframe"
+                                    x-show="alive"
                                     referrerpolicy="strict-origin-when-cross-origin"
-                                    x-on:load="loaded = true"
                                 ></iframe>
 
                                 {{--
