@@ -51,10 +51,16 @@ class Teledeclaration extends Page
     {
         // BelongsToUserScope limite déjà la requête à l'utilisateur courant.
         //
-        // ⚠️ On ne teste QUE `pdf_path`. `transmitted_at` serait le meilleur signal, mais la
-        // colonne n'existe pas en base : le modèle la déclare (`$fillable`, `casts`) et deux
-        // outils MCP la lisent, sans qu'aucune migration ne l'ait jamais créée. La lire sur un
-        // modèle rend `null` sans broncher ; l'interroger en SQL casserait la page.
+        // ⚠️ On ne teste QUE `pdf_path`, et c'est délibéré : l'encart s'adresse à qui a
+        // DÉJÀ imprimé une liasse avec l'ancien calcul, transmise ou non. `transmitted_at`
+        // (colonne créée le 2026-09-04) ne couvrirait que les déclarations déposées et
+        // raterait exactement ceux qui ont un PDF faux entre les mains.
+        //
+        // ⚠️ En revanche `ack_number` reste déclaré par le modèle et lu par deux outils MCP
+        // SANS qu'aucune migration ne le crée. Inoffensif aujourd'hui (le modèle rend `null`),
+        // mais ne jamais l'interroger en SQL : sous SQLite un identifiant entre guillemets
+        // sans colonne correspondante devient un LITTÉRAL DE CHAÎNE, donc un
+        // `whereNotNull('ack_number')` rendrait TOUTES les lignes, sans lever d'erreur.
         return FiscalYear::query()->whereNotNull('pdf_path')->exists();
     }
 
