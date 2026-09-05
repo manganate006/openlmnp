@@ -2,7 +2,7 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
-## [1.5.0] - 2026-09-06
+## [1.5.0] - 2026-09-05
 
 > ⚠️ **Cette version change des liasses fiscales déjà générées.** La correction du tableau
 > 2033-D (cases 982/983/984, détaillée plus bas) modifie ce que l'application imprime :
@@ -134,6 +134,16 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   reconstitue le suivi sur les dossiers déjà tenus (rapport par défaut, `--fix` pour écrire).
   Elle ne réécrit que les colonnes de déficit — le résultat fiscal déclaré ne bouge pas. La
   page « Aide à la télédéclaration » avertit les utilisateurs concernés.
+
+- **Deux montants d'immobilisations qui ne concordaient pas entre le 2033-A et le 2033-C**
+  (signalé par cocool97, issue #10). Les deux tableaux se trompaient **en sens inverse**, ce qui
+  rendait l'écart illisible : le bilan simplifié n'inscrivait en case 028 que la valeur de
+  référence du bien, sans les travaux ni le mobilier — que notre propre 2033-C listait pourtant ;
+  et le 2033-C oubliait le **terrain**, qui ne s'amortit pas, ne sort d'aucune ligne de détail
+  d'amortissement, et disparaissait donc du tableau alors qu'il reste une immobilisation. Les
+  quatre cases tombent désormais exactement sur celles d'une liasse 2025 établie par un cabinet.
+  **Si vous êtes en v1.4.5 ou antérieure, c'est ce qui explique l'écart que vous avez sous les
+  yeux** — il disparaît en passant à cette version, sans rien ressaisir.
 
 - **Le contrôle de reprise ne voyait pas la cause d'écart la plus fréquente.** Il ne
   rapprochait un écart que du montant **brut** des frais d'acquisition. Or sur la ligne des

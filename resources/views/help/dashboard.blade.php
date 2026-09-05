@@ -21,8 +21,9 @@
     </div>
 
     @if (auth()->user()?->is_demo && ! auth()->user()?->demo_promoted_at)
+        @php($demoProlonge = filled(auth()->user()?->demo_extended_at))
         <h3>Votre bac à sable de démonstration</h3>
-        <p>Vous n'êtes pas sur un compte ordinaire&nbsp;: vous explorez un <strong>bac à sable</strong>, rempli de données fictives, qui n'appartient qu'à vous et que personne d'autre ne voit. Il est <strong>effacé automatiquement</strong> au bout de {{ config('demo.ttl_hours') }}&nbsp;h.</p>
+        <p>Vous n'êtes pas sur un compte ordinaire&nbsp;: vous explorez un <strong>bac à sable</strong>, rempli de données fictives, qui n'appartient qu'à vous et que personne d'autre ne voit. Il est <strong>effacé automatiquement</strong> au bout de {{ $demoProlonge ? config('demo.extended_ttl_days') : config('demo.ttl_hours') }}&nbsp;{{ $demoProlonge ? 'jours' : 'h' }}.</p>
 
         <h3>Ce que le compte à rebours vous dit</h3>
         <ul>
@@ -41,7 +42,7 @@
         <p>Choisir <strong>Continuer la démonstration</strong> ne fait que repousser la question&nbsp;: le compte à rebours continue de tourner.</p>
 
         <div class="ctx-warning">
-            <strong>Vous risquez de vous croire effacé alors que tout est là.</strong> Votre session ne dure que {{ config('session.lifetime') }}&nbsp;minutes, alors que le bac à sable, lui, vit {{ config('demo.ttl_hours') }}&nbsp;h. Revenez trois heures plus tard&nbsp;: vous serez déconnecté devant un dossier parfaitement vivant, sans moyen d'y rentrer. C'est le <strong>lien de reprise</strong>, envoyé quand vous prolongez, qui vous y ramène depuis n'importe quel appareil.
+            <strong>Vous risquez de vous croire effacé alors que tout est là.</strong> Votre session ne dure que {{ config('session.lifetime') }}&nbsp;minutes, alors que le bac à sable, lui, vit {{ $demoProlonge ? config('demo.extended_ttl_days') : config('demo.ttl_hours') }}&nbsp;{{ $demoProlonge ? 'jours' : 'h' }}. Revenez trois heures plus tard&nbsp;: vous serez déconnecté devant un dossier parfaitement vivant, sans moyen d'y rentrer. C'est le <strong>lien de reprise</strong>, envoyé quand vous prolongez, qui vous y ramène depuis n'importe quel appareil.
         </div>
 
         <div class="ctx-tip">

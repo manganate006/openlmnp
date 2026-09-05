@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **597 tests automatisés (1 654 assertions)** écrits avec
+OpenLMNP est couvert par **700 tests automatisés (1 970 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -61,8 +61,8 @@ vendor/bin/pest --filter="Filament"
 | Couverture de l'aide contextuelle | 6 | Toute fiche d'aide recensée (l'index de l'assistant part du registre, pas du dossier des vues), aucune entrée sans vue, libellés cités par l'aide vérifiés dans l'écran, 2033-D expliqué comme le code le calcule |
 | Charges récurrentes | 25 | Calendrier des échéances (non-débordement des mois courts, heures ignorées), idempotence, bornes d'année civile, refus sur exercice clôturé, action Filament et recalcul des exercices |
 | Duplication d'une charge | 13 | Date avancée d'une période, conversion euros/centimes, justificatifs non recopiés, invitation à générer posée après enregistrement |
-| Suites ajoutées depuis (détail non ventilé) | 193 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel, estimation DVF de la valeur vénale, justificatifs restés à la racine d'avant Laravel 11… |
-| **Total** | **577** | **1 584 assertions** |
+| Suites ajoutées depuis (détail non ventilé) | 278 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel, estimation DVF de la valeur vénale, justificatifs restés à la racine d'avant Laravel 11… |
+| **Total** | **700** | **1 970 assertions** |
 
 > Le détail par suite est tenu à jour lot par lot ; la ligne « suites ajoutées depuis »
 > absorbe les suites fusionnées sans ventilation, pour que le tableau reste juste au total.
