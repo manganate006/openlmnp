@@ -2,6 +2,49 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.6.0] - 2026-09-05
+
+### Ajouts
+
+- **La liasse vérifie désormais sa propre cohérence.** Deux montants que les formulaires
+  calculent séparément sont rapprochés, dans le PDF comme sur l'écran de télédéclaration :
+  la case **044** du 2033-A face à la ligne **490** du 2033-C (total des immobilisations
+  brutes), et la ligne **572** face à la ligne **254** du 2033-B (dotation de l'exercice).
+  C'est le contrôle demandé dans l'issue #10, en complément de la correction de calcul
+  livrée en 1.5.0
+- Le contrôle des immobilisations a **trois** issues, et pas deux. Un écart ne veut pas dire
+  une erreur : il vaut exactement la part de votre base amortissable qui n'est rattachée à
+  aucun composant. Ventiler partiellement est autorisé — l'écran l'affiche alors en
+  **orange**, avec ce que ça implique : *cette part ne s'amortira pas*. Le **rouge** est
+  réservé au cas inverse, des composants qui dépassent la base, en général parce que la
+  valeur du bien ou la part du terrain ont changé après la ventilation
+- **Les cases 044 et 048 du 2033-A sont enfin affichées** : elles étaient calculées et
+  visibles nulle part, ni dans le PDF, ni à l'écran, ni dans l'export CSV. Qui recopiait le
+  CSV dans son formulaire laissait donc deux vraies cases Cerfa vides
+- L'aide de la télédéclaration explique les deux contrôles et ce que signifie un
+  avertissement orange
+
+### Corrections
+
+- **Le PDF et l'écran pouvaient se contredire sur la même liasse.** Le contrôle 572 = 254
+  était écrit à deux endroits avec deux comparaisons différentes — l'une stricte, l'autre
+  non. Les deux s'accordaient en pratique, mais rien ne le garantissait. Les contrôles
+  n'ont plus qu'une seule source, que les deux écrans se contentent d'afficher
+- **`ack_number` était annoncé sans pouvoir exister.** Le numéro d'accusé de réception
+  figurait dans le modèle des exercices et était renvoyé par deux outils MCP, alors
+  qu'aucune colonne ne le portait en base : le champ ne pouvait jamais avoir de valeur. La
+  colonne est créée. Elle reste vide sur les exercices existants — reconstituer après coup
+  un numéro d'accusé serait l'inventer
+
+### Interne
+
+- Un garde-fou parcourt désormais **tous** les modèles et vérifie que chaque champ déclaré
+  assignable existe bien en base. Le défaut s'était produit deux fois de suite au même
+  endroit (`transmitted_at`, puis `ack_number`) sans jamais donner de symptôme : sous
+  SQLite, filtrer sur une colonne inexistante ne lève aucune erreur et rend **toutes** les
+  lignes. Le contrôle ne liste rien, il dérive de la déclaration du modèle : ajouter un
+  champ sans sa migration le fait échouer tout seul
+
 ## [1.5.0] - 2026-09-05
 
 > ⚠️ **Cette version change des liasses fiscales déjà générées.** La correction du tableau
