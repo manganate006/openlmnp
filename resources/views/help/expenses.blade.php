@@ -21,7 +21,7 @@
     <p>Le champ <strong>Récurrence</strong> décrit une échéance, pas un total : le montant que vous saisissez est celui d'<strong>un</strong> prélèvement.</p>
     <ul>
         <li data-icon="&#x1F5D3;"><strong>Mensuel</strong> ou <strong>Trimestriel</strong> &mdash; Le bouton <strong>« Générer les échéances »</strong>, sur la ligne de la charge dans la liste, crée les échéances manquantes jusqu'au 31 décembre de la même année.</li>
-        <li data-icon="&#x1F4C5;"><strong>Annuel</strong> et <strong>Ponctuel</strong> &mdash; Une seule ligne dans l'exercice : la charge de l'année suivante se saisit l'année suivante, avec sa facture.</li>
+        <li data-icon="&#x1F4C5;"><strong>Annuel</strong> et <strong>Ponctuel</strong> &mdash; Une seule ligne dans l'exercice. Pour la reporter sans tout retaper, le bouton <strong>« Dupliquer »</strong> recopie la charge : il ne reste qu'à confirmer la description, la date et le montant.</li>
     </ul>
     <p>Chaque échéance générée est une charge à part entière : ajustez son montant s'il a varié, et joignez-lui son propre justificatif &mdash; ceux de la charge d'origine ne sont pas recopiés.</p>
 

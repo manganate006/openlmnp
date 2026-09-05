@@ -2,6 +2,7 @@
 
 namespace App\Filament\Actions;
 
+use App\Filament\Resources\Expenses\ExpenseResource;
 use App\Helpers\TvaHelper;
 use App\Models\Expense;
 use App\Services\FiscalYearService;
@@ -87,6 +88,47 @@ class GenerateOccurrencesAction extends Action
 
                 ($result['created'] > 0 ? $notification->success() : $notification->warning())->send();
             });
+    }
+
+    /**
+     * Invitation à générer, posée juste après l'enregistrement d'une charge récurrente.
+     *
+     * L'action ne se découvre autrement que dans la liste : quelqu'un qui vient de
+     * saisir sa première charge « Mensuel » ignore qu'elle existe — c'est exactement la
+     * situation qui a produit l'issue #9. Le bouton ouvre la modale sur la bonne ligne
+     * (Filament monte une action de table depuis l'URL), donc rien n'est automatique :
+     * l'aperçu et la confirmation restent en travers du chemin.
+     *
+     * Rend `null` quand il n'y a rien à proposer — la notification d'origine passe alors
+     * inchangée.
+     */
+    public static function proposal(Expense $record, string $title): ?Notification
+    {
+        if (! RecurringExpenseService::isGeneratable($record->recurring_type)) {
+            return null;
+        }
+
+        $plan = static::service()->plan($record, static::service()->defaultUntil($record));
+
+        if ($plan['to_create'] === 0) {
+            return null;
+        }
+
+        $year = CarbonImmutable::parse($record->expense_date)->year;
+
+        return Notification::make()
+            ->success()
+            ->title($title)
+            ->body($plan['to_create'] . ' échéance(s) restent à saisir pour ' . $year . '.')
+            ->actions([
+                Action::make('generate')
+                    ->label('Générer les échéances')
+                    ->button()
+                    ->url(ExpenseResource::getUrl('index', [
+                        'tableAction' => static::getDefaultName(),
+                        'tableActionRecord' => $record->getKey(),
+                    ])),
+            ]);
     }
 
     protected static function service(): RecurringExpenseService
