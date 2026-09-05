@@ -91,6 +91,60 @@ idempotent : le relancer **réinitialise** le compte fixe sur ce jeu de données
 php artisan db:seed --class=DemoSeeder
 ```
 
+## Prévenir avant d'effacer
+
+Le bac à sable vit `DEMO_TTL_HOURS` (24 h par défaut), et le visiteur doit pouvoir
+l'apprendre **avant** d'y avoir investi du temps. Quatre dispositifs, du plus discret au
+plus insistant :
+
+| Où | Quand |
+|---|---|
+| Sous-titre du bouton de connexion | Avant même d'entrer |
+| Pastille de compte à rebours (bas gauche) | En continu, dès la première seconde |
+| Bandeau bas, non bloquant | Paliers « doux » |
+| Modale | Paliers graves |
+
+### Les paliers
+
+`DEMO_REMINDERS` liste des couples `heures restantes:forme`, séparés par des virgules.
+Deux formes seulement : `banner` et `modal` — toute autre valeur est **ignorée**, jamais
+interprétée par défaut.
+
+```
+DEMO_REMINDERS="96:banner,24:modal,23:banner,18:banner,12:banner,6:modal,1:modal"
+```
+
+Les paliers s'expriment en heures **restantes**, jamais écoulées. C'est ce qui supprime tout
+cas particulier entre un bac à sable de 24 h et un bac à sable prolongé à 7 jours : « il
+reste 6 h » a le même sens pour les deux.
+
+Un palier n'est retenu que s'il est **strictement sous la durée de vie** du bac à sable —
+sans quoi « il reste 24 h » se déclencherait à la première seconde d'un sandbox de 24 h, qui
+n'a jamais 24 h pleines devant lui mais 23 h 59.
+
+`DEMO_REMINDER_MIN_GAP_HOURS` (2 par défaut) empêche deux relances rapprochées : servir un
+palier rend caducs ceux situés juste en dessous.
+
+### Prolongation
+
+Le visiteur peut prolonger **une fois** de `DEMO_EXTENDED_TTL_DAYS` jours (7 par défaut), en
+laissant une adresse e-mail avec consentement explicite. Il reçoit alors un **lien de
+reprise** signé, qui le reconnecte à son bac à sable depuis n'importe quel appareil et sans
+mot de passe — traiter ce lien comme une clé : qui l'a, y entre.
+
+Un rappel part avant l'effacement (`openlmnp:demo-expiry-notify`, planifiée toutes les heures
+**avant** la purge). Il n'écrit qu'aux comptes ayant laissé une adresse **et** donné leur
+consentement, et jamais sur une date d'expiration inconnue.
+
+⚠️ Les bacs à sable prolongés sont **exclus** du plafond `DEMO_MAX_ACCOUNTS` : vivant 7 jours
+au lieu de 24 h, les compter reviendrait à laisser quelques dizaines de visiteurs occuper
+tout le quota pendant une semaine.
+
+### Sur une instance auto-hébergée
+
+`DEMO_URL_PRO` est **vide par défaut** : aucune offre commerciale n'est proposée, et « garder
+mes données » propose alors directement la prolongation. Rien à désactiver.
+
 ## Purge automatique des comptes expirés
 
 Les comptes démo étant éphémères, une commande les supprime une fois expirés,
@@ -116,7 +170,13 @@ session démo est refusée temporairement (le service reste protégé contre l'a
 | `DEMO_MODE` | Active le mode démonstration | `false` |
 | `DEMO_TTL_HOURS` | Durée de vie d'un compte démo, en heures | `24` |
 | `DEMO_MAX_ACCOUNTS` | Nombre maximum de comptes démo actifs simultanés | `200` |
+| `DEMO_REMINDERS` | `96:banner,24:modal,23:banner,18:banner,12:banner,6:modal,1:modal` | Paliers de relance, en **heures restantes** |
+| `DEMO_REMINDER_MIN_GAP_HOURS` | `2` | Espacement minimal entre deux relances |
+| `DEMO_EXTENDED_TTL_DAYS` | `7` | Durée de la prolongation accordée contre une adresse |
+| `DEMO_URL_PRO` | *(vide)* | Cible commerciale de « garder mes données ». Vide = pas d'offre |
+| `DEMO_IFRAME_TIMEOUT_MS` | `4000` | Délai avant de considérer que le cadre d'offre ne s'affichera pas |
 
 ---
 
 Voir aussi : [INSTALLATION.md](INSTALLATION.md) · [FONCTIONNALITES.md](FONCTIONNALITES.md) · [FAQ.md](FAQ.md)
+

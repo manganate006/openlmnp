@@ -101,6 +101,10 @@ class AdminPanelProvider extends PanelProvider
             // démonstration le composant n'est pas monté du tout, et une instance normale ne
             // paie pas un aller-retour Livewire par page pour un compteur qui n'existe pas.
             ->renderHook('panels::body.end', fn () => config('demo.enabled') ? view('livewire.demo-expiry-prompt-hook') : '')
+            // Sort des données d'exemple après promotion. NON conditionné par `demo.enabled` :
+            // un compte promu n'est plus une démonstration, et il doit pouvoir trancher même
+            // si le mode démonstration a été coupé entre-temps sur l'instance.
+            ->renderHook('panels::body.end', fn () => view('livewire.demo-seed-choice-hook'))
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
             ->renderHook(\Filament\View\PanelsRenderHook::HEAD_START, fn () => config('services.gtm.id') ? view('partials.gtm-head') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::BODY_START, fn () => config('services.gtm.id') ? view('partials.gtm-body') : '')
