@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **440 tests automatisés (1 191 assertions)** écrits avec
+OpenLMNP est couvert par **467 tests automatisés (1 284 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -48,7 +48,9 @@ vendor/bin/pest --filter="Filament"
 | Page politique de confidentialité | 2 | Rendu et accessibilité de la page légale |
 | En-têtes de sécurité (F8) | 1 | X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy |
 | Smoke (framework) | 2 | Amorçage de l'application |
-| **Total** | **234** | **629 assertions** |
+| Charges récurrentes | 25 | Calendrier des échéances (non-débordement des mois courts, heures ignorées), idempotence, bornes d'année civile, refus sur exercice clôturé, action Filament et recalcul des exercices |
+| Suites ajoutées depuis | 208 | Suites plus récentes non encore détaillées ligne à ligne |
+| **Total** | **467** | **1 284 assertions** |
 
 ## Principes
 
