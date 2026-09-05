@@ -117,6 +117,27 @@ it('opens the offer iframe and freezes the sandbox while the visitor pays', func
     expect($user->demo_expires_at->greaterThan(Carbon::now()->addDays(6)))->toBeTrue();
 });
 
+it('derives the offer origin with its PORT, as the browser reports it', function () {
+    // ⚠️ Une origine se compare au caractère près : `http://127.0.0.1` ne vaut PAS
+    // `http://127.0.0.1:8299`. Sans le port, le signal de vie posté par la page encadrée est
+    // rejeté et le repli s'affiche alors même que le cadre s'est chargé correctement.
+    //
+    // Invisible en production, où `https://openlmnp.fr` n'a pas de port explicite — et c'est
+    // précisément le danger : le défaut ne se serait manifesté qu'ailleurs, bien plus tard.
+    // Trouvé en montant les deux serveurs en local, pas en relisant le code.
+    config()->set('demo.links.pro', 'http://127.0.0.1:8299/migrer');
+    actingOnSandbox(6);
+
+    expect(Livewire::test(DemoExpiryPrompt::class)->call('keepData')->get('offerOrigin'))
+        ->toBe('http://127.0.0.1:8299');
+
+    config()->set('demo.links.pro', 'https://openlmnp.fr/migrer');
+    actingOnSandbox(6);
+
+    expect(Livewire::test(DemoExpiryPrompt::class)->call('keepData')->get('offerOrigin'))
+        ->toBe('https://openlmnp.fr');
+});
+
 it('sends the refusal straight to the extension, without leaving the sandbox', function () {
     config()->set('demo.links.pro', 'https://openlmnp.fr/migrer');
     actingOnSandbox(6);

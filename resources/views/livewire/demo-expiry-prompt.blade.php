@@ -403,7 +403,7 @@
                                 class="dx-frame"
                                 x-data="{
                                     alive: false,
-                                    origin: @js(parse_url($offerUrl, PHP_URL_SCHEME).'://'.parse_url($offerUrl, PHP_URL_HOST)),
+                                    origin: @js($offerOrigin),
 
                                     init() {
                                         window.addEventListener('message', (e) => {

@@ -56,6 +56,17 @@ class DemoExpiryPrompt extends Component
 
     public int $iframeTimeoutMs = 4000;
 
+    /**
+     * Origine attendue du signal de vie posté par la page encadrée.
+     *
+     * ⚠️ Le PORT en fait partie. Une origine se compare au caractère près, et
+     * `http://127.0.0.1` ne vaut pas `http://127.0.0.1:8299` : sans le port, le message est
+     * rejeté et le repli s'affiche alors même que le cadre s'est chargé correctement. Invisible
+     * en production, où `https://openlmnp.fr` n'a pas de port explicite — et c'est bien le
+     * problème : le défaut ne se serait manifesté qu'ailleurs, longtemps après.
+     */
+    public string $offerOrigin = '';
+
     /** Lien de reprise, affiché ET envoyé par courriel après prolongation. */
     public string $resumeUrl = '';
 
@@ -159,6 +170,7 @@ class DemoExpiryPrompt extends Component
         ])->save();
 
         $this->offerUrl = $this->buildOfferUrl($token);
+        $this->offerOrigin = $this->originOf($this->offerUrl);
         $this->step = 'offer';
 
         $this->dispatch('analytics', ['event' => 'demo_claim_started']);
@@ -292,6 +304,20 @@ class DemoExpiryPrompt extends Component
             'demo' => $token,
             'embed' => 1,
         ]);
+    }
+
+    /**
+     * Origine d'une URL, PORT COMPRIS — c'est ce que le navigateur met dans `event.origin`.
+     */
+    private function originOf(string $url): string
+    {
+        $parts = parse_url($url);
+
+        if (empty($parts['scheme']) || empty($parts['host'])) {
+            return '';
+        }
+
+        return $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
     }
 
     /**
