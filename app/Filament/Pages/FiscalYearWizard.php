@@ -113,8 +113,11 @@ class FiscalYearWizard extends Page
                             ->hint('L\'exercice couvre du 1er janvier au 31 décembre')
                             ->rules([
                                 fn () => function (string $attribute, $value, \Closure $fail) {
-                                    $error = app(FiscalYearService::class)
-                                        ->missingPreviousYearError(auth()->user(), (int) $value);
+                                    $error = app(FiscalYearService::class)->missingPreviousYearError(
+                                        auth()->user(),
+                                        (int) $value,
+                                        $this->hasOpeningBalances((int) $value),
+                                    );
 
                                     if ($error !== null) {
                                         $fail($error);
@@ -504,8 +507,28 @@ class FiscalYearWizard extends Page
      */
     private function previousYearMissingError(): ?string
     {
-        return app(FiscalYearService::class)
-            ->missingPreviousYearError(auth()->user(), $this->selectedYear());
+        return app(FiscalYearService::class)->missingPreviousYearError(
+            auth()->user(),
+            $this->selectedYear(),
+            $this->hasOpeningBalances($this->selectedYear()),
+        );
+    }
+
+    /**
+     * L'exercice porte-t-il des soldes d'ouverture repris d'une liasse ?
+     *
+     * Sans ce contrôle, quelqu'un qui vient de reprendre son dossier se voyait refuser la
+     * création de son exercice au motif que le N-1 « n'existe pas » — alors que c'est
+     * précisément le cas d'usage de la reprise : son report vient de ses soldes
+     * d'ouverture, pas d'un exercice antérieur qu'il n'a jamais tenu ici.
+     */
+    private function hasOpeningBalances(int $year): bool
+    {
+        return FiscalYear::withoutGlobalScopes()
+            ->where('user_id', auth()->id())
+            ->where('year', $year)
+            ->first()
+            ?->hasOpeningBalances() ?? false;
     }
 
     /**

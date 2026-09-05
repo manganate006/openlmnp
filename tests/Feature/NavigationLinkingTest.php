@@ -16,9 +16,11 @@ use App\Filament\Pages\DepreciationEditor;
 use App\Filament\Pages\FiscalYearWizard;
 use App\Filament\Pages\HelpPage;
 use App\Filament\Pages\ImportAirbnb;
+use App\Filament\Pages\ImportCsv;
 use App\Filament\Pages\LoanDetail;
 use App\Filament\Pages\OnboardingWizard;
 use App\Filament\Pages\Projection;
+use App\Filament\Pages\RepriseDossier;
 use App\Filament\Pages\Simulator;
 use App\Filament\Pages\Teledeclaration;
 use App\Filament\Pages\TvaDeclaration;
@@ -58,9 +60,11 @@ function allUserPages(): array
         'TvaDeclaration' => TvaDeclaration::class,
         'AnnualImportWizard' => AnnualImportWizard::class,
         'ImportAirbnb' => ImportAirbnb::class,
+        'ImportCsv' => ImportCsv::class,
         'LoanDetail' => LoanDetail::class,
         'FiscalYearWizard' => FiscalYearWizard::class,
         'OnboardingWizard' => OnboardingWizard::class,
+        'RepriseDossier' => RepriseDossier::class,
     ];
 }
 
@@ -81,9 +85,12 @@ function pageLinkMap(): array
 {
     return [
         'Dashboard' => ['Incomes', 'Expenses', 'Simulator', 'Properties'],
-        'Incomes' => ['ImportAirbnb'],
+        'Incomes' => ['ImportAirbnb', 'ImportCsv'],
+        'Expenses' => ['ImportCsv'],
+        'Furniture' => ['ImportCsv'],
+        'PropertyWorks' => ['ImportCsv'],
         'Loans' => ['LoanDetail'],
-        'FiscalYears' => ['FiscalYearWizard', 'Simulator', 'Projection', 'Teledeclaration'],
+        'FiscalYears' => ['FiscalYearWizard', 'Simulator', 'Projection', 'Teledeclaration', 'RepriseDossier'],
     ];
 }
 
@@ -99,7 +106,7 @@ function helpPageLinks(): array
 /** Pages that never appear in any menu ($shouldRegisterNavigation = false). */
 function noMenuPages(): array
 {
-    return ['ImportAirbnb', 'FiscalYearWizard', 'LoanDetail'];
+    return ['ImportAirbnb', 'ImportCsv', 'FiscalYearWizard', 'LoanDetail', 'RepriseDossier'];
 }
 
 /** Pages hidden in Simple mode via isHiddenInSimpleMode(). */

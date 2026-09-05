@@ -28,14 +28,28 @@
     <h3>Personnalisation</h3>
     <p>Vous pouvez ajuster les pourcentages et les durées. Quand vous ajoutez un composant optionnel, réduisez principalement le gros &oelig;uvre. Si le coût réel d'un composant est connu (travaux, facture), utilisez-le plutôt que le pourcentage par défaut.</p>
 
-    <h3>Saisir un montant exact</h3>
-    <p>L'onglet <strong>Montants</strong> permet d'entrer directement la base amortissable de chaque composant, en euros. C'est le mode à utiliser pour <strong>reprendre une comptabilité déjà tenue ailleurs</strong> : un pourcentage entier ne permet pas de retomber à l'euro près sur les amortissements pratiqués par un cabinet.</p>
+    <h3>Deux modes : Ventilation ou Montants</h3>
+    <p>La bascule en haut de l'écran choisit la façon de renseigner le plan.</p>
     <ul>
-        <li data-icon="&#x1F4B6;">Les montants sont <strong>quote-part déjà appliquée</strong> : saisissez la part réellement louée, pas la valeur totale du bien.</li>
-        <li data-icon="&#x1F512;">Une base saisie à la main est <strong>verrouillée</strong> : elle ne suit plus le prix du bien et n'est jamais recalculée automatiquement.</li>
-        <li data-icon="&#x1F4C9;">La dotation annuelle se calcule seule, mais reste modifiable si votre cabinet arrondissait autrement.</li>
+        <li data-icon="&#x1F39A;"><strong>Ventilation</strong> &mdash; vous répartissez la base amortissable au curseur, en pourcentages. Le mode normal quand vous partez de zéro.</li>
+        <li data-icon="&#x1F4B6;"><strong>Montants</strong> &mdash; vous saisissez directement la base de chaque composant, en euros. Le mode à utiliser pour <strong>reprendre une comptabilité déjà tenue ailleurs</strong> : un pourcentage entier ne permet pas de retomber à l'euro près sur les amortissements pratiqués par un cabinet.</li>
     </ul>
-    <p>Ventiler <strong>moins</strong> que la base amortissable est permis, et signalé : la part non rattachée à un composant ne s'amortit simplement pas. Ventiler <strong>plus</strong> est refusé.</p>
+    <p>L'écran s'ouvre sur le mode qui correspond à vos données : dès qu'une base a été saisie à la main, c'est <strong>Montants</strong> qui s'affiche.</p>
+
+    <h3>Le tableau des montants, colonne par colonne</h3>
+    <ul>
+        <li data-icon="&#x1F4D0;"><strong>Ligne 2033-C</strong> &mdash; la rubrique sous laquelle le composant sera imprimé dans la liasse : Constructions (430 / 520), Installations techniques (440 / 530), Agencements et aménagements (450 / 540) ou Autres immobilisations (470 / 560). Elle est proposée d'après le nom, et reste modifiable.</li>
+        <li data-icon="&#x1F4B6;"><strong>Base</strong> &mdash; en euros, <strong>quote-part déjà appliquée</strong> : saisissez la part réellement louée, pas la valeur totale du bien.</li>
+        <li data-icon="&#x1F4C9;"><strong>Dotation annuelle</strong> &mdash; calculée seule (base &divide; durée), mais modifiable si votre cabinet arrondissait autrement.</li>
+        <li data-icon="&#x1F4C5;"><strong>Début</strong> &mdash; à ne renseigner que si le composant ne démarre pas à la mise en location du bien : passage du micro-BIC au réel, mise en service échelonnée. Laissé vide, il suit la date de mise en location.</li>
+        <li data-icon="&#x1F5C3;"><strong>Cumul repris</strong> &mdash; les amortissements déjà pratiqués par votre cabinet sur des exercices que vous ne saisirez pas ici. Ils s'ajoutent au cumul du bilan (2033-A case 030) et à la colonne « amortissements » du 2033-C, <strong>jamais</strong> à la charge de l'exercice.</li>
+    </ul>
+    <p>Une base saisie à la main porte l'étiquette <strong>saisi</strong> : elle est <strong>verrouillée</strong>, ne suit plus le prix du bien et n'est jamais recalculée automatiquement.</p>
+
+    <h3>Une ligne qui n'existe pas au catalogue</h3>
+    <p>Le bouton <strong>« + Ajouter un composant »</strong> crée une ligne à nom libre &mdash; « Ascenseur », « Menuiseries extérieures », tout ce que votre liasse comporte et que la liste standard ignore. Elle naît en mode Montants, sur 10 ans et en « Autres immobilisations » : donnez-lui son nom, sa durée, sa base et sa vraie ligne 2033-C.</p>
+
+    <p>Ventiler <strong>moins</strong> que la base amortissable est permis, et signalé sous le tableau : la part non rattachée à un composant ne s'amortit simplement pas. Ventiler <strong>plus</strong> est refusé à l'enregistrement.</p>
 
     <div class="ctx-warning" style="margin-top:12px;">
         <strong>Après modification :</strong> les exercices déjà enregistrés gardent leurs totaux figés. Lancez « Recalculer la chaîne » depuis la page Exercices pour qu'ils reprennent les nouvelles valeurs.

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Expense;
 use App\Models\FiscalYear;
 use App\Models\Income;
 use App\Models\Property;
@@ -204,6 +205,50 @@ it('expose les trois signaux ajoutes pour le sequenceur', function () {
         ->and($signal['first_rental_start'])->toContain('2024-07-01')
         // Aucune charge saisie : toutes les categories manquent.
         ->and($signal['expense_categories_missing'])->not->toBeEmpty();
+});
+
+it('exclut les categories REELLEMENT saisies, sur la bonne colonne de date', function () {
+    // ⚠️ Le test voisin n'exerce que le cas « aucune charge saisie », où toutes les
+    // categories manquent — il passait donc AUSSI avec la faute qu'il etait cense couvrir :
+    // `whereYear('date')` au lieu de `whereYear('expense_date')`.
+    //
+    // SQLite ne leve aucune erreur sur une colonne inconnue entre guillemets, il la traite
+    // comme un litteral texte : la requete rendait zero ligne, en silence. Toutes les
+    // categories etaient donc declarees absentes, pour tout le monde, et le scenario
+    // « charges incompletes » de la vitrine se serait declenche a chaque fois.
+    //
+    // Ce test-ci est le seul qui fasse la difference : il faut des charges PRESENTES.
+    $user = User::factory()->create(['email' => 'charges@example.com']);
+    $property = signalsProperty($user);
+
+    Expense::create([
+        'property_id' => $property->id, 'expense_date' => '2025-03-10',
+        'amount' => 120000, 'category' => 'property_tax', 'description' => 'Taxe fonciere',
+    ]);
+
+    // Hors exercice : elle ne doit PAS compter comme presente en 2025.
+    Expense::create([
+        'property_id' => $property->id, 'expense_date' => '2024-03-10',
+        'amount' => 90000, 'category' => 'insurance', 'description' => 'Assurance 2024',
+    ]);
+
+    // Charge d'un AUTRE utilisateur, sur la bonne annee et une categorie encore manquante.
+    // Sans elle, retirer le filtre `whereIn('property_id')` ne casserait aucun test : avec un
+    // seul dossier en base, filtrer ou non donne le meme resultat. Le signal fuiterait d'un
+    // client vers un autre sans que rien ne le voie.
+    $voisin = User::factory()->create(['email' => 'voisin@example.com']);
+    Expense::create([
+        'property_id' => signalsProperty($voisin)->id, 'expense_date' => '2025-05-20',
+        'amount' => 50000, 'category' => 'insurance', 'description' => 'Assurance du voisin',
+    ]);
+
+    $manquantes = $this->getJson('/api/admin/lifecycle-signals?emails[]=charges@example.com&year=2025', signalsHeaders())
+        ->assertOk()->json('signals.0.expense_categories_missing');
+
+    expect($manquantes)->not->toContain('property_tax')   // saisie en 2025 → presente
+        // Saisie en 2024 par lui, et en 2025 par QUELQU'UN D'AUTRE : manquante dans les deux cas.
+        ->and($manquantes)->toContain('insurance')
+        ->and($manquantes)->not->toBeEmpty();
 });
 
 it('ne renvoie jamais un montant dans les categories manquantes', function () {

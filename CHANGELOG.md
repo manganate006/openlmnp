@@ -2,6 +2,121 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.5.0] - 2026-09-06
+
+> ⚠️ **Cette version change des liasses fiscales déjà générées.** La correction du tableau
+> 2033-D (cases 982/983/984, détaillée plus bas) modifie ce que l'application imprime pour
+> des exercices **déjà déposés**. Régénérer une liasse antérieure produira un document
+> différent de celui transmis à l'administration — c'est voulu, l'ancien était faux.
+> `php artisan openlmnp:repair-deficits` reconstitue le suivi sur les dossiers déjà tenus,
+> en mode rapport par défaut.
+
+### Ajouts
+
+- **Un assistant « Reprendre un dossier existant », en cinq étapes.** Accessible depuis
+  l'écran de premier lancement (« J'ai déjà une comptabilité LMNP ») et depuis les exercices
+  fiscaux, il reprend un dossier tenu par un cabinet **à partir de la seule dernière liasse**,
+  sans ressaisir un exercice passé : votre situation, votre bien, vos amortissements, vos
+  reports, puis un contrôle. **Chaque montant demandé porte le numéro de la case Cerfa où le
+  lire** — 2033-D case 870 pour les amortissements différés, 2033-A case 030 pour le cumul,
+  2033-A case 028 pour les immobilisations brutes, 2033-D cases 980 à 984 pour les déficits
+- L'étape des amortissements commence par un **choix de méthode**, avantages et inconvénients
+  affichés : *recopier les lignes de sa liasse* (une dizaine de champs, mais les chiffres
+  restent exactement ceux du comptable) ou *répartir automatiquement la base* (un clic, mais
+  un plan différent du sien). La grille qui suit est l'éditeur d'amortissements existant, avec
+  ses deux modes — la reprise ne les réinvente pas, elle les propose au bon moment
+- **L'étape de contrôle est la fonctionnalité.** Elle met face à face ce que dit la liasse et
+  ce que l'application reconstitue, ligne par ligne, et nomme les causes probables d'un écart
+  par ordre de fréquence. Quand l'écart correspond aux frais d'acquisition, un bouton les
+  bascule en charges et rejoue le contrôle sur place
+- Rien n'est écrit dans les exercices fiscaux avant la fin du parcours : un assistant
+  abandonné en route ne laisse pas derrière lui un exercice dont toute la chaîne de reports
+  lirait les montants
+- **Reprendre une comptabilité tenue par un cabinet, sans ressaisir les exercices passés.**
+  Un exercice peut désormais porter des **soldes d'ouverture** recopiés de la liasse N-1 :
+  amortissements réputés différés (2033-D case 870 ou 2033-B case 318), déficits reportables
+  par millésime (2033-D cases 980-984), cumul d'amortissements déclaré (2033-A case 030) et
+  provenance de la saisie. Jusqu'ici le report d'amortissements différés se lisait
+  **uniquement** dans l'exercice N-1 présent en base : celui qui arrivait d'un cabinet, et
+  n'avait donc aucun exercice antérieur dans l'application, perdait purement et simplement
+  son report. Créer un exercice sans son prédécesseur n'est plus refusé lorsque des soldes
+  d'ouverture sont saisis, et la liste des exercices porte un badge « Reprise »
+- Le cumul d'amortissements d'ouverture est une donnée de **contrôle** : il sert à comparer
+  ce que l'application reconstitue à ce que le cabinet a déclaré, et n'entre jamais dans un
+  calcul — l'y faire entrer reviendrait à compter deux fois le même amortissement
+- **Un exercice N-1 vide ne peut plus effacer un solde d'ouverture en silence.** Un exercice
+  créé par erreur puis jamais alimenté portait un report de 0 € qui l'emportait sur les
+  12 000 € recopiés de la liasse, sans aucun signal. Le solde saisi est désormais conservé,
+  et la situation est signalée dans la liste des exercices tant que l'exercice vide subsiste
+- **Les déficits reportables sont enfin suivis pour eux-mêmes.** Chaque exercice porte son
+  stock de déficits antérieurs, ce qui en a été imputé sur le bénéfice, ce qui reste à
+  reporter, et le détail par millésime. L'imputation part du millésime le plus ancien et
+  s'arrête à dix ans : un déficit né en 2015 s'impute de 2016 à 2025, et disparaît en 2026
+  (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250). L'amortissement réputé différé, lui,
+  se reporte sans limite de durée (art. 39 C, II-3) — ce ne sont pas les mêmes règles, et ce
+  n'était pas le même compteur
+- **Un contrôle de reprise, chiffre à chiffre.** Un service compare la liasse du dernier
+  exercice bouclé par le cabinet à ce que l'application reconstitue : immobilisations brutes
+  (2033-A case 028), amortissements cumulés (case 030), amortissements différés (2033-D case
+  870), déficits restants (case 984) et résultat (2033-B cases 352/354). Verdict par ligne :
+  vert jusqu'à 1 € d'écart — une liasse est arrondie à l'euro —, ambre jusqu'à 1 %, rouge
+  au-delà, avec les causes probables classées par fréquence : date de mise en location, part
+  du terrain, frais d'acquisition passés en charges, composant manquant, valeur vénale au
+  lieu du prix d'acquisition. Certaines pistes sont *corroborées* par les données du dossier
+  quand celles-ci les appuient — l'écart vaut exactement les frais de notaire, par exemple.
+  L'écran qui l'affiche arrive avec l'assistant de reprise
+- L'outil MCP `get_fiscal_year` expose les soldes d'ouverture et le suivi des déficits
+  (lecture seule : aucun outil MCP ne les écrit)
+- **Un plan d'amortissement fidèle à celui du cabinet.** Date de départ par composant (pour
+  un passage au réel plusieurs années après la mise en location, ou une toiture refaite en
+  cours de route), composants à nom libre hors catalogue, ligne Cerfa explicite par composant,
+  dotations recopiées telles quelles et cumuls d'amortissements d'ouverture par actif. Les
+  frais d'acquisition peuvent être **amortis, passés en charges ou non repris** : c'est le
+  choix le plus fréquemment divergent d'un cabinet à l'autre, et il fallait pouvoir le suivre
+- **Import CSV générique** (recettes, charges, mobilier, travaux) : séparateur, montants et
+  dates reconnus automatiquement, correspondance des colonnes corrigeable, aperçu avant
+  écriture, doublons écartés. L'import Airbnb reste l'écran à préférer pour un export Airbnb :
+  lui seul reconstitue le brut depuis le net
+- **Export et import du dossier complet** (`openlmnp:export-dossier`, `openlmnp:import-dossier`)
+  : un JSON versionné qui fait l'aller-retour à l'identique, pour changer d'instance sans
+  ressaisie
+- `list_property_components` (MCP) expose la ligne Cerfa, la date de départ et le cumul
+  d'ouverture de chaque composant
+
+### Corrections
+
+- **⚠️ Le tableau 2033-D déclarait des déficits qui n'existaient pas.** Les cases 982, 983 et
+  984 suivent les **déficits reportables** ; elles étaient alimentées par le montant des
+  **amortissements réputés différés**. Tout bailleur ayant de l'amortissement différé — c'est
+  le cas le plus courant en LMNP — a donc déposé une liasse portant des déficits qu'il n'avait
+  pas. **Cette correction change des liasses déjà générées et déjà transmises.** Les cases
+  982/983/984 portent désormais les déficits, la case 860 le déficit de l'exercice et la case
+  870 le total d'amortissements différés reportables ; la case 360 du 2033-B reste
+  l'amortissement différé antérieur.
+
+  L'ordre d'imputation retenu est sourcé, pas déduit : les amortissements différés se
+  déduisent **du résultat de l'exercice** (BOI-BIC-AMT-20-40-10-30 § 10), le déficit antérieur
+  s'impute ensuite sur un résultat **déjà déterminé** (BOI-BIC-DEF-20-10 § 70 ; CE, 10 avril
+  2015, n° 369667). Conséquence : tant qu'il reste de l'amortissement différé, aucun déficit
+  antérieur n'est consommé — alors que son délai de dix ans continue de courir.
+
+  Les totaux d'exercice sont figés en base : la commande **`php artisan openlmnp:repair-deficits`**
+  reconstitue le suivi sur les dossiers déjà tenus (rapport par défaut, `--fix` pour écrire).
+  Elle ne réécrit que les colonnes de déficit — le résultat fiscal déclaré ne bouge pas. La
+  page « Aide à la télédéclaration » avertit les utilisateurs concernés.
+
+- **Le contrôle de reprise ne voyait pas la cause d'écart la plus fréquente.** Il ne
+  rapprochait un écart que du montant **brut** des frais d'acquisition. Or sur la ligne des
+  amortissements **cumulés** (2033-A case 030), l'écart ne vaut pas les frais entiers mais
+  seulement ce qui en a été amorti à ce jour : la piste « frais passés en charges par le
+  cabinet » n'était donc jamais mise en avant là où elle est vraie. Les deux références sont
+  désormais comparées.
+
+### Interne
+
+- `openlmnp:recompute-depreciation` : signale (et corrige sur demande) les dotations qui ne
+  reflètent plus le plan, sans jamais toucher une dotation saisie à la main ni un cumul
+  d'ouverture aberrant, qu'elle se contente de nommer
 ## [1.4.5] - 2026-09-04
 
 ### Corrections
@@ -69,7 +184,7 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   message d'erreur**. `INSTALLATION.md` et la FAQ décrivaient précisément cette méthode :
   ils indiquent maintenant la commande d'instantané à utiliser à la place
 
-## [1.4.2] - 2026-09-05
+## [1.4.2] - 2026-09-04
 
 ### Ajouts
 
