@@ -59,6 +59,8 @@ vendor/bin/pest --filter="Filament"
 | Export / import du dossier | 13 | Aller-retour identique, `schema_version` refusée si trop récente, contrôle d'appartenance, archive antérieure relisible, transaction annulée en cas d'échec |
 | Assistant de reprise (`/reprise`) | 30 | Les cinq étapes, la case Cerfa à côté de chaque montant, euros→centimes une seule fois, choix de méthode et réemploi de l'éditeur existant, contrôle branché sur `ReprisesCheckService`, rien écrit dans `fiscal_years` avant la fin, exercice clôturé protégé, isolation entre comptes, les deux portes d'entrée |
 | Couverture de l'aide contextuelle | 6 | Toute fiche d'aide recensée (l'index de l'assistant part du registre, pas du dossier des vues), aucune entrée sans vue, libellés cités par l'aide vérifiés dans l'écran, 2033-D expliqué comme le code le calcule |
+| Charges récurrentes | 25 | Calendrier des échéances (non-débordement des mois courts, heures ignorées), idempotence, bornes d'année civile, refus sur exercice clôturé, action Filament et recalcul des exercices |
+| Duplication d'une charge | 13 | Date avancée d'une période, conversion euros/centimes, justificatifs non recopiés, invitation à générer posée après enregistrement |
 | Suites ajoutées depuis (détail non ventilé) | 193 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel, estimation DVF de la valeur vénale, justificatifs restés à la racine d'avant Laravel 11… |
 | **Total** | **577** | **1 584 assertions** |
 

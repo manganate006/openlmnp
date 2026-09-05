@@ -70,12 +70,16 @@ class ExpenseForm
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
                                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Montant total de la charge. Si partagée, la quote-part sera calculée automatiquement.'),
+                            // Le montant saisi est celui d'UNE échéance, jamais un total annuel.
+                            // L'avertissement était un tooltip caché derrière une icône « ? »,
+                            // introuvable sur mobile : d'où l'issue #9, où une charge mensuelle
+                            // n'était comptée qu'une fois. Il est désormais toujours visible.
                             Select::make('recurring_type')
                                 ->label('Récurrence')
                                 ->options(Expense::recurringLabels())
                                 ->required()
                                 ->default('once')
-                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Pour le suivi uniquement. Chaque occurrence doit être saisie séparément.'),
+                                ->helperText('Le montant est celui d\'UNE échéance. Mensuel ou trimestriel : l\'action « Générer les échéances », dans la liste, crée les lignes de l\'année.'),
                         ]),
                         Grid::make(2)
                             ->schema([
