@@ -212,10 +212,25 @@ class DemoDataService
         // Chaîne d'exercices fiscaux clôturés : 2022 → N-1, dans l'ordre,
         // pour que les reports d'amortissements différés se propagent.
         $fiscalYearService = app(FiscalYearService::class);
+        $seededYears = [];
         for ($year = 2022; $year < $currentYear; $year++) {
             $fiscalYear = $fiscalYearService->getOrCreate($user, $year);
             $fiscalYear->update(['status' => FiscalYear::STATUS_CLOSED]);
+            $seededYears[] = $fiscalYear->id;
         }
+
+        // Trace de ce qui vient du seed, et pas du visiteur.
+        //
+        // Sans ce marqueur, distinguer le bien d'exemple de celui que le visiteur a saisi
+        // relèverait de la devinette : c'est lui qui rend possible l'option « ne garder que
+        // mes saisies » au moment de la conversion, et le décompte honnête de ce qui serait
+        // réellement perdu à l'expiration. Il tient parce que le seed ne crée QU'UN bien.
+        $user->forceFill([
+            'demo_seed' => [
+                'property_id' => $property->id,
+                'fiscal_year_ids' => $seededYears,
+            ],
+        ])->save();
     }
 
     /**
