@@ -150,9 +150,21 @@ class LifecycleSignalsController extends Controller
             return [];
         }
 
+        // ⚠️ `expense_date`, pas `date`. SQLite ne lève AUCUNE erreur sur un nom de colonne
+        // inconnu entre guillemets : il le traite comme un littéral texte. `whereYear('date')`
+        // compilait donc en `strftime('%Y', "date")`, qui rend NULL, et la requête rendait
+        // ZÉRO ligne — sans exception, sans journal, sans test rouge.
+        //
+        // Mesuré sur la base de production : 8 catégories avec `expense_date`, 0 avec `date`.
+        // Conséquence en chaîne : toutes les catégories étaient déclarées absentes, pour tout
+        // le monde, et le scénario `SequenceCatalog.php:155` de la vitrine — qui se déclenche
+        // quand la liste contient `property_tax` et compte au moins deux virgules — se serait
+        // déclenché TOUJOURS. Un e-mail serait parti reprocher à chacun des charges qu'il a
+        // pourtant saisies. Même famille que le `has_loan ?? false` corrigé le même jour :
+        // un e-mail qui AFFIRME sur un signal faux.
         $presentes = Expense::query()
             ->whereIn('property_id', $propertyIds)
-            ->whereYear('date', $year)
+            ->whereYear('expense_date', $year)
             ->pluck('category')
             ->unique()
             ->filter()
