@@ -152,21 +152,41 @@ class TaxReturnService
      */
     public function compute2033A(FiscalYear $fy, $properties, int $year): array
     {
-        $immoBrut = 0;
-        $immoAmort = 0;
+        $corpBrut = 0;
+        $corpAmort = 0;
+        $incorpBrut = 0;
+        $incorpAmort = 0;
         $emprunts = 0;
 
         foreach ($properties as $prop) {
-            // Immobilisations brutes (valeur de référence × quote-part)
+            // ⚠️ Immobilisations CORPORELLES brutes = le bien (terrain compris, il reste
+            // corporel même s'il ne s'amortit pas) PLUS les travaux et le mobilier. Jusqu'au
+            // 2026-09-05 la case 028 ne portait que la valeur de référence du bien : rejouer
+            // une liasse réelle a montré qu'il y manquait exactement les travaux et le
+            // mobilier — 9 144 € sur 226 645 —, alors que notre propre 2033-C les liste.
+            // Sans effet sur le résultat, mais l'écran de contrôle de reprise compare cette
+            // ligne : l'utilisateur voyait un écart rouge qui ne venait pas de lui.
             $refValue = $prop->market_value ?? $prop->acquisition_price;
-            $immoBrut += (int) bcmul((string) $refValue, $prop->quota_share, 0);
+            $corpBrut += (int) bcmul((string) $refValue, $prop->quota_share, 0);
 
-            // Amortissements cumulés — même source que la colonne « amortissements à la
-            // fin de l'exercice » du 2033-C, donc les deux tableaux ne peuvent plus diverger.
-            // Le rejeu partait auparavant de la mise en location du BIEN, ce qui perdait les
-            // dotations des travaux réalisés avant elle (rénovation en 2022, location en 2023).
+            // Les frais d'acquisition sont des immobilisations INCORPORELLES (cases 014/016).
+            // Ils sont incorporés au coût du bâtiment dans le 2033-C, mais le bilan les
+            // distingue — c'est aussi ce que fait la liasse d'un cabinet.
             foreach ($this->depreciationService->depreciationDetailForYear($prop, $year) as $line) {
-                $immoAmort += (int) $line['cumul'];
+                if ($line['type'] === 'notary') {
+                    $incorpBrut += (int) $line['base'];
+                    $incorpAmort += (int) $line['cumul'];
+
+                    continue;
+                }
+
+                // La base des composants immeuble est déjà comprise dans la valeur de
+                // référence ci-dessus : seuls travaux et mobilier s'y ajoutent.
+                if ($line['type'] === 'work' || $line['type'] === 'furniture') {
+                    $corpBrut += (int) $line['base'];
+                }
+
+                $corpAmort += (int) $line['cumul'];
             }
 
             // Emprunts : capital restant dû
@@ -176,12 +196,15 @@ class TaxReturnService
             }
         }
 
-        $immoNet = $immoBrut - $immoAmort;
-        $totalActif = $immoNet; // Simplifié : pas de trésorerie trackée
+        $totalActif = ($corpBrut - $corpAmort) + ($incorpBrut - $incorpAmort);
 
         return [
-            '028' => $immoBrut,
-            '030' => $immoAmort,
+            '014' => $incorpBrut,
+            '016' => $incorpAmort,
+            '028' => $corpBrut,
+            '030' => $corpAmort,
+            '044' => $corpBrut + $incorpBrut,
+            '048' => $corpAmort + $incorpAmort,
             '112' => $totalActif,
             '120' => $totalActif - $fy->fiscal_result - $emprunts, // Compte exploitant (bouclage)
             '136' => $fy->fiscal_result,
@@ -203,37 +226,45 @@ class TaxReturnService
      * et d'agence n'avaient AUCUNE ligne dans ce tableau alors que la 254 les compte, et le
      * cumul était écrasé d'un bien à l'autre (`=` au lieu de `+=`) puis approximé par
      * `dotation × années`.
+     *
+     * ⚠️ Depuis le 2026-09-04, la ligne Cerfa d'un composant est une DONNÉE
+     * (`property_components.cerfa_category`) et non plus une déduction faite sur son nom :
+     * un composant renommé « Toiture ardoise » ou créé à la main basculait en « autres »
+     * sans que rien ne le dise. La table de correspondance historique subsiste dans
+     * `PropertyComponent::LEGACY_NAME_TO_CATEGORY`, où elle sert de valeur par défaut —
+     * aucun montant n'a donc changé de ligne à la migration.
      */
     public function compute2033C($properties, int $year): array
     {
+        // Ordre du Cerfa : incorporel, terrain, puis le corporel amortissable.
         $categories = [
+            'incorporelles' => ['lines' => ['immo' => '410', 'amort' => '500'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
+            'terrains'      => ['lines' => ['immo' => '420', 'amort' => null], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
             'constructions' => ['lines' => ['immo' => '430', 'amort' => '520'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
             'installations' => ['lines' => ['immo' => '440', 'amort' => '530'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
             'agencements'   => ['lines' => ['immo' => '450', 'amort' => '540'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
             'autres'        => ['lines' => ['immo' => '470', 'amort' => '560'], 'brut' => 0, 'dotation' => 0, 'cumul' => 0],
         ];
 
-        // Mappage par NOM, conservé à l'identique : les composants optionnels et ceux
-        // renommés tombent en « autres ». Le corriger déplacerait des montants entre
-        // lignes Cerfa d'un exercice à l'autre — chantier distinct.
-        $componentCategoryMap = [
-            'Gros œuvre' => 'constructions',
-            'Toiture' => 'constructions',
-            'Installations électriques' => 'installations',
-            'Plomberie / sanitaire' => 'installations',
-            'Étanchéité' => 'agencements',
-            'Agencements intérieurs' => 'agencements',
-        ];
-
         foreach ($properties as $prop) {
+            // ⚠️ Le terrain ne sort d'AUCUNE ligne du détail : il n'est pas amortissable, donc
+            // le service d'amortissement l'ignore. Il n'en reste pas moins une immobilisation,
+            // que la liasse d'un cabinet porte bien en 420 — sans lui, notre total 490 était
+            // amputé de la part terrain (32 625 € sur 245 643 € pour la liasse réelle rejouée
+            // le 2026-09-05). On le déduit de la valeur de référence, dont la base amortissable
+            // est justement le complément.
+            $refValue = (string) ($prop->market_value ?? $prop->acquisition_price);
+            $land = bcsub(
+                bcmul($refValue, $prop->quota_share, 0),
+                $prop->depreciable_base,
+                0
+            );
+            $categories['terrains']['brut'] += (int) $land;
+
             foreach ($this->depreciationService->depreciationDetailForYear($prop, $year) as $line) {
-                $category = match ($line['type']) {
-                    'building'  => $componentCategoryMap[$line['name']] ?? 'autres',
-                    'work'      => 'agencements',
-                    'furniture' => 'autres',
-                    // Les frais d'acquisition sont incorporés au coût du bâtiment.
-                    'notary'    => 'constructions',
-                };
+                $category = isset($categories[$line['cerfa_category'] ?? null])
+                    ? $line['cerfa_category']
+                    : 'autres';
 
                 $categories[$category]['brut'] += (int) $line['base'];
                 $categories[$category]['dotation'] += (int) $line['annual'];
@@ -250,16 +281,33 @@ class TaxReturnService
     }
 
     /**
-     * 2033-D — Déficits reportables
+     * 2033-D — Déficits reportables et amortissements différés
+     *
+     * ⚠️ Correction de conformité (v1.4.0). Les cases 982/983/984 suivent les DÉFICITS
+     * reportables ; elles étaient alimentées par `previous_deferred`, c'est-à-dire par
+     * l'AMORTISSEMENT RÉPUTÉ DIFFÉRÉ. Toute liasse d'un bailleur ayant de l'amortissement
+     * différé déclarait donc des déficits qu'il n'avait pas — un défaut de conformité, pas
+     * une gêne d'affichage. Les liasses générées avant la correction portent l'ancienne
+     * valeur : le changement est annoncé au CHANGELOG et dans la page Liasse fiscale.
+     *
+     * Ce sont bien deux stocks distincts, que l'administration fait d'ailleurs suivre par
+     * deux états séparés (BOI-FORM-000038 pour les amortissements dont la déduction a été
+     * écartée, BOI-FORM-000039 pour les déficits) :
+     *   - 982/983/984 : déficits antérieurs, imputés, restants — reportables DIX ans
+     *     (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250) ;
+     *   - 870 : amortissements différés, reportables SANS limite de durée
+     *     (CGI art. 39 C, II-3 ; BOI-BIC-AMT-20-40-10-30 § 10).
+     *
+     * La case 984 porte le stock à la clôture, déficit de l'exercice (860) compris.
      */
     public function compute2033D(FiscalYear $fy): array
     {
         return [
-            '982' => $fy->previous_deferred, // Déficits N-1
-            '983' => min($fy->previous_deferred, max(0, $fy->fiscal_result)), // Imputés
-            '984' => max(0, $fy->previous_deferred - min($fy->previous_deferred, max(0, $fy->fiscal_result))),
-            '860' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0,
-            '870' => $fy->deferred_depreciation, // Total reportable
+            '982' => (int) $fy->previous_deficit,      // Déficits antérieurs à l'ouverture
+            '983' => (int) $fy->deficit_imputed,       // Imputés sur le bénéfice de l'exercice
+            '984' => (int) $fy->deficit_carryforward,  // Restant à reporter à la clôture
+            '860' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0, // Déficit de l'exercice
+            '870' => (int) $fy->deferred_depreciation, // Amortissements différés reportables
         ];
     }
 

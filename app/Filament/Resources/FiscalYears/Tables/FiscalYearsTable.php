@@ -70,6 +70,42 @@ class FiscalYearsTable
         return 'Report correctement propagé vers ' . ($record->year + 1) . '.';
     }
 
+    /**
+     * Infobulle du badge « reprise » : ce qui a été repris, et d'où.
+     *
+     * Signale aussi le cas où un exercice N-1 vide vient contredire le solde d'ouverture :
+     * c'est ainsi qu'un report se perd sans que personne ne le voie.
+     */
+    private static function getOpeningTooltip(FiscalYear $record): ?string
+    {
+        if (! $record->hasOpeningBalances()) {
+            return null;
+        }
+
+        $parts = [];
+
+        if ((int) $record->opening_deferred_depreciation > 0) {
+            $parts[] = 'amortissements différés repris : '
+                . number_format($record->opening_deferred_depreciation / 100, 0, ',', ' ') . ' €';
+        }
+
+        if ($record->openingDeficitsTotal() > 0) {
+            $parts[] = 'déficits repris : '
+                . number_format($record->openingDeficitsTotal() / 100, 0, ',', ' ') . ' €';
+        }
+
+        if ($record->opening_source !== null) {
+            $parts[] = 'source : '
+                . strtolower(FiscalYear::openingSourceLabels()[$record->opening_source] ?? $record->opening_source);
+        }
+
+        $tooltip = 'Exercice de reprise — ' . implode(', ', $parts) . '.';
+
+        $warning = app(FiscalYearService::class)->openingBalanceWarning($record);
+
+        return $warning === null ? $tooltip : $tooltip . ' ⚠️ ' . $warning;
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -82,6 +118,16 @@ class FiscalYearsTable
                     ->formatStateUsing(fn ($state) => FiscalYear::statusLabels()[$state] ?? $state)
                     ->badge()
                     ->color(fn ($state) => $state === 'closed' ? 'success' : 'warning'),
+                TextColumn::make('opening_source')
+                    ->label('Reprise')
+                    ->badge()
+                    ->state(fn (FiscalYear $record) => $record->hasOpeningBalances() ? 'Reprise' : null)
+                    ->color(fn (FiscalYear $record) => app(FiscalYearService::class)->openingBalanceWarning($record) === null
+                        ? 'info'
+                        : 'danger')
+                    ->icon('heroicon-o-arrow-down-on-square')
+                    ->tooltip(fn (FiscalYear $record) => self::getOpeningTooltip($record))
+                    ->placeholder('—'),
                 TextColumn::make('total_income')
                     ->label('Recettes')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 0, ',', ' ') . ' €')

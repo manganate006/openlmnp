@@ -149,11 +149,14 @@ it('counts the gross value of acquisition fees, which the table ignored entirely
     $withoutFees = taxProperty($other, ['name' => 'Sans frais']);
     app(DepreciationService::class)->generateDefaultComponents($withoutFees);
 
-    $brut = fn (Property $p) => $this->taxReturn->compute2033C(collect([$p]), 2025)['categories']['constructions']['brut'];
+    $cat = fn (Property $p, string $c) => $this->taxReturn->compute2033C(collect([$p]), 2025)['categories'][$c]['brut'];
 
-    // Les frais d'acquisition sont incorporés au coût du bâtiment : l'écart entre les
-    // deux biens, par ailleurs identiques, doit valoir exactement leur montant.
-    expect($brut($withFees) - $brut($withoutFees))->toBe(2500000);
+    // Les frais d'acquisition sont des immobilisations INCORPORELLES (410/500) : depuis le
+    // 2026-09-05 ils ne gonflent plus les constructions, où ils étaient rangés faute de
+    // catégorie pour les accueillir. L'écart entre les deux biens, par ailleurs identiques,
+    // doit donc valoir leur montant sur la ligne incorporelle, et zéro sur les constructions.
+    expect($cat($withFees, 'incorporelles') - $cat($withoutFees, 'incorporelles'))->toBe(2500000)
+        ->and($cat($withFees, 'constructions'))->toBe($cat($withoutFees, 'constructions'));
 });
 
 it('still counts the gross value of fees once they are fully depreciated', function () {
@@ -163,13 +166,31 @@ it('still counts the gross value of fees once they are fully depreciated', funct
     // 2060 : les 25 ans des frais sont révolus, mais le gros œuvre (50 ans) court encore.
     $c = $this->taxReturn->compute2033C(collect([$property]), 2060);
 
-    // La valeur brute des frais reste au bilan (constructions = gros œuvre 50 % +
-    // toiture 10 % de 200 000 €, plus les 25 000 € de frais)…
-    expect($c['categories']['constructions']['brut'])->toBe(12000000 + 2500000)
+    // La valeur brute des frais reste au bilan, sur sa propre ligne incorporelle, tandis que
+    // les constructions gardent le seul bâti (gros œuvre 50 % + toiture 10 % de 200 000 €)…
+    expect($c['categories']['incorporelles']['brut'])->toBe(2500000)
+        ->and($c['categories']['constructions']['brut'])->toBe(12000000)
         // … alors qu'ils ne dotent plus rien : seul le gros œuvre alimente l'exercice.
         ->and($c['total_dotation'])->toBe(200000)
         // et leur cumul est complet, plafonné à leur valeur brute.
-        ->and($c['categories']['constructions']['cumul'])->toBeGreaterThan(2500000);
+        ->and($c['categories']['incorporelles']['cumul'])->toBe(2500000);
+});
+
+it('carries the land in the total gross assets, where the table ignored it', function () {
+    // Le terrain ne sort d'aucune ligne du détail d'amortissement — il ne s'amortit pas —, et
+    // la ligne 490 l'oubliait donc : 32 625 € manquants sur 245 643 € pour la liasse réelle
+    // rejouée le 2026-09-05. Ici : 250 000 € à 20 % de terrain, soit 50 000 €.
+    $property = taxProperty($this->user);
+    $this->depreciation->generateDefaultComponents($property);
+
+    $c = $this->taxReturn->compute2033C(collect([$property]), 2025);
+
+    expect($c['categories']['terrains']['brut'])->toBe(5000000)
+        // Le terrain ne dote rien et n'a pas de ligne d'amortissement au Cerfa.
+        ->and($c['categories']['terrains']['dotation'])->toBe(0)
+        ->and($c['categories']['terrains']['lines']['amort'])->toBeNull()
+        // Et le total brut vaut bien la valeur de référence entière.
+        ->and($c['total_brut'])->toBe(25000000);
 });
 
 it('matches line 572 with line 254 on a primary residence with a quota share', function () {

@@ -178,6 +178,7 @@ class DepreciationService
                 'base_amount'         => (int) $baseAmount,
                 'annual_depreciation' => (int) self::annualFromBase($baseAmount, $comp['duration_years']),
                 'base_source'         => PropertyComponent::BASE_SOURCE_PERCENTAGE,
+                'cerfa_category'      => PropertyComponent::cerfaCategoryForName($comp['name']),
                 'sort_order'          => $comp['sort_order'],
             ]);
         }
@@ -198,7 +199,9 @@ class DepreciationService
      * @param  list<array{
      *     id?: int|null, name: string, duration_years: int, sort_order: int,
      *     base_source?: string, percentage?: float|string|null,
-     *     base_amount?: int|null, annual_depreciation?: int|null
+     *     base_amount?: int|null, annual_depreciation?: int|null,
+     *     cerfa_category?: string|null, depreciation_start_date?: string|null,
+     *     opening_accumulated_depreciation?: int|null
      * }>  $lines
      * @return array{written: int, deleted: int, remainder: string}
      *
@@ -224,6 +227,12 @@ class DepreciationService
                 'base_source'         => $source,
                 'base_amount'         => $baseAmount,
                 'annual_depreciation' => $line['annual_depreciation'] ?? null,
+                // Trois colonnes optionnelles : absentes du tableau, elles ne touchent
+                // pas la valeur en base. C'est ce qui permet aux curseurs de continuer
+                // à n'envoyer que la ventilation sans effacer une reprise d'antériorité.
+                'cerfa_category'          => $line['cerfa_category'] ?? null,
+                'depreciation_start_date' => $line['depreciation_start_date'] ?? null,
+                'opening_accumulated_depreciation' => $line['opening_accumulated_depreciation'] ?? null,
             ];
         }
 
@@ -263,6 +272,19 @@ class DepreciationService
                         $line['base_amount'],
                         $line['duration_years'],
                     );
+                }
+
+                if (array_key_exists((string) $line['cerfa_category'], PropertyComponent::cerfaCategoryLabels())) {
+                    $attributes['cerfa_category'] = $line['cerfa_category'];
+                }
+
+                if ($line['depreciation_start_date'] !== null) {
+                    $attributes['depreciation_start_date'] = $line['depreciation_start_date'] ?: null;
+                }
+
+                if ($line['opening_accumulated_depreciation'] !== null) {
+                    $attributes['opening_accumulated_depreciation'] =
+                        max(0, (int) $line['opening_accumulated_depreciation']);
                 }
 
                 $component = $line['id']
@@ -428,7 +450,15 @@ class DepreciationService
      * Le cumul est un vrai rejeu année par année, et non l'ancien `dotation × années`, qui
      * ignorait le prorata de première année comme les plans arrivés à terme.
      *
-     * @return list<array{type: string, name: string, base: string, annual: string, cumul: string}>
+     * ⚠️ `opening_accumulated_depreciation` s'ajoute au CUMUL, et à lui seul. C'est le
+     * stock d'amortissements déjà pratiqué par le cabinet précédent sur des exercices que
+     * l'application ne tient pas : le compter aussi dans `annual` doublerait la charge de
+     * l'exercice — et ce serait invisible, l'égalité 572 = 254 restant vraie des deux côtés.
+     *
+     * ⚠️ `cerfa_category` accompagne chaque ligne pour que `TaxReturnService::compute2033C()`
+     * n'ait plus à deviner la ligne Cerfa depuis le NOM du composant.
+     *
+     * @return list<array{type: string, name: string, base: string, annual: string, cumul: string, cerfa_category: string}>
      */
     public function depreciationDetailForYear(Property $property, int $year): array
     {
@@ -440,11 +470,12 @@ class DepreciationService
                 'name'   => $component->name,
                 'base'   => (string) $component->base_amount,
                 'annual' => $this->calculateComponentForYear($component, $property, $year),
-                'cumul'  => $this->replay(
+                'cumul'  => $this->withOpening($component->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateComponentForYear($component, $property, $y),
-                    (int) $property->rental_start_date->format('Y'),
+                    (int) $this->componentStartDate($component, $property)->format('Y'),
                     $year,
-                ),
+                )),
+                'cerfa_category' => $component->cerfaCategory(),
             ];
         }
 
@@ -454,11 +485,12 @@ class DepreciationService
                 'name'   => $work->description,
                 'base'   => $this->grossAmount((string) $work->amount, $work->is_dedicated, $property),
                 'annual' => $this->calculateWorkForYear($work, $property, $year),
-                'cumul'  => $this->replay(
+                'cumul'  => $this->withOpening($work->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateWorkForYear($work, $property, $y),
                     (int) $work->work_date->format('Y'),
                     $year,
-                ),
+                )),
+                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_FITTINGS,
             ];
         }
 
@@ -468,12 +500,20 @@ class DepreciationService
                 'name'   => $item->description,
                 'base'   => $this->grossAmount((string) $item->amount, $item->is_dedicated, $property),
                 'annual' => $this->calculateFurnitureForYear($item, $property, $year),
-                'cumul'  => $this->replay(
+                'cumul'  => $this->withOpening($item->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateFurnitureForYear($item, $property, $y),
                     (int) $item->purchase_date->format('Y'),
                     $year,
-                ),
+                )),
+                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_OTHER,
             ];
+        }
+
+        // Frais passés en charges ou non repris : ils ne sont PAS une immobilisation.
+        // Les laisser au bilan brut ferait apparaître un actif que le cabinet a déjà
+        // déduit, et l'écart se lirait sur la case 028 du 2033-A.
+        if (! $property->amortizesAcquisitionFees()) {
+            return $lines;
         }
 
         foreach (['notary_fees' => 'Frais de notaire', 'agency_fees' => 'Honoraires agence'] as $field => $label) {
@@ -496,10 +536,26 @@ class DepreciationService
                     (int) $property->rental_start_date->format('Y'),
                     $year,
                 ),
+                // Les frais d'acquisition sont des immobilisations INCORPORELLES (410/500),
+                // pas des constructions : c'est ainsi qu'un cabinet les présente, et le bilan
+                // les distingue aussi (cases 014/016 du 2033-A).
+                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_INTANGIBLE,
             ];
         }
 
         return $lines;
+    }
+
+    /**
+     * Ajoute au cumul rejoué le stock d'amortissements repris d'une comptabilité antérieure.
+     *
+     * ⚠️ À n'appeler QUE sur un cumul. Un appel sur une dotation d'exercice passerait
+     * inaperçu (les tests d'égalité 572 = 254 resteraient verts) tout en gonflant la
+     * charge déductible de l'année.
+     */
+    private function withOpening(?int $opening, string $cumul): string
+    {
+        return bcadd($cumul, (string) max(0, (int) $opening), 0);
     }
 
     /** Assiette brute d'un actif, quote-part appliquée s'il n'est pas dédié à la location. */
@@ -525,11 +581,27 @@ class DepreciationService
     }
 
     /**
+     * Date à laquelle le plan d'un composant démarre.
+     *
+     * Par défaut la mise en location du bien. Une date propre au composant traite deux
+     * cas que le défaut rendait irreprésentables : le passage du micro-BIC au réel
+     * plusieurs années après la mise en location, et les mises en service échelonnées
+     * (une toiture refaite en 2021 sur un bien loué depuis 2018).
+     *
+     * ⚠️ Le défaut est résolu À LA LECTURE, jamais recopié en base : déplacer la mise en
+     * location du bien doit continuer d'entraîner tout le plan avec elle.
+     */
+    public function componentStartDate(PropertyComponent $component, Property $property): CarbonInterface
+    {
+        return $component->depreciation_start_date ?? $property->rental_start_date;
+    }
+
+    /**
      * Calcule l'amortissement d'un composant immeuble pour une année.
      */
     private function calculateComponentForYear(PropertyComponent $component, Property $property, int $year): string
     {
-        $startDate = $property->rental_start_date;
+        $startDate = $this->componentStartDate($component, $property);
         $startYear = (int) $startDate->format('Y');
         $endYear = $startYear + $component->duration_years - 1;
 
@@ -601,22 +673,30 @@ class DepreciationService
         return $annual;
     }
 
-    private const NOTARY_FEES_DURATION = 25;
-
     /**
-     * Calcule l'amortissement des frais de notaire pour une année (25 ans linéaire).
+     * Calcule l'amortissement des frais de notaire ou d'agence pour une année (linéaire).
+     *
+     * La durée et le traitement sont désormais des données du bien
+     * (`acquisition_fees_duration`, `acquisition_fees_treatment`). Les 25 ans en dur,
+     * qui ont régné jusqu'au 2026-09-04, amortissaient une seconde fois des frais que
+     * beaucoup de cabinets passent en charges l'année de l'acquisition.
      */
     private function calculateAcquisitionFeesForYear(Property $property, string $field, int $year): string
     {
+        if (! $property->amortizesAcquisitionFees()) {
+            return '0';
+        }
+
+        $duration = $property->acquisitionFeesDurationYears();
         $startDate = $property->rental_start_date;
         $startYear = (int) $startDate->format('Y');
-        $endYear = $startYear + self::NOTARY_FEES_DURATION - 1;
+        $endYear = $startYear + $duration - 1;
 
         if ($year < $startYear || $year > $endYear) {
             return '0';
         }
 
-        $annual = bcdiv((string) $property->$field, (string) self::NOTARY_FEES_DURATION, 0);
+        $annual = bcdiv((string) $property->$field, (string) $duration, 0);
 
         // Quote-part si résidence principale
         if ($property->is_primary_residence) {

@@ -64,8 +64,12 @@
             <td>Résultat exercice (136)</td><td class="r">{{ $fmt($form2033A['136']) }} €</td>
         </tr>
         <tr>
-            <td></td><td></td>
+            <td>Immob. incorporelles brut (014)</td><td class="r">{{ $fmtInt($form2033A['014']) }} €</td>
             <td>Emprunts (156)</td><td class="r">{{ $fmtInt($form2033A['156']) }} €</td>
+        </tr>
+        <tr>
+            <td>Amortissements (016)</td><td class="r">- {{ $fmtInt($form2033A['016']) }} €</td>
+            <td></td><td></td>
         </tr>
         <tr class="total">
             <td><strong>Total actif (112)</strong></td><td class="r"><strong>{{ $fmtInt($form2033A['112']) }} €</strong></td>
@@ -113,7 +117,8 @@
         @foreach($form2033C['categories'] as $catName => $cat)
             @if($cat['brut'] > 0)
                 <tr>
-                    <td class="c">{{ $cat['lines']['immo'] }} / {{ $cat['lines']['amort'] }}</td>
+                    {{-- Le terrain n'a pas de ligne d'amortissement : il ne s'amortit pas. --}}
+                    <td class="c">{{ $cat['lines']['immo'] }}@if($cat['lines']['amort']) / {{ $cat['lines']['amort'] }}@endif</td>
                     <td>{{ ucfirst($catName) }}</td>
                     <td class="r">{{ $fmtInt($cat['brut']) }} €</td>
                     <td class="r">{{ $fmtInt($cat['dotation']) }} €</td>
