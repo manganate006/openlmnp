@@ -116,6 +116,25 @@ class RecurringExpenseService
     }
 
     /**
+     * Date proposée pour une COPIE de la charge.
+     *
+     * Avance d'une période selon la récurrence déclarée — c'est le cas d'usage de la
+     * duplication : la taxe foncière de l'an prochain, la même charge au mois suivant.
+     * Une charge « Ponctuel » n'a pas de période : sa date est reprise telle quelle,
+     * à l'utilisateur de la corriger.
+     *
+     * ⚠️ Contrairement à la génération, la copie a le DROIT de sortir de l'année
+     * civile : c'est même son intérêt principal pour une charge annuelle.
+     */
+    public function defaultCopyDate(Expense $expense): CarbonImmutable
+    {
+        $start = $this->asDay(CarbonImmutable::parse($expense->expense_date));
+        $step = self::STEP_MONTHS[$expense->recurring_type] ?? ($expense->recurring_type === 'yearly' ? 12 : 0);
+
+        return $step === 0 ? $start : $start->addMonthsNoOverflow($step);
+    }
+
+    /**
      * Première échéance à générer, ou null si cette récurrence n'en produit aucune.
      * Sert de borne basse au sélecteur de date de la modale.
      */

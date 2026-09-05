@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Expenses\Tables;
 
 use App\Enums\TvaRate;
+use App\Filament\Actions\DuplicateExpenseAction;
 use App\Filament\Actions\GenerateOccurrencesAction;
 use App\Filament\Tables\Filters\YearFilter;
 use App\Models\Expense;
@@ -73,6 +74,8 @@ class ExpensesTable
             ->persistFiltersInSession()
             ->recordActions([
                 GenerateOccurrencesAction::make(),
+                DuplicateExpenseAction::make(),
+
                 EditAction::make(),
             ])
             ->toolbarActions([
