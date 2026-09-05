@@ -97,6 +97,10 @@ class AdminPanelProvider extends PanelProvider
             // `FEEDBACK_ENABLED=false`, le composant n'est même pas monté — une instance
             // auto-hébergée qui l'éteint ne paie pas un aller-retour Livewire par page.
             ->renderHook('panels::body.end', fn () => config('feedback.enabled') ? view('livewire.feedback-prompt-hook') : '')
+            // Compte à rebours du bac à sable. Conditionné ici, comme ci-dessus : hors mode
+            // démonstration le composant n'est pas monté du tout, et une instance normale ne
+            // paie pas un aller-retour Livewire par page pour un compteur qui n'existe pas.
+            ->renderHook('panels::body.end', fn () => config('demo.enabled') ? view('livewire.demo-expiry-prompt-hook') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
             ->renderHook(\Filament\View\PanelsRenderHook::HEAD_START, fn () => config('services.gtm.id') ? view('partials.gtm-head') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::BODY_START, fn () => config('services.gtm.id') ? view('partials.gtm-body') : '')
