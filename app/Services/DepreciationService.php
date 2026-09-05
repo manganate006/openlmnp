@@ -311,6 +311,40 @@ class DepreciationService
     }
 
     /**
+     * Une ligne compte-t-elle comme « ventilée » ?
+     *
+     * Prédicat unique de la règle de troncature : il sert à `absorbTruncationDust()`, qui
+     * travaille sur des lignes en cours d'écriture, ET à `truncationTolerance()`, qui
+     * travaille sur les composants persistés. Deux entrées, une seule définition — sinon
+     * le contrôle de la liasse et l'éditeur d'amortissements finiraient par diverger sur
+     * ce qui est de la poussière d'arrondi.
+     */
+    public static function isVentilated(?string $baseSource, int|string|null $baseAmount): bool
+    {
+        return $baseSource === PropertyComponent::BASE_SOURCE_PERCENTAGE
+            && bccomp((string) ($baseAmount ?? '0'), '0', 0) > 0;
+    }
+
+    /**
+     * Tolérance d'arrondi d'un bien, en centimes.
+     *
+     * `baseFromPercentage()` tronque chaque part séparément : une ventilation à 100 % peut
+     * donc laisser jusqu'à un centime par ligne ventilée. Au-delà, ce n'est plus de la
+     * poussière mais une sous-ventilation voulue.
+     *
+     * ⚠️ `generateDefaultComponents()` **n'appelle pas** `absorbTruncationDust()` : un bien
+     * fraîchement créé porte réellement ces quelques centimes. Tout contrôle qui compare la
+     * base amortissable à la somme des composants doit donc passer par cette tolérance,
+     * sans quoi il signale un défaut sur un bien intact.
+     */
+    public function truncationTolerance(Property $property): int
+    {
+        return $property->components
+            ->filter(fn (PropertyComponent $c) => self::isVentilated($c->base_source, $c->base_amount))
+            ->count();
+    }
+
+    /**
      * Réaffecte les quelques centimes perdus par la troncature de `baseFromPercentage()`.
      *
      * Une ventilation à 100 % ne retombe pas exactement sur la base : chaque part est
@@ -334,8 +368,7 @@ class DepreciationService
 
         $ventilated = array_keys(array_filter(
             $resolved,
-            fn ($l) => $l['base_source'] === PropertyComponent::BASE_SOURCE_PERCENTAGE
-                && bccomp($l['base_amount'], '0', 0) > 0,
+            fn ($l) => self::isVentilated($l['base_source'], $l['base_amount']),
         ));
 
         if ($ventilated === [] || bccomp($remainder, (string) count($ventilated), 0) > 0) {

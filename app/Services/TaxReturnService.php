@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\Storage;
  */
 class TaxReturnService
 {
+    public const CHECK_OK = 'ok';
+
+    /** Situation permise par le produit, mais que l'utilisateur doit savoir. */
+    public const CHECK_WARNING = 'warning';
+
+    public const CHECK_ERROR = 'error';
+
     public function __construct(
         private FiscalYearService $fiscalYearService,
         private DepreciationService $depreciationService,
@@ -46,6 +53,8 @@ class TaxReturnService
             'form2033D' => $this->compute2033D($fiscalYear),
             'form2042' => $this->compute2042($fiscalYear),
         ];
+
+        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties);
 
         $pdf = Pdf::loadView('pdf.tax-return', $data);
         $pdf->setPaper('A4', 'portrait');
@@ -145,6 +154,122 @@ class TaxReturnService
             '370' => $fy->fiscal_result > 0 ? $fy->fiscal_result : 0,
             '372' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0,
         ];
+    }
+
+    /**
+     * Contrôles de cohérence entre formulaires — SEULE source de vérité.
+     *
+     * Fonction pure : les trois tableaux sont déjà calculés, aucun accès base
+     * supplémentaire. Le PDF et l'écran de télédéclaration l'appellent tous les deux au
+     * lieu de recalculer chacun le sien. Avant ça, le contrôle 572 = 254 vivait en double
+     * — `!=` lâche dans la vue PDF, `===` strict dans la page Filament — deux écrans qui
+     * pouvaient donc, à terme, dire l'inverse l'un de l'autre sur la même liasse.
+     *
+     * @param  \Illuminate\Support\Collection<int, Property>|array<int, Property>  $properties
+     * @return list<array{id: string, status: string, message: string, delta: int}>
+     */
+    public function checks(array $form2033A, array $form2033B, array $form2033C, $properties): array
+    {
+        return [
+            $this->checkDotation($form2033B, $form2033C),
+            $this->checkImmobilisations($form2033A, $form2033C, $properties),
+        ];
+    }
+
+    /**
+     * La dotation de l'exercice doit se retrouver à l'identique dans les deux tableaux.
+     *
+     * @return array{id: string, status: string, message: string, delta: int}
+     */
+    private function checkDotation(array $form2033B, array $form2033C): array
+    {
+        $dotation = (int) $form2033C['total_dotation'];
+        $resultat = (int) ($form2033B['254'] ?? 0);
+        $delta = $dotation - $resultat;
+
+        if ($delta === 0) {
+            return [
+                'id' => 'dotation',
+                'status' => self::CHECK_OK,
+                'message' => 'Cohérence vérifiée : ligne 572 = ligne 254 du 2033-B ('
+                    . self::euros($dotation) . ').',
+                'delta' => 0,
+            ];
+        }
+
+        return [
+            'id' => 'dotation',
+            'status' => self::CHECK_ERROR,
+            'message' => 'Écart : ligne 572 (' . self::euros($dotation)
+                . ') ≠ ligne 254 du 2033-B (' . self::euros($resultat) . ').',
+            'delta' => $delta,
+        ];
+    }
+
+    /**
+     * Le total des immobilisations brutes doit concorder entre le bilan et le 2033-C.
+     *
+     * ⚠️ Ce contrôle n'est pas binaire, et c'est le cœur du sujet (issue #10). L'écart
+     * `044 − 490` n'est pas quelconque : tous les autres termes des deux sommes viennent
+     * des mêmes expressions et s'annulent au centime, si bien que
+     *
+     *     044 − 490 = base amortissable − Σ des bases de composants
+     *
+     * c'est-à-dire **exactement le reliquat de ventilation**. Or le produit ACCEPTE
+     * délibérément un reliquat positif depuis l'issue #8 : un comptable peut n'avoir
+     * ventilé qu'une partie de la base. Afficher cela en erreur contredirait l'éditeur
+     * d'amortissements, qui l'affiche en orange avec « c'est permis, mais cette part ne
+     * s'amortira pas ». D'où trois états, et une tolérance empruntée à la règle de
+     * troncature plutôt que réinventée.
+     *
+     * @return array{id: string, status: string, message: string, delta: int}
+     */
+    private function checkImmobilisations(array $form2033A, array $form2033C, $properties): array
+    {
+        $bilan = (int) $form2033A['044'];
+        $tableau = (int) $form2033C['total_brut'];
+        $delta = $bilan - $tableau;
+
+        $tolerance = 0;
+        foreach ($properties as $property) {
+            $tolerance += $this->depreciationService->truncationTolerance($property);
+        }
+
+        if (abs($delta) <= $tolerance) {
+            return [
+                'id' => 'immobilisations',
+                'status' => self::CHECK_OK,
+                'message' => 'Cohérence vérifiée : case 044 du 2033-A = ligne 490 du 2033-C ('
+                    . self::euros($bilan) . ').',
+                'delta' => $delta,
+            ];
+        }
+
+        if ($delta > 0) {
+            return [
+                'id' => 'immobilisations',
+                'status' => self::CHECK_WARNING,
+                'message' => self::euros($delta) . ' de base amortissable ne sont rattachés à '
+                    . 'aucun composant : cette part ne s\'amortira pas. C\'est permis — ajustez '
+                    . 'la ventilation dans l\'éditeur d\'amortissements si ce n\'est pas voulu.',
+                'delta' => $delta,
+            ];
+        }
+
+        return [
+            'id' => 'immobilisations',
+            'status' => self::CHECK_ERROR,
+            'message' => 'Les composants dépassent la base amortissable de ' . self::euros(abs($delta))
+                . ' : la ligne 490 du 2033-C est au-dessus de la case 044 du 2033-A. Vérifiez la '
+                . 'valeur retenue et la part du terrain sur la fiche du bien, puis la ventilation.',
+            'delta' => $delta,
+        ];
+    }
+
+    /** Montant en centimes → euros, arrondi comme le PDF (`$fmtInt`). */
+    private static function euros(int $cents): string
+    {
+        return number_format($cents / 100, 0, ',', ' ') . ' €';
     }
 
     /**

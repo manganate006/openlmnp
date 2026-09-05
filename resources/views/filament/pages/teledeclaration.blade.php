@@ -41,6 +41,7 @@
         .td-check { font-size: 12px; padding: 4px 10px; border-radius: 6px; margin-top: 8px; display: inline-block; }
         .td-check-ok { background: var(--olmnp-success-bg); color: var(--olmnp-success-fg); }
         .td-check-ko { background: var(--olmnp-danger-bg); color: var(--olmnp-danger-fg); }
+        .td-check-warn { background: var(--olmnp-warning-bg); color: var(--olmnp-warning-fg); }
     </style>
 
     <script>
@@ -161,13 +162,6 @@
                                 </tbody>
                             </table>
                             </div>
-                            @if(isset($form['check_572_254']))
-                                @if($form['check_572_254'])
-                                    <span class="td-check td-check-ok">Ligne 572 = ligne 254 du 2033-B</span>
-                                @else
-                                    <span class="td-check td-check-ko">Ligne 572 &ne; ligne 254 du 2033-B — vérifiez les amortissements</span>
-                                @endif
-                            @endif
                         @else
                             {{-- Tableau standard --}}
                             <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
@@ -196,6 +190,26 @@
                     </div>
                 </details>
             @endforeach
+
+            {{-- Contrôles de cohérence entre formulaires.
+                 Rendus depuis TaxReturnService::checks(), la même source que le PDF : aucune
+                 comparaison n'est refaite ici, sinon les deux écrans finiraient par diverger. --}}
+            <div class="td-card" style="margin-top:24px;">
+                <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Contrôles de cohérence</h3>
+                {{-- Classes écrites en toutes lettres, jamais interpolées : `PanelStylesheetTest`
+                     ne valide que les classes statiques, une classe construite lui échapperait. --}}
+                @foreach($data['checks'] as $check)
+                    <div>
+                        @if($check['status'] === \App\Services\TaxReturnService::CHECK_OK)
+                            <span class="td-check td-check-ok">{{ $check['message'] }}</span>
+                        @elseif($check['status'] === \App\Services\TaxReturnService::CHECK_WARNING)
+                            <span class="td-check td-check-warn">{{ $check['message'] }}</span>
+                        @else
+                            <span class="td-check td-check-ko">{{ $check['message'] }}</span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
 
             {{-- Guide EFI --}}
             <div class="td-card" style="margin-top:24px;">
