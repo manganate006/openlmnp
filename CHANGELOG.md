@@ -2,6 +2,23 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Corrections
+
+- **Le logiciel prévient maintenant au moment où vous changez le prix du bien.** Un montant
+  d'amortissement saisi en euros ne suit pas la valeur du bien — c'est sa raison d'être — mais
+  la somme peut alors dépasser ce qu'il y a à amortir. Ce dépassement ne se découvrait qu'à la
+  génération de la liasse, des semaines après le geste qui l'avait créé. L'avertissement paraît
+  désormais à l'enregistrement du bien, chiffré, avec un bouton qui mène à l'écran des
+  amortissements. Un bien entièrement ventilé en pourcentage ne produit aucun message : ses
+  montants ont suivi, il n'y a rien à signaler
+- **Un composant ventilé en pourcentage suit désormais la base dans tous les cas.** Il cessait
+  de la suivre dès qu'un montant saisi faisait déborder le total : le recalage abandonnait
+  alors *tout*, laissant les composants en pourcentage calculés sur une valeur du bien qui
+  n'existait plus. L'écran affichait en conséquence deux chiffres contradictoires — un écart au
+  bandeau, un autre déduit des compteurs. Les deux concordent maintenant par construction
+
 ## [1.6.2] - 2026-09-06
 
 ### Ajouts

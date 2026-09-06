@@ -118,7 +118,12 @@ it('ne touche à rien quand une modification ne change pas la base', function ()
     expect($property->fresh()->components->first()->updated_at->eq($avant))->toBeTrue();
 });
 
-it('renonce plutôt que de rogner une base manuelle devenue trop grande', function () {
+it('ne rogne jamais une base saisie, même quand elle dépasse à elle seule', function () {
+    // ⚠️ Ce test affirmait auparavant que le recalage RENONÇAIT entièrement dans ce cas.
+    //    C'était le défaut mesuré en production le 2026-09-06 : abandonner tout laissait les
+    //    composants en pourcentage sur une base disparue. La garantie qui compte n'a pas
+    //    changé — un montant saisi n'est jamais rogné — mais elle ne justifie pas de figer
+    //    aussi ceux qui devaient suivre.
     $property = bienDeCocool();
 
     app(DepreciationService::class)->syncComponents($property, [
@@ -127,12 +132,17 @@ it('renonce plutôt que de rogner une base manuelle devenue trop grande', functi
         ['name' => 'Ventilé', 'duration_years' => 20, 'sort_order' => 1, 'percentage' => 1],
     ]);
 
-    $avant = $property->fresh()->components->pluck('base_amount', 'name')->all();
-
-    // La nouvelle base (2 070 000) est très inférieure à la seule base manuelle.
+    // La nouvelle base (2 070 000) est très inférieure à la seule base saisie.
     $property->update(['land_percentage' => 80]);
+    $property->refresh();
 
-    expect($property->fresh()->components->pluck('base_amount', 'name')->all())->toBe($avant);
+    $composants = $property->components->keyBy('name');
+
+    expect((int) $composants['Recopié du cabinet']->base_amount)->toBe(8_700_000)
+        // ... et le composant ventilé suit bien la nouvelle base : 1 % de 2 070 000.
+        ->and((int) $composants['Ventilé']->base_amount)->toBe(20_700)
+        // Le débordement subsiste, et c'est ce que le bandeau et la liasse signalent.
+        ->and(app(DepreciationService::class)->overAllocation($property))->toBeGreaterThan(0);
 });
 
 it('surveille exactement les champs dont dépend la base amortissable', function () {
@@ -152,4 +162,49 @@ it('surveille exactement les champs dont dépend la base amortissable', function
         expect($accesseur)->toContain($champ)
             ->and($surveilles)->toContain($champ);
     }
+});
+
+/**
+ * L'INVARIANT dont dépend l'accord entre les deux compteurs de l'écran.
+ *
+ * L'éditeur dérive la base d'un composant en pourcentage de la base COURANTE
+ * (`baseCentsOf()` dans `depreciation-editor-assets.blade.php`), alors que
+ * `overAllocation()` somme les valeurs STOCKÉES. Les deux ne peuvent diverger que si une
+ * base stockée est périmée — c'est ce qui affichait « 23 812 € » dans le bandeau contre un
+ * écart de 11 416 € déduit des cartes, mesuré en production le 2026-09-06.
+ *
+ * Asserter l'invariant plutôt que le symptôme : tant que chaque composant en pourcentage
+ * porte exactement sa part de la base courante, la contradiction est impossible.
+ */
+it('garde toute base en pourcentage égale à sa part de la base courante', function () {
+    $property = bienDeCocool();
+
+    app(DepreciationService::class)->syncComponents($property, [
+        ['name' => 'Recopié du cabinet', 'duration_years' => 40, 'sort_order' => 0,
+            'base_source' => PropertyComponent::BASE_SOURCE_MANUAL, 'base_amount' => 6_100_000],
+        ['name' => 'Ventilé A', 'duration_years' => 25, 'sort_order' => 1, 'percentage' => 20],
+        ['name' => 'Ventilé B', 'duration_years' => 15, 'sort_order' => 2, 'percentage' => 10],
+    ]);
+
+    // La valeur baisse : la base passe sous la somme (le montant saisi ne bouge pas).
+    $property->update(['acquisition_price' => 8_000_000]);
+    $property->refresh();
+
+    $base = (string) $property->depreciable_base;
+
+    foreach ($property->components as $composant) {
+        if ($composant->base_source !== PropertyComponent::BASE_SOURCE_PERCENTAGE) {
+            continue;
+        }
+
+        expect((int) $composant->base_amount)->toBe(
+            (int) DepreciationService::baseFromPercentage($base, (string) $composant->percentage),
+            "le composant « {$composant->name} » n'est plus aligné sur la base courante",
+        );
+    }
+
+    // Et le montant saisi, lui, est resté intact — c'est ce qui fait déborder, légitimement.
+    expect((int) $property->components->firstWhere('name', 'Recopié du cabinet')->base_amount)
+        ->toBe(6_100_000)
+        ->and(app(DepreciationService::class)->overAllocation($property))->toBeGreaterThan(0);
 });

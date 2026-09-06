@@ -205,7 +205,14 @@ class DepreciationService
      * }>  $lines
      * @return array{written: int, deleted: int, remainder: string}
      *
+     * @param  bool  $refuseOverAllocation  Refuser d'écrire une ventilation qui dépasse la
+     *   base. VRAI pour toute soumission de l'utilisateur — c'est la garde de l'éditeur.
+     *   FAUX pour le seul recalage automatique (`resyncToBase`), où la base vient de changer
+     *   sous des composants qui n'ont rien demandé : un pourcentage doit suivre son assiette,
+     *   et le débordement résiduel est signalé ailleurs plutôt qu'écrit à moitié.
+     *
      * @throws \RuntimeException si la ventilation dépasse la base amortissable
+     *   et que `$refuseOverAllocation` est vrai
      */
     /**
      * Recale les composants ventilés EN POURCENTAGE sur la base amortissable courante.
@@ -286,20 +293,39 @@ class DepreciationService
             'base_amount'    => (int) $c->base_amount,
         ])->all();
 
-        try {
-            $this->syncComponents($property, $lines);
-        } catch (\RuntimeException) {
-            // Les seules bases manuelles dépassent déjà la nouvelle assiette. Recaler
-            // reviendrait à rogner un montant que l'utilisateur a saisi lui-même : on ne
-            // touche à rien et on laisse le contrôle de la liasse le lui signaler.
-            return 0;
-        }
+        // ⚠️ `refuseOverAllocation: false` — et c'est le cœur du correctif.
+        //
+        // Le refus de `syncComponents()` protège une SOUMISSION de l'utilisateur depuis
+        // l'éditeur : on ne le laisse pas répartir plus qu'il n'y a à répartir. Mais ici
+        // personne ne soumet rien — la base vient de changer, et un composant ventilé en
+        // pourcentage DOIT suivre son assiette, c'est tout ce qu'un pourcentage veut dire.
+        //
+        // La première version abandonnait tout le recalage dès que le total débordait, en
+        // prétendant que « les seules bases manuelles dépassent l'assiette ». Mesuré en
+        // production le 2026-09-06, c'est faux : un montant saisi de 61 000 € tenait
+        // largement dans une base de 99 167 €, et pourtant AUCUN des cinq composants en
+        // pourcentage n'a suivi — ils sont restés calculés sur une base de 123 958 € qui
+        // n'existait plus. C'est la COMBINAISON qui débordait, pas la saisie seule.
+        //
+        // Conséquence visible de cet abandon : l'écran affichait deux chiffres
+        // contradictoires. `baseCentsOf()` (Alpine) dérive une base en pourcentage de la
+        // base COURANTE, tandis qu'`overAllocation()` somme les valeurs STOCKÉES — les deux
+        // ne peuvent diverger que si une base stockée est périmée. Recaler systématiquement
+        // les fait retomber d'accord par construction.
+        //
+        // Le débordement dû aux montants saisis subsiste, et c'est légitime : il est signalé
+        // au bon endroit, sur la fiche du bien au moment du changement de prix, puis par le
+        // bandeau de l'éditeur et le contrôle de la liasse.
+        $this->syncComponents($property, $lines, refuseOverAllocation: false);
 
         return $aRecaler->count();
     }
 
-    public function syncComponents(Property $property, array $lines): array
-    {
+    public function syncComponents(
+        Property $property,
+        array $lines,
+        bool $refuseOverAllocation = true,
+    ): array {
         $depreciableBase = $property->depreciable_base;
         $resolved = [];
 
@@ -329,7 +355,7 @@ class DepreciationService
 
         $allocated = array_reduce($resolved, fn ($carry, $l) => bcadd($carry, $l['base_amount'], 0), '0');
 
-        if (bccomp($allocated, $depreciableBase, 0) > 0) {
+        if ($refuseOverAllocation && bccomp($allocated, $depreciableBase, 0) > 0) {
             throw new \RuntimeException(sprintf(
                 'La ventilation dépasse la base amortissable : %s € répartis pour %s € disponibles.',
                 number_format((int) $allocated / 100, 0, ',', ' '),
