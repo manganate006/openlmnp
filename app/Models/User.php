@@ -133,4 +133,20 @@ class User extends Authenticatable implements FilamentUser
             'demo_promoted_at' => 'datetime',
         ];
     }
+
+    /**
+     * Adresse réelle de destination des e-mails.
+     *
+     * Un compte de démonstration porte une adresse technique en `@demo.local`, qui n'existe
+     * pas : lui écrire ne part nulle part. Dès que le visiteur a laissé la sienne pour
+     * prolonger son bac à sable, c'est elle qui reçoit.
+     *
+     * ⚠️ Le routage est ICI et pas dans la notification : `MailMessage` n'expose pas de
+     * `->to()` (c'est une méthode de `Mailable`), et l'y appeler lève une `Error` fatale au
+     * moment de l'envoi. Laravel ne consulte ce point d'entrée que pour le canal `mail`.
+     */
+    public function routeNotificationForMail(): string
+    {
+        return filled($this->demo_email) ? $this->demo_email : $this->email;
+    }
 }
