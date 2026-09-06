@@ -23,6 +23,11 @@
         .de-stat-amber .de-stat-value { color: var(--olmnp-warning-fg); }
         .de-stat-red .de-stat-value { color: var(--olmnp-danger-accent); }
         .de-stat-blue .de-stat-value { color: var(--olmnp-info-fg); }
+        /* Bandeau de recalage : les composants dépassent la base amortissable.
+           Jetons --olmnp-danger-* uniquement — aucune couleur littérale hors theme-tokens. */
+        .de-realign { background: var(--olmnp-danger-bg); border: 1px solid var(--olmnp-danger-border); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+        .de-realign-text { color: var(--olmnp-danger-fg); font-size: 13px; line-height: 1.5; flex: 1 1 320px; }
+        .de-realign-amount { font-weight: 700; }
         .de-select { padding: 6px 10px; border: 1px solid var(--olmnp-border-strong); border-radius: 8px; font-size: 14px; background: var(--olmnp-surface); color: var(--olmnp-fg); }
         .de-section-title { font-size: 13px; font-weight: 700; color: var(--olmnp-fg-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--olmnp-border); }
 

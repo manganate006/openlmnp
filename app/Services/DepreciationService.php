@@ -226,11 +226,47 @@ class DepreciationService
      */
     public function resyncPercentageComponents(Property $property): int
     {
+        return $this->resyncToBase($property, includeManual: false);
+    }
+
+    /**
+     * Recale TOUS les composants sur la base courante, bases saisies à la main comprises.
+     *
+     * Réservé à une action explicite de l'utilisateur : réécrire une base `manual` est
+     * exactement ce que `base_source` sert à empêcher, et ce n'est légitime que si quelqu'un
+     * l'a demandé en connaissance de cause. C'est ce que fait le bouton « Recaler sur la base
+     * actuelle » de l'éditeur d'amortissements — pendant in-app de
+     * `openlmnp:repair-components --fix --all`, pour les instances sans accès console.
+     *
+     * @return int nombre de composants réécrits
+     */
+    public function realignAllToBase(Property $property): int
+    {
+        return $this->resyncToBase($property, includeManual: true);
+    }
+
+    /**
+     * Écart entre ce qui est ventilé et la base amortissable courante, en centimes.
+     *
+     * Positif = les composants DÉPASSENT la base (état incohérent, l'enregistrement de
+     * l'éditeur serait refusé). Négatif ou nul = sous-ventilation, légitime.
+     */
+    public function overAllocation(Property $property): int
+    {
+        $alloue = (int) $property->components()->sum('base_amount');
+
+        return $alloue - (int) $property->depreciable_base;
+    }
+
+    private function resyncToBase(Property $property, bool $includeManual): int
+    {
         $components = $property->components()->orderBy('sort_order')->get();
 
-        $aRecaler = $components->filter(
-            fn (PropertyComponent $c) => $c->base_source === PropertyComponent::BASE_SOURCE_PERCENTAGE
-        );
+        $aRecaler = $includeManual
+            ? $components
+            : $components->filter(
+                fn (PropertyComponent $c) => $c->base_source === PropertyComponent::BASE_SOURCE_PERCENTAGE
+            );
 
         if ($aRecaler->isEmpty()) {
             return 0;
@@ -241,7 +277,11 @@ class DepreciationService
             'name'           => $c->name,
             'duration_years' => (int) $c->duration_years,
             'sort_order'     => (int) $c->sort_order,
-            'base_source'    => $c->base_source,
+            // Forcer `percentage` fait recalculer la base depuis le pourcentage, y compris
+            // pour une ligne marquée `manual` : c'est précisément ce que l'utilisateur demande.
+            'base_source'    => $includeManual
+                ? PropertyComponent::BASE_SOURCE_PERCENTAGE
+                : $c->base_source,
             'percentage'     => $c->percentage,
             'base_amount'    => (int) $c->base_amount,
         ])->all();
