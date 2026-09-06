@@ -38,6 +38,17 @@ class DocumentsSection
                             ->displayFormat('d/m/Y'),
                         FileUpload::make('file_path')
                             ->label('Fichier')
+                            // ⚠️ `openable()` et `downloadable()` sont ce qui rend le justificatif
+                            // CONSULTABLE. Sans eux, la tuile est une vignette morte : rien d'autre
+                            // dans l'application ne permet d'ouvrir une pièce jointe à une charge —
+                            // il n'existe ni page de consultation, ni action dédiée, et
+                            // `Document::$file_url` n'est référencé nulle part. Le seul chemin qui
+                            // sortait un fichier était l'export ZIP des exercices. Signalé par
+                            // cocool97 (issue #12) : « je n'arrive pas à visualiser les documents ».
+                            // Le FileUpload des photos de bien, lui, appelle `openable()` depuis
+                            // toujours — c'est l'écart qui a rendu le défaut invisible en relecture.
+                            ->openable()
+                            ->downloadable()
                             ->required()
                             ->acceptedFileTypes(['application/pdf', 'image/*', 'application/zip', 'application/x-zip-compressed'])
                             ->directory(DocumentStorage::directory('pieces-comptables'))

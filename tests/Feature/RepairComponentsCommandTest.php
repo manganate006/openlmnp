@@ -26,6 +26,32 @@ function makeRepairTestProperty(User $user, int $priceCents): Property
     ]);
 }
 
+/**
+ * Fabrique un état PÉRIMÉ sans passer par une mise à jour du bien.
+ *
+ * ⚠️ Depuis l'issue #11 (2026-09-06), `PropertyObserver` resynchronise les composants
+ * ventilés en pourcentage dès que la base amortissable change : corriger le prix du bien ne
+ * laisse donc plus de composants périmés derrière lui — c'était tout l'objet du correctif.
+ * Ces tests décrivent la dette DÉJÀ EN BASE des instances qui ont vécu le bug avant lui, et
+ * doivent la fabriquer directement pour continuer à exercer la commande de réparation.
+ */
+function makeStaleComponents(App\Models\Property $property, int $staleBaseTotal): void
+{
+    $components = PropertyComponent::withoutGlobalScopes()
+        ->where('property_id', $property->id)->orderBy('id')->get();
+
+    $reste = $staleBaseTotal;
+
+    foreach ($components as $i => $component) {
+        $part = $i === $components->count() - 1
+            ? $reste
+            : (int) round($staleBaseTotal * ((float) $component->percentage) / 100);
+        $reste -= $part;
+
+        $component->forceFill(['base_amount' => $part])->saveQuietly();
+    }
+}
+
 it('repairs components left stale after a price correction', function () {
     $user = User::factory()->create();
 
@@ -33,8 +59,10 @@ it('repairs components left stale after a price correction', function () {
     $property = makeRepairTestProperty($user, 2_500_000_000);
     app(DepreciationService::class)->generateDefaultComponents($property);
 
-    // L'utilisateur corrige le prix à la main. Les composants restent périmés.
+    // Le prix est corrigé, puis on REFABRIQUE l'état périmé : l'observer de l'issue #11
+    // recale désormais les composants à la correction, ce qui est le comportement voulu.
     $property->forceFill(['acquisition_price' => 25_000_000])->save();
+    makeStaleComponents($property, 2_125_000_000);
 
     $staleTotal = (int) PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->sum('base_amount');
     expect($staleTotal)->toBe(2_125_000_000); // 21 250 000 € : 100x trop
@@ -70,6 +98,7 @@ it('does not modify anything without --fix', function () {
     $property = makeRepairTestProperty($user, 2_500_000_000);
     app(DepreciationService::class)->generateDefaultComponents($property);
     $property->forceFill(['acquisition_price' => 25_000_000])->save();
+    makeStaleComponents($property, 2_125_000_000);
 
     $this->artisan('openlmnp:repair-components')->assertSuccessful();
 

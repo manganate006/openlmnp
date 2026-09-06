@@ -2,6 +2,27 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Corrections
+
+- **Les justificatifs d'une charge n'étaient consultables nulle part.** La vignette du fichier
+  n'était pas cliquable et aucun écran ne permettait d'ouvrir une pièce jointe : le seul moyen
+  d'en ressortir une était l'export ZIP des exercices. Les fichiers s'ouvrent et se téléchargent
+  désormais depuis la charge, comme les photos de bien le permettaient déjà (signalé par
+  cocool97, issue #12)
+- **L'export ZIP des justificatifs en oubliait certains, sans le dire.** Un fichier déposé avant
+  le déplacement de la racine de stockage n'était pas trouvé, donc pas archivé, et rien ne le
+  signalait — alors que le téléchargement à l'unité le servait correctement. Une archive
+  incomplète qui se présente comme complète est le pire cas pour un document d'archivage
+- **Une ventilation en pourcentage ne suivait plus la valeur du bien.** Baisser le prix ou
+  monter la part du terrain rétrécissait la base amortissable en laissant les composants à leur
+  ancien montant : la ventilation se retrouvait au-dessus de la base, et l'utilisateur ne
+  l'apprenait qu'en générant sa liasse. Les composants ventilés en pourcentage sont désormais
+  recalculés dès que la base change, quel que soit l'écran ou l'outil qui la modifie. Une base
+  **saisie à la main** reste intouchée — c'est un choix explicite — et l'écart éventuel continue
+  d'être signalé par les contrôles de cohérence (signalé par cocool97, issue #11)
+
 ## [1.6.0] - 2026-09-05
 
 ### Ajouts

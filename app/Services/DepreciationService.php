@@ -207,6 +207,57 @@ class DepreciationService
      *
      * @throws \RuntimeException si la ventilation dépasse la base amortissable
      */
+    /**
+     * Recale les composants ventilés EN POURCENTAGE sur la base amortissable courante.
+     *
+     * Un pourcentage n'a de sens que s'il suit son assiette. Or `base_amount` est la source
+     * de vérité depuis la 1.2.0 (nécessaire pour recopier le plan d'un comptable au centime),
+     * et rien ne la recalculait quand la base changeait : baisser la valeur du bien ou monter
+     * la part du terrain rétrécissait la base en laissant les composants à leur ancien
+     * montant. L'utilisateur ne l'apprenait qu'en générant sa liasse, par le contrôle
+     * d'immobilisations de la 1.6.0 — signalé par cocool97 (issue #11), 4 335 € d'écart pour
+     * une valeur passée de 103 500 € à 98 400 €, ses trois composants restant à 60/20/20
+     * d'une base disparue.
+     *
+     * Les bases `manual` ne sont JAMAIS touchées : elles sont un choix explicite.
+     *
+     * @return int nombre de composants recalculés (0 si rien à faire ou si le recalage est
+     *             impossible sans écraser une saisie manuelle)
+     */
+    public function resyncPercentageComponents(Property $property): int
+    {
+        $components = $property->components()->orderBy('sort_order')->get();
+
+        $aRecaler = $components->filter(
+            fn (PropertyComponent $c) => $c->base_source === PropertyComponent::BASE_SOURCE_PERCENTAGE
+        );
+
+        if ($aRecaler->isEmpty()) {
+            return 0;
+        }
+
+        $lines = $components->map(fn (PropertyComponent $c) => [
+            'id'             => $c->id,
+            'name'           => $c->name,
+            'duration_years' => (int) $c->duration_years,
+            'sort_order'     => (int) $c->sort_order,
+            'base_source'    => $c->base_source,
+            'percentage'     => $c->percentage,
+            'base_amount'    => (int) $c->base_amount,
+        ])->all();
+
+        try {
+            $this->syncComponents($property, $lines);
+        } catch (\RuntimeException) {
+            // Les seules bases manuelles dépassent déjà la nouvelle assiette. Recaler
+            // reviendrait à rogner un montant que l'utilisateur a saisi lui-même : on ne
+            // touche à rien et on laisse le contrôle de la liasse le lui signaler.
+            return 0;
+        }
+
+        return $aRecaler->count();
+    }
+
     public function syncComponents(Property $property, array $lines): array
     {
         $depreciableBase = $property->depreciable_base;
