@@ -52,7 +52,18 @@
             <strong>Important :</strong> Si la valeur vénale n'est pas renseignée, c'est le prix d'achat + frais de notaire qui sera utilisé comme base d'amortissement.
         </div>
 
-        <h3>Estimer la valeur vénale (DVF)</h3>
+        <h3>Si vous changez le prix ou la part du terrain</h3>
+    <p>Ces deux champs déterminent la <strong>base amortissable</strong> : ce qui s'amortit, une fois
+    le terrain retiré. La changer déplace donc vos amortissements.</p>
+    <p>Vos composants réglés <strong>en pourcentage</strong> suivent tout seuls — c'est le sens d'un
+    pourcentage, et rien ne vous sera signalé. Ceux dont le montant est <strong>saisi en euros</strong>
+    ne bougent pas, et c'est voulu : ce sont les chiffres de votre comptable. Mais leur somme peut
+    alors dépasser la nouvelle base.</p>
+    <p>Dans ce cas, un message vous le dit <strong>au moment où vous enregistrez</strong>, avec le
+    montant du dépassement et un bouton pour aller ajuster. N'attendez pas la génération de votre
+    liasse pour le découvrir.</p>
+
+    <h3>Estimer la valeur vénale (DVF)</h3>
         <p>Le bouton <strong>« Estimer (DVF) »</strong> interroge les <em>demandes de valeurs foncières</em> publiées par la DGFiP : les ventes réellement enregistrées dans votre commune, filtrées par type de bien, ramenées à un prix au mètre carré dont l'application prend la médiane.</p>
         <ul>
             <li data-icon="&#x1F50D;"><strong>Ce qui est envoyé</strong> &mdash; uniquement la commune et le type de bien. Ni l'adresse, ni le prix, ni aucune donnée de votre dossier.</li>
