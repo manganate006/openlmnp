@@ -89,6 +89,13 @@ trait EditsDepreciationComponents
             'cerfaCategories'      => PropertyComponent::cerfaCategoryLabels(),
             // Défaut affiché dans la colonne « Début » : la mise en location du bien.
             'rentalStartDate'      => $property->rental_start_date?->format('Y-m-d'),
+            // ⚠️ Écart DÉJÀ EN BASE à l'ouverture de l'écran, en centimes, positif seulement
+            // si les composants dépassent la base. Jusqu'ici l'incohérence ne se voyait qu'à
+            // l'enregistrement — et cet enregistrement était REFUSÉ, laissant l'utilisateur
+            // enfermé : il ne pouvait ni sauvegarder, ni comprendre pourquoi, et sa seule
+            // sortie était une commande console qu'un utilisateur du cloud n'a pas.
+            // Signalé par cocool97 (issue #11), 4 335 € d'écart après une baisse du prix.
+            'overAllocationCents'  => max(0, app(DepreciationService::class)->overAllocation($property)),
         ];
     }
 
@@ -278,6 +285,69 @@ trait EditsDepreciationComponents
                     $manualCount,
                 )
                 : 'Les 6 composants standards ont été restaurés.')
+            ->send();
+    }
+
+    /**
+     * Recale toute la ventilation sur la base amortissable courante.
+     *
+     * Pendant in-app de `openlmnp:repair-components --fix --all`, pour les instances sans
+     * accès console — c'est-à-dire tous les comptes du cloud. Réécrit chaque composant depuis
+     * son POURCENTAGE, bases saisies à la main comprises : c'est ce que l'utilisateur demande
+     * en cliquant, et l'écran le dit avant de le faire.
+     */
+    public function realignToBase(): void
+    {
+        $property = Property::find($this->propertyId);
+
+        if (! $property) {
+            return;
+        }
+
+        $ecart = app(DepreciationService::class)->overAllocation($property);
+
+        if ($ecart <= 0) {
+            Notification::make()
+                ->success()
+                ->title('Rien à recaler')
+                ->body('La ventilation tient déjà dans la base amortissable.')
+                ->send();
+
+            return;
+        }
+
+        $recales = app(DepreciationService::class)->realignAllToBase($property);
+
+        unset($this->editorData);
+
+        // ⚠️ Le conteneur de l'éditeur porte `wire:ignore` : Livewire n'y re-rend RIEN, et le
+        // composant Alpine garde les données de son montage. Sans ce dispatch, le bandeau
+        // disparaissait et la notification annonçait le succès pendant que les montants
+        // affichés restaient les anciens — et un enregistrement depuis cet écran aurait
+        // RÉÉCRIT la dérive qu'on vient de corriger. Trouvé au navigateur : aucun test
+        // Livewire ne voit ce que voit l'utilisateur devant l'écran.
+        // `updatedPropertyId()` fait déjà exactement ça au changement de bien.
+        $this->dispatch('components-loaded', data: $this->editorData);
+
+        if ($recales === 0) {
+            Notification::make()
+                ->danger()
+                ->title('Recalage impossible')
+                ->body('Vérifiez la valeur retenue et la part du terrain sur la fiche du bien.')
+                ->persistent()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->success()
+            ->title('Ventilation recalée')
+            ->body(sprintf(
+                '%d composant(s) recalculés sur la base actuelle. L\'excédent de %s € a disparu.',
+                $recales,
+                number_format($ecart / 100, 0, ',', ' '),
+            ))
             ->send();
     }
 }

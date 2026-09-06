@@ -46,6 +46,15 @@
     </ul>
     <p>Une base saisie à la main porte l'étiquette <strong>saisi</strong> : elle est <strong>verrouillée</strong>, ne suit plus le prix du bien et n'est jamais recalculée automatiquement.</p>
 
+    <h3>Un bandeau rouge en haut de l'écran</h3>
+    <p>Il apparaît quand vos composants <strong>dépassent</strong> la base amortissable, et il chiffre
+    l'écart. Tant qu'il est là, l'écran refuse d'enregistrer : la ventilation ne peut pas dépasser ce
+    qu'il y a à ventiler.</p>
+    <p>Le bouton <strong>« Recaler sur la base actuelle »</strong> règle la situation : chaque composant
+    est recalculé depuis son pourcentage, sur la base d'aujourd'hui. Vos proportions sont conservées,
+    seuls les montants changent. ⚠️ Une base que vous auriez <strong>saisie</strong> sera elle aussi
+    réécrite — l'écran vous le demande avant de le faire.</p>
+
     <h3>Si vous changez la valeur du bien ou la part du terrain</h3>
     <p>La base amortissable en dépend directement. Les composants <strong>ventilés en pourcentage</strong>
     suivent tout seuls : leurs montants sont recalculés sur la nouvelle base, et leurs pourcentages ne

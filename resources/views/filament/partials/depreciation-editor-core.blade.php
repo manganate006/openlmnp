@@ -31,6 +31,28 @@
             <p style="font-size:18px;color:var(--olmnp-fg-muted);">Aucun bien enregistré. Ajoutez un bien dans Mes biens pour configurer les composants d'amortissement.</p>
         </div>
     @else
+        {{-- Les composants dépassent déjà la base : l'écran refuserait tout enregistrement.
+             ⚠️ HORS du conteneur `wire:ignore` ci-dessous, sinon le bandeau ne disparaîtrait
+             jamais après le recalage — Livewire n'y re-rendrait rien. --}}
+        @if(($data['overAllocationCents'] ?? 0) > 0)
+            <div class="de-realign">
+                <div class="de-realign-text">
+                    Vos composants dépassent la base amortissable de
+                    <span class="de-realign-amount">{{ number_format($data['overAllocationCents'] / 100, 0, ',', ' ') }} €</span>.
+                    Cela arrive quand la valeur du bien ou la part du terrain a changé après la ventilation :
+                    la base a rétréci, les montants sont restés. Tant que l'écart subsiste, cet écran refuse
+                    d'enregistrer.
+                </div>
+                <button
+                    type="button"
+                    class="de-btn de-btn-primary"
+                    wire:click="realignToBase"
+                    wire:loading.attr="disabled"
+                    wire:confirm="Chaque composant sera recalculé depuis son pourcentage, sur la base actuelle. Les bases que vous auriez saisies à la main seront réécrites. Continuer ?"
+                >Recaler sur la base actuelle</button>
+            </div>
+        @endif
+
         <div
             x-data="depreciationEditor(@js($data))"
             @components-loaded.window="reload($event.detail.data)"

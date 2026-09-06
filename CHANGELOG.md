@@ -2,6 +2,19 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Ajouts
+
+- **L'écran des amortissements répare lui-même une ventilation devenue incohérente.** Quand
+  les composants dépassent la base amortissable — parce que la valeur du bien ou la part du
+  terrain a changé après la ventilation — un bandeau chiffre l'écart et propose de recaler
+  d'un clic. Jusqu'ici l'écran ne signalait rien à l'ouverture **et refusait tout
+  enregistrement** : l'utilisateur était enfermé, sans autre issue qu'une commande console
+  que personne n'a sur une instance hébergée. Le recalage recalcule chaque composant depuis
+  son pourcentage ; il prévient qu'une base saisie à la main sera réécrite, et c'est
+  l'utilisateur qui décide
+
 ## [1.6.1] - 2026-09-06
 
 ### Corrections
