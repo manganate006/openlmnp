@@ -190,6 +190,79 @@ it('extends the sandbox, records the consent and sends the resume link', functio
     Notification::assertSentTo($user, DemoResumeLink::class);
 });
 
+it('actually renders the resume mail and routes it to the address left by the visitor', function () {
+    /*
+     * ⚠️ CE QUE `Notification::fake()` NE VOIT PAS, ET QUI A CASSÉ LA PRODUCTION.
+     *
+     * Le test ci-dessus est vert depuis le premier jour, et pourtant la prolongation levait
+     * une `Error` fatale en production le 2026-09-06 : `MailMessage::to()` n'existe pas
+     * (c'est une méthode de `Mailable`). La feinte n'appelle JAMAIS `toMail()` — elle
+     * enregistre l'intention d'envoyer et s'arrête là. Tout le rendu du message, donc tout ce
+     * qui peut y échouer, restait hors de portée de la suite.
+     *
+     * Le sandbox était bien prolongé de 7 jours AVANT la fatale : l'utilisateur voyait un
+     * écran d'erreur, ne recevait rien, et son bac à sable était pourtant prolongé.
+     *
+     * Ce test appelle donc `toMail()` pour de vrai, et vérifie le destinataire — les deux
+     * moitiés du défaut.
+     */
+    $user = actingOnSandbox(1, ['email' => 'demo-abc123@demo.local']);
+
+    Livewire::test(DemoExpiryPrompt::class)
+        ->set('email', 'visiteur@exemple.fr')
+        ->set('consent', true)
+        ->call('extend')
+        ->assertSet('step', 'extended');
+
+    $user->refresh();
+
+    // Le rendu du message ne doit lever aucune erreur.
+    $mail = (new DemoResumeLink('https://exemple.test/reprendre'))->toMail($user);
+    expect($mail)->toBeInstanceOf(\Illuminate\Notifications\Messages\MailMessage::class);
+
+    // Et il doit partir à l'adresse laissée, jamais à l'adresse technique du sandbox.
+    expect($user->email)->toEndWith('@demo.local')
+        ->and($user->routeNotificationForMail())->toBe('visiteur@exemple.fr');
+});
+
+it('shows a multi-day sandbox in days, never in three-digit hours', function () {
+    /*
+     * ⚠️ La pastille est rendue par le SERVEUR avant qu'Alpine ne prenne la main : c'est ce
+     * repli-là que ce test mesure, et il doit suivre la même règle que les getters JS.
+     *
+     * Un sandbox prolongé vit `extended_ttl_days` (7 j). Le format conçu pour les 24 h de
+     * base affichait alors « 167:59:40 » et « 167 h » — un nombre d'heures que personne ne
+     * convertit de tête (observé en production le 2026-09-06).
+     */
+    actingOnSandbox(167.9);
+
+    $html = Livewire::test(DemoExpiryPrompt::class)->html();
+
+    expect($html)->toContain('>6 j<')
+        ->and($html)->not->toContain('167 h');
+});
+
+it('keeps the hourly countdown on the last day, where it carries the urgency', function () {
+    actingOnSandbox(5.5);
+
+    $html = Livewire::test(DemoExpiryPrompt::class)->html();
+
+    // Le repli serveur tronque : 5,5 h restantes s'affichent « 5 h ».
+    expect($html)->toContain('>5 h<')
+        ->and($html)->not->toContain('>5 j<');
+});
+
+it('routes mail to the real address only once the visitor has left one', function () {
+    // Sans prolongation, rien à router : l'adresse technique reste la destination, et c'est
+    // ce qui garantit qu'un compte normal n'est pas dérouté par ce point d'entrée.
+    $user = actingOnSandbox(1);
+
+    expect($user->routeNotificationForMail())->toBe($user->email);
+
+    $normal = User::factory()->create(['email' => 'client@exemple.fr']);
+    expect($normal->routeNotificationForMail())->toBe('client@exemple.fr');
+});
+
 it('refuses to extend twice', function () {
     $user = actingOnSandbox(6, ['demo_extended_at' => Carbon::now()->subDay()]);
 
