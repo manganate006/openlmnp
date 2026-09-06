@@ -33,6 +33,13 @@
     <p>Les <strong>petites réparations</strong> (volet roulant, serrure, robinet, prise électrique...) sont des charges directes en catégorie « Entretien ». Elles sont déduites intégralement l'année de la dépense.</p>
     <p>En revanche, les <strong>gros travaux</strong> qui augmentent la valeur du bien (rénovation complète, isolation, nouvelle salle de bain...) doivent être enregistrés dans l'onglet <strong>Travaux</strong> du bien et sont amortis sur 10 à 15 ans.</p>
 
+    <h3>Joindre un justificatif</h3>
+    <p>Dépliez la section <strong>Pièces justificatives</strong>, cliquez sur
+    <strong>« Ajouter un document »</strong> puis déposez votre fichier. Le <strong>libellé se
+    remplit tout seul</strong> avec le nom du fichier : vous pouvez le remplacer, mais vous
+    n'avez plus à y penser. Un libellé vide empêchait l'enregistrement, et le message d'erreur
+    restait invisible tant que la section était repliée.</p>
+
     <h3>Retrouver un justificatif déjà déposé</h3>
     <p>Les pièces jointes vivent dans la section <strong>Justificatifs</strong> de la charge, repliée par
     défaut : dépliez-la pour les voir. Chaque fichier peut être <strong>ouvert</strong> dans un nouvel
