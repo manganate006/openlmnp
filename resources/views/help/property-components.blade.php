@@ -46,6 +46,15 @@
     </ul>
     <p>Une base saisie à la main porte l'étiquette <strong>saisi</strong> : elle est <strong>verrouillée</strong>, ne suit plus le prix du bien et n'est jamais recalculée automatiquement.</p>
 
+    <h3>Si vous changez la valeur du bien ou la part du terrain</h3>
+    <p>La base amortissable en dépend directement. Les composants <strong>ventilés en pourcentage</strong>
+    suivent tout seuls : leurs montants sont recalculés sur la nouvelle base, et leurs pourcentages ne
+    bougent pas. C'est le sens même d'une ventilation en pourcentage.</p>
+    <p>Une base <strong>saisie</strong>, en revanche, ne bouge pas &mdash; c'est sa raison d'être. Si la
+    nouvelle base devient plus petite que la somme de vos montants saisis, rien n'est rogné dans votre dos :
+    l'écart vous est signalé au moment de générer votre liasse, dans les contrôles de cohérence. À vous de
+    décider ce qui doit changer.</p>
+
     <h3>Une ligne qui n'existe pas au catalogue</h3>
     <p>Le bouton <strong>« + Ajouter un composant »</strong> crée une ligne à nom libre &mdash; « Ascenseur », « Menuiseries extérieures », tout ce que votre liasse comporte et que la liste standard ignore. Elle naît en mode Montants, sur 10 ans et en « Autres immobilisations » : donnez-lui son nom, sa durée, sa base et sa vraie ligne 2033-C.</p>
 

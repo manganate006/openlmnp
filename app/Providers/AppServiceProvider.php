@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use App\Models\Property;
+use App\Observers\PropertyObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Les composants ventilés en pourcentage suivent la valeur du bien (issue #11).
+        Property::observe(PropertyObserver::class);
+
         // Dates : saisie ET affichage au format français partout (issue #6).
         //
         // ⚠️ `DatePicker` est NATIF par défaut (`CanBeNative::$isNative = true`) : il rend un

@@ -8,6 +8,7 @@ use App\Models\Furniture;
 use App\Models\Property;
 use App\Models\PropertyWork;
 use App\Models\User;
+use App\Support\DocumentStorage;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
@@ -48,7 +49,17 @@ class DocumentExportService
         $count = 0;
 
         foreach ($documents as $document) {
-            $filePath = Storage::path($document->file_path);
+            // ⚠️ Même repli que `DocumentController` : un justificatif déposé avant que
+            // Laravel 11 ne déplace le disque `local` vers `storage/app/private` vit encore
+            // sous l'ancienne racine. Sans ce repli, `file_exists()` rendait false et le
+            // `continue` ci-dessous l'écartait **en silence** — l'archive était incomplète
+            // sans que rien ne le dise, ce qui est le pire cas pour un export d'archivage.
+            // La route de téléchargement, elle, servait ces mêmes fichiers : deux chemins de
+            // lecture qui ne s'accordaient pas.
+            $filePath = DocumentStorage::isLegacyOnly($document->file_path)
+                ? DocumentStorage::legacyDisk()->path($document->file_path)
+                : Storage::path($document->file_path);
+
             if (! file_exists($filePath)) {
                 continue;
             }
