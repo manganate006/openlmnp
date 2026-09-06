@@ -8,6 +8,10 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class DocumentsSection
 {
@@ -21,6 +25,16 @@ class DocumentsSection
                     ->relationship()
                     ->label('')
                     ->schema([
+                        // ⚠️ `label` est `required()` ET la section est repliée : déposer un
+                        // fichier sans taper de libellé fait échouer l'enregistrement, et le
+                        // message d'erreur tombe HORS DU CHAMP DE VISION. L'utilisateur croit
+                        // avoir joint sa pièce ; en réalité rien n'est écrit en base et le
+                        // fichier reste dans `storage/app/private/livewire-tmp/`, où il n'est
+                        // ramassé qu'au prochain téléversement et après 24 h. C'est le
+                        // symptôme rapporté par cocool97 (issue #12).
+                        // Le libellé est donc PRÉ-REMPLI depuis le nom du fichier déposé (voir
+                        // `afterStateUpdated` du champ Fichier) : on supprime le mode d'échec
+                        // au lieu de rendre son message plus visible.
                         TextInput::make('label')
                             ->label('Libellé')
                             ->required()
@@ -49,6 +63,27 @@ class DocumentsSection
                             // toujours — c'est l'écart qui a rendu le défaut invisible en relecture.
                             ->openable()
                             ->downloadable()
+                            // Pré-remplit le libellé avec le nom du fichier déposé, s'il est
+                            // vide. Sans quoi un dépôt suivi d'un enregistrement échoue en
+                            // silence pour l'utilisateur (voir le commentaire du champ Libellé).
+                            // On ne remplace jamais une saisie : `filled()` d'abord.
+                            ->afterStateUpdated(function ($state, Get $get, Set $set): void {
+                                if (filled($get('label'))) {
+                                    return;
+                                }
+
+                                $fichier = is_array($state) ? reset($state) : $state;
+
+                                if (! $fichier instanceof TemporaryUploadedFile) {
+                                    return;
+                                }
+
+                                $nom = pathinfo($fichier->getClientOriginalName(), PATHINFO_FILENAME);
+
+                                if ($nom !== '') {
+                                    $set('label', Str::limit($nom, 120, ''));
+                                }
+                            })
                             ->required()
                             ->acceptedFileTypes(['application/pdf', 'image/*', 'application/zip', 'application/x-zip-compressed'])
                             ->directory(DocumentStorage::directory('pieces-comptables'))

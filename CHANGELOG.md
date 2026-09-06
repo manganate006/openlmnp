@@ -15,6 +15,12 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   le déplacement de la racine de stockage n'était pas trouvé, donc pas archivé, et rien ne le
   signalait — alors que le téléchargement à l'unité le servait correctement. Une archive
   incomplète qui se présente comme complète est le pire cas pour un document d'archivage
+- **Un justificatif déposé sans libellé était perdu sans le dire.** Le libellé était
+  obligatoire, la section « Pièces justificatives » est repliée par défaut, et le message
+  d'erreur tombait donc hors du champ de vision : l'utilisateur croyait avoir joint sa pièce
+  alors que rien n'était enregistré et que le fichier restait dans le répertoire temporaire.
+  Le libellé se pré-remplit désormais avec le nom du fichier déposé — il reste modifiable, et
+  une saisie n'est jamais écrasée (signalé par cocool97, issue #12)
 - **Une ventilation en pourcentage ne suivait plus la valeur du bien.** Baisser le prix ou
   monter la part du terrain rétrécissait la base amortissable en laissant les composants à leur
   ancien montant : la ventilation se retrouvait au-dessus de la base, et l'utilisateur ne
