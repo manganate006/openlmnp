@@ -15,6 +15,14 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   le déplacement de la racine de stockage n'était pas trouvé, donc pas archivé, et rien ne le
   signalait — alors que le téléchargement à l'unité le servait correctement. Une archive
   incomplète qui se présente comme complète est le pire cas pour un document d'archivage
+- **La colonne « Docs » est visible par défaut** sur les charges, le mobilier et les travaux :
+  elle compte les pièces jointes de chaque ligne, et permettait déjà de repérer une charge sans
+  justificatif — mais il fallait savoir aller l'activer dans le sélecteur de colonnes. Coût
+  mesuré sur un écran de 361 px : la table des charges passe de 716 à 775 px, en deçà des
+  797 px déjà en vigueur (suggéré par cocool97, issue #12)
+- **Dupliquer une charge échouait dès que la colonne « Docs » était affichée.** L'agrégat
+  `documents_count` posé par cette colonne était recopié par la duplication vers une colonne
+  qui n'existe pas en base. Le défaut existait déjà pour qui activait la colonne à la main
 - **Un justificatif déposé sans libellé était perdu sans le dire.** Le libellé était
   obligatoire, la section « Pièces justificatives » est repliée par défaut, et le message
   d'erreur tombait donc hors du champ de vision : l'utilisateur croyait avoir joint sa pièce
