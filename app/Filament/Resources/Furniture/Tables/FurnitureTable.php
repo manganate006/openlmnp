@@ -59,7 +59,7 @@ class FurnitureTable
                     ->counts('documents')
                     ->icon('heroicon-o-paper-clip')
                     ->default(0)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
             ])
             ->reorderableColumns()
             ->defaultSort('purchase_date', 'desc')

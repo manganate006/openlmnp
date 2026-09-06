@@ -38,6 +38,15 @@ class DuplicateExpenseAction extends ReplicateAction
             ->modalDescription('La copie reprend le bien, la catégorie, la description, la TVA et la quote-part. Ajustez la date et le montant ; le justificatif, lui, n\'est pas recopié.')
             ->modalSubmitActionLabel('Dupliquer')
             ->successNotificationTitle('Charge dupliquée')
+            // ⚠️ `documents_count` n'est PAS une colonne : c'est l'agrégat posé sur le modèle
+            // par le `->counts('documents')` de la colonne « Docs » de la table. `replicate()`
+            // recopie les attributs chargés, agrégat compris, et l'insertion échoue sur
+            // « table expenses has no column named documents_count ». Le défaut est resté
+            // invisible tant que la colonne était masquée par défaut : sans elle, `counts()`
+            // n'était jamais appliqué, donc l'attribut n'existait pas. Rendre la colonne
+            // visible (issue #12) l'a révélé — et il se serait déclenché de la même façon pour
+            // tout utilisateur qui l'affichait à la main.
+            ->excludeAttributes(['documents_count'])
             ->mutateRecordDataUsing(function (array $data, Expense $record): array {
                 // La date proposée avance d'une période : c'est ce qu'on duplique en
                 // pratique, la même charge à l'échéance suivante.

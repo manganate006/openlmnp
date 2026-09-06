@@ -44,9 +44,9 @@
     <p>Les pièces jointes vivent dans la section <strong>Justificatifs</strong> de la charge, repliée par
     défaut : dépliez-la pour les voir. Chaque fichier peut être <strong>ouvert</strong> dans un nouvel
     onglet ou <strong>téléchargé</strong> depuis sa vignette.</p>
-    <p>La liste des charges peut aussi afficher une colonne <strong>Docs</strong>, qui compte les pièces
-    de chaque ligne. Elle est masquée par défaut : activez-la par le bouton de choix des colonnes, en
-    haut à droite du tableau.</p>
+    <p>La liste des charges affiche une colonne <strong>Docs</strong> qui compte les pièces de chaque
+    ligne : un coup d'œil suffit pour repérer une charge sans justificatif. Vous pouvez la masquer par
+    le bouton de choix des colonnes, en haut à droite du tableau.</p>
 
     <div class="ctx-warning">
         <strong>Important :</strong> Conservez tous les justificatifs pendant 6 ans minimum (10 ans recommandés). Joignez-les directement à chaque charge.
