@@ -108,3 +108,41 @@ it('does nothing at all when demo mode is switched off', function () {
 
     Notification::assertNothingSent();
 });
+
+// === Ce que `Notification::fake()` ne voit pas ===
+
+it('actually renders the expiry reminder, which the fake never does', function () {
+    /*
+     * ⚠️ LA MÊME FATALE QUE `DemoResumeLink`, MAIS SANS TÉMOIN.
+     *
+     * `MailMessage::to()` n'existe pas — c'est une méthode de `Mailable`. `DemoExpiring` la
+     * passait au rendu du message, donc à l'envoi. Tous les tests ci-dessus étaient verts :
+     * `Notification::fake()` enregistre l'intention d'envoyer et n'appelle JAMAIS `toMail()`.
+     *
+     * Et contrairement à la prolongation, personne ne voyait l'erreur : la commande tourne
+     * toutes les heures sans surveillance, attrape la fatale et la journalise. Le rappel
+     * d'expiration n'est donc jamais parti.
+     */
+    $user = extendedSandbox();
+
+    $mail = (new DemoExpiring('https://exemple.test/reprendre'))->toMail($user);
+
+    expect($mail)->toBeInstanceOf(\Illuminate\Notifications\Messages\MailMessage::class);
+});
+
+it('reports a failure instead of announcing success on a send that never left', function () {
+    /*
+     * Le marqueur d'envoi n'est posé qu'APRÈS le `try` : un compte en échec est repris à
+     * chaque passage horaire, indéfiniment. Tant que la commande rendait `SUCCESS` quoi
+     * qu'il arrive, le planificateur lisait « Rappels envoyés : 0 » et tenait la panne pour
+     * une absence de travail — c'est ce qui a laissé la fatale vivre en production.
+     *
+     * Le journal ne suffisait pas à alerter : la production tournait avec un `LOG_LEVEL`
+     * invalide, qui renvoyait ces lignes vers le journal d'urgence.
+     */
+    extendedSandbox();
+
+    Notification::shouldReceive('send')->andThrow(new RuntimeException('relais SMTP injoignable'));
+
+    $this->artisan('openlmnp:demo-expiry-notify')->assertFailed();
+});

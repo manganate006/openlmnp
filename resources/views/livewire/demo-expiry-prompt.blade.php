@@ -245,19 +245,41 @@
                     $wire.reach(due.hours);
                 },
 
+                /*
+                 * ⚠️ Les trois formats basculent en JOURS au-delà de 24 h.
+                 *
+                 * Le sandbox de base vit `ttl_hours` (24 h) et une prolongation le porte à
+                 * `extended_ttl_days` (7 j) : les formats conçus pour la première durée
+                 * deviennent illisibles sur la seconde. Observé en production le 2026-09-06,
+                 * l'horloge affichait « 167:59:40 » — un nombre d'heures que personne ne
+                 * convertit de tête, là où « 6 j 23 h » se lit d'un coup d'œil.
+                 *
+                 * Sous 24 h on garde l'horloge à la seconde : c'est là qu'elle porte
+                 * l'urgence, et c'est tout son intérêt.
+                 */
+                get days() {
+                    return Math.floor(this.left / 86400);
+                },
+
                 get label() {
+                    if (this.left >= 86400) return this.days + ' j';
                     const h = Math.floor(this.left / 3600);
                     const m = Math.floor((this.left % 3600) / 60);
                     return h > 0 ? h + ' h ' + String(m).padStart(2, '0') : m + ' min';
                 },
 
                 get long() {
+                    if (this.left >= 86400) {
+                        const h = Math.floor((this.left % 86400) / 3600);
+                        return this.days + ' j' + (h > 0 ? ' ' + h + ' h' : '');
+                    }
                     const h = Math.floor(this.left / 3600);
                     const m = Math.floor((this.left % 3600) / 60);
                     return h > 0 ? h + ' h ' + String(m).padStart(2, '0') + ' min' : m + ' min';
                 },
 
                 get clock() {
+                    if (this.left >= 86400) return this.long;
                     const p = (n) => String(n).padStart(2, '0');
                     return p(Math.floor(this.left / 3600)) + ':' + p(Math.floor((this.left % 3600) / 60)) + ':' + p(this.left % 60);
                 },
@@ -285,7 +307,9 @@
                     </svg>
                 </span>
                 <span class="dx-pill-label">Démo</span>
-                <span class="dx-pill-time" x-text="label">{{ floor($remainingSeconds / 3600) }} h</span>
+                <span class="dx-pill-time" x-text="label">{{ $remainingSeconds >= 86400
+                        ? floor($remainingSeconds / 86400).' j'
+                        : floor($remainingSeconds / 3600).' h' }}</span>
             </button>
 
             {{-- Bandeau : non bloquant, le panel reste utilisable derrière. --}}

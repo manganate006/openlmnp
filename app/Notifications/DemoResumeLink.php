@@ -59,15 +59,20 @@ class DemoResumeLink extends Notification
     }
 
     /**
-     * L'adresse de destination est `demo_email`, pas `email` : le compte de démonstration
-     * porte une adresse technique en `@demo.local`, qui n'existe pas.
+     * ⚠️ Le destinataire ne se choisit PAS ici. `MailMessage` n'a pas de `->to()` — c'est une
+     * méthode de `Mailable`, et l'appeler lève une `Error` fatale AU MOMENT DE L'ENVOI, donc
+     * après que la prolongation a déjà été écrite en base. Symptôme observé en production le
+     * 2026-09-06 : le sandbox était bien prolongé de 7 jours et l'utilisateur voyait un écran
+     * d'erreur sans jamais recevoir son lien.
+     *
+     * Le routage vers `demo_email` (le compte de démonstration porte une adresse technique en
+     * `@demo.local`, qui n'existe pas) vit donc dans `User::routeNotificationForMail()`.
      */
     public function toMail(object $notifiable): MailMessage
     {
         $expiresAt = $notifiable->demo_expires_at?->timezone(config('app.timezone'));
 
         $mail = (new MailMessage)
-            ->to($notifiable->demo_email)
             ->subject('Votre démonstration OpenLMNP vous attend')
             ->greeting('Votre bac à sable est prolongé')
             ->line($expiresAt
