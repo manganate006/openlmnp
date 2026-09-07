@@ -39,6 +39,7 @@ class DemoExpiryNotifyCommand extends Command
         $threshold = (int) $this->option('hours');
         $now = Carbon::now();
         $sent = 0;
+        $failed = 0;
 
         User::query()
             ->where('is_demo', true)
@@ -52,7 +53,7 @@ class DemoExpiryNotifyCommand extends Command
             ->whereNotNull('demo_expires_at')
             ->where('demo_expires_at', '>', $now)
             ->where('demo_expires_at', '<=', $now->copy()->addHours($threshold))
-            ->each(function (User $user) use (&$sent, $now) {
+            ->each(function (User $user) use (&$sent, &$failed, $now) {
                 $seen = array_map('intval', $user->demo_reminders_seen ?? []);
 
                 if (in_array(self::SENT_MARKER, $seen, true)) {
@@ -65,8 +66,8 @@ class DemoExpiryNotifyCommand extends Command
                 // relais SMTP ne rattraperont un message qui n'aurait pas dû partir.
                 //
                 // ⚠️ L'adresse est vérifiée SÉPARÉMENT : `applies()` ne la regarde pas, et
-                // `DemoExpiring` la passe à `->to()`. Sur un `demo_email` nul, le message
-                // partirait vers l'adresse technique `@demo.local` du compte — inexistante.
+                // `User::routeNotificationForMail()` retombe sur `email` quand `demo_email`
+                // est nul — soit l'adresse technique `@demo.local` du compte, inexistante.
                 if (blank($user->demo_email) || blank($user->demo_email_consent_at)) {
                     return;
                 }
@@ -78,6 +79,8 @@ class DemoExpiryNotifyCommand extends Command
                 try {
                     $user->notify(new DemoExpiring(DemoResumeLink::urlFor($user)));
                 } catch (\Throwable $e) {
+                    $failed++;
+
                     Log::error('Rappel d\'expiration de démonstration : échec d\'envoi', [
                         'user_id' => $user->id,
                         'error' => $e->getMessage(),
@@ -92,6 +95,25 @@ class DemoExpiryNotifyCommand extends Command
             });
 
         $this->info("Rappels envoyés : {$sent}");
+
+        // ⚠️ Un échec doit SORTIR de la commande, pas seulement finir au journal.
+        //
+        // Le marqueur d'envoi n'est posé qu'après le `try` : un compte en échec est donc
+        // repris à chaque passage horaire, indéfiniment. Tant que cette méthode rendait
+        // `SUCCESS` quoi qu'il arrive, le planificateur lisait « Rappels envoyés : 0 » et
+        // tenait la panne pour une absence de travail.
+        //
+        // Ce n'est pas théorique : `DemoExpiring` a porté un `->to()` fatal jusqu'au
+        // 2026-09-07 sans que rien n'alerte, faute de compte remplissant les conditions
+        // d'envoi. Le premier bac à sable prolongé l'aurait déclenché, en silence.
+        //
+        // Le journal seul ne suffit pas : la production tourne avec un `LOG_LEVEL` invalide,
+        // qui renvoie ces lignes vers le journal d'urgence.
+        if ($failed > 0) {
+            $this->error("Rappels en échec : {$failed}");
+
+            return self::FAILURE;
+        }
 
         return self::SUCCESS;
     }

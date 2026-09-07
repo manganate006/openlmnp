@@ -33,12 +33,20 @@ class DemoExpiring extends Notification
         return ['mail'];
     }
 
+    /**
+     * ⚠️ Le destinataire ne se choisit PAS ici. `MailMessage` n'a pas de `->to()` — c'est une
+     * méthode de `Mailable`, et l'appeler lève une `Error` fatale AU MOMENT DE L'ENVOI. Ici
+     * la fatale était en plus INVISIBLE : `DemoExpiryNotifyCommand` l'attrape, et son marqueur
+     * d'envoi n'étant posé qu'après le `try`, le même compte serait réessayé toutes les heures
+     * sans que rien ne parte jamais.
+     *
+     * Le routage vit dans `User::routeNotificationForMail()`.
+     */
     public function toMail(object $notifiable): MailMessage
     {
         $expiresAt = $notifiable->demo_expires_at?->timezone(config('app.timezone'));
 
         $mail = (new MailMessage)
-            ->to($notifiable->demo_email)
             ->subject('Votre démonstration OpenLMNP s\'efface bientôt')
             ->greeting('Il reste peu de temps')
             ->line($expiresAt
