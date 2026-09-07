@@ -2,6 +2,30 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.6.4] - 2026-09-07
+
+### Corrections
+
+- **Prolonger sa démonstration affichait une erreur et n'envoyait jamais le lien de reprise.**
+  Le bac à sable était pourtant bien prolongé de 7 jours : l'échec survenait après
+  l'enregistrement, au moment de composer le message. Le rappel envoyé avant effacement
+  souffrait du même défaut, à ceci près que personne ne pouvait le voir — il part d'une tâche
+  planifiée, sans écran pour en rendre compte. Aucun rappel n'avait encore échoué faute de
+  compte réunissant les conditions d'envoi ; le premier bac à sable prolongé l'aurait
+  déclenché.
+- **Un bac à sable prolongé affichait « 167:59:40 ».** Le compte à rebours était conçu pour les
+  24 heures d'une démonstration ordinaire ; sur les 7 jours d'une prolongation, il rendait un
+  nombre d'heures à trois chiffres que personne ne convertit de tête. Au-delà de 24 heures il
+  compte désormais en jours, et garde l'horloge à la seconde sur la dernière journée, là où
+  elle porte l'urgence.
+- **Le lien de création de mot de passe d'un nouveau client pouvait partir à la mauvaise
+  adresse.** Quelqu'un qui essayait la démonstration en laissant une première adresse, puis
+  s'abonnait avec une seconde, recevait son accès à l'ancienne. C'est désormais toujours
+  l'adresse de l'abonnement qui reçoit.
+- La tâche planifiée qui envoie ces rappels **signale désormais ses échecs** au lieu de se
+  terminer normalement en annonçant « Rappels envoyés : 0 ». Un envoi en échec n'étant jamais
+  marqué comme fait, il était repris à chaque passage horaire sans que rien ne l'indique.
+
 ## [1.6.3] - 2026-09-06
 
 ### Corrections
