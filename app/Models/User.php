@@ -144,9 +144,16 @@ class User extends Authenticatable implements FilamentUser
      * ⚠️ Le routage est ICI et pas dans la notification : `MailMessage` n'expose pas de
      * `->to()` (c'est une méthode de `Mailable`), et l'y appeler lève une `Error` fatale au
      * moment de l'envoi. Laravel ne consulte ce point d'entrée que pour le canal `mail`.
+     *
+     * ⚠️ La condition porte sur `is_demo`, PAS sur la seule présence de `demo_email`.
+     * `ProvisioningController::promoteSandbox()` transforme un bac à sable en compte payant :
+     * il écrit `email` = l'adresse donnée à Stripe et `is_demo = false`, mais ne vide jamais
+     * `demo_email`. Router sur l'adresse résiduelle enverrait le `WelcomeSetPassword` du
+     * client qui vient de payer — son lien de création de mot de passe — à celle qu'il avait
+     * laissée en essayant la démo, quand les deux diffèrent.
      */
     public function routeNotificationForMail(): string
     {
-        return filled($this->demo_email) ? $this->demo_email : $this->email;
+        return $this->is_demo && filled($this->demo_email) ? $this->demo_email : $this->email;
     }
 }
