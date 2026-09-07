@@ -63,7 +63,8 @@ vendor/bin/pest --filter="Filament"
 | Duplication d'une charge | 13 | Date avancée d'une période, conversion euros/centimes, justificatifs non recopiés, invitation à générer posée après enregistrement |
 | Contrôles de cohérence de la liasse | 10 | 044 = 490 et 572 = 254, trois états, tolérance de troncature, concordance entre le PDF et l'écran de télédéclaration |
 | Colonnes déclarées vs schéma | 3 | Audit générique des `$fillable` de tous les modèles, `ack_number` filtrable, paire transmitted_at/ack_number |
-| Suites ajoutées depuis (détail non ventilé) | 304 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel, estimation DVF de la valeur vénale, justificatifs restés à la racine d'avant Laravel 11… |
+| Expiration de démo : rendu réel du message et routage | 8 | Les deux notifications sont **rendues pour de vrai** (`Notification::fake()` n'appelle jamais `toMail()`, d'où une fatale restée invisible), compte à rebours basculé en jours au-delà de 24 h côté Alpine comme côté serveur, adresse laissée par le visiteur honorée, adresse **de paiement** honorée après promotion du bac à sable, cron qui signale un échec au lieu de rendre SUCCESS |
+| Suites ajoutées depuis (détail non ventilé) | 296 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel, estimation DVF de la valeur vénale, justificatifs restés à la racine d'avant Laravel 11… |
 | **Total** | **739** | **2 092 assertions** |
 
 > Le détail par suite est tenu à jour lot par lot ; la ligne « suites ajoutées depuis »
