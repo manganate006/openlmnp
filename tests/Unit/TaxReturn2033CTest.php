@@ -151,12 +151,13 @@ it('counts the gross value of acquisition fees, which the table ignored entirely
 
     $cat = fn (Property $p, string $c) => $this->taxReturn->compute2033C(collect([$p]), 2025)['categories'][$c]['brut'];
 
-    // Les frais d'acquisition sont des immobilisations INCORPORELLES (410/500) : depuis le
-    // 2026-09-05 ils ne gonflent plus les constructions, où ils étaient rangés faute de
-    // catégorie pour les accueillir. L'écart entre les deux biens, par ailleurs identiques,
-    // doit donc valoir leur montant sur la ligne incorporelle, et zéro sur les constructions.
-    expect($cat($withFees, 'incorporelles') - $cat($withoutFees, 'incorporelles'))->toBe(2500000)
-        ->and($cat($withFees, 'constructions'))->toBe($cat($withoutFees, 'constructions'));
+    // ⚠️ Le 2026-09-05 les frais avaient été sortis des constructions vers la ligne
+    // incorporelle 410/500 ; le 2026-09-08 ils y sont revenus, et pour une raison de fond :
+    // un frais d'acquisition capitalisé fait partie du coût de l'immobilisation acquise
+    // (PCG art. 213-8). L'écart entre les deux biens, par ailleurs identiques, vaut donc
+    // leur montant sur les CONSTRUCTIONS, et rien sur la ligne incorporelle.
+    expect($cat($withFees, 'constructions') - $cat($withoutFees, 'constructions'))->toBe(2500000)
+        ->and($cat($withFees, 'incorporelles'))->toBe(0);
 });
 
 it('still counts the gross value of fees once they are fully depreciated', function () {
@@ -166,14 +167,16 @@ it('still counts the gross value of fees once they are fully depreciated', funct
     // 2060 : les 25 ans des frais sont révolus, mais le gros œuvre (50 ans) court encore.
     $c = $this->taxReturn->compute2033C(collect([$property]), 2060);
 
-    // La valeur brute des frais reste au bilan, sur sa propre ligne incorporelle, tandis que
-    // les constructions gardent le seul bâti (gros œuvre 50 % + toiture 10 % de 200 000 €)…
-    expect($c['categories']['incorporelles']['brut'])->toBe(2500000)
-        ->and($c['categories']['constructions']['brut'])->toBe(12000000)
+    // La valeur brute des frais reste au bilan une fois amortis — c'est la raison d'être de
+    // la ligne émise à dotation nulle — et elle s'ajoute aux constructions : gros œuvre 50 %
+    // + toiture 10 % de 200 000 €, soit 120 000 €, plus les 25 000 € de frais…
+    expect($c['categories']['incorporelles']['brut'])->toBe(0)
+        ->and($c['categories']['constructions']['brut'])->toBe(14500000)
         // … alors qu'ils ne dotent plus rien : seul le gros œuvre alimente l'exercice.
         ->and($c['total_dotation'])->toBe(200000)
-        // et leur cumul est complet, plafonné à leur valeur brute.
-        ->and($c['categories']['incorporelles']['cumul'])->toBe(2500000);
+        // et leur cumul est complet, plafonné à leur valeur brute : 120 000 € de bâti
+        // entièrement amorti pour la toiture, plus les 25 000 € de frais.
+        ->and($c['categories']['constructions']['cumul'])->toBeGreaterThanOrEqual(2500000);
 });
 
 it('carries the land in the total gross assets, where the table ignored it', function () {

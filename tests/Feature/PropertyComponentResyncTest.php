@@ -3,7 +3,6 @@
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\User;
-use App\Observers\PropertyObserver;
 use App\Services\DepreciationService;
 
 /**
@@ -145,24 +144,42 @@ it('ne rogne jamais une base saisie, même quand elle dépasse à elle seule', f
         ->and(app(DepreciationService::class)->overAllocation($property))->toBeGreaterThan(0);
 });
 
-it('surveille exactement les champs dont dépend la base amortissable', function () {
-    // Garde-fou d'accord : si `Property::getDepreciableBaseAttribute()` gagne une entrée,
-    // l'observer doit la surveiller, sinon le recalage redevient partiel en silence.
-    $reflection = new ReflectionClass(PropertyObserver::class);
-    $surveilles = $reflection->getConstant('CHAMPS_DE_LA_BASE');
+/**
+ * Le garde-fou d'accord entre l'accesseur et l'observer — COMPORTEMENTAL, plus textuel.
+ *
+ * ⚠️ La version d'avant comparait des CHAÎNES : elle vérifiait que « quota_share » figurait
+ * à la fois dans le corps de `getDepreciableBaseAttribute()` et dans `CHAMPS_DE_LA_BASE`.
+ * Les deux étaient vraies, et pourtant le recalage ne partait jamais sur une surface : la
+ * quote-part est un ACCESSEUR (`rented_area / total_area`), pas une colonne, donc
+ * `wasChanged('quota_share')` est toujours faux. Le test annonçait plus qu'il ne mesurait —
+ * exactement le mode d'échec que ce fichier est censé fermer.
+ *
+ * On mesure donc l'effet : chaque champ dont dépend la base est modifié pour de vrai, et le
+ * composant ventilé doit avoir suivi.
+ */
+it('recale sur CHAQUE champ dont dépend la base amortissable', function (string $champ, mixed $valeur) {
+    $property = bienDeCocool();
 
-    $source = file_get_contents(app_path('Models/Property.php'));
-    $accesseur = substr(
-        $source,
-        (int) strpos($source, 'function getDepreciableBaseAttribute'),
-        900,
-    );
+    app(DepreciationService::class)->syncComponents($property, [
+        ['name' => 'Gros œuvre', 'duration_years' => 40, 'sort_order' => 0, 'percentage' => 100],
+    ]);
 
-    foreach (['market_value', 'acquisition_price', 'land_percentage', 'quota_share'] as $champ) {
-        expect($accesseur)->toContain($champ)
-            ->and($surveilles)->toContain($champ);
-    }
-});
+    $property->update([$champ => $valeur]);
+    $property->refresh();
+
+    expect((int) $property->components->sum('base_amount'))
+        ->toBe((int) $property->depreciable_base)
+        // Sans quoi le test passerait aussi sur une modification qui ne change rien.
+        ->not->toBe(8_797_500);
+})->with([
+    'prix d\'acquisition' => ['acquisition_price', 9_840_000],
+    'valeur vénale'       => ['market_value', 12_000_000],
+    'part du terrain'     => ['land_percentage', 30],
+    // Les deux surfaces composent la quote-part, qui n'est pas une colonne : c'est
+    // précisément le cas que le garde-fou textuel ne voyait pas.
+    'surface louée'       => ['rented_area', 30],
+    'surface totale'      => ['total_area', 90],
+]);
 
 /**
  * L'INVARIANT dont dépend l'accord entre les deux compteurs de l'écran.

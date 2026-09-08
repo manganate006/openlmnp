@@ -49,8 +49,34 @@
         </ul>
 
         <div class="ctx-warning">
-            <strong>Important :</strong> Si la valeur vénale n'est pas renseignée, c'est le prix d'achat + frais de notaire qui sera utilisé comme base d'amortissement.
+            <strong>Ce qui s'amortit, exactement :</strong> la valeur vénale si vous l'avez renseignée,
+            sinon le prix d'achat &mdash; moins la part du terrain, et ramené à votre quote-part si le
+            bien n'est pas loué en entier.
         </div>
+
+        <h3>Vos frais de notaire et d'agence</h3>
+        <p>Ils ne sont <strong>pas</strong> compris dans le prix d'achat ci-dessus, et le champ
+        <strong>« Traitement des frais d'acquisition »</strong> décide de ce qu'ils deviennent. Quatre
+        réponses possibles, à aligner sur ce qu'a fait votre comptable :</p>
+        <ul>
+            <li data-icon="&#x1F4C4;"><strong>Amortis séparément</strong> (par défaut) &mdash; ils forment
+            une immobilisation à part, amortie sur sa propre durée (25 ans en général). Votre base
+            amortissable ne change pas. Au bilan, ils apparaissent avec les constructions
+            (case&nbsp;028), pas sur une ligne à eux.</li>
+            <li data-icon="&#x1F3E0;"><strong>Intégrés au coût du bien</strong> &mdash; ils rejoignent le
+            prix : ils se répartissent alors terrain / bâti comme lui, donc la part terrain ne s'amortit
+            pas, et le reste suit la durée de chaque composant. <strong>Votre base amortissable
+            augmente.</strong></li>
+            <li data-icon="&#x1F4B8;"><strong>Passés en charges</strong> &mdash; déduits en une fois
+            l'année de l'achat. Ils ne figurent alors dans aucune immobilisation.</li>
+            <li data-icon="&#x274C;"><strong>Non repris</strong> &mdash; ni charge ni immobilisation.</li>
+        </ul>
+        <p>Une <strong>valeur vénale</strong> renseignée prime sur tout cela : c'est la valeur d'entrée
+        du bien dans votre activité de loueur, et des frais payés à l'achat, souvent des années plus
+        tôt, ne s'y ajoutent pas. Le formulaire vous le signale si la combinaison se présente.</p>
+        <p>Pour retrouver d'où vient chaque montant de votre liasse, l'annexe
+        <strong>« Détail des immobilisations »</strong> &mdash; dans le PDF et sur l'écran de
+        télédéclaration &mdash; donne la ligne du 2033-C de chaque actif.</p>
 
         <h3>Si vous changez le prix ou la part du terrain</h3>
     <p>Ces deux champs déterminent la <strong>base amortissable</strong> : ce qui s'amortit, une fois

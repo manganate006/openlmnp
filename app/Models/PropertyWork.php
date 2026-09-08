@@ -49,6 +49,7 @@ class PropertyWork extends Model
         'amount_tva',
         'work_date',
         'duration_years',
+        'cerfa_category',
         'is_dedicated',
         'annual_depreciation',
         'depreciation_source',

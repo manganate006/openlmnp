@@ -8,6 +8,7 @@ use App\Support\DocumentStorage;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -232,7 +233,15 @@ class PropertyForm
                     ->default(Property::ACQUISITION_FEES_AMORTIZED)
                     ->required()
                     ->live()
-                    ->helperText('« Passés en charges » : votre comptable les a déduits en une fois l\'année de l\'achat. OpenLMNP ne les amortira donc plus.'),
+                    ->helperText(fn (callable $get) => match ($get('acquisition_fees_treatment') ?? Property::ACQUISITION_FEES_AMORTIZED) {
+                        Property::ACQUISITION_FEES_CAPITALIZED => 'Les frais rejoignent le prix du bien : ils se répartissent terrain / bâti comme lui, '
+                            . 'donc la part terrain ne s\'amortit pas, et le reste suit la durée de chaque composant. '
+                            . 'Votre base amortissable augmente.',
+                        Property::ACQUISITION_FEES_EXPENSED => 'Votre comptable les a déduits en une fois l\'année de l\'achat. OpenLMNP ne les amortira donc plus.',
+                        Property::ACQUISITION_FEES_EXCLUDED => 'Ils n\'entrent ni dans les charges ni dans les immobilisations : rien n\'en sera repris.',
+                        default => 'Les frais forment une immobilisation à part, amortie sur sa propre durée. Ils apparaissent '
+                            . 'avec les constructions au bilan (case 028), et votre base amortissable ne bouge pas.',
+                    }),
                 TextInput::make('acquisition_fees_duration')
                     ->label('Durée d\'amortissement des frais')
                     ->suffix('ans')
@@ -243,12 +252,24 @@ class PropertyForm
                     ->visible(fn (callable $get) => ($get('acquisition_fees_treatment') ?? Property::ACQUISITION_FEES_AMORTIZED) === Property::ACQUISITION_FEES_AMORTIZED)
                     ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'La pratique dominante est 25 ans, alignée sur la durée du gros œuvre. Reprenez celle de votre liasse si elle diffère.'),
             ]),
+            // ⚠️ Une valeur vénale renseignée PRIME sur le prix d'acquisition, frais compris :
+            // c'est la valeur d'entrée dans l'activité, à laquelle les frais d'une acquisition
+            // antérieure n'ont pas à s'ajouter. La combinaison n'est pas refusée — refuser
+            // casserait les outils MCP et l'import de dossier —, elle est dite.
+            Placeholder::make('acquisition_fees_ignored')
+                ->hiddenLabel()
+                ->visible(fn (callable $get) => $get('acquisition_fees_treatment') === Property::ACQUISITION_FEES_CAPITALIZED
+                    && (int) $get('market_value') > 0)
+                ->content('Une valeur vénale est renseignée : c\'est elle qui sert de base, et vos frais '
+                    . 'd\'acquisition ne sont donc pas repris. Ils datent de l\'achat, pas de l\'entrée du '
+                    . 'bien dans votre activité de loueur.'),
             Grid::make(3)->schema([
                 TextInput::make('market_value')
                     ->label('Valeur vénale')
                     ->suffix('€')
                     ->numeric()
                     ->step(1)
+                    ->live(onBlur: true)
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : null)
                     ->dehydrateStateUsing(fn ($state) => $state ? (int) round(((float) $state) * 100) : null)
                     ->hintAction(MarketValueEstimate::action())

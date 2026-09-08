@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Expense;
 use App\Models\FiscalYear;
 use App\Models\Property;
+use App\Models\PropertyComponent;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,6 +17,20 @@ use Illuminate\Support\Facades\Storage;
  */
 class TaxReturnService
 {
+    /**
+     * Les formulaires que le document contient RÉELLEMENT.
+     *
+     * ⚠️ Source unique de l'annonce faite au dehors — l'outil MCP `generate_tax_return` la
+     * lit ici. Elle a longtemps promis « 2031, 2033-A à 2033-G » là où la vue ne rend que
+     * quatre sections : un assistant répète l'annonce, l'utilisateur cherche des pages qui
+     * n'existent pas, et l'erreur essaime dans la documentation. `TaxReturnFormsTest` la
+     * compare aux titres de `pdf/tax-return.blade.php` DANS LES DEUX SENS — ajouter une
+     * section sans l'annoncer échoue aussi.
+     *
+     * Les codes sont ceux du Cerfa, tels que la vue les écrit.
+     */
+    public const FORMS = ['2031-SD', '2033-A', '2033-B', '2033-C', '2033-D'];
+
     public const CHECK_OK = 'ok';
 
     /** Situation permise par le produit, mais que l'utilisateur doit savoir. */
@@ -52,6 +67,7 @@ class TaxReturnService
             'form2033C' => $this->compute2033C($properties, $year),
             'form2033D' => $this->compute2033D($fiscalYear),
             'form2042' => $this->compute2042($fiscalYear),
+            'assetBreakdown' => $this->assetBreakdown($properties, $year),
         ];
 
         $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties);
@@ -291,23 +307,30 @@ class TaxReturnService
             // mobilier — 9 144 € sur 226 645 —, alors que notre propre 2033-C les liste.
             // Sans effet sur le résultat, mais l'écran de contrôle de reprise compare cette
             // ligne : l'utilisateur voyait un écart rouge qui ne venait pas de lui.
-            $refValue = $prop->market_value ?? $prop->acquisition_price;
-            $corpBrut += (int) bcmul((string) $refValue, $prop->quota_share, 0);
+            $corpBrut += (int) bcmul($prop->referenceValue(), $prop->quota_share, 0);
 
-            // Les frais d'acquisition sont des immobilisations INCORPORELLES (cases 014/016).
-            // Ils sont incorporés au coût du bâtiment dans le 2033-C, mais le bilan les
-            // distingue — c'est aussi ce que fait la liasse d'un cabinet.
+            // ⚠️ Le classement se fait sur `cerfa_category`, JAMAIS sur le type de ligne.
+            // C'est la même règle que celle du 2033-C, et c'est ce qui garantit que les deux
+            // formulaires ne peuvent pas ranger un même montant à deux endroits différents.
+            // Le cas particulier `type === 'notary'` qui vivait ici jusqu'au 2026-09-08 était
+            // la seconde règle, indépendante, qui envoyait les frais d'acquisition en 014
+            // pendant que le 2033-C les envoyait en 410 : deux vérités pour un montant.
             foreach ($this->depreciationService->depreciationDetailForYear($prop, $year) as $line) {
-                if ($line['type'] === 'notary') {
-                    $incorpBrut += (int) $line['base'];
+                $isIntangible = ($line['cerfa_category'] ?? null) === PropertyComponent::CERFA_CATEGORY_INTANGIBLE;
+
+                // La base des composants immeuble est déjà comprise dans la valeur de
+                // référence ci-dessus : seuls travaux, mobilier et frais amortis à part
+                // s'y ajoutent.
+                $addsToGross = $line['type'] !== 'building';
+
+                if ($isIntangible) {
+                    $incorpBrut += $addsToGross ? (int) $line['base'] : 0;
                     $incorpAmort += (int) $line['cumul'];
 
                     continue;
                 }
 
-                // La base des composants immeuble est déjà comprise dans la valeur de
-                // référence ci-dessus : seuls travaux et mobilier s'y ajoutent.
-                if ($line['type'] === 'work' || $line['type'] === 'furniture') {
+                if ($addsToGross) {
                     $corpBrut += (int) $line['base'];
                 }
 
@@ -378,9 +401,8 @@ class TaxReturnService
             // amputé de la part terrain (32 625 € sur 245 643 € pour la liasse réelle rejouée
             // le 2026-09-05). On le déduit de la valeur de référence, dont la base amortissable
             // est justement le complément.
-            $refValue = (string) ($prop->market_value ?? $prop->acquisition_price);
             $land = bcsub(
-                bcmul($refValue, $prop->quota_share, 0),
+                bcmul($prop->referenceValue(), $prop->quota_share, 0),
                 $prop->depreciable_base,
                 0
             );
@@ -403,6 +425,81 @@ class TaxReturnService
             'total_dotation' => array_sum(array_column($categories, 'dotation')),
             'total_cumul' => array_sum(array_column($categories, 'cumul')),
         ];
+    }
+
+    /**
+     * Le détail des immobilisations, actif par actif — l'annexe qui rend la liasse lisible.
+     *
+     * Raison d'être : issue #11. Un utilisateur y découvrait une ligne « Immob. incorporelles
+     * brut (014) » de 8 900 € que rien, nulle part, ne reliait à ce qu'il avait saisi. Le
+     * calcul était juste au centime ; c'est la traçabilité qui manquait, et un montant qu'on
+     * ne peut pas remonter jusqu'à sa source est un montant qu'on ne peut pas vérifier.
+     *
+     * ⚠️ Rendue depuis `depreciationDetailForYear()`, la source qui alimente DÉJÀ le 2033-A
+     * et le 2033-C. Une annexe qui recalculerait de son côté pourrait contredire les deux
+     * tableaux qu'elle prétend expliquer — c'est le défaut qu'avait le contrôle 572 = 254
+     * avant qu'il n'ait une source unique.
+     *
+     * @return list<array{name: string, origin: string, cerfa: string, base: int, annual: int, cumul: int}>
+     */
+    public function assetBreakdown($properties, int $year): array
+    {
+        $origins = [
+            'building'  => 'Composant du bien',
+            'work'      => 'Travaux',
+            'furniture' => 'Mobilier',
+            'notary'    => 'Frais d\'acquisition',
+        ];
+
+        $cerfaLines = [
+            PropertyComponent::CERFA_CATEGORY_INTANGIBLE    => '410 / 500',
+            PropertyComponent::CERFA_CATEGORY_CONSTRUCTIONS  => '430 / 520',
+            PropertyComponent::CERFA_CATEGORY_INSTALLATIONS  => '440 / 530',
+            PropertyComponent::CERFA_CATEGORY_FITTINGS       => '450 / 540',
+            PropertyComponent::CERFA_CATEGORY_OTHER          => '470 / 560',
+        ];
+
+        $rows = [];
+
+        foreach ($properties as $prop) {
+            // Le terrain ne sort d'aucune ligne du détail — il ne s'amortit pas — et c'est
+            // précisément la part que l'utilisateur cherche quand il ne retrouve pas son
+            // total. On l'écrit donc, à sa place, avant les actifs amortissables.
+            $land = (int) bcsub(
+                bcmul($prop->referenceValue(), $prop->quota_share, 0),
+                $prop->depreciable_base,
+                0
+            );
+
+            if ($land > 0) {
+                $rows[] = [
+                    'name'   => 'Terrain (non amortissable)',
+                    'origin' => 'Quote-part du bien',
+                    'cerfa'  => '420',
+                    'base'   => $land,
+                    'annual' => 0,
+                    'cumul'  => 0,
+                ];
+            }
+
+            foreach ($this->depreciationService->depreciationDetailForYear($prop, $year) as $line) {
+                $rows[] = [
+                    'name'   => $line['name'],
+                    'origin' => $origins[$line['type']] ?? $line['type'],
+                    'cerfa'  => $cerfaLines[$line['cerfa_category'] ?? ''] ?? '470 / 560',
+                    // ⚠️ Un composant d'immeuble est DÉJÀ compris dans la valeur de référence
+                    // du bien : sa base n'est pas un actif de plus, c'est la ventilation de
+                    // celui qui précède. Additionner cette colonne ne rend donc PAS la case
+                    // 044 — le terrain et les composants s'y recouvrent — et l'annexe ne
+                    // porte volontairement aucun total, pour ne pas suggérer le contraire.
+                    'base'   => (int) $line['base'],
+                    'annual' => (int) $line['annual'],
+                    'cumul'  => (int) $line['cumul'],
+                ];
+            }
+        }
+
+        return $rows;
     }
 
     /**

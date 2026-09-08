@@ -25,6 +25,11 @@
     <p>Un contrôle <strong>orange</strong> n'est pas une erreur : il signale qu'une part de votre base amortissable n'est rattachée à aucun composant. C'est autorisé &mdash; mais cette part <strong>ne s'amortira pas</strong>. Si ce n'est pas voulu, complétez la ventilation dans l'éditeur d'amortissements.</p>
     <p>Un contrôle <strong>rouge</strong> demande une correction avant de déclarer : vos composants dépassent la base amortissable, en général parce que la valeur du bien ou la part du terrain ont été modifiées après la ventilation.</p>
 
+    <h3>D'où vient chaque montant : le détail des immobilisations</h3>
+    <p>Le tableau 2033-C agrège : une ligne « Constructions » de 60 000 € ne dit pas ce qu'elle contient. Le bloc <strong>« Détail des immobilisations »</strong>, dépliable en bas de cet écran et repris en annexe du PDF, donne une ligne par actif &mdash; son intitulé, son origine (composant du bien, travaux, mobilier, frais d'acquisition), la ligne du 2033-C où il atterrit, sa valeur brute, sa dotation et son cumul.</p>
+    <p>Rien à recopier : ce tableau n'est pas un formulaire Cerfa, il sert à retrouver la provenance d'un chiffre qui vous surprend. Une précision utile pour le lire : les <strong>composants du bien ventilent</strong> sa valeur, ils ne s'y ajoutent pas &mdash; la colonne « Valeur brute » ne se totalise donc pas, et c'est voulu.</p>
+    <p>Si l'explication ne suffit pas, le bouton <strong>« Rapport de diagnostic »</strong> en haut de l'écran rassemble en un texte tout ce qui produit votre liasse : valeurs saisies, base amortissable, composants, travaux, mobilier, lignes obtenues et écarts. Il ne part nulle part tout seul, et ne contient ni votre nom, ni votre adresse, ni votre commune &mdash; joignez-le à votre message pour qu'on puisse vous répondre sans vous faire tout ressaisir.</p>
+
     <h3>Tableau 2033-D : deux reports à ne pas confondre</h3>
     <p>Le 2033-D suit <strong>deux stocks distincts</strong>, que l'administration fait d'ailleurs suivre par deux états séparés. Les mélanger, c'est déclarer des reports que vous n'avez pas.</p>
     <ul>

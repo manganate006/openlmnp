@@ -42,6 +42,7 @@
         .td-check-ok { background: var(--olmnp-success-bg); color: var(--olmnp-success-fg); }
         .td-check-ko { background: var(--olmnp-danger-bg); color: var(--olmnp-danger-fg); }
         .td-check-warn { background: var(--olmnp-warning-bg); color: var(--olmnp-warning-fg); }
+        .td-breakdown-note { font-size: 12px; color: var(--olmnp-fg-muted); margin-bottom: 12px; }
     </style>
 
     <script>
@@ -210,6 +211,46 @@
                     </div>
                 @endforeach
             </div>
+
+            {{-- Détail des immobilisations : d'où vient chaque ligne du cadre I du 2033-C.
+                 Rendu depuis TaxReturnService::assetBreakdown(), la même source que les
+                 tableaux ci-dessus et que le PDF. Né de l'issue #11 : une ligne agrégée ne
+                 dit pas ce qu'elle contient, et un montant qu'on ne peut pas remonter à sa
+                 source est un montant qu'on ne peut pas vérifier. --}}
+            <details class="td-section" style="margin-top:24px;">
+                <summary>Détail des immobilisations <span class="td-cerfa">d'où vient chaque ligne du 2033-C</span></summary>
+                <div class="td-section-body">
+                    <p class="td-breakdown-note">
+                        Rien à recopier ici : ce tableau explique les lignes du 2033-C ci-dessus.
+                        Les composants ventilent la valeur du bien, ils ne s'y ajoutent pas — la
+                        colonne « Valeur brute » ne se totalise donc pas.
+                    </p>
+                    <table class="td-table">
+                        <thead>
+                            <tr>
+                                <th>Immobilisation</th>
+                                <th>Origine</th>
+                                <th>Ligne 2033-C</th>
+                                <th style="text-align:right;">Valeur brute</th>
+                                <th style="text-align:right;">Dotation</th>
+                                <th style="text-align:right;">Amort. cumulé</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['breakdown'] as $row)
+                                <tr>
+                                    <td>{{ $row['name'] }}</td>
+                                    <td>{{ $row['origin'] }}</td>
+                                    <td class="line-cell">{{ $row['cerfa'] }}</td>
+                                    <td class="value-cell">{{ number_format($row['base'] / 100, 2, ',', ' ') }} €</td>
+                                    <td class="value-cell">{{ number_format($row['annual'] / 100, 2, ',', ' ') }} €</td>
+                                    <td class="value-cell">{{ number_format($row['cumul'] / 100, 2, ',', ' ') }} €</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </details>
 
             {{-- Guide EFI --}}
             <div class="td-card" style="margin-top:24px;">

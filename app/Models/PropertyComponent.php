@@ -69,9 +69,14 @@ class PropertyComponent extends Model
     public const CERFA_CATEGORY_OTHER         = 'autres';
 
     /**
-     * ⚠️ Volontairement ABSENTE de `cerfaCategoryLabels()` : les frais d'acquisition portent
-     * cette catégorie, mais aucun composant d'immeuble ne doit pouvoir être classé incorporel
-     * depuis l'interface. Le sélecteur ne propose donc que les quatre lignes amortissables.
+     * La ligne 410/500 du 2033-C — cases 014/016 du bilan.
+     *
+     * ⚠️ Volontairement ABSENTE de `cerfaCategoryLabels()`, et depuis le 2026-09-08 **plus
+     * rien ne la produit** : les frais d'acquisition la portaient, ils sont désormais
+     * corporels (un frais capitalisé fait partie du coût de l'immobilisation qu'il a servi à
+     * acquérir, PCG art. 213-8). La constante subsiste parce que la case Cerfa existe et que
+     * `TaxReturnService` doit continuer à savoir où router ce qui s'en réclamerait — pas
+     * parce qu'on projette d'y remettre quelque chose.
      */
     public const CERFA_CATEGORY_INTANGIBLE = 'incorporelles';
 

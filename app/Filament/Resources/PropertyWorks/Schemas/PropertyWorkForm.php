@@ -131,6 +131,12 @@ class PropertyWorkForm
             ->description('À renseigner uniquement si ces travaux figuraient déjà dans le plan d\'amortissement de votre comptable.')
             ->collapsed()
             ->schema([
+                Select::make('cerfa_category')
+                    ->label('Ligne du 2033-C')
+                    ->options(\App\Models\PropertyComponent::cerfaCategoryLabels())
+                    ->placeholder('Agencements (450 / 540) — par défaut')
+                    ->helperText('Sur quelle ligne du tableau des immobilisations votre comptable range-t-il ces travaux ? '
+                        . 'Laissez vide si vous ne reprenez pas une liasse existante.'),
                 Select::make('depreciation_source')
                     ->label('Dotation annuelle')
                     ->options([

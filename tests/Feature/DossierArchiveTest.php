@@ -178,7 +178,7 @@ it('reads an archive written by an older version that lacked a column', function
     $imported = Property::withoutGlobalScopes()->where('user_id', $target->id)->first();
 
     // La colonne retombe sur le défaut de la base, et l'import ne casse pas.
-    expect($imported->amortizesAcquisitionFees())->toBeTrue();
+    expect($imported->emitsSeparateAcquisitionFeeLine())->toBeTrue();
 });
 
 it('never mixes two users data in one archive', function () {

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\EditsDepreciationComponents;
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Pages\Concerns\ShowsDiagnosticReport;
 use App\Models\Property;
 use BackedEnum;
 use Filament\Pages\Page;
@@ -16,6 +17,7 @@ class DepreciationEditor extends Page
 {
     use EditsDepreciationComponents;
     use NavigationAware;
+    use ShowsDiagnosticReport;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingLibrary;
     protected static string | UnitEnum | null $navigationGroup = 'Mes biens';
@@ -39,6 +41,13 @@ class DepreciationEditor extends Page
 
     public ?int $propertyId = null;
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            $this->diagnosticReportAction(),
+        ];
+    }
+
     public function mount(?int $propertyId = null): void
     {
         if ($propertyId) {
@@ -61,7 +70,11 @@ class DepreciationEditor extends Page
             'propertyName' => $propertyName,
             'active' => 'components',
             'heading' => 'Ventilation des composants',
-            'actions' => [],
+            // ⚠️ `getHeader()` REMPLACE l'en-tête de Filament : déclarer `getHeaderActions()`
+            // ne suffit pas, il faut passer les actions au partial, comme le font les trois
+            // autres écrans qui l'utilisent. Sans cette ligne le bouton existe, répond, et
+            // n'est visible nulle part — le genre d'oubli qu'aucun test Pest ne voit.
+            'actions' => $this->getCachedHeaderActions(),
             'properties' => $this->propertyId ? null : Property::orderBy('name')->get(['id', 'name']),
             'currentUrl' => '/depreciation-editor',
         ]);

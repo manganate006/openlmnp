@@ -330,6 +330,33 @@ La commande ne touche jamais à la base de données et n'écrase jamais un fichi
 déjà présent à la nouvelle racine : ce cas est signalé, pas exécuté. Elle est sans
 effet si votre instance n'est pas concernée.
 
+### Signaler un problème de calcul : le rapport de diagnostic
+
+Si vos amortissements ou votre liasse ne tombent pas sur les chiffres attendus, un
+rapport de diagnostic rassemble en un texte tout ce qui les produit : les valeurs
+saisies sur le bien, la base amortissable et sa provenance, chaque composant avec sa
+base, sa durée et sa date de départ, vos travaux et votre mobilier, les lignes de
+liasse obtenues, et les écarts.
+
+Il est accessible **depuis l'interface**, bouton « Rapport de diagnostic » en haut des
+pages *Amortissements* et *Télédéclaration*. Depuis le serveur :
+
+```bash
+# Le seul compte de l'instance, exercice en cours
+docker exec openlmnp php artisan openlmnp:diagnostic
+
+# Un compte précis, un exercice précis
+docker exec openlmnp php artisan openlmnp:diagnostic vous@exemple.fr --year=2025
+
+# En JSON, si vous voulez le traiter
+docker exec openlmnp php artisan openlmnp:diagnostic --json
+```
+
+La commande ne modifie rien et **n'envoie rien** : elle écrit sur la sortie standard.
+Le rapport ne contient ni nom, ni adresse, ni commune, ni adresse e-mail — mais il
+porte vos montants et les intitulés que vous avez saisis. Relisez-le avant de le
+joindre à une issue publique.
+
 ## Sauvegarde et restauration
 
 Tout tient dans deux répertoires : `database` (la base) et `storage` (vos justificatifs).

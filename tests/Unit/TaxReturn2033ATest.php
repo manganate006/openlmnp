@@ -91,20 +91,47 @@ it('counts works and furniture among the gross corporeal assets', function () {
     expect(form2033A($this->user, 2025)['028'])->toBe(26500000);
 });
 
-it('carries acquisition fees on the incorporeal lines, out of 028 and 030', function () {
-    // Un cabinet porte les frais de notaire en 014/016, jamais avec les constructions.
+it('carries separately-amortised acquisition fees among the corporeal assets', function () {
+    // ⚠️ Ce test affirmait l'inverse jusqu'au 2026-09-08 — les frais en 014/016, « comme un
+    // cabinet les présente ». C'est cette présentation qui a produit l'issue #11 : un
+    // utilisateur découvrait au bilan une ligne « immobilisations incorporelles » de 8 900 €
+    // que rien n'expliquait. Un frais d'acquisition capitalisé fait partie du coût de
+    // l'immobilisation acquise (PCG art. 213-8) : il est corporel.
     $property = balanceProperty($this->user, ['notary_fees' => 2500000]); // 25 000 €
     $this->depreciation->generateDefaultComponents($property);
 
     $form = form2033A($this->user, 2025);
 
-    // Amortis sur 25 ans depuis la mise en location (2023) : trois exercices courus.
-    expect($form['014'])->toBe(2500000)
-        ->and($form['016'])->toBe(300000)
-        // La valeur brute des frais ne gonfle pas le corporel…
-        ->and($form['028'])->toBe(25000000)
-        // … et leur amortissement ne se mélange plus au cumul corporel.
-        ->and($form['030'])->toBeLessThan($form['048']);
+    // Plus rien n'alimente les cases incorporelles, qui subsistent à zéro.
+    expect($form['014'])->toBe(0)
+        ->and($form['016'])->toBe(0)
+        // La valeur brute des frais s'ajoute au corporel : 250 000 € + 25 000 €.
+        ->and($form['028'])->toBe(27500000)
+        // Amortis sur 25 ans depuis la mise en location (2023) : trois exercices courus.
+        // Leur cumul rejoint celui du corporel, et le total 048 ne s'en distingue plus.
+        ->and($form['048'])->toBe($form['030'])
+        ->and($form['044'])->toBe($form['028']);
+});
+
+it('leaves the fees out of every asset line once they are capitalised into the property', function () {
+    // Sous « intégrés au coût du bien », les frais ne portent AUCUNE ligne à eux : ils sont
+    // dans la valeur de référence, donc déjà dans la case 028 et dans la base des composants.
+    // Une ligne de plus les compterait deux fois au bilan.
+    $property = balanceProperty($this->user, [
+        'notary_fees' => 2500000,
+        'acquisition_fees_treatment' => Property::ACQUISITION_FEES_CAPITALIZED,
+    ]);
+    $this->depreciation->generateDefaultComponents($property);
+
+    $form = form2033A($this->user, 2025);
+
+    // 275 000 € une fois, pas deux.
+    expect($form['028'])->toBe(27500000)
+        ->and($form['014'])->toBe(0);
+
+    $lines = $this->depreciation->depreciationDetailForYear($property->fresh(), 2025);
+
+    expect(collect($lines)->where('type', 'notary'))->toBeEmpty();
 });
 
 it('totals the two families and keeps the balance sheet balanced', function () {

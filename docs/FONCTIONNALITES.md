@@ -35,6 +35,16 @@ intérieurs, plomberie/sanitaire…), chacun avec sa propre durée d'amortisseme
 - **Prorata temporis** : la première et la dernière année sont calculées au nombre de jours
 - **Amortissement différé** : l'amortissement ne peut pas créer de déficit ; l'excédent
   est reporté sans limite de durée et déduit sur les exercices suivants
+- **Frais de notaire et d'agence** : quatre traitements au choix, à aligner sur ce qu'a fait
+  votre comptable — amortis séparément sur leur propre durée, intégrés au coût du bien (ils
+  rejoignent alors la base amortissable et se répartissent terrain / bâti), passés en charges
+  l'année de l'acquisition, ou non repris
+- **Ligne du 2033-C** paramétrable sur chaque composant, travail et meuble, pour reproduire la
+  présentation d'un cabinet
+- **Rapport de diagnostic** : un texte reprenant tout ce qui produit vos amortissements et
+  votre liasse — valeurs saisies, base amortissable, composants, travaux, mobilier, lignes
+  obtenues, écarts. À joindre à une demande d'aide. Aucune donnée nominative, aucun envoi
+  automatique
 
 ## Multi-biens
 
@@ -141,10 +151,15 @@ d'anticiper l'année où le régime réel cesse d'être avantageux par rapport a
 
 OpenLMNP prépare les documents de la déclaration BIC au réel :
 
-- **Télédéclaration interactive** : les lignes des formulaires Cerfa **2031**,
+- **Télédéclaration interactive** : les lignes des formulaires Cerfa **2031-SD**,
   **2033-A / B / C / D** et **2042-C-PRO** sont affichées avec des boutons « Copier »
   pour les reporter dans l'espace impots.gouv.fr
 - **Liasse fiscale PDF** : génération complète du document au format PDF (via DomPDF)
+- **Contrôles de cohérence** entre formulaires : case 044 face à la ligne 490, ligne 572
+  face à la ligne 254
+- **Détail des immobilisations** : une annexe, dans le PDF comme à l'écran, qui donne pour
+  chaque actif sa ligne du 2033-C, sa valeur brute, sa dotation et son cumul — de quoi
+  remonter n'importe quel montant de la liasse jusqu'à ce qui l'a produit
 
 ## FEC conforme DGFiP
 

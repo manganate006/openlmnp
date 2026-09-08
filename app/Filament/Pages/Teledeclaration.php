@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Pages\Concerns\ShowsDiagnosticReport;
 use App\Models\FiscalYear;
 use App\Models\Property;
 use App\Services\CsvExportService;
@@ -18,6 +19,7 @@ use UnitEnum;
 class Teledeclaration extends Page
 {
     use NavigationAware;
+    use ShowsDiagnosticReport;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPaperAirplane;
     protected static string | UnitEnum | null $navigationGroup = 'Fiscal';
@@ -36,6 +38,19 @@ class Teledeclaration extends Page
     public function mount(): void
     {
         $this->year = (int) (request()->query('year', date('Y')));
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            $this->diagnosticReportAction(),
+        ];
+    }
+
+    /** Le rapport de diagnostic décrit l'exercice affiché, pas l'année en cours. */
+    protected function diagnosticReportYear(): int
+    {
+        return $this->year;
     }
 
     /**
@@ -91,6 +106,9 @@ class Teledeclaration extends Page
             // Les contrôles viennent du service, jamais d'un calcul refait ici : le PDF les
             // affiche à partir de la même source, sinon les deux écrans peuvent diverger.
             'checks' => $tax->checks($form2033A, $form2033B, $form2033C, $properties),
+            // Le détail actif par actif — d'où vient chaque ligne du cadre I ci-dessus.
+            // Même source que les tableaux, pour la même raison que les contrôles.
+            'breakdown' => $tax->assetBreakdown($properties, $this->year),
         ];
     }
 
@@ -114,9 +132,9 @@ class Teledeclaration extends Page
                 'cerfa' => 'CERFA 10956',
                 'open' => false,
                 'lines' => [
-                    ['line' => '014', 'desc' => 'Immobilisations incorporelles (frais d\'acquisition, brut)', 'value' => $fmt($f2033A['014']), 'raw' => $f2033A['014']],
+                    ['line' => '014', 'desc' => 'Immobilisations incorporelles (brut)', 'value' => $fmt($f2033A['014']), 'raw' => $f2033A['014']],
                     ['line' => '016', 'desc' => 'Amortissements des incorporelles', 'value' => $fmt($f2033A['016']), 'raw' => $f2033A['016']],
-                    ['line' => '028', 'desc' => 'Immobilisations corporelles (brut)', 'value' => $fmt($f2033A['028']), 'raw' => $f2033A['028']],
+                    ['line' => '028', 'desc' => 'Immobilisations corporelles (bien, terrain, travaux, mobilier, frais d\'acquisition)', 'value' => $fmt($f2033A['028']), 'raw' => $f2033A['028']],
                     ['line' => '030', 'desc' => 'Amortissements cumulés', 'value' => $fmt($f2033A['030']), 'raw' => $f2033A['030']],
                     // 044 et 048 étaient calculées sans être affichées nulle part. Ce sont de
                     // vraies cases du Cerfa : les taire laissait l'utilisateur les remplir au
@@ -160,10 +178,10 @@ class Teledeclaration extends Page
                 'open' => false,
                 'categories' => $f2033C['categories'],
                 'lines' => [
-                    ['line' => '410 / 500', 'desc' => 'Immobilisations incorporelles (frais d\'acquisition)', 'value' => $fmt($f2033C['categories']['incorporelles']['brut']), 'raw' => $f2033C['categories']['incorporelles']['brut'], 'dotation' => $fmt($f2033C['categories']['incorporelles']['dotation']), 'dotation_raw' => $f2033C['categories']['incorporelles']['dotation']],
+                    ['line' => '410 / 500', 'desc' => 'Immobilisations incorporelles', 'value' => $fmt($f2033C['categories']['incorporelles']['brut']), 'raw' => $f2033C['categories']['incorporelles']['brut'], 'dotation' => $fmt($f2033C['categories']['incorporelles']['dotation']), 'dotation_raw' => $f2033C['categories']['incorporelles']['dotation']],
                     // Le terrain n'a pas de ligne d'amortissement : il ne s'amortit pas.
                     ['line' => '420', 'desc' => 'Terrains (non amortissables)', 'value' => $fmt($f2033C['categories']['terrains']['brut']), 'raw' => $f2033C['categories']['terrains']['brut'], 'dotation' => $fmt(0), 'dotation_raw' => 0],
-                    ['line' => '430 / 520', 'desc' => 'Constructions', 'value' => $fmt($f2033C['categories']['constructions']['brut']), 'raw' => $f2033C['categories']['constructions']['brut'], 'dotation' => $fmt($f2033C['categories']['constructions']['dotation']), 'dotation_raw' => $f2033C['categories']['constructions']['dotation']],
+                    ['line' => '430 / 520', 'desc' => 'Constructions (dont frais d\'acquisition amortis à part)', 'value' => $fmt($f2033C['categories']['constructions']['brut']), 'raw' => $f2033C['categories']['constructions']['brut'], 'dotation' => $fmt($f2033C['categories']['constructions']['dotation']), 'dotation_raw' => $f2033C['categories']['constructions']['dotation']],
                     ['line' => '440 / 530', 'desc' => 'Installations techniques', 'value' => $fmt($f2033C['categories']['installations']['brut']), 'raw' => $f2033C['categories']['installations']['brut'], 'dotation' => $fmt($f2033C['categories']['installations']['dotation']), 'dotation_raw' => $f2033C['categories']['installations']['dotation']],
                     ['line' => '450 / 540', 'desc' => 'Agencements, aménagements', 'value' => $fmt($f2033C['categories']['agencements']['brut']), 'raw' => $f2033C['categories']['agencements']['brut'], 'dotation' => $fmt($f2033C['categories']['agencements']['dotation']), 'dotation_raw' => $f2033C['categories']['agencements']['dotation']],
                     ['line' => '470 / 560', 'desc' => 'Autres immobilisations (mobilier)', 'value' => $fmt($f2033C['categories']['autres']['brut']), 'raw' => $f2033C['categories']['autres']['brut'], 'dotation' => $fmt($f2033C['categories']['autres']['dotation']), 'dotation_raw' => $f2033C['categories']['autres']['dotation']],

@@ -47,7 +47,6 @@ class ReprisesCheckService
     public const TOLERANCE_RATIO = '0.01';
 
     public const LINE_GROSS_ASSETS = 'gross_assets';
-    public const LINE_INTANGIBLE_ASSETS = 'intangible_assets';
     public const LINE_ACCUMULATED_DEPRECIATION = 'accumulated_depreciation';
     public const LINE_DEFERRED_DEPRECIATION = 'deferred_depreciation';
     public const LINE_DEFICIT_CARRYFORWARD = 'deficit_carryforward';
@@ -70,10 +69,13 @@ class ReprisesCheckService
                      . '15 % déplace des dizaines de milliers d\'euros de base amortissable.',
         ],
         'acquisition_fees' => [
-            'label' => 'Les frais d\'acquisition ont peut-être été passés en charges par le cabinet',
-            'hint'  => 'Frais de notaire et honoraires d\'agence sont ici amortis avec le bien. '
-                     . 'Si le cabinet les a déduits l\'année de l\'acquisition, ils ne figurent '
-                     . 'pas dans ses immobilisations.',
+            'label' => 'Le traitement des frais d\'acquisition n\'est pas celui du cabinet',
+            'hint'  => 'Frais de notaire et honoraires d\'agence se traitent de quatre façons, '
+                     . 'et le choix se lit sur la fiche du bien. S\'ils manquent au total du '
+                     . 'cabinet, il les a passés en charges l\'année de l\'acquisition. S\'ils '
+                     . 'y sont mais que le cumul diffère, il les a peut-être intégrés au coût '
+                     . 'du bien — donc amortis au rythme des composants, part terrain exclue — '
+                     . 'là où nous les amortissons séparément, ou l\'inverse.',
         ],
         'missing_component' => [
             'label' => 'Un composant du plan du cabinet manque ici',
@@ -120,9 +122,14 @@ class ReprisesCheckService
         // peuvent donc pas raconter deux histoires différentes.
         $form2033A = $this->taxReturnService->compute2033A($repriseYear, $properties, $comparedYear);
 
+        // ⚠️ Le TOTAL (044), pas la seule case 028 : depuis que les frais d'acquisition
+        // peuvent légitimement se présenter en corporelles (chez nous) ou en incorporelles
+        // (chez certains cabinets), 028 dépend d'une convention de présentation alors que
+        // 044 n'en dépend pas. Comparer 028 faisait apparaître en rouge une différence de
+        // présentation qui ne coûte pas un euro — et la ligne 014 qui servait à la révéler
+        // faisait alors DEUX lignes rouges pour un seul et même fait.
         $computed = [
-            self::LINE_GROSS_ASSETS             => (int) $form2033A['028'],
-            self::LINE_INTANGIBLE_ASSETS        => (int) $form2033A['014'],
+            self::LINE_GROSS_ASSETS             => (int) $form2033A['044'],
             self::LINE_ACCUMULATED_DEPRECIATION => (int) $form2033A['030'],
             self::LINE_DEFERRED_DEPRECIATION    => (int) $repriseYear->opening_deferred_depreciation,
             self::LINE_DEFICIT_CARRYFORWARD     => $repriseYear->openingDeficitsTotal(),
@@ -148,23 +155,13 @@ class ReprisesCheckService
     {
         return [
             self::LINE_GROSS_ASSETS => [
-                'cerfa' => '2033-A case 028',
-                'label' => 'Immobilisations brutes',
+                'cerfa' => '2033-A case 044',
+                'label' => 'Total des immobilisations brutes',
                 'reconstituted' => true,
             ],
             self::LINE_ACCUMULATED_DEPRECIATION => [
                 'cerfa' => '2033-A case 030',
                 'label' => 'Amortissements cumulés',
-                'reconstituted' => true,
-            ],
-            // ⚠️ Cette ligne existe pour une raison précise. Depuis que la case 030 ne porte
-            // plus l'amortissement des frais d'acquisition (2026-09-05), plus rien ne révélait
-            // le cas — fréquent — du comptable qui les avait passés en CHARGES l'année de
-            // l'acquisition : son bilan porte alors 0 en 014 quand nous en amortissons encore.
-            // L'écart était auparavant détecté par accident, à travers une case 030 fausse.
-            self::LINE_INTANGIBLE_ASSETS => [
-                'cerfa' => '2033-A case 014',
-                'label' => 'Immobilisations incorporelles (frais d\'acquisition)',
                 'reconstituted' => true,
             ],
             self::LINE_DEFERRED_DEPRECIATION => [

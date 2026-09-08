@@ -633,14 +633,14 @@ class DepreciationService
             $lines[] = [
                 'type'   => 'work',
                 'name'   => $work->description,
-                'base'   => $this->grossAmount((string) $work->amount, $work->is_dedicated, $property),
+                'base'   => $this->grossAmount($this->amortizableAmount($work, $property), $work->is_dedicated, $property),
                 'annual' => $this->calculateWorkForYear($work, $property, $year),
                 'cumul'  => $this->withOpening($work->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateWorkForYear($work, $property, $y),
                     (int) $work->work_date->format('Y'),
                     $year,
                 )),
-                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_FITTINGS,
+                'cerfa_category' => $work->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_FITTINGS,
             ];
         }
 
@@ -648,21 +648,24 @@ class DepreciationService
             $lines[] = [
                 'type'   => 'furniture',
                 'name'   => $item->description,
-                'base'   => $this->grossAmount((string) $item->amount, $item->is_dedicated, $property),
+                'base'   => $this->grossAmount($this->amortizableAmount($item, $property), $item->is_dedicated, $property),
                 'annual' => $this->calculateFurnitureForYear($item, $property, $year),
                 'cumul'  => $this->withOpening($item->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateFurnitureForYear($item, $property, $y),
                     (int) $item->purchase_date->format('Y'),
                     $year,
                 )),
-                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_OTHER,
+                'cerfa_category' => $item->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_OTHER,
             ];
         }
 
-        // Frais passés en charges ou non repris : ils ne sont PAS une immobilisation.
-        // Les laisser au bilan brut ferait apparaître un actif que le cabinet a déjà
-        // déduit, et l'écart se lirait sur la case 028 du 2033-A.
-        if (! $property->amortizesAcquisitionFees()) {
+        // Trois des quatre traitements ne produisent AUCUNE ligne ici :
+        //   - `expensed` / `excluded` : ce n'est pas une immobilisation. La laisser au bilan
+        //     brut ferait apparaître un actif que le cabinet a déjà déduit.
+        //   - `capitalized` : les frais sont dans la valeur de référence du bien, donc déjà
+        //     dans la base des composants ET dans la case 028. Une ligne de plus les
+        //     compterait deux fois.
+        if (! $property->emitsSeparateAcquisitionFeeLine()) {
             return $lines;
         }
 
@@ -677,23 +680,45 @@ class DepreciationService
             $lines[] = [
                 'type'   => 'notary',
                 'name'   => $label,
-                'base'   => $property->is_primary_residence
-                    ? bcmul((string) $property->$field, $property->quota_share, 0)
-                    : (string) $property->$field,
+                // ⚠️ La quote-part s'applique TOUJOURS, comme à la valeur du bien. Elle était
+                // conditionnée à `is_primary_residence` jusqu'au 2026-09-08 : une chambre
+                // louée dans un bien qui n'était pas la résidence principale portait alors
+                // 100 % de ses frais face à une valeur déjà proratisée.
+                'base'   => bcmul((string) $property->$field, $property->quota_share, 0),
                 'annual' => $this->calculateAcquisitionFeesForYear($property, $field, $year),
                 'cumul'  => $this->replay(
                     fn (int $y) => $this->calculateAcquisitionFeesForYear($property, $field, $y),
                     (int) $property->rental_start_date->format('Y'),
                     $year,
                 ),
-                // Les frais d'acquisition sont des immobilisations INCORPORELLES (410/500),
-                // pas des constructions : c'est ainsi qu'un cabinet les présente, et le bilan
-                // les distingue aussi (cases 014/016 du 2033-A).
-                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_INTANGIBLE,
+                // ⚠️ CORPORELLES, et non incorporelles comme jusqu'au 2026-09-08. Un frais
+                // d'acquisition capitalisé fait partie du coût de l'immobilisation qu'il a
+                // servi à acquérir (PCG art. 213-8) : il suit les constructions (430/520 du
+                // 2033-C, 028/030 du 2033-A). Le classer en 014 laissait l'utilisateur devant
+                // une ligne « immobilisations incorporelles » que rien n'expliquait — c'est
+                // exactement l'issue #11.
+                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_CONSTRUCTIONS,
             ];
         }
 
         return $lines;
+    }
+
+    /**
+     * Assiette amortissable d'un travail ou d'un meuble, avant quote-part.
+     *
+     * ⚠️ Le HT quand le bien est assujetti à la TVA — la TVA étant récupérée, elle n'entre
+     * pas dans le coût de l'immobilisation. La valeur BRUTE portée au bilan était prise en
+     * TTC jusqu'au 2026-09-08 alors que la dotation, elle, se calculait déjà sur le HT :
+     * les cases 028/044 et la ligne 490 étaient surévaluées de la TVA, et la ligne ne
+     * s'amortissait jamais entièrement. Même règle que `expectedAnnualDepreciation()` des
+     * deux modèles — à ne pas réécrire une troisième fois.
+     */
+    private function amortizableAmount(PropertyWork|Furniture $asset, Property $property): string
+    {
+        return $property->isTvaLiable()
+            ? (string) $asset->amount_ht
+            : (string) $asset->amount;
     }
 
     /**
@@ -833,7 +858,9 @@ class DepreciationService
      */
     private function calculateAcquisitionFeesForYear(Property $property, string $field, int $year): string
     {
-        if (! $property->amortizesAcquisitionFees()) {
+        // Sous `capitalized` les frais s'amortissent bien, mais à travers les composants du
+        // bien : les compter aussi ici doublerait la charge de l'exercice.
+        if (! $property->emitsSeparateAcquisitionFeeLine()) {
             return '0';
         }
 
@@ -848,10 +875,10 @@ class DepreciationService
 
         $annual = bcdiv((string) $property->$field, (string) $duration, 0);
 
-        // Quote-part si résidence principale
-        if ($property->is_primary_residence) {
-            $annual = bcmul($annual, $property->quota_share, 0);
-        }
+        // ⚠️ Quote-part TOUJOURS, comme sur la valeur brute de la ligne. Elle était
+        // conditionnée à `is_primary_residence`, ce qui laissait un bien partiellement loué
+        // amortir 100 % de ses frais face à une base déjà proratisée.
+        $annual = bcmul($annual, $property->quota_share, 0);
 
         // Prorata temporis la 1ère année
         if ($year === $startYear) {

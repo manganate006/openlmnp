@@ -52,6 +52,7 @@ class Furniture extends Model
         'amount_tva',
         'purchase_date',
         'duration_years',
+        'cerfa_category',
         'is_dedicated',
         'is_second_hand',
         'annual_depreciation',
