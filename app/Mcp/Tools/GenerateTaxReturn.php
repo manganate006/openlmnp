@@ -11,7 +11,7 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 
-#[Description('Génère la liasse fiscale LMNP au format PDF (formulaires 2031, 2033-A à 2033-G) pour un exercice fiscal donné. L\'exercice est recalculé avant la génération si nécessaire. Retourne le chemin du PDF généré et un résumé des montants clés de la déclaration.')]
+#[Description('Génère la liasse fiscale LMNP au format PDF (formulaires 2031-SD, 2033-A, 2033-B, 2033-C et 2033-D) pour un exercice fiscal donné. L\'exercice est recalculé avant la génération si nécessaire. Retourne le chemin du PDF généré et un résumé des montants clés de la déclaration.')]
 class GenerateTaxReturn extends Tool
 {
     protected string $name = 'generate_tax_return';
@@ -65,7 +65,11 @@ class GenerateTaxReturn extends Tool
                 'file_exists'     => $fileExists,
                 'file_size_bytes' => $fileSize,
                 'format'          => 'PDF (DomPDF)',
-                'forms'           => ['2031', '2033-A', '2033-B', '2033-C', '2033-D', '2033-E', '2033-G'],
+                // ⚠️ Cette liste est ANCRÉE au document par `TaxReturnFormsTest`, dans les
+                // deux sens. Elle a annoncé « 2031, 2033-A à 2033-G » alors que la vue ne
+                // rend que quatre sections : un assistant répète l'annonce, et l'utilisateur
+                // cherche des pages qui n'existent pas.
+                'forms'           => TaxReturnService::FORMS,
             ],
 
             'message' => $fileExists

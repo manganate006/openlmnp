@@ -77,6 +77,17 @@
         <strong>Attention :</strong> Le terrain n'est pas amortissable. Sa part (15-20 % en général, parfois plus en zone urbaine) est déduite avant le calcul des composants. Sources : MeilleursAgents, votre notaire, l'acte d'acquisition. Le bouton « Estimer (DVF) » de la fiche du bien ne répond pas à cette question : il estime la valeur du bien entier, terrain compris.
     </div>
 
+    <h3>Vos chiffres ne tombent pas juste ? Le rapport de diagnostic</h3>
+    <p>Le bouton <strong>« Rapport de diagnostic »</strong>, en haut de cet écran et de la page
+    Télédéclaration, rassemble en un texte tout ce qui produit vos amortissements : les valeurs saisies
+    sur le bien, la base amortissable et sa provenance, chaque composant avec sa base, sa durée et sa
+    date de départ, vos travaux et votre mobilier, puis les lignes de liasse qui en découlent et les
+    écarts éventuels.</p>
+    <p>Il ne part <strong>nulle part</strong> tout seul : copiez-le ou téléchargez-le, et joignez-le à
+    votre message. Il ne contient ni votre nom, ni votre adresse, ni votre commune, ni votre adresse
+    e-mail &mdash; mais il porte vos montants et les intitulés que vous avez saisis, alors relisez-le
+    avant de l'envoyer.</p>
+
     <div class="ctx-tip" style="margin-top:12px;">
         <strong>Source :</strong> BOFiP BOI-ANNX-000115. La ventilation doit être « sincère et justifiée ». Il n'existe pas de grille obligatoire. En cas de doute, consultez un expert-comptable.
     </div>

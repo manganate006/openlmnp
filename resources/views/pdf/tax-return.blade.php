@@ -52,6 +52,17 @@
         </p>
     </div>
 
+    {{-- 2031-SD : DÉCLARATION DE RÉSULTAT.
+         L'écran de télédéclaration l'affichait depuis toujours, et `$form2031` était passé à
+         cette vue sans qu'elle l'utilise : le document annonçait donc un formulaire qu'il ne
+         contenait pas. `TaxReturnFormsTest` ancre désormais l'annonce au document. --}}
+    <h2>Formulaire 2031-SD — Déclaration de résultat</h2>
+    <table>
+        <tr><td class="c">AB</td><td>Production vendue — Services (loyers)</td><td class="r">{{ $fmt($form2031['AB']) }} €</td></tr>
+        <tr><td class="c">CB</td><td>Bénéfice fiscal</td><td class="r">{{ $fmt($form2031['CB']) }} €</td></tr>
+        <tr><td class="c">CC</td><td>Déficit fiscal</td><td class="r">{{ $fmt($form2031['CC']) }} €</td></tr>
+    </table>
+
     {{-- 2033-A : BILAN SIMPLIFIÉ --}}
     <h2>Formulaire 2033-A — Bilan simplifié</h2>
     <table>
@@ -159,6 +170,39 @@
             @endif
         </p>
     @endforeach
+
+    {{-- ANNEXE : d'où vient chaque montant du cadre I.
+         Elle n'est PAS un formulaire Cerfa — d'où le titre sans numéro, que
+         `TaxReturnFormsTest` distingue des sections « Formulaire … ». Elle existe parce
+         qu'une ligne agrégée du 2033-C ne dit pas ce qu'elle contient : l'issue #11 a été
+         ouverte par quelqu'un qui lisait 8 900 € en face d'un intitulé qui ne lui évoquait
+         rien. Même source que les deux tableaux ci-dessus, donc jamais en désaccord. --}}
+    <h2>Annexe — Détail des immobilisations</h2>
+    <p class="small">
+        Ce tableau n'est pas à recopier sur votre déclaration : il explique d'où vient chaque
+        ligne du cadre I ci-dessus. Les composants d'immeuble ventilent la valeur du bien, ils
+        ne s'y ajoutent pas — la colonne « Valeur brute » ne se totalise donc pas.
+    </p>
+    <table>
+        <tr>
+            <th>Immobilisation</th>
+            <th>Origine</th>
+            <th class="line-num">Ligne 2033-C</th>
+            <th class="r">Valeur brute</th>
+            <th class="r">Dotation {{ $year }}</th>
+            <th class="r">Amort. cumulé</th>
+        </tr>
+        @foreach($assetBreakdown as $row)
+            <tr>
+                <td>{{ $row['name'] }}</td>
+                <td>{{ $row['origin'] }}</td>
+                <td class="c">{{ $row['cerfa'] }}</td>
+                <td class="r">{{ $fmtInt($row['base']) }} €</td>
+                <td class="r">{{ $fmtInt($row['annual']) }} €</td>
+                <td class="r">{{ $fmtInt($row['cumul']) }} €</td>
+            </tr>
+        @endforeach
+    </table>
 
     {{-- 2033-D : DÉFICITS --}}
     <h2>Formulaire 2033-D — Déficits reportables</h2>

@@ -67,10 +67,23 @@ class Property extends Model
      * Jusqu'au 2026-09-04, OpenLMNP imposait l'amortissement sur 25 ans. Un bailleur dont
      * le cabinet avait passé ces frais en charges l'année de l'acquisition les voyait donc
      * amortis une SECONDE fois : écart garanti avec sa liasse, sans rien pour le corriger.
+     *
+     * ⚠️ `AMORTIZED` et `CAPITALIZED` ne sont pas deux façons de dire la même chose, et la
+     * confusion a duré : le libellé de `AMORTIZED` annonçait « incorporés au coût du bien »
+     * alors que le code en faisait une immobilisation SÉPARÉE, amortie linéairement sur sa
+     * propre durée. C'est cet écart entre l'annonce et le calcul qui a produit l'issue #11.
+     *
+     *   - `AMORTIZED`   : immobilisation distincte, durée propre (`acquisition_fees_duration`),
+     *                     amortie en totalité. La base amortissable du bien ne bouge pas.
+     *   - `CAPITALIZED` : les frais rejoignent le coût de revient du bien. Ils se répartissent
+     *                     donc terrain / bâti par `land_percentage` — la part terrain cesse
+     *                     de s'amortir — et le bâti suit le rythme des composants. C'est le
+     *                     traitement que décrit le PCG (art. 213-8).
      */
-    public const ACQUISITION_FEES_AMORTIZED = 'amortized';
-    public const ACQUISITION_FEES_EXPENSED  = 'expensed';
-    public const ACQUISITION_FEES_EXCLUDED  = 'excluded';
+    public const ACQUISITION_FEES_AMORTIZED   = 'amortized';
+    public const ACQUISITION_FEES_CAPITALIZED = 'capitalized';
+    public const ACQUISITION_FEES_EXPENSED    = 'expensed';
+    public const ACQUISITION_FEES_EXCLUDED    = 'excluded';
 
     /** Durée retenue quand rien n'est précisé — la pratique dominante en LMNP. */
     public const ACQUISITION_FEES_DEFAULT_DURATION = 25;
@@ -166,19 +179,43 @@ class Property extends Model
     public static function acquisitionFeesTreatmentLabels(): array
     {
         return [
-            self::ACQUISITION_FEES_AMORTIZED => 'Amortis (incorporés au coût du bien)',
-            self::ACQUISITION_FEES_EXPENSED  => 'Passés en charges l\'année de l\'acquisition',
-            self::ACQUISITION_FEES_EXCLUDED  => 'Non repris (hors comptabilité)',
+            self::ACQUISITION_FEES_AMORTIZED   => 'Amortis séparément, sur leur propre durée',
+            self::ACQUISITION_FEES_CAPITALIZED => 'Intégrés au coût du bien (amortis avec les composants)',
+            self::ACQUISITION_FEES_EXPENSED    => 'Passés en charges l\'année de l\'acquisition',
+            self::ACQUISITION_FEES_EXCLUDED    => 'Non repris (hors comptabilité)',
         ];
     }
 
-    /** Vrai si les frais de notaire et d'agence doivent encore être amortis. */
-    public function amortizesAcquisitionFees(): bool
+    /** Le traitement retenu, l'ancien comportement valant défaut pour une valeur absente. */
+    public function acquisitionFeesTreatment(): string
     {
         // Une valeur absente vaut l'ancien comportement : les instances qui n'ont jamais
-        // vu ce réglage continuent d'amortir, comme avant l'ajout de la colonne.
-        return ($this->acquisition_fees_treatment ?? self::ACQUISITION_FEES_AMORTIZED)
-            === self::ACQUISITION_FEES_AMORTIZED;
+        // vu ce réglage continuent d'amortir séparément, comme avant l'ajout de la colonne.
+        return $this->acquisition_fees_treatment ?? self::ACQUISITION_FEES_AMORTIZED;
+    }
+
+    /**
+     * Vrai si les frais portent leur PROPRE ligne d'immobilisation, amortie à part.
+     *
+     * ⚠️ Ne pas confondre avec `capitalizesAcquisitionFees()` : sous `CAPITALIZED` les frais
+     * sont bien amortis, mais à travers les composants du bien — aucune ligne distincte ne
+     * doit être émise, sans quoi ils seraient comptés deux fois au bilan.
+     */
+    public function emitsSeparateAcquisitionFeeLine(): bool
+    {
+        return $this->acquisitionFeesTreatment() === self::ACQUISITION_FEES_AMORTIZED;
+    }
+
+    /** Vrai si les frais rejoignent le coût de revient du bien (et donc sa base amortissable). */
+    public function capitalizesAcquisitionFees(): bool
+    {
+        return $this->acquisitionFeesTreatment() === self::ACQUISITION_FEES_CAPITALIZED;
+    }
+
+    /** Montant total des frais d'acquisition saisis, en centimes. */
+    public function acquisitionFeesTotal(): string
+    {
+        return bcadd((string) (int) $this->notary_fees, (string) (int) $this->agency_fees, 0);
     }
 
     /** Durée d'amortissement des frais d'acquisition, en années. */
@@ -233,18 +270,51 @@ class Property extends Model
     }
 
     /**
+     * Valeur de référence du bien, en centimes — la SEULE source, à n'écrire nulle part ailleurs.
+     *
+     * ⚠️ Elle était recalculée à trois endroits indépendants : ici, dans la case 028 du
+     * 2033-A et dans la ligne 420 (terrain) du 2033-C. Or `044 − 490` ne vaut le reliquat
+     * de ventilation que si les trois s'accordent au centime — en oublier un fait diverger
+     * le bilan de l'état des immobilisations, sans qu'aucun des deux ne soit « faux » pris
+     * isolément. C'est devenu une vraie mine le jour où les frais d'acquisition ont pu
+     * entrer dans cette valeur.
+     *
+     * Les frais ne s'y ajoutent que sous le traitement `CAPITALIZED`, ET seulement à défaut
+     * de valeur vénale : une valeur vénale est la valeur d'entrée dans l'activité, à laquelle
+     * les frais d'une acquisition antérieure n'ont aucune raison de s'ajouter. Le formulaire
+     * du bien signale la combinaison plutôt que de la refuser.
+     */
+    public function referenceValue(): string
+    {
+        if ($this->market_value !== null) {
+            return (string) $this->market_value;
+        }
+
+        $value = (string) $this->acquisition_price;
+
+        return $this->capitalizesAcquisitionFees()
+            ? bcadd($value, $this->acquisitionFeesTotal(), 0)
+            : $value;
+    }
+
+    /** Vrai si des frais capitalisés sont ignorés parce qu'une valeur vénale prime. */
+    public function acquisitionFeesIgnoredByMarketValue(): bool
+    {
+        return $this->capitalizesAcquisitionFees()
+            && $this->market_value !== null
+            && bccomp($this->acquisitionFeesTotal(), '0', 0) > 0;
+    }
+
+    /**
      * Retourne la base amortissable en centimes.
      *
      * Formule :
-     *   base = (market_value ?: acquisition_price) * (1 - land_percentage/100) * quota_share
+     *   base = referenceValue() * (1 - land_percentage/100) * quota_share
      *
      * Tous les calculs utilisent bcmath.
      */
     public function getDepreciableBaseAttribute(): string
     {
-        // Valeur de référence : valeur vénale si renseignée, sinon prix d'acquisition
-        $referenceValue = $this->market_value ?? $this->acquisition_price;
-
         // Fraction non-terrain : (100 - land_percentage) / 100
         $buildingFraction = bcdiv(
             bcsub('100', (string) $this->land_percentage, 10),
@@ -252,9 +322,9 @@ class Property extends Model
             10
         );
 
-        // Base = valeur * fraction_bâti * quote-part
+        // Base = valeur de référence * fraction_bâti * quote-part
         return bcmul(
-            bcmul((string) $referenceValue, $buildingFraction, 10),
+            bcmul($this->referenceValue(), $buildingFraction, 10),
             $this->quota_share,
             0  // résultat en centimes entiers
         );

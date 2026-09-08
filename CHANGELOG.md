@@ -2,6 +2,64 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Ajouts
+
+- **Vos frais de notaire et d'agence ont désormais quatre traitements possibles**, à aligner
+  sur ce qu'a fait votre comptable. Au trio existant — amortis, passés en charges, non repris
+  — s'ajoute **« Intégrés au coût du bien »** : les frais rejoignent alors le prix, se
+  répartissent terrain / bâti comme lui, et s'amortissent au rythme de chaque composant.
+  C'est le traitement que décrit le plan comptable, et c'est celui que retiennent beaucoup de
+  cabinets. Votre base amortissable augmente en conséquence
+- **Une annexe « Détail des immobilisations »**, dans le PDF comme sur l'écran de
+  télédéclaration : une ligne par actif, avec son origine, la ligne du 2033-C où il atterrit,
+  sa valeur brute, sa dotation et son cumul. Un tableau agrégé ne dit pas ce qu'il contient ;
+  on peut désormais remonter n'importe quel montant de la liasse jusqu'à ce qui l'a produit
+- **Un bouton « Rapport de diagnostic »** en haut des pages *Amortissements* et
+  *Télédéclaration*. Il rassemble en un texte tout ce qui produit vos amortissements et votre
+  liasse — valeurs saisies, base amortissable et sa provenance, chaque composant avec sa base,
+  sa durée et sa date de départ, travaux, mobilier, lignes de liasse obtenues et écarts. À
+  copier ou télécharger, puis à joindre à une demande d'aide. Il ne contient **ni nom, ni
+  adresse, ni commune, ni adresse e-mail**, et **ne part nulle part tout seul**. En ligne de
+  commande : `php artisan openlmnp:diagnostic`
+- **La ligne du 2033-C de vos travaux et de votre mobilier est maintenant réglable.** Elle
+  était figée — travaux en agencements, mobilier en autres —, si bien qu'un cabinet qui
+  classait des travaux de gros œuvre en constructions ne pouvait pas être reproduit. Sans
+  effet si vous n'y touchez pas
+- Le PDF contient enfin la section **2031-SD**, que l'écran affichait déjà et que le document
+  annonçait sans la produire
+
+### Corrections
+
+- **Vos frais d'acquisition amortis ne sont plus présentés en immobilisations
+  incorporelles** (cases 014/016, ligne 410/500) mais avec les corporelles (cases 028/030,
+  ligne 430/520). Un frais d'acquisition capitalisé fait partie du coût de l'immobilisation
+  qu'il a servi à acquérir. Le **total de vos immobilisations ne change pas** — seule leur
+  présentation change. C'est l'issue #11 : un utilisateur y découvrait au bilan une ligne
+  « incorporelles » de 8 900 € que rien n'expliquait, et il avait raison de s'en étonner
+- **L'aide de la fiche du bien affirmait que « prix d'achat + frais de notaire » servait de
+  base d'amortissement.** C'était faux, et cette phrase contredisait une autre ligne de la
+  même fiche. Elle est remplacée par la formule réelle et par ce que devient chaque euro de
+  frais sous les quatre traitements
+- **Le libellé du réglage annonçait « Amortis (incorporés au coût du bien) »** alors que le
+  logiciel en faisait une immobilisation distincte. Le libellé promettait un traitement, le
+  calcul en appliquait un autre : les deux options portent désormais chacune son nom
+- **Modifier une surface ne recalait plus rien.** La quote-part change la base amortissable,
+  mais le recalage des composants ventilés en pourcentage surveillait un attribut calculé au
+  lieu des deux colonnes de surface : il ne se déclenchait donc jamais sur ce chemin
+- **Sur un bien assujetti à la TVA, la valeur brute des travaux et du mobilier était portée
+  au bilan TTC** alors que leur amortissement se calcule sur le HT. Les cases 028/044 et la
+  ligne 490 étaient majorées de la TVA, et la ligne ne s'amortissait jamais entièrement
+- **La quote-part ne s'appliquait aux frais d'acquisition que sur une résidence principale**,
+  alors qu'elle s'applique toujours à la valeur du bien. Un bien partiellement loué portait
+  donc 100 % de ses frais face à une base déjà proratisée
+- L'écran de contrôle de la reprise compare désormais le **total** des immobilisations brutes
+  (case 044) et non la seule case 028 : deux cabinets présentent les mêmes frais sur deux
+  lignes différentes sans qu'aucun ait tort, et le total ne dépend pas de cette convention
+- L'outil MCP `generate_tax_return` annonçait « 2031, 2033-A à 2033-G » quand le document n'en
+  contenait que quatre. L'annonce est désormais **dérivée du document**, dans les deux sens
+
 ## [1.6.4] - 2026-09-07
 
 ### Corrections

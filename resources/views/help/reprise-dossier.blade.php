@@ -19,12 +19,13 @@
     <ul>
         <li data-icon="&#x1F522;"><strong>Amortissements diff&eacute;r&eacute;s</strong> &mdash; 2033-D case 870 (&agrave; d&eacute;faut&nbsp;: 2033-B case 318 cumul&eacute;e)</li>
         <li data-icon="&#x1F522;"><strong>Cumul d'amortissements</strong> &mdash; 2033-A case 030</li>
-        <li data-icon="&#x1F522;"><strong>Immobilisations brutes</strong> &mdash; 2033-A case 028</li>
-        <li data-icon="&#x1F522;"><strong>Immobilisations incorporelles</strong> &mdash; 2033-A case 014&nbsp;:
-            vos frais de notaire et d'agence, s'ils y figurent. <strong>Z&eacute;ro si votre comptable les a
-            pass&eacute;s en charges</strong> l'ann&eacute;e de l'acquisition&nbsp;: l'&eacute;cart vous sera
-            signal&eacute;, et l'&eacute;cran de contr&ocirc;le vous proposera d'aligner l'application sur ce
-            traitement.</li>
+        <li data-icon="&#x1F522;"><strong>Total des immobilisations brutes</strong> &mdash; 2033-A case 044&nbsp;:
+            le <strong>total</strong>, incorporelles comprises, et non la seule case 028. Vos frais de
+            notaire figurent chez certains cabinets en incorporelles (case 014), chez d'autres avec les
+            constructions&nbsp;: aucun des deux n'a tort, et le total ne change pas. C'est donc lui qu'on
+            compare. S'il manque le montant de vos frais, votre comptable les a <strong>pass&eacute;s en
+            charges</strong> l'ann&eacute;e de l'acquisition&nbsp;: l'&eacute;cran de contr&ocirc;le vous
+            proposera d'aligner l'application sur ce traitement.</li>
         <li data-icon="&#x1F522;"><strong>D&eacute;ficits reportables</strong> &mdash; 2033-D cases 980 &agrave; 984</li>
     </ul>
 

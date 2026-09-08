@@ -117,10 +117,15 @@ class RepriseDossier extends Page
     // Étape 4 — vos reports
     public ?string $openingDeferred = null;
     public ?string $openingAccumulated = null;
+    /**
+     * Case 044 : le TOTAL des immobilisations brutes, et non la seule case 028.
+     *
+     * ⚠️ Une question sur la case 014 vivait ici jusqu'au 2026-09-08, pour révéler le
+     * comptable qui avait passé les frais d'acquisition en charges. Elle n'a plus d'objet :
+     * nos frais capitalisés sont désormais corporels, donc notre 014 vaut zéro, et le total
+     * 044 révèle le même cas sans dépendre d'une convention de présentation.
+     */
     public ?string $declaredGrossAssets = null;
-
-    /** Case 014 : révèle le comptable qui a passé les frais d'acquisition en charges. */
-    public ?string $declaredIntangibleAssets = null;
 
     /** @var list<array{origin_year: string|int|null, amount: string|null}> */
     public array $deficits = [];
@@ -430,8 +435,7 @@ class RepriseDossier extends Page
         foreach ([
             'openingDeferred' => 'Montant illisible (2033-D case 870).',
             'openingAccumulated' => 'Montant illisible (2033-A case 030).',
-            'declaredGrossAssets' => 'Montant illisible (2033-A case 028).',
-            'declaredIntangibleAssets' => 'Montant illisible (2033-A case 014).',
+            'declaredGrossAssets' => 'Montant illisible (2033-A case 044).',
         ] as $field => $message) {
             $raw = trim((string) $this->{$field});
 
@@ -675,7 +679,6 @@ class RepriseDossier extends Page
     {
         $declared = [
             ReprisesCheckService::LINE_GROSS_ASSETS => self::centsFromEuros($this->declaredGrossAssets),
-            ReprisesCheckService::LINE_INTANGIBLE_ASSETS => self::centsFromEuros($this->declaredIntangibleAssets),
             ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION => self::centsFromEuros($this->openingAccumulated),
             ReprisesCheckService::LINE_DEFERRED_DEPRECIATION => self::centsFromEuros($this->openingDeferred),
             ReprisesCheckService::LINE_DEFICIT_CARRYFORWARD => $this->openingDeficitsPayload() === []

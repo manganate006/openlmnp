@@ -349,7 +349,7 @@ it('names the Cerfa box next to every amount it asks for', function () {
         ->assertSee('2033-D, case 870')
         ->assertSee('2033-B, case 318')
         ->assertSee('2033-A, case 030')
-        ->assertSee('2033-A, case 028')
+        ->assertSee('2033-A, case 044')
         ->assertSee('2033-D, cases 980 à 984')
         ->assertSee('Différé n\'est pas déficit.', false);
 });
@@ -388,10 +388,11 @@ it('branches the check service and declares a faithful reprise', function () {
     $property = repriseProperty($this->user);
 
     $component = repriseAtStepFour($this->user, $property)
-        // 2033-A case 028 : la valeur brute du bien, que l'application reconstitue à
-        // l'identique. Le cumul (030) est laissé vide : une case non renseignée ne se
-        // compare pas, elle ne vaut surtout pas zéro.
-        ->set('declaredGrossAssets', '200000')
+        // 2033-A case 044 : le TOTAL des immobilisations brutes, que l'application
+        // reconstitue à l'identique — 200 000 € de bien plus 16 000 € de frais de notaire,
+        // que le cabinet a capitalisés comme nous. Le cumul (030) est laissé vide : une case
+        // non renseignée ne se compare pas, elle ne vaut surtout pas zéro.
+        ->set('declaredGrossAssets', '216000')
         ->set('openingDeferred', '12480')
         ->call('addDeficit')
         ->set('deficits.0.origin_year', 2023)
@@ -406,15 +407,15 @@ it('branches the check service and declares a faithful reprise', function () {
 
     $lines = collect($report['lines'])->keyBy('key');
 
-    expect($lines[ReprisesCheckService::LINE_GROSS_ASSETS]['declared'])->toBe(20_000_000)
-        ->and($lines[ReprisesCheckService::LINE_GROSS_ASSETS]['computed'])->toBe(20_000_000)
+    expect($lines[ReprisesCheckService::LINE_GROSS_ASSETS]['declared'])->toBe(21_600_000)
+        ->and($lines[ReprisesCheckService::LINE_GROSS_ASSETS]['computed'])->toBe(21_600_000)
         ->and($lines[ReprisesCheckService::LINE_DEFERRED_DEPRECIATION]['computed'])->toBe(1_248_000)
         ->and($lines[ReprisesCheckService::LINE_DEFICIT_CARRYFORWARD]['computed'])->toBe(125_000)
         ->and($lines[ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION]['verdict'])
             ->toBe(ReprisesCheckService::VERDICT_UNCHECKED);
 
     $component->assertSee('Votre reprise est fidèle à votre liasse.')
-        ->assertSee('2033-A case 028')
+        ->assertSee('2033-A case 044')
         ->assertSee('2033-D case 870');
 });
 
@@ -467,8 +468,9 @@ it('switches the acquisition fees to charges and stops amortising them', functio
         ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION)['computed'];
 
     $before = $line();
+    $cumulAvant = notaryCumulOf($property);
 
-    expect(notaryCumulOf($property))->toBeGreaterThan(0);
+    expect($cumulAvant)->toBeGreaterThan(0);
 
     $component->call('expenseAcquisitionFees');
 
@@ -478,8 +480,11 @@ it('switches the acquisition fees to charges and stops amortising them', functio
         // Les frais ne sont plus amortis du tout : c'est bien ce que demande l'utilisateur
         // dont le comptable les avait passés en charges l'année de l'acquisition.
         ->and(notaryCumulOf($property))->toBe(0)
-        // Et la case 030 n'a pas bougé d'un centime : elle ne portait déjà plus les frais.
-        ->and($line())->toBe($before);
+        // ⚠️ Et la case 030 BAISSE d'exactement leur cumul. Ce test affirmait l'inverse
+        // jusqu'au 2026-09-08 (« elle ne portait déjà plus les frais ») : c'était vrai tant
+        // qu'ils étaient incorporels. Depuis qu'ils sont corporels, l'action a un effet
+        // visible sur la ligne même que le contrôle compare — et c'est ce qui la rend utile.
+        ->and($line())->toBe($before - $cumulAvant);
 });
 
 // ─────────────────────────────────────────────────────────────────────

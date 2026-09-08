@@ -280,6 +280,7 @@ function renderTaxReturnHtml(User $user, int $year): string
         'form2033D' => $tax->compute2033D($fy),
         'form2042' => $tax->compute2042($fy),
         'checks' => $tax->checks($form2033A, $form2033B, $form2033C, $properties),
+        'assetBreakdown' => $tax->assetBreakdown($properties, $year),
     ])->render();
 }
 

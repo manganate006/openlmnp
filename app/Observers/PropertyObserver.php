@@ -23,16 +23,25 @@ class PropertyObserver
     /**
      * Les champs dont dépend `Property::depreciable_base`.
      *
-     * Dérivé du calcul de l'accesseur, pas d'une liste d'intuition : valeur de référence
-     * (`market_value` sinon `acquisition_price`), fraction bâtie (`land_percentage`) et
-     * `quota_share`. Toute évolution de l'accesseur doit se répercuter ici — c'est ce que
-     * vérifie `PropertyComponentResyncTest`.
+     * ⚠️ Ce sont des COLONNES, jamais des accesseurs. `wasChanged()` interroge les attributs
+     * réellement écrits : il a porté `'quota_share'` du 2026-09-06 au 2026-09-08 alors que
+     * c'est un accesseur (`rented_area / total_area`), donc il rendait **toujours faux** et
+     * modifier une surface ne recalait rien. La quote-part est ici décomposée en ses deux
+     * colonnes, et `acquisition_fees_treatment` + les deux montants de frais s'y ajoutent
+     * depuis que le traitement « intégrés au coût du bien » les fait entrer dans la base.
+     *
+     * `PropertyComponentResyncTest` mesure désormais l'EFFET de chacun, un par un — la
+     * version textuelle de ce garde-fou passait au vert sur un observer aveugle.
      */
     private const CHAMPS_DE_LA_BASE = [
         'market_value',
         'acquisition_price',
         'land_percentage',
-        'quota_share',
+        'rented_area',
+        'total_area',
+        'acquisition_fees_treatment',
+        'notary_fees',
+        'agency_fees',
     ];
 
     public function updated(Property $property): void
