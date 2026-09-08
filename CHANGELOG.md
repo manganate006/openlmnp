@@ -2,7 +2,7 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
-## [Non publié]
+## [1.6.5] - 2026-09-08
 
 ### Ajouts
 
