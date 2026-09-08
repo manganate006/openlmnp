@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Pages\Teledeclaration;
 use App\Models\Furniture;
 use App\Models\Property;
 use App\Models\PropertyWork;
@@ -210,6 +211,60 @@ it('survives an account that has no property at all', function () {
 it('carries a schema version, so a pasted report stays readable later', function () {
     expect($this->service->build($this->user, 2025)['schema_version'])
         ->toBe(DiagnosticReportService::SCHEMA_VERSION);
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// L'action des deux écrans
+// ─────────────────────────────────────────────────────────────────────
+
+it('RENDERS the button on both screens where a gap is discovered', function (string $url) {
+    // ⚠️ On assère le MARKUP, pas l'existence de l'action. `DepreciationEditor::getHeader()`
+    // remplace l'en-tête de Filament : l'action était bien déclarée, bien montée, et
+    // n'apparaissait nulle part — un test d'existence serait resté vert sur le défaut qu'un
+    // parcours navigateur a trouvé. Il fallait passer `getCachedHeaderActions()` au partial.
+    $property = diagnosticProperty($this->user);
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    // ⚠️ On ancre sur le NOM DE L'ACTION, pas sur son libellé. « Rapport de diagnostic » est
+    // aussi écrit dans la fiche d'aide contextuelle, injectée dans la même page : une
+    // assertion sur le libellé restait verte alors que le bouton avait disparu — mesuré en
+    // remettant `'actions' => []` dans `DepreciationEditor::getHeader()`. Un attribut non
+    // discriminant ne prouve rien.
+    $html = $this->actingAs($this->user)
+        ->get(str_replace('{id}', (string) $property->id, $url))
+        ->assertOk()
+        ->getContent();
+
+    expect($html)->toContain('diagnosticReport');
+})->with([
+    '/teledeclaration',
+    '/depreciation-editor/{id}',
+]);
+
+it('streams a downloadable text file, not just a modal', function () {
+    // ⚠️ Ce que la capture d'écran ne prouve pas : un bouton peut s'afficher, répondre, et
+    // ne rien télécharger. On exerce donc la réponse elle-même — son type, son en-tête, son
+    // nom de fichier et son contenu réellement écrit sur le flux.
+    $property = diagnosticProperty($this->user);
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    $this->actingAs($this->user);
+
+    $page = new Teledeclaration;
+    $page->year = 2025;
+    $response = $page->downloadDiagnosticReport();
+
+    ob_start();
+    $response->sendContent();
+    $body = ob_get_clean();
+
+    expect($response->headers->get('Content-Type'))->toBe('text/plain; charset=UTF-8')
+        ->and($response->headers->get('Content-Disposition'))
+            ->toContain('openlmnp-diagnostic-2025.txt')
+        ->and($body)->toContain('RAPPORT DE DIAGNOSTIC OPENLMNP')
+        ->and($body)->toContain('BASE AMORTISSABLE')
+        // Le fichier décrit bien l'exercice affiché, pas l'année en cours.
+        ->and($body)->toContain('exercice 2025');
 });
 
 // ─────────────────────────────────────────────────────────────────────
