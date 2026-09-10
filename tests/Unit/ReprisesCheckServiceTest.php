@@ -397,3 +397,52 @@ it('does not care whether the accountant showed the fees on 014 or on 028', func
     expect($line['cerfa'])->toBe('2033-A case 044')
         ->and($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MATCH);
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// Un écart « proche » ne doit plus être muet
+// ─────────────────────────────────────────────────────────────────────
+
+it('explains a close gap instead of leaving the user with a silent badge', function () {
+    // ⚠️ Le cas resté sans réponse : sous la tolérance, aucun diagnostic n'était produit.
+    // L'utilisateur lisait « proche » et n'avait aucun moyen de savoir s'il devait s'en
+    // inquiéter — alors que c'est exactement ce qui subsiste après avoir corrigé un double
+    // comptage, et que la cause est parfaitement identifiable.
+    makeCheckProperty($this->user);
+
+    $repriseYear = makeRepriseYear($this->user, 2025);
+
+    $computed = (int) $this->service->check($repriseYear, [])['lines'][1]['computed'];
+
+    // Un écart de 0,5 % : sous la tolérance de 1 %, donc verdict « proche ».
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION => (int) round($computed * 0.995),
+    ]);
+
+    $line = collect($report['lines'])
+        ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_CLOSE)
+        ->and($line['diagnostics'])->toHaveCount(1)
+        ->and($line['diagnostics'][0]['code'])->toBe('prorata_convention')
+        // ⚠️ Le mot « arrondi » est proscrit : la troncature au centime ne peut pas produire
+        // des dizaines d'euros, et l'écrire enverrait l'utilisateur sur une fausse piste.
+        ->and($line['diagnostics'][0]['hint'])->not->toContain('arrondi')
+        ->and($line['diagnostics'][0]['hint'])->toContain('JOUR');
+});
+
+it('keeps the full list of causes for a real mismatch', function () {
+    // La contrepartie : au-delà de la tolérance, il faut bien dérouler toutes les pistes.
+    makeCheckProperty($this->user);
+
+    $repriseYear = makeRepriseYear($this->user, 2025);
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION => 1,
+    ]);
+
+    $line = collect($report['lines'])
+        ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MISMATCH)
+        ->and(count($line['diagnostics']))->toBeGreaterThan(1);
+});

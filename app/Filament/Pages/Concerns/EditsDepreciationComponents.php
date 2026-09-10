@@ -121,6 +121,7 @@ trait EditsDepreciationComponents
             'cerfaCategory'       => $component->cerfaCategory(),
             'startDate'           => $component->depreciation_start_date?->format('Y-m-d'),
             'openingCumul'        => (int) $component->opening_accumulated_depreciation,
+            'openingYear'         => $component->opening_accumulated_year,
         ];
     }
 
@@ -191,6 +192,9 @@ trait EditsDepreciationComponents
                 'depreciation_start_date' => self::sanitizeStartDate($comp['startDate'] ?? null),
                 'opening_accumulated_depreciation' => isset($comp['openingCumul'])
                     ? max(0, (int) $comp['openingCumul'])
+                    : null,
+                'opening_accumulated_year' => isset($comp['openingYear'])
+                    ? max(0, (int) $comp['openingYear'])
                     : null,
             ];
         }

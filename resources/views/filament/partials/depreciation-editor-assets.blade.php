@@ -88,6 +88,9 @@
         .de-amounts-num { text-align: right; font-family: monospace; }
         .de-amount-input { width: 130px; padding: 6px 8px; border: 1px solid var(--olmnp-border-strong); border-radius: 6px; font-size: 13px; text-align: right; font-family: monospace; background: var(--olmnp-surface); color: var(--olmnp-fg); }
         .de-amount-input:focus { outline: 2px solid var(--olmnp-success-solid); outline-offset: -1px; }
+        /* Cumul repris saisi sans borne : la combinaison qui double la case 030.
+           Jetons --olmnp-danger-* uniquement, jamais de couleur littérale. */
+        .de-amount-unbounded { border-color: var(--olmnp-danger-border); background: var(--olmnp-danger-bg); color: var(--olmnp-danger-fg); }
         .de-manual-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--olmnp-info-bg); color: var(--olmnp-info-fg); border: 1px solid var(--olmnp-info-border); }
         .de-remainder { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; }
         .de-remainder-ok { background: var(--olmnp-success-bg); color: var(--olmnp-success-fg); border: 1px solid var(--olmnp-success-border); }
@@ -239,6 +242,15 @@
 
                     setOpeningEuros(idx, value) {
                         this.components[idx].openingCumul = Math.max(0, Math.round(parseFloat(value || 0) * 100));
+                        this.markDirty();
+                    },
+
+                    // Dernier exercice couvert par le cumul repris. Vidé, il vaut null et le
+                    // rejeu repart de l'origine du plan — c'est le comportement d'un dossier
+                    // sans reprise, et il doit rester atteignable.
+                    setOpeningYear(idx, value) {
+                        const year = parseInt(value, 10);
+                        this.components[idx].openingYear = Number.isInteger(year) && year > 0 ? year : null;
                         this.markDirty();
                     },
 

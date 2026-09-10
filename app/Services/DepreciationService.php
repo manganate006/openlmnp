@@ -201,7 +201,7 @@ class DepreciationService
      *     base_source?: string, percentage?: float|string|null,
      *     base_amount?: int|null, annual_depreciation?: int|null,
      *     cerfa_category?: string|null, depreciation_start_date?: string|null,
-     *     opening_accumulated_depreciation?: int|null
+     *     opening_accumulated_depreciation?: int|null, opening_accumulated_year?: int|null
      * }>  $lines
      * @return array{written: int, deleted: int, remainder: string}
      *
@@ -344,12 +344,13 @@ class DepreciationService
                 'base_source'         => $source,
                 'base_amount'         => $baseAmount,
                 'annual_depreciation' => $line['annual_depreciation'] ?? null,
-                // Trois colonnes optionnelles : absentes du tableau, elles ne touchent
+                // Quatre colonnes optionnelles : absentes du tableau, elles ne touchent
                 // pas la valeur en base. C'est ce qui permet aux curseurs de continuer
                 // à n'envoyer que la ventilation sans effacer une reprise d'antériorité.
                 'cerfa_category'          => $line['cerfa_category'] ?? null,
                 'depreciation_start_date' => $line['depreciation_start_date'] ?? null,
                 'opening_accumulated_depreciation' => $line['opening_accumulated_depreciation'] ?? null,
+                'opening_accumulated_year' => $line['opening_accumulated_year'] ?? null,
             ];
         }
 
@@ -402,6 +403,14 @@ class DepreciationService
                 if ($line['opening_accumulated_depreciation'] !== null) {
                     $attributes['opening_accumulated_depreciation'] =
                         max(0, (int) $line['opening_accumulated_depreciation']);
+                }
+
+                // ⚠️ `0` vaut « pas de borne » et remet la colonne à `null` : l'utilisateur
+                // qui vide le champ doit pouvoir revenir au rejeu complet, sinon un zéro
+                // écrit tel quel ferait démarrer tous les rejeux en l'an 1.
+                if ($line['opening_accumulated_year'] !== null) {
+                    $year = (int) $line['opening_accumulated_year'];
+                    $attributes['opening_accumulated_year'] = $year > 0 ? $year : null;
                 }
 
                 $component = $line['id']
@@ -622,7 +631,10 @@ class DepreciationService
                 'annual' => $this->calculateComponentForYear($component, $property, $year),
                 'cumul'  => $this->withOpening($component->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateComponentForYear($component, $property, $y),
-                    (int) $this->componentStartDate($component, $property)->format('Y'),
+                    $this->replayFrom(
+                        $component->opening_accumulated_year,
+                        (int) $this->componentStartDate($component, $property)->format('Y'),
+                    ),
                     $year,
                 )),
                 'cerfa_category' => $component->cerfaCategory(),
@@ -637,7 +649,7 @@ class DepreciationService
                 'annual' => $this->calculateWorkForYear($work, $property, $year),
                 'cumul'  => $this->withOpening($work->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateWorkForYear($work, $property, $y),
-                    (int) $work->work_date->format('Y'),
+                    $this->replayFrom($work->opening_accumulated_year, (int) $work->work_date->format('Y')),
                     $year,
                 )),
                 'cerfa_category' => $work->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_FITTINGS,
@@ -652,7 +664,7 @@ class DepreciationService
                 'annual' => $this->calculateFurnitureForYear($item, $property, $year),
                 'cumul'  => $this->withOpening($item->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateFurnitureForYear($item, $property, $y),
-                    (int) $item->purchase_date->format('Y'),
+                    $this->replayFrom($item->opening_accumulated_year, (int) $item->purchase_date->format('Y')),
                     $year,
                 )),
                 'cerfa_category' => $item->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_OTHER,
@@ -733,6 +745,29 @@ class DepreciationService
         return bcadd($cumul, (string) max(0, (int) $opening), 0);
     }
 
+    /**
+     * Année où le rejeu doit commencer, compte tenu de ce que le cumul repris couvre déjà.
+     *
+     * ⚠️ La contrepartie indispensable de `withOpening()`, qui est un `bcadd` pur. Sans cette
+     * borne, le stock du cabinet s'ajoutait à un rejeu portant sur LES MÊMES exercices, et la
+     * case 030 valait le double. Constaté chez un utilisateur le 2026-09-09 : 9 496 € affichés
+     * pour 4 736 € déclarés — soit exactement ses 4 736 € plus 4 760 € de reconstitution.
+     *
+     * ⚠️ Ne PAS confondre avec `depreciation_start_date`, qui est l'ORIGINE DU PLAN : elle
+     * ancre le terme (`$startYear + duration - 1`) et le prorata de première année. La
+     * détourner pour retarder le rejeu repousserait la fin des plans d'autant. Ici on ne
+     * touche qu'à la borne basse de la SOMME, jamais au plan lui-même.
+     *
+     * @param  int|null  $coveredThrough  Dernier exercice couvert par le cumul repris, inclus.
+     * @param  int       $planStartYear   Année d'origine du plan — plancher, toujours.
+     */
+    private function replayFrom(?int $coveredThrough, int $planStartYear): int
+    {
+        return $coveredThrough === null
+            ? $planStartYear
+            : max($planStartYear, $coveredThrough + 1);
+    }
+
     /** Assiette brute d'un actif, quote-part appliquée s'il n'est pas dédié à la location. */
     private function grossAmount(string $amount, bool $isDedicated, Property $property): string
     {
@@ -808,11 +843,14 @@ class DepreciationService
             return '0';
         }
 
-        // Montant annuel, avec quote-part si non dédié
+        // ⚠️ PAS de quote-part ici : `annual_depreciation` la porte DÉJÀ.
+        // `PropertyWork::expectedAnnualDepreciation()` l'applique à l'assiette avant division,
+        // et le hook `saving` fige le résultat en base. La réappliquer à la lecture donnait
+        // `q² × montant / durée` — invisible à quote-part 1, soit la quasi-totalité des
+        // dossiers, et 47,50 €/an d'écart sur 10 000 € de travaux à 95 %. Elle rendait aussi
+        // la ligne incohérente avec sa propre valeur brute, qui n'applique `q` qu'une fois
+        // (`grossAmount()`) : `base / durée` ne retombait pas sur `annual`.
         $annual = (string) $work->annual_depreciation;
-        if (! $work->is_dedicated) {
-            $annual = bcmul($annual, $property->quota_share, 0);
-        }
 
         // Prorata temporis la 1ère année
         if ($year === $startYear) {
@@ -835,10 +873,8 @@ class DepreciationService
             return '0';
         }
 
+        // ⚠️ Idem : `Furniture::expectedAnnualDepreciation()` a déjà appliqué la quote-part.
         $annual = (string) $item->annual_depreciation;
-        if (! $item->is_dedicated) {
-            $annual = bcmul($annual, $property->quota_share, 0);
-        }
 
         // Prorata temporis
         if ($year === $startYear) {

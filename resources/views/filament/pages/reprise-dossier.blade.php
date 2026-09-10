@@ -388,7 +388,11 @@
                             <div class="rp-field">
                                 <label for="rp-land">Part du terrain</label>
                                 <div @class(['rp-input', 'rp-input-bad' => isset($this->stepErrors['landPercentage'])])>
-                                    <input id="rp-land" type="number" wire:model.live="landPercentage" min="0" max="99">
+                                    {{-- ⚠️ `step` est OBLIGATOIRE : sans lui un input[type=number] vaut `step="1"` et le
+                                         navigateur REFUSE 17,5 — une part de terrain d'acte parfaitement
+                                         ordinaire. Signalé le 2026-09-09 : « votre cellule ne semble pas
+                                         prendre en compte les décimales ». --}}
+                                    <input id="rp-land" type="number" wire:model.live="landPercentage" min="0" max="99" step="0.01">
                                     <i>%</i>
                                 </div>
                                 <span class="rp-hint">Non amortissable. Reprenez la valeur retenue par votre comptable.</span>
@@ -428,7 +432,7 @@
                                     <span>{{ $this->formatEuros($this->depreciableBaseCents()) }}</span>
                                 </div>
                                 <span class="rp-hint">
-                                    (prix d'acquisition − {{ (int) $this->landPercentage }} % de terrain). C'est elle que vous allez ventiler.
+                                    (prix d'acquisition − {{ rtrim(rtrim(number_format((float) $this->landPercentage, 2, ',', ''), '0'), ',') }} % de terrain). C'est elle que vous allez ventiler.
                                 </span>
                             </div>
                         </div>

@@ -283,10 +283,14 @@ class PropertyForm
                     ->suffix('%')
                     ->required()
                     ->numeric()
+                    // ⚠️ Deux décimales, et pas un entier. Un acte donne couramment 17,5 % ;
+                    // arrondir à 17 ou 18 déplace 875 € de base sur un bien à 175 000 €,
+                    // soit plus que les écarts que l'écran de contrôle signale en rouge.
+                    ->step(0.01)
                     ->default(15)
                     ->minValue(0)
                     ->maxValue(50)
-                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Généralement 15-20%'),
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Généralement 15-20 %. Les décimales sont acceptées (17,5 par exemple).'),
             ]),
         ];
     }

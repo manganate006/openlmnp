@@ -58,6 +58,7 @@ class Furniture extends Model
         'annual_depreciation',
         'depreciation_source',
         'opening_accumulated_depreciation',
+        'opening_accumulated_year',
     ];
 
     protected static function booted(): void
@@ -92,6 +93,7 @@ class Furniture extends Model
             'purchase_date'  => 'date',
             'is_dedicated'   => 'boolean',
             'is_second_hand' => 'boolean',
+            'opening_accumulated_year' => 'integer',
         ];
     }
 

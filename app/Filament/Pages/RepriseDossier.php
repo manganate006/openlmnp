@@ -284,6 +284,10 @@ class RepriseDossier extends Page
             $this->persistProperty();
         }
 
+        if ($this->step === 3) {
+            $this->boundOpeningCumuls();
+        }
+
         if ($this->step === 4) {
             $this->runCheck();
         }
@@ -377,9 +381,12 @@ class RepriseDossier extends Page
             $errors['acquisitionPrice'] = 'Indiquez le prix d\'acquisition du bien.';
         }
 
+        // ⚠️ `(float)` et non `(int)` : une part de terrain de 17,5 % tombait à 17, ce qui
+        // déplace 875 € de base amortissable sur un bien à 175 000 € — davantage que les
+        // écarts que l'écran de contrôle signale en rouge deux étapes plus loin.
         $land = $this->landPercentage === null || trim((string) $this->landPercentage) === ''
             ? null
-            : (int) $this->landPercentage;
+            : (float) str_replace(',', '.', (string) $this->landPercentage);
 
         if ($land === null || $land < 0 || $land > 99) {
             $errors['landPercentage'] = 'La part du terrain doit être comprise entre 0 et 99 %.';
@@ -504,6 +511,36 @@ class RepriseDossier extends Page
     // Étape 2 — enregistrement du bien
     // -------------------------------------------------------------------------
 
+    /**
+     * Borne les cumuls repris sur le dernier exercice que le cabinet a tenu.
+     *
+     * ⚠️ Sans cette borne, le cumul repris s'ajoutait à un rejeu portant sur LES MÊMES
+     * exercices : la case 030 valait le double. Un utilisateur l'a signalé le 2026-09-09,
+     * chiffres à l'appui — 9 496 € affichés pour 4 736 € déclarés.
+     *
+     * L'assistant est le seul endroit qui connaisse la réponse sans avoir à la demander :
+     * `firstYear` est l'exercice que l'utilisateur reprend, donc son cumul d'ouverture
+     * s'arrête à la clôture de l'année précédente. On ne l'écrit que là où elle manque —
+     * une borne saisie à la main, fût-elle différente, appartient à l'utilisateur.
+     */
+    private function boundOpeningCumuls(): void
+    {
+        if (! $this->propertyId || ! $this->firstYear) {
+            return;
+        }
+
+        $property = Property::find($this->propertyId);
+
+        if ($property === null) {
+            return;
+        }
+
+        $property->components()
+            ->where('opening_accumulated_depreciation', '>', 0)
+            ->whereNull('opening_accumulated_year')
+            ->update(['opening_accumulated_year' => (int) $this->firstYear - 1]);
+    }
+
     private function persistProperty(): void
     {
         $rentalStart = $this->parseDate($this->rentalStartDate)?->format('Y-m-d');
@@ -513,7 +550,7 @@ class RepriseDossier extends Page
             'acquisition_price' => self::centsFromEuros($this->acquisitionPrice) ?? 0,
             'notary_fees' => self::centsFromEuros($this->notaryFees) ?? 0,
             'agency_fees' => self::centsFromEuros($this->agencyFees) ?? 0,
-            'land_percentage' => (int) $this->landPercentage,
+            'land_percentage' => (float) str_replace(',', '.', (string) $this->landPercentage),
             'rental_start_date' => $rentalStart,
             'acquisition_date' => $acquisition,
             'acquisition_fees_treatment' => $this->acquisitionFeesTreatment,
@@ -804,7 +841,7 @@ class RepriseDossier extends Page
     public function depreciableBaseCents(): int
     {
         $price = self::centsFromEuros($this->acquisitionPrice) ?? 0;
-        $land = max(0, min(99, (int) $this->landPercentage));
+        $land = max(0.0, min(99.0, (float) str_replace(',', '.', (string) $this->landPercentage)));
 
         return (int) bcdiv(bcmul((string) $price, (string) (100 - $land), 0), '100', 0);
     }

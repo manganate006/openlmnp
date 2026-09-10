@@ -97,11 +97,29 @@ it('keeps every yearly depreciation unchanged', function (int $year, array $expe
         $result['total'],
     ])->toBe($expected);
 })->with([
+    // ⚠️ COLONNE « TRAVAUX » RÉVISÉE LE 2026-09-10, et c'est le témoin lui-même qui a
+    // dénoncé le défaut. Les valeurs capturées le 2026-09-03 portaient la quote-part DEUX
+    // fois sur les travaux : `PropertyWork::expectedAnnualDepreciation()` l'applique à
+    // l'assiette et fige le résultat en base, puis `DepreciationService` la reposait à la
+    // lecture. La preuve tient dans l'ancienne valeur : 15 631 = 53 593 × 35/120.
+    //
+    // Le bien de référence est le seul du dépôt à réunir les deux conditions nécessaires —
+    // un actif NON dédié et une quote-part différente de 1. Partout ailleurs `q² = q`, et
+    // le défaut est rigoureusement invisible.
+    //
+    // Les colonnes bâti, mobilier et notaire ne bougent pas d'un centime : le mobilier de
+    // ce bien est dédié, et les composants n'ont jamais subi la double application.
+    //
+    // ⚠️ Aucune commande de réparation n'est nécessaire sur `annual_depreciation` : la
+    // valeur STOCKÉE était juste, seule sa relecture était fausse. En revanche les totaux
+    // figés dans `fiscal_years` d'un exercice clôturé portant un actif non dédié sont, eux,
+    // sous-évalués — c'est « Recalculer la chaîne » qui les reprend.
+    //
     // année      bâti       travaux    mobilier  notaire   total
-    'travaux seuls, avant la mise en location' => [2022, ['0', '4410', '0', '0', '4410']],
-    'première année, au prorata'               => [2023, ['233288', '15631', '0', '23678', '272597']],
-    'première année pleine, avec mobilier'     => [2024, ['291612', '15631', '57066', '29598', '393907']],
-    'mobilier arrivé à terme'                  => [2029, ['291612', '15631', '0', '29598', '336841']],
+    'travaux seuls, avant la mise en location' => [2022, ['0', '15123', '0', '0', '15123']],
+    'première année, au prorata'               => [2023, ['233288', '53593', '0', '23678', '310559']],
+    'première année pleine, avec mobilier'     => [2024, ['291612', '53593', '57066', '29598', '431869']],
+    'mobilier arrivé à terme'                  => [2029, ['291612', '53593', '0', '29598', '374803']],
     'composants partiellement à terme'         => [2038, ['138132', '0', '0', '29598', '167730']],
     'plan entièrement amorti'                  => [2073, ['0', '0', '0', '0', '0']],
 ]);

@@ -1,6 +1,6 @@
 # Couverture de tests
 
-OpenLMNP est couvert par **782 tests automatisés (2 188 assertions)** écrits avec
+OpenLMNP est couvert par **802 tests automatisés (2 229 assertions)** écrits avec
 [Pest PHP](https://pestphp.com). La suite s'exécute à chaque push via
 [GitHub Actions](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml).
 
@@ -64,8 +64,8 @@ vendor/bin/pest --filter="Filament"
 | Contrôles de cohérence de la liasse | 10 | 044 = 490 et 572 = 254, trois états, tolérance de troncature, concordance entre le PDF et l'écran de télédéclaration |
 | Colonnes déclarées vs schéma | 3 | Audit générique des `$fillable` de tous les modèles, `ack_number` filtrable, paire transmitted_at/ack_number |
 | Expiration de démo : rendu réel du message et routage | 8 | Les deux notifications sont **rendues pour de vrai** (`Notification::fake()` n'appelle jamais `toMail()`, d'où une fatale restée invisible), compte à rebours basculé en jours au-delà de 24 h côté Alpine comme côté serveur, adresse laissée par le visiteur honorée, adresse **de paiement** honorée après promotion du bac à sable, cron qui signale un échec au lieu de rendre SUCCESS |
-| Suites ajoutées depuis (détail non ventilé) | 339 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel, estimation DVF de la valeur vénale, justificatifs restés à la racine d'avant Laravel 11, traitements des frais d'acquisition, valeur brute des actifs, rapport de diagnostic, formulaires annoncés… |
-| **Total** | **782** | **2 188 assertions** |
+| Suites ajoutées depuis (détail non ventilé) | 359 | Coffre-fort, IA, orphelins d'exercices, avis in-app, import annuel, estimation DVF de la valeur vénale, justificatifs restés à la racine d'avant Laravel 11, traitements des frais d'acquisition, valeur brute des actifs, rapport de diagnostic, formulaires annoncés, recouvrement du cumul repris, quote-part appliquée une seule fois… |
+| **Total** | **802** | **2 229 assertions** |
 
 > Le détail par suite est tenu à jour lot par lot ; la ligne « suites ajoutées depuis »
 > absorbe les suites fusionnées sans ventilation, pour que le tableau reste juste au total.
