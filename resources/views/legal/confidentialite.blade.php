@@ -115,6 +115,32 @@
             <li>Des journaux techniques de connexion (horodatage, adresse IP)</li>
         </ul>
 
+        <h2>Cookies et mesure d'audience</h2>
+        <p>
+            <strong>En auto-hébergement, l'application ne charge aucun outil de mesure et ne
+            dépose aucun traceur.</strong> Elle n'a donc aucune question à vous poser : le
+            bandeau de consentement n'existe tout simplement pas. C'est la même condition
+            technique qui commande les deux — sans conteneur de mesure configuré, ni l'un ni
+            l'autre n'est chargé.
+        </p>
+        <p>
+            Sur l'instance Cloud Pro, une mesure d'audience est en place. Elle n'est activée
+            qu'après votre accord, demandé par un bandeau à votre première visite ; refuser est
+            aussi simple qu'accepter, et l'application fonctionne à l'identique dans les deux
+            cas. Votre réponse est conservée six mois, puis la question vous est reposée.
+        </p>
+        <p>Dans tous les cas, l'application dépose les cookies suivants, nécessaires à son
+            fonctionnement et qui ne servent à aucune mesure :</p>
+        <ul>
+            <li><strong>Session</strong> : vous garde connecté et protège les formulaires. Expire à la fermeture du navigateur.</li>
+            <li><code>olmnp_demo_seen</code> : se souvient que vous avez essayé la démonstration, pour ne pas vous la reproposer. 30 jours.</li>
+            <li><code>olmnp_consent</code> : mémorise votre réponse au bandeau, quand celui-ci existe. 6 mois.</li>
+        </ul>
+        <p>
+            Pour revenir sur votre choix, supprimez les cookies de ce site dans votre
+            navigateur : le bandeau réapparaîtra à la visite suivante.
+        </p>
+
         <h2>Retours et avis sur le logiciel</h2>
         <p>
             Après un moment d'utilisation, l'application vous propose une fois de donner votre
