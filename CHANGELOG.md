@@ -4,6 +4,17 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 
 ## [1.6.6] - 2026-09-10
 
+### Ajouts
+
+- **Un bandeau de consentement aux traceurs**, avec Consent Mode v2. La mesure d'audience
+  n'est activée qu'après votre accord explicite ; refuser est aussi simple qu'accepter, et
+  l'application fonctionne à l'identique dans les deux cas.
+  ⚠️ **En auto-hébergement, rien ne change** : sans conteneur de mesure configuré, aucun
+  traceur n'est chargé et aucune question ne vous est posée
+- **`CONSENT_COOKIE_DOMAIN`** (facultatif, vide par défaut) : élargit la portée du cookie de
+  consentement à un domaine, pour la partager entre plusieurs sous-domaines d'une même
+  installation. Laissé vide, le cookie reste limité à l'hôte qui l'a posé
+
 ### Corrections
 
 - **Vos amortissements déjà pratiqués ne se comptent plus deux fois.** Si vous aviez recopié
