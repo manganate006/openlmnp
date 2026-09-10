@@ -62,6 +62,13 @@
                 // JSON : une erreur d'encodage se lirait sinon comme un refus, en silence.
                 var value = 'v1.a' + (accepted ? '1' : '0') + 'p' + (accepted ? '1' : '0');
                 var attrs = '; path=/; max-age={{ \App\Support\ConsentState::LIFETIME_DAYS * 24 * 60 * 60 }}; SameSite=Lax';
+                @if (filled(config('consent.cookie_domain')))
+                // Portée élargie au domaine enregistrable, pour que la VITRINE et
+                // l'application partagent le même choix. `_ga` l'est déjà (cookieDomain=auto) :
+                // laisser celui-ci host-only ferait reposer la question à chaque passage.
+                // Vide sur une instance auto-hébergée, qui n'a qu'un seul hôte.
+                attrs += '; domain={{ config('consent.cookie_domain') }}';
+                @endif
                 if (location.protocol === 'https:') { attrs += '; Secure'; }
                 document.cookie = '{{ \App\Support\ConsentState::COOKIE }}=' + value + attrs;
 
