@@ -108,6 +108,11 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
             ->renderHook(\Filament\View\PanelsRenderHook::HEAD_START, fn () => config('services.gtm.id') ? view('partials.gtm-head') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::BODY_START, fn () => config('services.gtm.id') ? view('partials.gtm-body') : '')
+            // Bandeau de consentement, sous LA MÊME condition que le conteneur ci-dessus :
+            // une instance auto-hébergée ne charge aucun traceur, donc ne pose aucune
+            // question. Les deux portes doivent rester la même — en poser une sans l'autre,
+            // c'est soit mesurer sans demander, soit demander sans mesurer.
+            ->renderHook('panels::body.end', fn () => config('services.gtm.id') ? view('partials.consent-banner') : '')
             // Pages d'authentification uniquement (login, inscription, mot de passe oublié) :
             // le visiteur doit pouvoir lire la politique AVANT de créer un compte. Une fois
             // connecté, le lien vit dans le menu utilisateur (->userMenuItems() ci-dessus).
