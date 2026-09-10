@@ -488,6 +488,127 @@ it('switches the acquisition fees to charges and stops amortising them', functio
 });
 
 // ─────────────────────────────────────────────────────────────────────
+// Le cumul repris ne doit pas se compter deux fois
+// ─────────────────────────────────────────────────────────────────────
+
+it('bounds an opening cumul on the last exercise the accountant kept', function () {
+    // ⚠️ Le défaut signalé le 2026-09-09 : le cumul repris s'ajoutait à un rejeu portant sur
+    // LES MÊMES exercices, et la case 030 valait le double (9 496 € pour 4 736 € déclarés).
+    // L'assistant est le seul écran à connaître la réponse sans la demander : l'utilisateur
+    // reprend l'exercice `firstYear`, donc son stock s'arrête à la clôture précédente.
+    $property = repriseProperty($this->user);
+
+    app(DepreciationService::class)->generateDefaultComponents($property);
+    $property->components()->update(['opening_accumulated_depreciation' => 500000]);
+
+    Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->set('regime', RepriseDossier::REGIME_SINCE_START)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_COPY)
+        ->call('nextStep')
+        ->assertSet('step', 4);
+
+    // firstYear = 2026, donc le stock couvre les exercices jusqu'à 2025 inclus.
+    expect($property->components()->pluck('opening_accumulated_year')->unique()->all())
+        ->toBe([2025]);
+});
+
+it('never overwrites a bound the user set by hand', function () {
+    // Une borne saisie appartient à l'utilisateur : son cabinet a pu s'arrêter avant.
+    // ⚠️ Les composants se créent ICI et pas via `repriseAtStepFour()`, qui les régénère
+    // et produirait un second jeu — l'assertion porterait alors sur deux populations.
+    $property = repriseProperty($this->user);
+
+    app(DepreciationService::class)->generateDefaultComponents($property);
+    $property->components()->update([
+        'opening_accumulated_depreciation' => 500000,
+        'opening_accumulated_year' => 2022,
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->set('regime', RepriseDossier::REGIME_SINCE_START)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_COPY)
+        ->call('nextStep');
+
+    expect($property->components()->pluck('opening_accumulated_year')->unique()->all())
+        ->toBe([2022]);
+});
+
+it('leaves components without an opening cumul unbounded', function () {
+    // Sans stock repris, il n'y a rien à borner : le rejeu doit courir depuis l'origine.
+    $property = repriseProperty($this->user);
+
+    repriseAtStepFour($this->user, $property);
+
+    expect($property->components()->whereNotNull('opening_accumulated_year')->count())->toBe(0);
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// La part du terrain, et ses décimales
+// ─────────────────────────────────────────────────────────────────────
+
+it('keeps the decimals of the land share instead of truncating them', function () {
+    // ⚠️ TROIS défauts au même endroit, et le premier m'a fait chercher au mauvais endroit.
+    // La fiche du bien, elle, acceptait déjà les décimales (Filament rend `step="any"`).
+    // C'est l'assistant qui bloquait : son `<input type="number">` n'avait PAS de `step`,
+    // donc `step="1"` par défaut et un navigateur qui refuse 17,5 ; puis deux `(int)` qui
+    // tronquaient à 17 ce qui aurait pu passer.
+    //
+    // 17,5 % sur 200 000 € : base 165 000 €. Tronqué à 17 % : 166 000 €, soit 1 000 € de
+    // trop — plus que la tolérance de l'écran de contrôle.
+    $property = repriseProperty($this->user);
+
+    Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->set('regime', RepriseDossier::REGIME_SINCE_START)
+        ->call('nextStep')
+        ->set('acquisitionPrice', '200000')
+        ->set('landPercentage', '17.5')
+        ->call('nextStep')
+        ->assertSet('step', 3);
+
+    $property->refresh();
+
+    expect((float) $property->land_percentage)->toBe(17.5)
+        ->and((int) $property->depreciable_base)->toBe(16_500_000)
+        ->and((int) $property->depreciable_base)->not->toBe(16_600_000);
+});
+
+it('renders a decimal step on the land share cell', function () {
+    // Le blocage tel que l'utilisateur l'a rencontré : sans `step`, le navigateur refuse
+    // la saisie avant qu'aucune ligne de PHP ne tourne. Aucune assertion sur la base de
+    // données ne peut le mesurer.
+    // ⚠️ Le champ vit à l'ÉTAPE 2 : un GET sur la page rend l'étape 1 et ne le contient
+    // pas. Une assertion sur le premier rendu serait restée verte quoi qu'il arrive.
+    repriseProperty($this->user);
+
+    $html = Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->set('regime', RepriseDossier::REGIME_SINCE_START)
+        ->call('nextStep')
+        ->assertSet('step', 2)
+        ->html();
+
+    preg_match('/<input[^>]*id="rp-land"[^>]*>/', $html, $input);
+
+    expect($input)->not->toBeEmpty()
+        ->and($input[0])->toContain('step="0.01"');
+});
+
+// ─────────────────────────────────────────────────────────────────────
 // Enregistrement des soldes d'ouverture
 // ─────────────────────────────────────────────────────────────────────
 

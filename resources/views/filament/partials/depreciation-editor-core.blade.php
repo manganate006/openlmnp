@@ -301,6 +301,12 @@
                     par votre cabinet sur des exercices que vous ne saisirez pas ici — ils s'ajoutent au
                     cumul du bilan, jamais à la charge de l'exercice.
                 </p>
+                <p class="de-hint">
+                    <strong>Couvert jusqu'à</strong> : le dernier exercice compris dans ce cumul repris,
+                    en général le dernier que votre cabinet a tenu. Renseignez-le dès que vous saisissez
+                    un cumul&nbsp;: sans lui, le logiciel reconstitue ces mêmes exercices et les
+                    <strong>compte une seconde fois</strong> dans votre case&nbsp;030.
+                </p>
                 <div class="de-amounts-wrap">
                 <table class="de-amounts">
                     <thead>
@@ -312,6 +318,7 @@
                             <th class="de-amounts-num">Dotation annuelle (&euro;)</th>
                             <th>Début</th>
                             <th class="de-amounts-num">Cumul repris (&euro;)</th>
+                            <th class="de-amounts-num">Couvert jusqu'&agrave;</th>
                             <th class="de-amounts-num">Part</th>
                         </tr>
                     </thead>
@@ -376,6 +383,17 @@
                                         type="number" class="de-amount-input" min="0" step="0.01"
                                         :value="((comp.openingCumul || 0) / 100).toFixed(2)"
                                         @change="setOpeningEuros(idx, $event.target.value)"
+                                    >
+                                </td>
+                                <td class="de-amounts-num">
+                                    {{-- ⚠️ Signalé en rouge quand un cumul est saisi sans borne :
+                                         c'est exactement la combinaison qui double la case 030. --}}
+                                    <input
+                                        type="number" class="de-amount-input" min="1900" max="2100" step="1"
+                                        placeholder="—"
+                                        :class="(comp.openingCumul || 0) > 0 && ! comp.openingYear ? 'de-amount-unbounded' : ''"
+                                        :value="comp.openingYear || ''"
+                                        @change="setOpeningYear(idx, $event.target.value)"
                                     >
                                 </td>
                                 <td class="de-amounts-num" x-text="formatPct(pctOf(comp))"></td>

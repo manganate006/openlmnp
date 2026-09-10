@@ -54,6 +54,7 @@ class PropertyWork extends Model
         'annual_depreciation',
         'depreciation_source',
         'opening_accumulated_depreciation',
+        'opening_accumulated_year',
     ];
 
     protected static function booted(): void
@@ -88,6 +89,7 @@ class PropertyWork extends Model
         return [
             'work_date'    => 'date',
             'is_dedicated' => 'boolean',
+            'opening_accumulated_year' => 'integer',
         ];
     }
 

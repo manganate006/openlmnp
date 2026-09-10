@@ -2,6 +2,30 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Corrections
+
+- **Vos amortissements déjà pratiqués ne se comptent plus deux fois.** Si vous aviez recopié
+  le cumul de votre cabinet, le logiciel reconstituait par-dessus les mêmes exercices et
+  ajoutait les deux : la case 030 valait le double. Un utilisateur l'a signalé avec les
+  chiffres qui le prouvent — 9 496 € affichés pour 4 736 € déclarés. L'éditeur d'amortissements
+  gagne une colonne **« Couvert jusqu'à »**, l'assistant de reprise la renseigne tout seul, et
+  le champ passe en rouge si un cumul est saisi sans elle
+- **Sur un bien partiellement loué, la quote-part s'appliquait deux fois** aux travaux et au
+  mobilier non dédiés à la location : leur dotation valait le carré de la quote-part au lieu de
+  la quote-part. Un bien loué à 60 % amortissait 36 % de ses travaux, et la ligne se
+  contredisait elle-même — sa valeur brute, elle, n'appliquait la quote-part qu'une fois.
+  ⚠️ Si vous êtes concerné, vos dotations **augmentent** : relancez « Recalculer la chaîne »
+  depuis la page Exercices pour que vos exercices déjà enregistrés le reprennent
+- **La part du terrain accepte les décimales dans l'assistant de reprise.** Sa cellule refusait
+  17,5 % — une valeur d'acte ordinaire — et tronquait à 17 ce qui passait quand même. Sur un
+  bien à 175 000 €, cela déplaçait 875 € de base amortissable
+- **Un écart « proche » vous dit maintenant d'où il vient.** Sous 1 %, l'écran de contrôle de la
+  reprise affichait un badge sans un mot d'explication. Il nomme désormais la cause — une
+  convention de prorata, au jour chez nous, au mois chez beaucoup de cabinets — et précise que
+  **c'est le chiffre de votre liasse déposée qu'il faut conserver**, pas le nôtre
+
 ## [1.6.5] - 2026-09-08
 
 ### Ajouts

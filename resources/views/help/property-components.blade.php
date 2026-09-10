@@ -43,6 +43,7 @@
         <li data-icon="&#x1F4C9;"><strong>Dotation annuelle</strong> &mdash; calculée seule (base &divide; durée), mais modifiable si votre cabinet arrondissait autrement.</li>
         <li data-icon="&#x1F4C5;"><strong>Début</strong> &mdash; à ne renseigner que si le composant ne démarre pas à la mise en location du bien : passage du micro-BIC au réel, mise en service échelonnée. Laissé vide, il suit la date de mise en location.</li>
         <li data-icon="&#x1F5C3;"><strong>Cumul repris</strong> &mdash; les amortissements déjà pratiqués par votre cabinet sur des exercices que vous ne saisirez pas ici. Ils s'ajoutent au cumul du bilan (2033-A case 030) et à la colonne « amortissements » du 2033-C, <strong>jamais</strong> à la charge de l'exercice.</li>
+        <li data-icon="&#x1F6D1;"><strong>Couvert jusqu'à</strong> &mdash; le dernier exercice compris dans ce cumul repris, en général le dernier que votre cabinet a tenu. <strong>À renseigner dès que vous saisissez un cumul.</strong> Sans lui, le logiciel reconstitue ces mêmes exercices et les compte une seconde fois : votre case 030 vaut alors le double. Le champ passe en rouge quand un cumul est saisi sans sa borne.</li>
     </ul>
     <p>Une base saisie à la main porte l'étiquette <strong>saisi</strong> : elle est <strong>verrouillée</strong>, ne suit plus le prix du bien et n'est jamais recalculée automatiquement.</p>
 
@@ -75,6 +76,23 @@
 
     <div class="ctx-warning">
         <strong>Attention :</strong> Le terrain n'est pas amortissable. Sa part (15-20 % en général, parfois plus en zone urbaine) est déduite avant le calcul des composants. Sources : MeilleursAgents, votre notaire, l'acte d'acquisition. Le bouton « Estimer (DVF) » de la fiche du bien ne répond pas à cette question : il estime la valeur du bien entier, terrain compris.
+    </div>
+
+    <div class="ctx-warning" style="margin-top:12px;">
+        <strong>Le piège à connaître :</strong> un cumul repris <em>sans</em> « Couvert jusqu'à »
+        se compte deux fois. Le logiciel ne sait pas quels exercices votre cabinet a déjà couverts :
+        il rejoue tout le plan depuis le début, et y ajoute votre montant. Un utilisateur a vu sa
+        case 030 afficher 9 496 € pour 4 736 € déclarés &mdash; soit exactement son cumul, plus une
+        reconstitution des mêmes années. Renseignez la borne, et les deux cessent de se superposer.
+    </div>
+
+    <div class="ctx-tip" style="margin-top:12px;">
+        <strong>Un écart de moins de 1 % après la reprise ?</strong> C'est presque toujours une
+        <strong>convention de prorata</strong>, et non une erreur. La première annuité se calcule ici
+        au <strong>jour</strong> ; beaucoup de cabinets la calculent au <strong>mois</strong>, ce qui
+        déplace environ 0,5 % &mdash; et l'écart se reporte ensuite à l'identique dans tous les
+        cumuls. Les deux conventions sont admises. <strong>Conservez le chiffre de votre liasse
+        déposée</strong> : c'est lui qui assure la continuité de votre bilan d'un exercice à l'autre.
     </div>
 
     <h3>Vos chiffres ne tombent pas juste ? Le rapport de diagnostic</h3>

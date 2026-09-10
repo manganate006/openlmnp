@@ -29,6 +29,25 @@
         <li data-icon="&#x1F522;"><strong>D&eacute;ficits reportables</strong> &mdash; 2033-D cases 980 &agrave; 984</li>
     </ul>
 
+    <h3>Le cumul repris, et jusqu'o&ugrave; il court</h3>
+    <p>&Agrave; l'&eacute;tape&nbsp;3, si vous recopiez les <strong>amortissements d&eacute;j&agrave;
+    pratiqu&eacute;s</strong> par votre cabinet, l'assistant retient tout seul qu'ils s'arr&ecirc;tent
+    &agrave; la cl&ocirc;ture de l'exercice pr&eacute;c&eacute;dant celui que vous reprenez. C'est
+    indispensable&nbsp;: sans cette borne, le logiciel reconstitue les m&ecirc;mes ann&eacute;es et les
+    <strong>compte une seconde fois</strong> dans votre case&nbsp;030.</p>
+    <p>Si votre cabinet s'est arr&ecirc;t&eacute; plus t&ocirc;t, corrigez la colonne
+    <strong>&laquo;&nbsp;Couvert jusqu'&agrave;&nbsp;&raquo;</strong> dans l'&eacute;diteur
+    d'amortissements&nbsp;: une borne que vous saisissez n'est jamais &eacute;cras&eacute;e.</p>
+
+    <h3>Un &eacute;cart de moins de 1&nbsp;% n'est pas une erreur</h3>
+    <p>L'&eacute;tape&nbsp;5 signale &laquo;&nbsp;proche&nbsp;&raquo; et vous en donne d&eacute;sormais
+    la raison. Sous 1&nbsp;%, il ne manque rien &agrave; votre plan&nbsp;: c'est une
+    <strong>convention de prorata</strong> qui diff&egrave;re. La premi&egrave;re annuit&eacute; se
+    calcule ici au <strong>jour</strong>, beaucoup de cabinets la calculent au <strong>mois</strong>
+    &mdash; environ 0,5&nbsp;% d'&eacute;cart, qui se reporte ensuite &agrave; l'identique dans tous
+    les cumuls. Les deux se d&eacute;fendent. <strong>Gardez le chiffre de votre liasse
+    d&eacute;pos&eacute;e</strong>&nbsp;: c'est lui qui assure la continuit&eacute; de votre bilan.</p>
+
     <h3>Diff&eacute;r&eacute; n'est pas d&eacute;ficit</h3>
     <p>L'<strong>amortissement diff&eacute;r&eacute;</strong> est la part d'amortissement que vous n'avez pas pu d&eacute;duire parce qu'elle aurait cr&eacute;&eacute; un d&eacute;ficit&nbsp;: elle se reporte sans limite de dur&eacute;e. Le <strong>d&eacute;ficit</strong>, lui, vient de vos charges, et ne s'impute que sur vos b&eacute;n&eacute;fices de location meubl&eacute;e des <strong>dix</strong> ann&eacute;es suivantes.</p>
 

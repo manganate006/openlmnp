@@ -31,7 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int         $agency_fees            centimes
  * @property int|null    $market_value           centimes
  * @property \Carbon\Carbon|null $market_value_date
- * @property int         $land_percentage        % terrain non amortissable
+ * @property float       $land_percentage        % terrain non amortissable (décimales admises)
  * @property \Carbon\Carbon $rental_start_date
  * @property string      $rental_type
  * @property bool        $is_primary_residence

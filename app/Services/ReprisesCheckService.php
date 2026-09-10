@@ -210,10 +210,27 @@ class ReprisesCheckService
         $line['ratio'] = $this->ratio($difference, $declared, $computed);
         $line['verdict'] = $this->verdict($difference, $line['ratio']);
 
+        // ⚠️ `close` produit des diagnostics AUSSI, depuis le 2026-09-10. Un écart sous la
+        // tolérance restait muet : l'utilisateur lisait « proche » sans un mot d'explication,
+        // et n'avait aucun moyen de savoir s'il devait s'en inquiéter. C'est précisément le
+        // cas qui reste après la correction d'un double comptage — quelques dizaines d'euros
+        // de convention de prorata, inoffensifs, mais que personne ne peut deviner.
         if ($line['verdict'] === self::VERDICT_MISMATCH) {
             $line['diagnostics'] = $definition['reconstituted']
                 ? $this->diagnostics($difference, $context)
                 : [$this->transcriptionDiagnostic($definition['cerfa'])];
+        }
+
+        // ⚠️ Un écart « proche » produit lui aussi un diagnostic depuis le 2026-09-10 — mais
+        // UN SEUL, et pas la même liste. Sous 1 %, dérouler six causes possibles serait du
+        // bruit : il ne manque pas un composant, la part du terrain n'est pas fausse. Il
+        // reste une différence de convention, et c'est la seule chose à dire.
+        //
+        // Jusque-là ce cas était MUET : l'utilisateur lisait « proche » sans un mot
+        // d'explication, et n'avait aucun moyen de savoir s'il devait s'en inquiéter. C'est
+        // exactement ce qui subsiste après la correction d'un double comptage.
+        if ($line['verdict'] === self::VERDICT_CLOSE && $definition['reconstituted']) {
+            $line['diagnostics'] = [$this->conventionDiagnostic()];
         }
 
         return $line;
@@ -242,6 +259,36 @@ class ReprisesCheckService
         }
 
         return self::VERDICT_MISMATCH;
+    }
+
+    /**
+     * Le seul diagnostic d'un écart sous la tolérance : une différence de convention.
+     *
+     * ⚠️ Ne PAS écrire « arrondi ». La troncature au centime de
+     * `DepreciationService::annualFromBase()` plafonne à un centime par ligne et par
+     * exercice — quelques dizaines de centimes sur un plan entier, jamais des dizaines
+     * d'euros. La cause tient à la convention de PRORATA de première année : nous comptons
+     * en jours (BOI-BIC-AMT-20-10 § 20), beaucoup de cabinets comptent en mois, et l'écart
+     * qui en résulte est d'environ 0,5 % — définitif, puisqu'il se retrouve à l'identique
+     * dans tous les cumuls suivants.
+     *
+     * ⚠️ Et c'est le chiffre du CABINET qui fait foi, pas le nôtre : le sien est déposé.
+     *
+     * @return array{code: string, label: string, hint: string, corroborated: bool}
+     */
+    private function conventionDiagnostic(): array
+    {
+        return [
+            'code'  => 'prorata_convention',
+            'label' => 'Une convention de calcul diffère, sans que l\'un des deux chiffres soit faux',
+            'hint'  => 'Sous 1 %, il ne manque rien à votre plan. La première annuité se '
+                     . 'proratise ici au JOUR ; beaucoup de cabinets la proratisent au MOIS, '
+                     . 'ce qui déplace environ 0,5 % — et l\'écart se reporte ensuite à '
+                     . 'l\'identique dans tous les cumuls. Les deux conventions sont admises. '
+                     . 'Conservez le chiffre de votre liasse déposée : c\'est lui qui assure '
+                     . 'la continuité de votre bilan d\'un exercice à l\'autre.',
+            'corroborated' => true,
+        ];
     }
 
     /**

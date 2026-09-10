@@ -108,6 +108,7 @@ class PropertyComponent extends Model
         'depreciation_start_date',
         'cerfa_category',
         'opening_accumulated_depreciation',
+        'opening_accumulated_year',
         'sort_order',
     ];
 
@@ -118,6 +119,7 @@ class PropertyComponent extends Model
             // la chaîne "50.0000" et polluerait les sorties JSON du serveur MCP.
             'percentage' => 'float',
             'depreciation_start_date' => 'date',
+            'opening_accumulated_year' => 'integer',
         ];
     }
 
