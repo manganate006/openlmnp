@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Support\ConsentState;
 use Filament\Forms\Components\DatePicker;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
@@ -25,10 +27,32 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Retire du chiffrement le cookie de consentement, posé par le navigateur.
+     *
+     * ⚠️ POURQUOI. Laravel chiffre tous les cookies, et `EncryptCookies` met à `null` ceux
+     * qu'il ne sait pas déchiffrer — silencieusement, sans exception ni journal. Le bandeau
+     * écrit son choix en JavaScript, donc en clair, parce que le Consent Mode doit être
+     * initialisé AVANT le conteneur GTM, sans attendre d'aller-retour serveur. Sans cette
+     * exception, le serveur relirait ce cookie comme illisible, donc comme « pas de
+     * réponse » : le bandeau reparaîtrait à chaque page, sans qu'aucune erreur ne soit levée.
+     *
+     * ⚠️ Déclaré ici plutôt que dans un middleware parce que l'application a DEUX piles :
+     * le panel Filament ne passe pas par le groupe `web`, alors que `/d/{path}` si. C'est le
+     * même piège que celui documenté pour `VaultSession`. La liste statique
+     * d'`EncryptCookies`, elle, vaut pour les deux.
+     */
+    public static function exemptThirdPartyCookiesFromEncryption(): void
+    {
+        EncryptCookies::except([ConsentState::COOKIE]);
+    }
+
+    /**
      * Bootstrap any application services.
      */
     public function boot(): void
     {
+        self::exemptThirdPartyCookiesFromEncryption();
+
         // Les composants ventilés en pourcentage suivent la valeur du bien (issue #11).
         Property::observe(PropertyObserver::class);
 
