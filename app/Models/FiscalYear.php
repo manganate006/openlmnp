@@ -110,6 +110,25 @@ class FiscalYear extends Model
     }
 
     /**
+     * Résumé du dépôt enregistré, ou `null` tant que l'utilisateur n'en a saisi aucun.
+     *
+     * Une liasse générée n'est pas une liasse déposée : seule cette date, saisie à la main
+     * après le dépôt effectif, distingue les deux. Rien ne la reconstitue — ni la génération
+     * du PDF, ni la clôture de l'exercice.
+     */
+    public function transmissionSummary(): ?string
+    {
+        if ($this->transmitted_at === null) {
+            return null;
+        }
+
+        return 'Liasse déposée le ' . $this->transmitted_at->format('d/m/Y')
+            . ($this->ack_number === null
+                ? ' — aucun numéro d\'accusé enregistré.'
+                : ' — accusé n° ' . $this->ack_number . '.');
+    }
+
+    /**
      * Exercice sans aucune donnée calculée.
      *
      * Un tel exercice n'a pas « un report de 0 € » : il n'a PAS DE REPORT DU TOUT. La nuance

@@ -17,6 +17,10 @@
         <li data-icon="&#x1F4BE;"><strong>FEC</strong> &mdash; Fichier des Écritures Comptables (obligatoire en cas de contrôle)</li>
     </ul>
 
+    <h3>La colonne « Dépôt »</h3>
+    <p>Un badge <strong>Déposée</strong> marque l'exercice dont la liasse a réellement été transmise. Il ne se pose pas tout seul : le bouton <strong>« Dépôt »</strong> de la ligne enregistre la date du dépôt et le numéro de l'accusé (certificat de dépôt en saisie en ligne, compte rendu de traitement en EDI). Survolez le badge pour les relire.</p>
+    <p>Générer le PDF ci-dessus ne dépose rien, et clôturer un exercice non plus : sans cette saisie, rien ne distingue une liasse imprimée d'une liasse transmise. Pour effacer un dépôt noté par erreur, rouvrez <strong>« Dépôt »</strong> et videz la date.</p>
+
     <h3>Exercice de reprise : les soldes d'ouverture</h3>
     <p>Vous arrivez d'un expert-comptable ou d'un autre logiciel ? Le bouton <strong>« Reprendre un dossier »</strong>, en haut de cette liste, saisit d'un coup ce que votre dernière liasse vous laisse en report. On ne renseigne pas ces montants exercice par exercice.</p>
     <ul>

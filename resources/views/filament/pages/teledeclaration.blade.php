@@ -98,6 +98,18 @@
 
             <p style="font-size:12px;color:var(--olmnp-fg-muted);margin-bottom:16px;">Cliquez sur « Copier » pour copier une valeur dans le presse-papier, puis collez-la dans le formulaire en ligne.</p>
 
+            {{-- Dépôt enregistré : la seule marque qui distingue une liasse déposée d'une liasse
+                 imprimée. Saisie par l'action « Dépôt » de l'en-tête, jamais déduite. --}}
+            @if($this->fiscalYearForYear?->transmitted_at)
+                <div class="td-card" style="margin-bottom:16px;background:var(--olmnp-success-bg);border-color:var(--olmnp-success-border);">
+                    <p style="font-size:14px;color:var(--olmnp-success-accent);">
+                        <strong>{{ $this->fiscalYearForYear->transmissionSummary() }}</strong>
+                        Les montants ci-dessous sont recalculés à chaque affichage : s'ils ont changé depuis,
+                        la liasse déposée ne les porte pas.
+                    </p>
+                </div>
+            @endif
+
             @if($this->showsDeficitCorrectionNotice)
                 <div class="td-card" style="margin-bottom:16px;background:var(--olmnp-warning-bg);border-color:var(--olmnp-warning-border);">
                     <h3 style="font-size:15px;font-weight:600;color:var(--olmnp-warning-fg);margin-bottom:8px;">Le tableau 2033-D a changé de règle</h3>
@@ -263,6 +275,7 @@
                         <li><span class="td-step">4</span>Remplissez les formulaires <strong>2033-B</strong>, <strong>2033-A</strong>, <strong>2033-C</strong> et <strong>2033-D</strong> en reportant les valeurs ci-dessus ligne par ligne</li>
                         <li><span class="td-step">5</span>Validez et transmettez</li>
                         <li><span class="td-step">6</span>Sur votre <strong>déclaration de revenus personnelle</strong> (2042), allez dans <strong>2042-C-PRO</strong> et reportez le résultat en case <strong>{{ $data['forms']['2042-C-PRO']['lines'][0]['line'] }}</strong></li>
+                        <li><span class="td-step">7</span>De retour ici, cliquez sur <strong>&laquo; Dépôt &raquo;</strong> en haut de l'écran et notez la date et le numéro du <strong>certificat de dépôt</strong> : sans lui, rien ne distingue cette liasse d'un brouillon</li>
                     </ol>
                     <p style="font-size:12px;color:var(--olmnp-fg-muted);margin-top:8px;">Date limite : 2ème jour ouvré après le 1er mai (environ 18-20 mai selon les années).</p>
                 </div>
@@ -278,6 +291,7 @@
                         <li><span class="td-step">3</span>Saisissez votre SIREN et les valeurs des formulaires ci-dessus</li>
                         <li><span class="td-step">4</span>Teledec transmet directement à la DGFiP via EDI-TDFC</li>
                         <li><span class="td-step">5</span>Vous recevez un accusé de réception</li>
+                        <li><span class="td-step">6</span>Notez l'accusé ici, bouton <strong>&laquo; Dépôt &raquo;</strong> en haut de l'écran</li>
                     </ol>
                     <p style="font-size:12px;color:var(--olmnp-fg-muted);margin-top:8px;">Avantage : transmission officielle EDI-TDFC avec accusé de réception.</p>
                 </div>

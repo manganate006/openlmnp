@@ -41,6 +41,12 @@
         <strong>Vos anciennes liasses portaient l'amortissement différé dans les cases de déficits.</strong> Jusqu'à la version 1.3.2, les cases 982, 983 et 984 recevaient le montant des amortissements réputés différés : une liasse déjà téléchargée ou déjà transmise affiche donc des déficits qui n'existaient pas. Les valeurs de cet écran sont les valeurs corrigées. Si une déclaration déjà déposée est concernée, régénérez la liasse depuis la page Exercices &mdash; un encart vous le rappelle en haut de cet écran tant que vous avez une liasse d'avant la correction.
     </div>
 
+    <h3>Noter le dépôt : ce qui distingue une liasse déposée d'une liasse imprimée</h3>
+    <p>Générer le PDF ou recopier les cases ne dépose rien. Une fois la transmission faite, l'administration rend une preuve : un <strong>certificat de dépôt</strong> pour une saisie en ligne, un <strong>compte rendu de traitement accepté</strong> pour un envoi EDI. Le bouton <strong>« Dépôt »</strong>, en haut de cet écran comme sur chaque ligne de la page Exercices, enregistre sa date et son numéro.</p>
+    <p>Rien ne les devine : ni la génération du PDF, ni la clôture de l'exercice ne valent dépôt. Tant que vous n'avez rien saisi, l'exercice reste sans marque &mdash; c'est voulu, une date inventée serait pire qu'une case vide. Une fois notés, un bandeau vert le rappelle sur cet écran, un badge <strong>Déposée</strong> apparaît dans la liste des exercices, et vos assistants connectés en MCP peuvent les lire.</p>
+    <p>Le numéro d'accusé est facultatif : si vous ne l'avez pas sous la main, la date seule suffit. Pour annuler l'enregistrement &mdash; dépôt noté par erreur, ou déclaration rectificative &mdash; rouvrez <strong>« Dépôt »</strong> et videz la date : le numéro s'efface avec elle, parce qu'un accusé sans date ne prouve rien.</p>
+    <p>Attention à un décalage : les montants de cet écran sont recalculés à chaque affichage. S'ils ont changé depuis votre dépôt (une charge ajoutée, une ventilation corrigée), la liasse déposée ne les porte pas &mdash; c'est une déclaration rectificative qu'il faut, pas un simple recalcul.</p>
+
     <div class="ctx-warning">
         <strong>Important :</strong> La liasse fiscale (2031, 2033) doit être envoyée séparément au SIE (Service des Impôts des Entreprises) dont vous dépendez.
     </div>
