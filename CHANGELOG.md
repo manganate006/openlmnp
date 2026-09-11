@@ -2,6 +2,21 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Ajouts
+
+- **Noter le dépôt de votre liasse.** Générer le PDF ou recopier les cases ne dépose rien :
+  seule l'administration le fait, et elle vous en rend la preuve — un certificat de dépôt pour
+  une saisie en ligne, un compte rendu de traitement pour un envoi EDI. Un bouton
+  **« Dépôt »**, en haut de l'écran de télédéclaration et sur chaque ligne de la page
+  Exercices, enregistre sa date et son numéro. Un badge **Déposée** distingue alors, dans la
+  liste, la liasse transmise de la liasse simplement imprimée, et vos assistants connectés en
+  MCP peuvent la lire.
+  Rien n'est deviné : sans votre saisie, l'exercice reste sans marque. Pour effacer un dépôt
+  noté par erreur, videz la date — le numéro d'accusé s'en va avec elle, un accusé sans date
+  ne prouvant rien
+
 ## [1.6.6] - 2026-09-10
 
 ### Ajouts

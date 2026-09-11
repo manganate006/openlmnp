@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FiscalYears\Tables;
 
+use App\Filament\Actions\RecordTransmissionAction;
 use App\Models\FiscalYear;
 use App\Services\BadgeService;
 use App\Services\FecService;
@@ -118,6 +119,16 @@ class FiscalYearsTable
                     ->formatStateUsing(fn ($state) => FiscalYear::statusLabels()[$state] ?? $state)
                     ->badge()
                     ->color(fn ($state) => $state === 'closed' ? 'success' : 'warning'),
+                // Une liasse générée n'est pas une liasse déposée : c'est la seule colonne qui
+                // le dise. Elle ne se remplit que par la saisie de l'utilisateur (action « Dépôt »).
+                TextColumn::make('transmitted_at')
+                    ->label('Dépôt')
+                    ->badge()
+                    ->state(fn (FiscalYear $record) => $record->transmitted_at === null ? null : 'Déposée')
+                    ->color('success')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->tooltip(fn (FiscalYear $record) => $record->transmissionSummary())
+                    ->placeholder('—'),
                 TextColumn::make('opening_source')
                     ->label('Reprise')
                     ->badge()
@@ -234,6 +245,7 @@ class FiscalYearsTable
                             "FEC_{$record->year}.txt"
                         );
                     }),
+                RecordTransmissionAction::forTable(),
             ])
             ->toolbarActions([
                 Action::make('recalculate_chain')

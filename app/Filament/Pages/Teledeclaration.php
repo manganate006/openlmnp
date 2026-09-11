@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Actions\RecordTransmissionAction;
 use App\Filament\Pages\Concerns\NavigationAware;
 use App\Filament\Pages\Concerns\ShowsDiagnosticReport;
 use App\Models\FiscalYear;
@@ -44,7 +45,28 @@ class Teledeclaration extends Page
     {
         return [
             $this->diagnosticReportAction(),
+            // Le dépôt se note là où il vient d'être fait : c'est au retour d'impots.gouv.fr,
+            // l'accusé sous les yeux, que le numéro est disponible — pas plus tard.
+            RecordTransmissionAction::forYear(fn () => $this->fiscalYearForYear)
+                ->after(fn () => $this->resetTransmission()),
         ];
+    }
+
+    /**
+     * L'exercice affiché, s'il existe déjà.
+     *
+     * Volontairement sans `getOrCreate()` : ouvrir le sélecteur d'année ne doit pas créer
+     * d'exercice, et un exercice qui n'existe pas n'a rien pu déposer.
+     */
+    #[Computed]
+    public function fiscalYearForYear(): ?FiscalYear
+    {
+        return FiscalYear::query()->where('year', $this->year)->first();
+    }
+
+    private function resetTransmission(): void
+    {
+        unset($this->fiscalYearForYear);
     }
 
     /** Le rapport de diagnostic décrit l'exercice affiché, pas l'année en cours. */
@@ -71,11 +93,11 @@ class Teledeclaration extends Page
         // (colonne créée le 2026-09-04) ne couvrirait que les déclarations déposées et
         // raterait exactement ceux qui ont un PDF faux entre les mains.
         //
-        // ⚠️ En revanche `ack_number` reste déclaré par le modèle et lu par deux outils MCP
-        // SANS qu'aucune migration ne le crée. Inoffensif aujourd'hui (le modèle rend `null`),
-        // mais ne jamais l'interroger en SQL : sous SQLite un identifiant entre guillemets
-        // sans colonne correspondante devient un LITTÉRAL DE CHAÎNE, donc un
-        // `whereNotNull('ack_number')` rendrait TOUTES les lignes, sans lever d'erreur.
+        // ⚠️ `transmitted_at` et `ack_number` sont deux vraies colonnes depuis les migrations
+        // des 2026-09-04 et 2026-09-05, et l'action « Dépôt » les renseigne — mais elles
+        // restent nulles partout où l'utilisateur n'a rien saisi. Un filtre posé dessus ne
+        // sélectionne donc pas « les liasses transmises », seulement celles dont le dépôt a
+        // été noté.
         return FiscalYear::query()->whereNotNull('pdf_path')->exists();
     }
 
@@ -255,5 +277,6 @@ class Teledeclaration extends Page
     public function updatedYear(): void
     {
         unset($this->declarationData);
+        $this->resetTransmission();
     }
 }
