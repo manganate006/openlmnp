@@ -74,19 +74,19 @@ $STD php artisan db:seed --force
 $STD php artisan optimize
 msg_ok "Configured OpenLMNP"
 
-msg_info "Securing Admin Account"
-ADMIN_PASS="$(openssl rand -hex 12)"
-# Replace the seeded demo password with a random one (password is cast as 'hashed')
-$STD php artisan tinker --execute="\$u = \App\Models\User::query()->orderBy('id')->first(); if (\$u) { \$u->password = '${ADMIN_PASS}'; \$u->save(); }"
+msg_info "Closing Registration After First Account"
+# Le seeder ne crée aucun compte : le premier visiteur qui s'inscrit devient administrateur,
+# puis l'inscription se referme d'elle-même (ALLOW_REGISTRATION=auto, la valeur par défaut).
 {
-  echo "OpenLMNP — identifiants administrateur"
-  echo "Email    : demo@openlmnp.fr"
-  echo "Password : ${ADMIN_PASS}"
+  echo "OpenLMNP — premier démarrage"
   echo ""
-  echo "Changez-les après la première connexion."
-} >/opt/openlmnp/admin_credentials.txt
-chmod 600 /opt/openlmnp/admin_credentials.txt
-msg_ok "Secured Admin Account (credentials in /opt/openlmnp/admin_credentials.txt)"
+  echo "Aucun compte n'existe encore : ouvrez http://${LOCAL_IP}/register pour créer le vôtre."
+  echo "Le premier compte créé devient administrateur, et l'inscription se referme ensuite."
+  echo ""
+  echo "Mot de passe oublié plus tard :"
+  echo "  cd /opt/openlmnp && sudo -u www-data php artisan openlmnp:reset-password vous@exemple.fr"
+} >/opt/openlmnp/premier-demarrage.txt
+msg_ok "Registration left open for the first account only"
 
 chown -R www-data:www-data /opt/openlmnp
 chmod -R 775 /opt/openlmnp/storage /opt/openlmnp/database /opt/openlmnp/bootstrap/cache
