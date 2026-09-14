@@ -32,6 +32,7 @@ et produisez votre liasse fiscale au régime réel — sans abonnement, chez vou
 - [Captures d'écran](#captures-décran)
 - [Documentation](#documentation)
 - [Installation rapide (Docker)](#installation-rapide-docker)
+- [Déploiement sur un PaaS](#déploiement-sur-un-paas-coolify-dokploy-easypanel)
 - [Installation LXC Proxmox](#installation-lxc-proxmox-script-communautaire)
 - [Installation développement](#installation-développement)
 - [Configuration](#configuration)
@@ -146,6 +147,14 @@ docker run -d --name openlmnp -p 8090:8000 --restart unless-stopped openlmnp
 
 Accès : `http://localhost:8090`
 Compte démo : `demo@openlmnp.fr` / `demo2026`
+
+## Déploiement sur un PaaS (Coolify, Dokploy, Easypanel)
+
+Sur un PaaS auto-hébergé, le fichier [`docker-compose.coolify.yml`](docker-compose.coolify.yml)
+donne un déploiement prêt à l'emploi : domaine, certificat TLS et reverse proxy sont câblés
+par la plateforme. Sur Coolify : *New Resource* → *Docker Compose (Empty)*, coller le fichier,
+*Deploy*. Détails et points de vigilance dans
+[docs/INSTALLATION.md](docs/INSTALLATION.md#déploiement-sur-un-paas-coolify-dokploy-easypanel).
 
 ## Installation LXC Proxmox (script communautaire)
 
