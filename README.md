@@ -146,7 +146,8 @@ docker run -d --name openlmnp -p 8090:8000 --restart unless-stopped openlmnp
 ```
 
 Accès : `http://localhost:8090`
-Compte démo : `demo@openlmnp.fr` / `demo2026`
+Première connexion : créez votre compte sur `/register` — le premier compte devient
+administrateur, et l'inscription se referme ensuite d'elle-même.
 
 ## Déploiement sur un PaaS (Coolify, Dokploy, Easypanel)
 

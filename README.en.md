@@ -147,7 +147,8 @@ docker run -d --name openlmnp -p 8090:8000 --restart unless-stopped openlmnp
 ```
 
 Access: `http://localhost:8090`
-Demo account: `demo@openlmnp.fr` / `demo2026`
+First login: create your account on `/register` — the first account becomes the
+administrator, and sign-up then closes by itself.
 
 ## Proxmox LXC install (community script)
 

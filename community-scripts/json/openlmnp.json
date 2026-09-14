@@ -32,7 +32,7 @@
   },
   "notes": [
     {
-      "text": "Admin account and a random password are generated during installation and saved to /opt/openlmnp/admin_credentials.txt inside the container. Change the password after first login.",
+      "text": "No account is created during installation: open http://<ip>/register to create yours. The first account becomes the administrator, and sign-up then closes by itself.",
       "type": "warning"
     },
     {
