@@ -28,4 +28,13 @@ return [
     | est désactivée. Image officielle publiée par .github/workflows/docker-publish.yml.
     */
     'docker_image' => env('UPDATE_DOCKER_IMAGE', 'manganate06/openlmnp:latest'),
+
+    /*
+    | Consigne affichée à la place de celle-ci quand la mise à jour en place est
+    | désactivée sur un hébergement qui n'est pas Docker. Un gestionnaire de paquets qui
+    | prend les mises à jour en charge (YunoHost, et demain d'autres) y met la sienne :
+    | sans ça, son utilisateur lit « docker pull » sur une machine sans Docker, et suit
+    | une instruction qui ne s'applique pas à lui.
+    */
+    'blocked_hint' => env('UPDATE_SELF_APPLY_HINT'),
 ];
