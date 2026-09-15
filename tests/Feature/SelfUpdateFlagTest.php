@@ -31,6 +31,26 @@ it('refuses to apply a release when self-apply is disabled', function () {
     Process::assertNothingRan();
 });
 
+it('shows the hosting platform own instruction instead of the Docker one', function () {
+    // Sur un serveur YunoHost, « docker pull » n'est pas seulement inutile : il envoie
+    // l'utilisateur chercher une commande qui n'existe pas sur sa machine, alors que sa
+    // mise à jour se fait par le gestionnaire de paquets. Le paquet fournit donc sa
+    // propre consigne, et elle doit remplacer celle-ci — pas s'y ajouter.
+    config([
+        'updater.self_apply' => false,
+        'updater.blocked_hint' => 'Passez par « yunohost app upgrade openlmnp ».',
+    ]);
+    Process::fake();
+
+    $result = (new UpdateService())->applyUpdate('https://example.test/tarball');
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['error'])->toContain('yunohost app upgrade openlmnp')
+        ->and($result['error'])->not->toContain('docker pull');
+
+    Process::assertNothingRan();
+});
+
 it('refuses to deploy a branch when self-apply is disabled', function () {
     config(['updater.self_apply' => false]);
     Process::fake();

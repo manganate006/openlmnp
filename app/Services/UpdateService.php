@@ -81,6 +81,13 @@ class UpdateService
     public function selfApplyBlockedReason(): ?string
     {
         if (! $this->selfApplyEnabled()) {
+            // Un hébergement qui gère lui-même les mises à jour fournit sa propre consigne.
+            $hint = trim((string) config('updater.blocked_hint', ''));
+
+            if ($hint !== '') {
+                return 'Mise à jour en place désactivée : ' . $hint;
+            }
+
             return 'Mise à jour en place désactivée : cette instance tourne sur une image '
                 . 'Docker immuable. Mettez à jour avec « ' . $this->dockerUpdateInstructions()
                 . ' » puis recréez le conteneur — les données des volumes sont conservées.';
