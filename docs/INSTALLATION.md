@@ -14,6 +14,7 @@ La méthode recommandée est **Docker**. Une installation en environnement de d�
 - [Prérequis](#prérequis)
 - [Installation Docker (recommandée)](#installation-docker-recommandée)
 - [Persistance des données (volumes)](#persistance-des-données-volumes)
+- [Déploiement sur un PaaS (Coolify, Dokploy, Easypanel)](#déploiement-sur-un-paas-coolify-dokploy-easypanel)
 - [Comptes et connexion](#comptes-et-connexion)
 - [Emails (optionnel)](#emails-optionnel)
 - [Variables d'environnement](#variables-denvironnement)
@@ -85,6 +86,30 @@ docker run -d --name openlmnp -p 8090:8000 \
 L'`Dockerfile` déclare déjà ces deux chemins comme volumes. En les mappant sur des
 répertoires de l'hôte (ici `/opt/openlmnp-data/`), vous pouvez reconstruire l'image
 sans jamais perdre vos écritures comptables.
+
+## Déploiement sur un PaaS (Coolify, Dokploy, Easypanel)
+
+Si vous administrez déjà un PaaS auto-hébergé, le fichier
+[`docker-compose.coolify.yml`](../docker-compose.coolify.yml) évite d'écrire la
+configuration à la main : la plateforme se charge du domaine, du certificat TLS et du
+reverse proxy, l'application n'expose que son port interne `8000`.
+
+**Coolify** — *New Resource* → *Docker Compose (Empty)*, coller le fichier, *Deploy*.
+Les variables `SERVICE_URL_*` sont remplies par Coolify au premier déploiement : rien
+d'autre à régler pour obtenir un domaine en HTTPS.
+
+**Dokploy, Easypanel, Portainer** — le même fichier convient en retirant la ligne
+`SERVICE_URL_OPENLMNP_8000` et en réglant `APP_URL` sur l'URL publique de l'instance.
+
+Trois points de vigilance, communs à toutes ces plateformes :
+
+- **`APP_URL` doit porter le schéma** (`https://votre-domaine`, pas `votre-domaine`) :
+  les liens de réinitialisation de mot de passe et les e-mails en sont construits.
+- **Les deux volumes sont indispensables.** Sans eux, la base SQLite et les
+  justificatifs vivent dans le conteneur et disparaissent à la première mise à jour.
+- **Le proxy de la plateforme doit être de confiance** pour que l'application se sache
+  en HTTPS. Les plages privées habituelles (dont le réseau Docker) le sont déjà par
+  défaut ; `TRUSTED_PROXIES` permet de restreindre à l'adresse exacte du proxy.
 
 ## Comptes et connexion
 
@@ -164,6 +189,7 @@ L'image utilise le fichier `.env.docker` fourni. Les variables non sensibles uti
 | `GTM_SCRIPT_PATH` | Chemin du script GTM (utile si renommé côté serveur) | `/gtm.js` |
 | `TELEMETRY_ENABLED` | Check-in anonyme quotidien (identifiant aléatoire + version) pour compter les instances installées. Aucune donnée comptable/personnelle. `false` = désactivé, aucune requête émise | `true` |
 | `TELEMETRY_URL` | Endpoint recevant le check-in de télémétrie | `https://openlmnp.fr/api/instances/checkin` |
+| `TRUSTED_PROXIES` | Proxies dont les en-têtes `X-Forwarded-*` sont crus (liste séparée par des virgules, ou `*`). Utile derrière un reverse proxy ou un PaaS | plages privées + loopback |
 | `PHP_CLI_SERVER_WORKERS` | Nombre de requêtes servies simultanément (voir ci-dessous) | `4` |
 | `DB_JOURNAL_MODE` | Journal SQLite. `WAL` par défaut ; `delete` si la base est sur un stockage réseau | `WAL` |
 | `DB_SYNCHRONOUS` | Politique de `fsync` de SQLite | `NORMAL` |

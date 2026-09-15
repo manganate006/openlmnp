@@ -1,0 +1,59 @@
+# OpenLMNP — déploiement en un clic sur un PaaS auto-hébergé.
+#
+# Coolify : New Resource → Docker Compose (Empty), coller ce fichier, Deploy.
+# Coolify remplit lui-même les variables SERVICE_* (domaine, certificat, proxy).
+#
+# Dokploy / Easypanel / Portainer : le même fichier fonctionne en retirant la ligne
+# SERVICE_URL_OPENLMNP_8000 et en réglant APP_URL sur l'URL publique de l'instance.
+#
+# documentation: https://github.com/manganate006/openlmnp/blob/main/docs/INSTALLATION.md
+# slogan: Comptabilité LMNP au réel : amortissements, liasse fiscale 2031 et FEC, auto-hébergés.
+# category: finance
+# tags: lmnp,accounting,tax,france,rental,airbnb,self-hosted
+# logo: svgs/openlmnp.png
+# port: 8000
+
+services:
+  openlmnp:
+    image: manganate06/openlmnp:latest
+    restart: unless-stopped
+    environment:
+      # Déclaration sans valeur : Coolify génère le domaine et publie le port 8000.
+      - SERVICE_URL_OPENLMNP_8000
+      # APP_URL porte le schéma, pas seulement le domaine (d'où SERVICE_URL_ et non
+      # SERVICE_FQDN_) : les liens des e-mails et les URL signées de réinitialisation
+      # de mot de passe en dépendent.
+      - APP_URL=${SERVICE_URL_OPENLMNP}
+      # `auto` : l'inscription se referme d'elle-même une fois le premier compte créé.
+      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-auto}
+      # Le proxy du PaaS vit sur le réseau Docker, déjà couvert par les plages privées
+      # ci-dessous. Réduisez à l'adresse exacte du proxy pour durcir l'installation.
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1,::1}
+      # Envoi d'e-mails (facultatif) : sans SMTP, le lien « mot de passe oublié » de la
+      # page de connexion reste inopérant — la commande openlmnp:reset-password le remplace.
+      - MAIL_MAILER=${MAIL_MAILER:-log}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+      # Compteur d'installations anonyme (identifiant aléatoire + version, rien d'autre).
+      # `false` coupe toute requête sortante.
+      - TELEMETRY_ENABLED=${TELEMETRY_ENABLED:-true}
+    volumes:
+      # Les deux seuls répertoires à conserver : la base SQLite et les justificatifs.
+      - openlmnp-database:/var/www/html/database
+      - openlmnp-storage:/var/www/html/storage
+    healthcheck:
+      # /up est la route de santé de Laravel. Test en PHP plutôt qu'en curl : l'image
+      # est construite sur Alpine sans curl ni wget.
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      # Le premier démarrage crée la base et applique les migrations.
+      start_period: 90s
+
+volumes:
+  openlmnp-database:
+  openlmnp-storage:
