@@ -2,7 +2,7 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
-## [Non publié]
+## [1.6.7] - 2026-09-15
 
 ### Ajouts
 
@@ -16,6 +16,27 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   Rien n'est deviné : sans votre saisie, l'exercice reste sans marque. Pour effacer un dépôt
   noté par erreur, videz la date — le numéro d'accusé s'en va avec elle, un accusé sans date
   ne prouvant rien
+
+- **Un déploiement en un clic sur les PaaS auto-hébergés.** Un fichier
+  `docker-compose.coolify.yml` à la racine du dépôt : sur Coolify, *New Resource* →
+  *Docker Compose (Empty)*, on le colle, et la plateforme s'occupe du domaine, du
+  certificat et du reverse proxy. Le même fichier convient à Dokploy, Easypanel ou
+  Portainer en réglant `APP_URL` à la main. Les points de vigilance — les deux volumes à
+  conserver, le schéma obligatoire dans `APP_URL` — sont dans
+  [docs/INSTALLATION.md](docs/INSTALLATION.md)
+- **`UPDATE_SELF_APPLY_HINT`** : la consigne affichée quand la mise à jour en place est
+  désactivée. Sans elle, l'application répond « cette instance tourne sur une image Docker
+  immuable, faites `docker pull` » — vrai pour l'image officielle, faux sur un serveur qui
+  n'a pas Docker. Un gestionnaire de paquets qui prend les mises à jour en charge y met
+  désormais la sienne. Rien ne change pour l'image Docker
+
+### Corrections
+
+- **`APP_NAME` et `TRUSTED_PROXIES` se règlent enfin par `-e`.** Les deux étaient
+  documentés comme modifiables à l'exécution, mais l'entrypoint ne les recopiait pas vers
+  `.env` : en Docker, `-e APP_NAME=…` ne faisait **rien**, sans le moindre message. Le
+  second n'est pas cosmétique — derrière un reverse proxy, c'est lui qui décide si les
+  en-têtes `X-Forwarded-*` sont crus, donc si l'application se sait en HTTPS
 
 ## [1.6.6] - 2026-09-10
 
