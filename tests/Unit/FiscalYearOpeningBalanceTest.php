@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\FiscalYear;
+use App\Models\Income;
 use App\Models\Property;
 use App\Models\User;
 use App\Services\DepreciationService;
@@ -70,20 +71,33 @@ it('carries the opening deferred depreciation when the previous fiscal year is a
     expect($fiscalYear->refresh()->previous_deferred)->toBe(OPENING_ARD);
 });
 
-it('prints the opening deferred depreciation in box 360 of form 2033-B', function () {
-    makeOpeningProperty($this->user);
+// Jusqu'en v1.6.7, ce report s'imprimait en ligne 360 du 2033-B — celle des DÉFICITS
+// antérieurs imputés (notice 2033-NOT-SD). Il apparaît désormais là où on le vérifie : dans
+// le plafonnement de l'annexe « Détail du résultat » (report disponible), et en ligne 350
+// pour la part effectivement reprise sur le résultat de l'exercice (issue #13).
+it('shows the opening deferred depreciation in the result breakdown, not in box 360', function () {
+    $property = makeOpeningProperty($this->user);
+    Income::create([
+        'property_id' => $property->id,
+        'income_date' => '2026-07-01',
+        'amount' => 50000000, // assez de recettes pour absorber dotation et report
+        'platform_fee' => 0,
+        'tourist_tax' => 0,
+        'source' => 'direct',
+    ]);
     $fiscalYear = makeOpeningYear($this->user, 2026);
 
     $this->service->calculate($fiscalYear);
     $fiscalYear->refresh();
 
-    $form = app(TaxReturnService::class)->compute2033B(
-        $fiscalYear,
-        Property::withoutGlobalScopes()->where('user_id', $this->user->id)->get(),
-        2026,
-    );
+    $tax = app(TaxReturnService::class);
+    $properties = Property::withoutGlobalScopes()->where('user_id', $this->user->id)->get();
+    $breakdown = $tax->resultBreakdown($fiscalYear, $properties, 2026);
+    $form = $tax->compute2033B($fiscalYear, $properties, 2026, $breakdown);
 
-    expect($form['360'])->toBe(OPENING_ARD);
+    expect($breakdown['capping']['carried_forward'])->toBe(OPENING_ARD)
+        ->and($form['350'])->toBe(OPENING_ARD)
+        ->and($form['360'])->toBe(0);
 });
 
 // === Un N-1 réel l'emporte toujours sur le solde d'ouverture ===

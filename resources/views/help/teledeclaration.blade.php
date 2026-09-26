@@ -17,18 +17,38 @@
     <div class="ctx-step"><span class="ctx-step-num">5</span><span class="ctx-step-text">Validez et conservez l'accusé de réception</span></div>
 
     <h3>Contrôles de cohérence</h3>
-    <p>En bas de l'écran, deux vérifications rapprochent des montants que les formulaires calculent séparément. Elles ne remplacent pas votre relecture, mais elles attrapent les incohérences les plus courantes avant que vous ne saisissiez la liasse.</p>
+    <p>En bas de l'écran, trois vérifications rapprochent des montants que les formulaires calculent séparément. Elles ne remplacent pas votre relecture, mais elles attrapent les incohérences les plus courantes avant que vous ne saisissiez la liasse.</p>
     <ul>
         <li data-icon="&#x1F9EE;"><strong>Ligne 572 = ligne 254</strong> &mdash; La dotation aux amortissements de l'exercice doit être la même dans le 2033-C et dans le compte de résultat.</li>
         <li data-icon="&#x1F3E0;"><strong>Case 044 = ligne 490</strong> &mdash; Le total des immobilisations brutes doit être le même au bilan et dans le tableau des immobilisations.</li>
+        <li data-icon="&#x2696;&#xFE0F;"><strong>310 + 318 − 350 = résultat fiscal</strong> &mdash; Le compte de résultat, recalculé depuis vos saisies, doit retomber sur le résultat de l'exercice. Un écart veut dire qu'une recette ou une charge a changé depuis le dernier calcul : sur un exercice clôturé, c'est une saisie faite après la clôture.</li>
     </ul>
     <p>Un contrôle <strong>orange</strong> n'est pas une erreur : il signale qu'une part de votre base amortissable n'est rattachée à aucun composant. C'est autorisé &mdash; mais cette part <strong>ne s'amortira pas</strong>. Si ce n'est pas voulu, complétez la ventilation dans l'éditeur d'amortissements.</p>
-    <p>Un contrôle <strong>rouge</strong> demande une correction avant de déclarer : vos composants dépassent la base amortissable, en général parce que la valeur du bien ou la part du terrain ont été modifiées après la ventilation.</p>
+    <p>Un contrôle <strong>rouge</strong> demande une correction avant de déclarer. Sur les immobilisations, vos composants dépassent la base amortissable, en général parce que la valeur du bien ou la part du terrain ont été modifiées après la ventilation. Sur le résultat, recalculez l'exercice &mdash; ou, s'il est clôturé, retrouvez la saisie faite après coup.</p>
+
+    <h3>Lignes 318, 350 et 360 du 2033-B</h3>
+    <ul>
+        <li data-icon="&#x2795;"><strong>318</strong> &mdash; la part de la dotation de l'année que le plafonnement (art. 39 C) empêche de déduire : elle est réintégrée au résultat et mise en report.</li>
+        <li data-icon="&#x2796;"><strong>350</strong> &mdash; les amortissements mis en report les années précédentes et déduits cette année (« déductions diverses »).</li>
+        <li data-icon="&#x1F4C9;"><strong>360</strong> &mdash; les déficits des années précédentes imputés sur le bénéfice de l'année. La ligne 370 est le bénéfice qui reste après cette imputation.</li>
+    </ul>
+    <p>Jusqu'à la version 1.6.7, la ligne 360 affichait par erreur le report d'amortissements au lieu des déficits, et la ligne 350 manquait. Si vous avez déjà déposé une liasse avec des reports ou des déficits antérieurs, comparez ces trois lignes avec la nouvelle version.</p>
+
+    <h3>D'où vient le résultat : le détail du résultat</h3>
+    <p>Le PDF contient, juste après le 2033-B, une annexe <strong>« Détail du résultat »</strong> qui permet de refaire chaque ligne à la main, avec votre expert-comptable ou seul :</p>
+    <ul>
+        <li data-icon="&#x1F4B6;"><strong>Recettes</strong> &mdash; par bien, le total encaissé et les commissions de plateforme déduites (hors taxe pour un bien assujetti à la TVA).</li>
+        <li data-icon="&#x1F9FE;"><strong>Charges</strong> &mdash; chaque charge avec sa date, sa catégorie, sa ligne (242 ou 244) et son affectation. Une charge dédiée compte en totalité ; les charges partagées sont additionnées, puis la quote-part locative s'applique au total.</li>
+        <li data-icon="&#x1F3E6;"><strong>Emprunts</strong> &mdash; intérêts et assurance de l'année, et la part retenue.</li>
+        <li data-icon="&#x1F9EE;"><strong>Plafonnement des amortissements</strong> &mdash; le résultat avant amortissement, la dotation de l'année et le report des années passées, ce qui est déduit, ce qui part en report.</li>
+        <li data-icon="&#x1F4C9;"><strong>Déficits antérieurs</strong> &mdash; millésime par millésime : imputé, périmé, restant.</li>
+    </ul>
+    <p>Comme le détail des immobilisations, cette annexe n'est pas à recopier sur votre déclaration.</p>
 
     <h3>D'où vient chaque montant : le détail des immobilisations</h3>
     <p>Le tableau 2033-C agrège : une ligne « Constructions » de 60 000 € ne dit pas ce qu'elle contient. Le bloc <strong>« Détail des immobilisations »</strong>, dépliable en bas de cet écran et repris en annexe du PDF, donne une ligne par actif &mdash; son intitulé, son origine (composant du bien, travaux, mobilier, frais d'acquisition), la ligne du 2033-C où il atterrit, sa valeur brute, sa dotation et son cumul.</p>
     <p>Rien à recopier : ce tableau n'est pas un formulaire Cerfa, il sert à retrouver la provenance d'un chiffre qui vous surprend. Une précision utile pour le lire : les <strong>composants du bien ventilent</strong> sa valeur, ils ne s'y ajoutent pas &mdash; la colonne « Valeur brute » ne se totalise donc pas, et c'est voulu.</p>
-    <p>Si l'explication ne suffit pas, le bouton <strong>« Rapport de diagnostic »</strong> en haut de l'écran rassemble en un texte tout ce qui produit votre liasse : valeurs saisies, base amortissable, composants, travaux, mobilier, lignes obtenues et écarts. Il ne part nulle part tout seul, et ne contient ni votre nom, ni votre adresse, ni votre commune &mdash; joignez-le à votre message pour qu'on puisse vous répondre sans vous faire tout ressaisir.</p>
+    <p>Si l'explication ne suffit pas, le bouton <strong>« Rapport de diagnostic »</strong> en haut de l'écran rassemble en un texte tout ce qui produit votre liasse : valeurs saisies, base amortissable, composants, travaux, mobilier, passage au résultat (totaux par bien, plafonnement, déficits), lignes obtenues et écarts. Le libellé de vos charges n'y figure pas. Il ne part nulle part tout seul, et ne contient ni votre nom, ni votre adresse, ni votre commune &mdash; joignez-le à votre message pour qu'on puisse vous répondre sans vous faire tout ressaisir.</p>
 
     <h3>Tableau 2033-D : deux reports à ne pas confondre</h3>
     <p>Le 2033-D suit <strong>deux stocks distincts</strong>, que l'administration fait d'ailleurs suivre par deux états séparés. Les mélanger, c'est déclarer des reports que vous n'avez pas.</p>

@@ -42,8 +42,8 @@ intérieurs, plomberie/sanitaire…), chacun avec sa propre durée d'amortisseme
 - **Ligne du 2033-C** paramétrable sur chaque composant, travail et meuble, pour reproduire la
   présentation d'un cabinet
 - **Rapport de diagnostic** : un texte reprenant tout ce qui produit vos amortissements et
-  votre liasse — valeurs saisies, base amortissable, composants, travaux, mobilier, lignes
-  obtenues, écarts. À joindre à une demande d'aide. Aucune donnée nominative, aucun envoi
+  votre liasse — valeurs saisies, base amortissable, composants, travaux, mobilier, passage
+  au résultat (totaux par bien, plafonnement, déficits), lignes obtenues, écarts. À joindre à une demande d'aide. Aucune donnée nominative, aucun envoi
   automatique
 
 ## Multi-biens
@@ -156,10 +156,15 @@ OpenLMNP prépare les documents de la déclaration BIC au réel :
   pour les reporter dans l'espace impots.gouv.fr
 - **Liasse fiscale PDF** : génération complète du document au format PDF (via DomPDF)
 - **Contrôles de cohérence** entre formulaires : case 044 face à la ligne 490, ligne 572
-  face à la ligne 254
+  face à la ligne 254, et partie B du 2033-B face au résultat fiscal de l'exercice
+  (310 + 318 − 350)
 - **Détail des immobilisations** : une annexe, dans le PDF comme à l'écran, qui donne pour
   chaque actif sa ligne du 2033-C, sa valeur brute, sa dotation et son cumul — de quoi
   remonter n'importe quel montant de la liasse jusqu'à ce qui l'a produit
+- **Détail du résultat** : une annexe du PDF qui refait le 2033-B pas à pas — recettes et
+  commissions, chaque charge avec sa ligne et son affectation (dédiée ou partagée), la
+  quote-part locative appliquée au total des charges partagées, les emprunts, le
+  plafonnement des amortissements (art. 39 C) et l'imputation des déficits antérieurs
 
 ## FEC conforme DGFiP
 

@@ -13,7 +13,7 @@
 
     <h3>Documents générés</h3>
     <ul>
-        <li data-icon="&#x1F4C4;"><strong>Liasse fiscale PDF</strong> &mdash; Formulaires 2031, 2033-A, 2033-B, 2033-C et 2033-D pré-remplis</li>
+        <li data-icon="&#x1F4C4;"><strong>Liasse fiscale PDF</strong> &mdash; Formulaires 2031, 2033-A, 2033-B, 2033-C et 2033-D pré-remplis, avec en annexe le détail des immobilisations et le détail du résultat (chaque charge, la quote-part, le plafonnement des amortissements, les déficits)</li>
         <li data-icon="&#x1F4BE;"><strong>FEC</strong> &mdash; Fichier des Écritures Comptables (obligatoire en cas de contrôle)</li>
     </ul>
 

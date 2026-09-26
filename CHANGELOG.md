@@ -2,6 +2,39 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Ajouts
+
+- **Le détail du résultat, en annexe du PDF.** Après le 2033-B, une annexe permet de refaire
+  chaque ligne à la main, seul ou avec un expert-comptable : pour chaque bien, les recettes
+  et commissions, chaque charge avec sa date, sa catégorie, sa ligne (242 ou 244) et son
+  affectation, le calcul de la quote-part sur les charges partagées, les intérêts et
+  l'assurance des emprunts ; puis le plafonnement des amortissements (art. 39 C) étape par
+  étape et l'imputation des déficits antérieurs, millésime par millésime
+  ([#13](https://github.com/manganate006/openlmnp/issues/13))
+- **Un contrôle de plus** sur l'écran de télédéclaration et dans le PDF : la partie B du
+  2033-B (310 + 318 − 350) doit retomber sur le résultat fiscal de l'exercice
+- Le **rapport de diagnostic** couvre le passage au résultat : lignes du 2033-B, totaux par
+  bien, plafonnement et déficits. Toujours sans libellé de charge ni nom de banque
+
+### Corrections
+
+- **2033-B, ligne 360** : elle affichait le report d'amortissements différés sous
+  l'intitulé « Déficits antérieurs imputés ». Elle porte désormais les déficits imputés, et
+  les lignes 370/372 le résultat **après** cette imputation — elles recopiaient jusqu'ici
+  les lignes 352/354
+- **2033-B, ligne 350** : les amortissements différés des années passées, déduits cette
+  année, n'apparaissaient nulle part ; la partie B ne se refaisait donc pas à la main dès
+  qu'un report était consommé
+- **2033-B d'un bien assujetti à la TVA** : les recettes et charges y étaient comptées TTC,
+  alors que le résultat de l'exercice les prend hors taxe. Les deux sont maintenant calculés
+  selon les mêmes règles, quote-part comprise, au centime près
+
+Si vous avez déjà déposé une liasse avec des déficits ou des amortissements différés
+antérieurs, comparez les lignes 350, 360 et 370 avec celles de cette version. Le résultat
+fiscal de l'exercice (352/354) et la 2042-C-PRO ne changent pas.
+
 ## [1.6.7] - 2026-09-15
 
 ### Ajouts

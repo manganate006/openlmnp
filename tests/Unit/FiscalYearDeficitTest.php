@@ -112,19 +112,28 @@ it('prints the deficit stock in boxes 982, 983 and 984', function () {
         ->and($form['984'])->toBe(100000);
 });
 
-it('keeps box 870 on the deferred depreciation and box 360 on the previous deferred', function () {
+// Ce test figeait jusqu'en v1.6.7 la ligne 360 du 2033-B sur `previous_deferred` : il
+// verrouillait le comportement d'origine sans le justifier. Or la 360 porte les DÉFICITS
+// antérieurs imputés (notice 2033-NOT-SD : 370 = 352 − 360) ; l'amortissement différé repris
+// passe en 350, « déductions diverses » (issue #13).
+it('keeps box 870 on the deferred depreciation and box 360 on the imputed deficits', function () {
     $fiscalYear = FiscalYear::forceCreate([
         'user_id' => $this->user->id,
         'year' => 2026,
         'status' => FiscalYear::STATUS_DRAFT,
         'previous_deferred' => 1200000,
         'deferred_depreciation' => 1500000,
-        'fiscal_result' => 0,
+        'fiscal_result' => 300000,
         'previous_deficit' => 400000,
+        'deficit_imputed' => 300000,
+        'deficit_carryforward' => 100000,
     ]);
 
+    $form2033B = $this->tax->compute2033B($fiscalYear, collect(), 2026);
+
     expect($this->tax->compute2033D($fiscalYear)['870'])->toBe(1500000)
-        ->and($this->tax->compute2033B($fiscalYear, collect(), 2026)['360'])->toBe(1200000);
+        ->and($form2033B['360'])->toBe(300000)
+        ->and($form2033B['370'])->toBe(0);
 });
 
 // === IMPUTATION ===

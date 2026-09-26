@@ -81,6 +81,52 @@ it('never leaks a single identifying field', function () {
     }
 });
 
+it('describes the way to the fiscal result without naming a single charge', function () {
+    // Le passage au résultat entre dans le rapport (issue #13), mais en agrégats : le libellé
+    // d'une charge porte souvent un nom, et celui d'un prêt le nom d'une agence locale.
+    $property = diagnosticProperty($this->user);
+    App\Models\Income::create([
+        'property_id' => $property->id,
+        'income_date' => '2025-05-01',
+        'amount' => 300_000,
+        'platform_fee' => 9_000,
+        'tourist_tax' => 0,
+        'source' => 'airbnb',
+    ]);
+    App\Models\Expense::create([
+        'property_id' => $property->id,
+        'expense_date' => '2025-06-01',
+        'amount' => 12_000,
+        'category' => 'cleaning',
+        'description' => 'Ménage Camille Dupont',
+        'is_dedicated' => true,
+        'recurring_type' => 'once',
+    ]);
+    App\Models\Loan::forceCreate([
+        'property_id' => $property->id,
+        'bank_name' => 'Caisse de Villefranche-sur-Saône',
+        'amount' => 10_000_000,
+        'annual_rate' => '2.5',
+        'duration_months' => 240,
+        'start_date' => '2025-01-01',
+        'monthly_payment' => 53_000,
+    ]);
+
+    $report = $this->service->build($this->user, 2025);
+    $text = $this->service->toText($report);
+    $serialised = json_encode($report, JSON_UNESCAPED_UNICODE);
+
+    expect($report['forms'])->toHaveKey('2033B')
+        ->and($report['result']['properties'][0]['commissions'])->toBe(9_000)
+        ->and($text)->toContain('--- 2033-B (résultat) ---')
+        ->and($text)->toContain('Plafonnement 39 C');
+
+    foreach (['Ménage Camille Dupont', 'Caisse de Villefranche-sur-Saône'] as $secret) {
+        expect($text)->not->toContain($secret)
+            ->and($serialised)->not->toContain($secret);
+    }
+});
+
 it('numbers the properties instead of naming them', function () {
     diagnosticProperty($this->user);
     diagnosticProperty($this->user, ['name' => 'Le deuxième']);

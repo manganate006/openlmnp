@@ -45,32 +45,8 @@ class TaxReturnService
 
     public function generatePdf(FiscalYear $fiscalYear): string
     {
-        // Un exercice clôturé est généré depuis ses totaux figés, sans recalcul.
-        if ($fiscalYear->status !== FiscalYear::STATUS_CLOSED) {
-            $this->fiscalYearService->calculate($fiscalYear);
-        }
-        $fiscalYear->refresh();
-
-        $user = $fiscalYear->user;
-        $year = $fiscalYear->year;
-        $properties = Property::withoutGlobalScopes()->where('user_id', $user->id)->get();
-
-        $data = [
-            'user' => $user,
-            'year' => $year,
-            'fiscalYear' => $fiscalYear,
-            'properties' => $properties,
-            'siren' => $user->siren ?? '000000000',
-            'form2031' => $this->compute2031($fiscalYear),
-            'form2033B' => $this->compute2033B($fiscalYear, $properties, $year),
-            'form2033A' => $this->compute2033A($fiscalYear, $properties, $year),
-            'form2033C' => $this->compute2033C($properties, $year),
-            'form2033D' => $this->compute2033D($fiscalYear),
-            'form2042' => $this->compute2042($fiscalYear),
-            'assetBreakdown' => $this->assetBreakdown($properties, $year),
-        ];
-
-        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties);
+        $data = $this->pdfData($fiscalYear);
+        $year = $data['year'];
 
         $pdf = Pdf::loadView('pdf.tax-return', $data);
         $pdf->setPaper('A4', 'portrait');
@@ -82,6 +58,46 @@ class TaxReturnService
         $fiscalYear->update(['pdf_path' => $path]);
 
         return $path;
+    }
+
+    /**
+     * Tout ce que la vue `pdf.tax-return` reçoit — séparé de `generatePdf()` pour que le rendu
+     * HTML se teste sans passer par DomPDF.
+     *
+     * @return array<string, mixed>
+     */
+    public function pdfData(FiscalYear $fiscalYear): array
+    {
+        // Un exercice clôturé est généré depuis ses totaux figés, sans recalcul.
+        if ($fiscalYear->status !== FiscalYear::STATUS_CLOSED) {
+            $this->fiscalYearService->calculate($fiscalYear);
+        }
+        $fiscalYear->refresh();
+
+        $user = $fiscalYear->user;
+        $year = $fiscalYear->year;
+        $properties = Property::withoutGlobalScopes()->where('user_id', $user->id)->get();
+        $resultBreakdown = $this->resultBreakdown($fiscalYear, $properties, $year);
+
+        $data = [
+            'user' => $user,
+            'year' => $year,
+            'fiscalYear' => $fiscalYear,
+            'properties' => $properties,
+            'siren' => $user->siren ?? '000000000',
+            'form2031' => $this->compute2031($fiscalYear),
+            'form2033B' => $this->compute2033B($fiscalYear, $properties, $year, $resultBreakdown),
+            'resultBreakdown' => $resultBreakdown,
+            'form2033A' => $this->compute2033A($fiscalYear, $properties, $year),
+            'form2033C' => $this->compute2033C($properties, $year),
+            'form2033D' => $this->compute2033D($fiscalYear),
+            'form2042' => $this->compute2042($fiscalYear),
+            'assetBreakdown' => $this->assetBreakdown($properties, $year),
+        ];
+
+        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties);
+
+        return $data;
     }
 
     /**
@@ -97,78 +113,218 @@ class TaxReturnService
     }
 
     /**
-     * 2033-B — Compte de résultat simplifié
+     * 2033-B — Compte de résultat simplifié.
+     *
+     * Une SOMME de `resultBreakdown()`, rien d'autre : l'annexe « Détail du résultat » du PDF
+     * imprime ce même détail, si bien que chaque ligne ci-dessous se refait à la main depuis
+     * l'annexe (issue #13).
+     *
+     * Partie B (détermination du résultat fiscal) :
+     *  - 318 réintègre la part de la dotation DE L'EXERCICE écartée par l'art. 39 C ;
+     *  - 350 déduit les amortissements différés des exercices antérieurs repris cette année
+     *    (« déductions diverses ») — sans elle, la partie B ne bouclait pas dès qu'un report
+     *    était consommé : 310 + 318 ne retombait pas sur 352 ;
+     *  - 360 porte les DÉFICITS antérieurs imputés. Elle a porté jusqu'en v1.6.7 le report
+     *    d'amortissements différés (`previous_deferred`), sous l'intitulé des déficits, et
+     *    370/372 recopiaient 352/354 sans rien retrancher.
+     *
+     * L'imputation suit `FiscalYearService` : dotation de l'exercice d'abord, report ensuite,
+     * déficits antérieurs sur le résultat déjà déterminé.
      */
-    public function compute2033B(FiscalYear $fy, $properties, int $year): array
+    public function compute2033B(FiscalYear $fy, $properties, int $year, ?array $breakdown = null): array
     {
-        // Produits
-        $loyers = 0; // Ligne 218 : loyers bruts (montant - commission)
-        $loyersBruts = 0; // CA brut incluant commissions
-        foreach ($properties as $prop) {
-            $income = $prop->incomes()->whereYear('income_date', $year);
-            $loyers += $income->selectRaw('SUM(amount) - SUM(platform_fee) as net')->value('net') ?? 0;
-            $loyersBruts += $income->sum('amount');
-        }
+        $breakdown ??= $this->resultBreakdown($fy, $properties, $year);
+        $lines = $breakdown['lines'];
+        $capping = $breakdown['capping'];
 
-        // Charges par ligne Cerfa
-        $line242 = 0; // Autres charges externes
-        $line244 = 0; // Impôts et taxes
-        $line294 = 0; // Charges financières (intérêts)
-
-        foreach ($properties as $prop) {
-            $expenses = $prop->expenses()->whereYear('expense_date', $year)->get();
-            foreach ($expenses as $exp) {
-                $effective = $exp->is_dedicated
-                    ? $exp->amount
-                    : (int) bcmul((string) $exp->amount, $prop->quota_share, 0);
-
-                if (in_array($exp->category, ['property_tax'])) {
-                    $line244 += $effective;
-                } else {
-                    $line242 += $effective;
-                }
-            }
-
-            // Intérêts d'emprunt
-            foreach ($prop->loans as $loan) {
-                $interests = $loan->getInterestsForYear($year);
-                $insurance = $loan->getInsuranceForYear($year);
-                $prorata = (int) bcmul((string) ($interests + $insurance), $prop->quota_share, 0);
-                $line294 += $prorata;
-            }
-        }
-
-        // Amortissements — ligne 254
-        $line254 = 0;
-        foreach ($properties as $prop) {
-            $dep = $this->depreciationService->calculateAnnualDepreciation($prop, $year);
-            $line254 += (int) $dep['total'];
-        }
-
-        $line232 = $loyers; // Total produits
-        $line264 = $line242 + $line244 + $line254; // Total charges exploitation
+        $line232 = $lines['218']; // Total produits
+        $line264 = $lines['242'] + $lines['244'] + $lines['254']; // Total charges exploitation
         $line270 = $line232 - $line264; // Résultat exploitation
-        $line310 = $line270 - $line294; // Résultat comptable
+        $line310 = $line270 - $lines['294']; // Résultat comptable
+
+        $fiscalResult = (int) $fy->fiscal_result;
+        $imputed = (int) $fy->deficit_imputed;
 
         return [
-            '218' => $loyers,
-            '218_brut' => $loyersBruts,
+            '218' => $lines['218'],
+            '218_brut' => $breakdown['income_gross'],
             '232' => $line232,
-            '242' => $line242,
-            '244' => $line244,
-            '254' => $line254,
+            '242' => $lines['242'],
+            '244' => $lines['244'],
+            '254' => $lines['254'],
             '264' => $line264,
             '270' => $line270,
-            '294' => $line294,
+            '294' => $lines['294'],
             '310' => $line310,
             '312' => $line310 > 0 ? $line310 : 0,
             '314' => $line310 < 0 ? abs($line310) : 0,
-            '318' => max(0, $fy->total_depreciation - $fy->capped_depreciation), // ARD
-            '352' => $fy->fiscal_result > 0 ? $fy->fiscal_result : 0,
-            '354' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0,
-            '360' => $fy->previous_deferred,
-            '370' => $fy->fiscal_result > 0 ? $fy->fiscal_result : 0,
-            '372' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0,
+            '318' => $capping['reintegrated'],
+            '350' => $capping['deducted_carried'],
+            '352' => $fiscalResult > 0 ? $fiscalResult : 0,
+            '354' => $fiscalResult < 0 ? abs($fiscalResult) : 0,
+            '360' => $imputed,
+            '370' => $fiscalResult > 0 ? $fiscalResult - $imputed : 0,
+            '372' => $fiscalResult < 0 ? abs($fiscalResult) : 0,
+        ];
+    }
+
+    /**
+     * Détail du passage des données saisies au résultat fiscal (issue #13).
+     *
+     * Reprend À L'IDENTIQUE les règles de `FiscalYearService::computeTotals()` — HT pour un
+     * bien assujetti à la TVA, quote-part appliquée à la SOMME des charges partagées d'un bien
+     * (pas charge par charge, ce qui aurait décalé le total de quelques centimes) — faute de
+     * quoi le 2033-B et le résultat de l'exercice diraient deux choses. Le contrôle `resultat`
+     * de `checks()` le vérifie à chaque génération.
+     *
+     * La quote-part des charges partagées d'un bien est répartie entre 242 et 244 ainsi :
+     * 244 = partagées de taxe × quote-part (tronqué), 242 = le reste du total partagé retenu.
+     * La somme des deux est donc exactement celle de `computeTotals()`.
+     *
+     * Les montants du plafonnement et des déficits viennent de l'exercice (ils dépendent de la
+     * chaîne N-1, pas des seules données de l'année).
+     *
+     * @return array{
+     *     properties: list<array<string, mixed>>,
+     *     lines: array{218: int, 242: int, 244: int, 254: int, 294: int},
+     *     income_gross: int,
+     *     capping: array<string, int>,
+     *     deficits: array<string, mixed>,
+     * }
+     */
+    public function resultBreakdown(FiscalYear $fy, $properties, int $year): array
+    {
+        $lines = ['218' => 0, '242' => 0, '244' => 0, '254' => 0, '294' => 0];
+        $incomeGross = 0;
+        $rows = [];
+        $categoryLabels = Expense::categoryLabels();
+
+        foreach ($properties as $prop) {
+            $tvaLiable = $prop->isTvaLiable();
+            $amountField = $tvaLiable ? 'amount_ht' : 'amount';
+            $quota = (string) $prop->quota_share;
+
+            // Recettes (ligne 218)
+            $incomeQuery = $prop->incomes()->whereYear('income_date', $year);
+            $gross = (int) (clone $incomeQuery)->sum($amountField);
+            $fees = (int) (clone $incomeQuery)->sum('platform_fee');
+            $incomeCount = (int) (clone $incomeQuery)->count();
+            $incomeGross += (int) (clone $incomeQuery)->sum('amount');
+
+            // Charges (lignes 242 / 244)
+            $expenses = $prop->expenses()
+                ->whereYear('expense_date', $year)
+                ->orderBy('expense_date')
+                ->orderBy('id')
+                ->get();
+
+            $expenseRows = [];
+            $sums = ['dedicated_242' => 0, 'dedicated_244' => 0, 'shared_242' => 0, 'shared_244' => 0];
+            foreach ($expenses as $exp) {
+                $line = $exp->category === Expense::CATEGORY_PROPERTY_TAX ? '244' : '242';
+                $amount = (int) $exp->{$amountField};
+                $sums[($exp->is_dedicated ? 'dedicated_' : 'shared_') . $line] += $amount;
+
+                $expenseRows[] = [
+                    'date'        => $exp->expense_date?->format('Y-m-d'),
+                    'description' => (string) ($exp->description ?? ''),
+                    'category'    => trim(preg_replace('/^\X\s*/u', '', $categoryLabels[$exp->category] ?? (string) $exp->category)),
+                    'line'        => $line,
+                    'amount'      => $amount,
+                    'dedicated'   => (bool) $exp->is_dedicated,
+                ];
+            }
+
+            $sharedTotal = $sums['shared_242'] + $sums['shared_244'];
+            $sharedRetained = (int) bcmul((string) $sharedTotal, $quota, 0);
+            $sharedRetained244 = (int) bcmul((string) $sums['shared_244'], $quota, 0);
+            $sharedRetained242 = $sharedRetained - $sharedRetained244;
+
+            $retained242 = $sums['dedicated_242'] + $sharedRetained242;
+            $retained244 = $sums['dedicated_244'] + $sharedRetained244;
+
+            // Emprunts (ligne 294) — intérêts et assurance tronqués séparément, comme computeTotals()
+            $loanRows = [];
+            $retained294 = 0;
+            foreach ($prop->loans as $loan) {
+                $interest = $loan->getInterestsForYear($year);
+                $insurance = $loan->getInsuranceForYear($year);
+                $interestRetained = (int) bcmul((string) $interest, $quota, 0);
+                $insuranceRetained = (int) bcmul((string) $insurance, $quota, 0);
+                $retained294 += $interestRetained + $insuranceRetained;
+
+                $loanRows[] = [
+                    'name'               => (string) ($loan->bank_name ?: 'Emprunt'),
+                    'interest'           => $interest,
+                    'insurance'          => $insurance,
+                    'interest_retained'  => $interestRetained,
+                    'insurance_retained' => $insuranceRetained,
+                    'retained'           => $interestRetained + $insuranceRetained,
+                ];
+            }
+
+            // Amortissements (ligne 254) — le détail actif par actif est l'annexe des immobilisations
+            $depreciation = (int) $this->depreciationService->calculateAnnualDepreciation($prop, $year)['total'];
+
+            $lines['218'] += $gross - $fees;
+            $lines['242'] += $retained242;
+            $lines['244'] += $retained244;
+            $lines['254'] += $depreciation;
+            $lines['294'] += $retained294;
+
+            $rows[] = [
+                'name'        => (string) $prop->name,
+                'quota_share' => $quota,
+                'tva_liable'  => $tvaLiable,
+                'income'      => [
+                    'count' => $incomeCount,
+                    'gross' => $gross,
+                    'fees'  => $fees,
+                    'net'   => $gross - $fees,
+                ],
+                'expenses'        => $expenseRows,
+                'expense_totals'  => $sums + [
+                    'shared_total'        => $sharedTotal,
+                    'shared_retained'     => $sharedRetained,
+                    'shared_retained_242' => $sharedRetained242,
+                    'shared_retained_244' => $sharedRetained244,
+                    'retained_242'        => $retained242,
+                    'retained_244'        => $retained244,
+                ],
+                'loans'           => $loanRows,
+                'loans_retained'  => $retained294,
+                'depreciation'    => $depreciation,
+            ];
+        }
+
+        $totalDepreciation = (int) $fy->total_depreciation;
+        $capped = (int) $fy->capped_depreciation;
+        $deductedCurrent = min($totalDepreciation, $capped);
+
+        return [
+            'properties'   => $rows,
+            'lines'        => $lines,
+            'income_gross' => $incomeGross,
+            'capping'      => [
+                'income'                     => (int) $fy->total_income,
+                'expenses'                   => (int) $fy->total_expenses,
+                'result_before_depreciation' => (int) $fy->total_income - (int) $fy->total_expenses,
+                'depreciation_year'          => $totalDepreciation,
+                'carried_forward'            => (int) $fy->previous_deferred,
+                'available'                  => $totalDepreciation + (int) $fy->previous_deferred,
+                'deducted'                   => $capped,
+                'deducted_current'           => $deductedCurrent,
+                'deducted_carried'           => $capped - $deductedCurrent,
+                'reintegrated'               => $totalDepreciation - $deductedCurrent,
+                'deferred'                   => (int) $fy->deferred_depreciation,
+                'fiscal_result'              => (int) $fy->fiscal_result,
+            ],
+            'deficits' => [
+                'previous'     => (int) $fy->previous_deficit,
+                'imputed'      => (int) $fy->deficit_imputed,
+                'carryforward' => (int) $fy->deficit_carryforward,
+                'detail'       => is_array($fy->deficit_detail) ? $fy->deficit_detail : [],
+            ],
         ];
     }
 
@@ -189,6 +345,45 @@ class TaxReturnService
         return [
             $this->checkDotation($form2033B, $form2033C),
             $this->checkImmobilisations($form2033A, $form2033C, $properties),
+            $this->checkResultat($form2033B),
+        ];
+    }
+
+    /**
+     * La partie B du 2033-B doit retomber sur le résultat fiscal de l'exercice :
+     * 310 + 318 − 350 = 352 − 354.
+     *
+     * Les lignes 218 à 310 sont recalculées depuis les données saisies, 318 à 354 viennent de
+     * l'exercice. Un écart dit donc que les deux se sont désynchronisées — typiquement une
+     * donnée modifiée après la clôture, l'exercice clôturé gardant ses totaux figés.
+     *
+     * @return array{id: string, status: string, message: string, delta: int}
+     */
+    private function checkResultat(array $form2033B): array
+    {
+        $rebuilt = $form2033B['310'] + $form2033B['318'] - $form2033B['350'];
+        $declared = $form2033B['352'] - $form2033B['354'];
+        $delta = $rebuilt - $declared;
+
+        if ($delta === 0) {
+            return [
+                'id' => 'resultat',
+                'status' => self::CHECK_OK,
+                'message' => 'Cohérence vérifiée : 310 + 318 − 350 = résultat fiscal ('
+                    . self::euros($declared) . ').',
+                'delta' => 0,
+            ];
+        }
+
+        return [
+            'id' => 'resultat',
+            'status' => self::CHECK_ERROR,
+            'message' => 'Écart : 310 + 318 − 350 donne ' . self::euros($rebuilt)
+                . ', le résultat fiscal de l\'exercice est de ' . self::euros($declared)
+                . ' (' . self::euros($delta) . '). Les données de l\'année ont changé depuis le '
+                . 'dernier calcul de l\'exercice : recalculez-le, ou, s\'il est clôturé, '
+                . 'vérifiez ce qui a été modifié après la clôture.',
+            'delta' => $delta,
         ];
     }
 

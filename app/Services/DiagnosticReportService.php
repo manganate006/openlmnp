@@ -37,7 +37,7 @@ class DiagnosticReportService
      * Version du format. À incrémenter dès qu'un bloc change de forme, pour qu'un rapport
      * collé dans un ticket reste interprétable des mois plus tard.
      */
-    public const SCHEMA_VERSION = 1;
+    public const SCHEMA_VERSION = 2; // 2 : bloc 2033-B et passage au résultat (issue #13)
 
     public function __construct(
         private DepreciationService $depreciationService,
@@ -80,12 +80,36 @@ class DiagnosticReportService
         $fiscalYear = $this->fiscalYearService->getOrCreate($user, $year);
 
         $form2033A = $this->taxReturnService->compute2033A($fiscalYear, $properties, $year);
-        $form2033B = $this->taxReturnService->compute2033B($fiscalYear, $properties, $year);
+        $breakdown = $this->taxReturnService->resultBreakdown($fiscalYear, $properties, $year);
+        $form2033B = $this->taxReturnService->compute2033B($fiscalYear, $properties, $year, $breakdown);
         $form2033C = $this->taxReturnService->compute2033C($properties, $year);
 
         $report['forms'] = [
             '2033A' => $form2033A,
+            '2033B' => $form2033B,
             '2033C' => $form2033C,
+        ];
+
+        // Le passage au résultat, en AGRÉGATS par bien : jamais le libellé d'une charge, qui
+        // porte souvent un nom (« Ménage Camille »). Le détail charge par charge est dans
+        // l'annexe du PDF, que l'utilisateur garde pour lui.
+        $report['result'] = [
+            'properties' => array_map(fn (array $p, int $i) => [
+                'label'                 => 'Bien #' . ($i + 1),
+                'quote_part'            => $p['quota_share'],
+                'tva'                   => $p['tva_liable'],
+                'recettes_brutes'       => $p['income']['gross'],
+                'commissions'           => $p['income']['fees'],
+                'charges_nb'            => count($p['expenses']),
+                'dediees_242'           => $p['expense_totals']['dedicated_242'],
+                'dediees_244'           => $p['expense_totals']['dedicated_244'],
+                'partagees_avant_qp'    => $p['expense_totals']['shared_total'],
+                'partagees_retenues'    => $p['expense_totals']['shared_retained'],
+                'emprunts_retenus'      => $p['loans_retained'],
+                'dotation'              => $p['depreciation'],
+            ], $breakdown['properties'], array_keys($breakdown['properties'])),
+            'capping'  => $breakdown['capping'],
+            'deficits' => array_diff_key($breakdown['deficits'], ['detail' => true]),
         ];
 
         $report['checks'] = $this->taxReturnService->checks($form2033A, $form2033B, $form2033C, $properties);
@@ -261,6 +285,33 @@ class DiagnosticReportService
         foreach ($report['forms']['2033A'] as $line => $value) {
             $out[] = sprintf('  case %-4s %s', $line, $euro((int) $value));
         }
+        $out[] = '';
+
+        $out[] = '--- 2033-B (résultat) ---';
+        foreach ($report['forms']['2033B'] as $line => $value) {
+            $out[] = sprintf('  ligne %-8s %s', $line, $euro((int) $value));
+        }
+        $out[] = '';
+
+        $out[] = '--- Passage au résultat (par bien) ---';
+        foreach ($report['result']['properties'] as $p) {
+            $out[] = sprintf(
+                '  %s : quote-part %s%s · recettes %s − commissions %s · %d charge(s) : dédiées %s (242) + %s (244), partagées %s → %s retenus · emprunts %s · dotation %s',
+                $p['label'], $p['quote_part'], $p['tva'] ? ' (HT)' : '',
+                $euro($p['recettes_brutes']), $euro($p['commissions']), $p['charges_nb'],
+                $euro($p['dediees_242']), $euro($p['dediees_244']),
+                $euro($p['partagees_avant_qp']), $euro($p['partagees_retenues']),
+                $euro($p['emprunts_retenus']), $euro($p['dotation']),
+            );
+        }
+        $c = $report['result']['capping'];
+        $out[] = '  Plafonnement 39 C : résultat avant amort. ' . $euro($c['result_before_depreciation'])
+            . ' · disponible ' . $euro($c['depreciation_year']) . ' + report ' . $euro($c['carried_forward'])
+            . ' · déduit ' . $euro($c['deducted']) . ' (dont report ' . $euro($c['deducted_carried']) . ')'
+            . ' · à reporter ' . $euro($c['deferred']);
+        $d = $report['result']['deficits'];
+        $out[] = '  Déficits : antérieurs ' . $euro($d['previous']) . ' · imputés ' . $euro($d['imputed'])
+            . ' · restant ' . $euro($d['carryforward']);
         $out[] = '';
 
         $out[] = '--- 2033-C, cadre I (immobilisations) ---';

@@ -256,32 +256,17 @@ it('gives the screen and the PDF the same verdict on the same fiscal year', func
     expect($html)->toContain('class="notice"');
 });
 
-/** Rend la vue du PDF en HTML, avec exactement les données que `generatePdf()` lui passe. */
+/**
+ * Rend la vue du PDF en HTML, avec exactement les données que `generatePdf()` lui passe.
+ *
+ * Passe par `pdfData()` au lieu d'en recopier la liste : la copie qui vivait ici a cassé dès
+ * que la vue a reçu une donnée de plus (le détail du résultat, issue #13).
+ */
 function renderTaxReturnHtml(User $user, int $year): string
 {
-    $properties = Property::withoutGlobalScopes()->where('user_id', $user->id)->get();
     $fy = app(FiscalYearService::class)->getOrCreate($user, $year);
-    $tax = app(TaxReturnService::class);
 
-    $form2033A = $tax->compute2033A($fy, $properties, $year);
-    $form2033B = $tax->compute2033B($fy, $properties, $year);
-    $form2033C = $tax->compute2033C($properties, $year);
-
-    return view('pdf.tax-return', [
-        'user' => $user,
-        'year' => $year,
-        'fiscalYear' => $fy,
-        'properties' => $properties,
-        'siren' => $user->siren ?? '000000000',
-        'form2031' => $tax->compute2031($fy),
-        'form2033A' => $form2033A,
-        'form2033B' => $form2033B,
-        'form2033C' => $form2033C,
-        'form2033D' => $tax->compute2033D($fy),
-        'form2042' => $tax->compute2042($fy),
-        'checks' => $tax->checks($form2033A, $form2033B, $form2033C, $properties),
-        'assetBreakdown' => $tax->assetBreakdown($properties, $year),
-    ])->render();
+    return view('pdf.tax-return', app(TaxReturnService::class)->pdfData($fy))->render();
 }
 
 it('prints the boxes 044 and 048 that the check refers to', function () {
