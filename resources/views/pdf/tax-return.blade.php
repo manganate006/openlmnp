@@ -121,7 +121,7 @@
         <tr><td class="c">318</td><td>Réintégration : amortissements de l'exercice non déductibles (art. 39 C), mis en report</td><td class="r">{{ $fmt($form2033B['318']) }} €</td></tr>
         <tr><td class="c">350</td><td>Déduction : amortissements différés des exercices antérieurs repris (art. 39 C)</td><td class="r">{{ $fmt($form2033B['350']) }} €</td></tr>
         <tr><td class="c">352/354</td><td>Résultat fiscal avant imputation des déficits antérieurs</td><td class="r">{{ $fmt($form2033B['352']) }} € / {{ $fmt($form2033B['354']) }} €</td></tr>
-        <tr><td class="c">360</td><td>Déficits antérieurs imputés</td><td class="r">{{ $fmt($form2033B['360']) }} €</td></tr>
+        <tr><td class="c">360</td><td>Déficits antérieurs imputés — laissée à zéro : en LMNP, ils s'imputent sur la 2042-C-PRO (cases 5GA à 5GJ)</td><td class="r">{{ $fmt($form2033B['360']) }} €</td></tr>
         <tr class="total"><td class="c">370/372</td><td><strong>Résultat fiscal après imputation</strong></td><td class="r"><strong>{{ $fmt($form2033B['370']) }} € / {{ $fmt($form2033B['372']) }} €</strong></td></tr>
     </table>
 
@@ -229,8 +229,12 @@
     <div class="keep">
     <h2 style="font-size:11px;">Déficits antérieurs</h2>
     <p class="small">
-        Un déficit ne s'impute que sur un bénéfice de même nature, pendant dix ans, le plus
-        ancien d'abord. Il s'impute après les amortissements.
+        Un déficit de location meublée non professionnelle ne s'impute pas sur la liasse :
+        l'administration le reprend en cases 5GA à 5GJ de la 2042-C-PRO (une case par année
+        d'origine) et l'impute elle-même, pendant dix ans, sur vos revenus de location meublée.
+        Reportez donc en 5NA le bénéfice avant imputation (ligne 352), et vérifiez que les cases
+        5GA à 5GJ correspondent au tableau ci-dessous. Ce suivi est une estimation : il ne tient
+        compte que des biens de ce dossier.
     </p>
     @if(count($def['detail']) > 0)
         <table>
@@ -248,7 +252,7 @@
     @endif
     <table>
         <tr><td>Déficits antérieurs à l'ouverture</td><td class="r" style="width:120px;">{{ $fmt($def['previous']) }} €</td></tr>
-        <tr><td>Imputés sur le résultat de l'exercice (ligne 360)</td><td class="r">{{ $fmt($def['imputed']) }} €</td></tr>
+        <tr><td>Imputables sur le bénéfice de l'année (imputés par l'administration)</td><td class="r">{{ $fmt($def['imputed']) }} €</td></tr>
         <tr class="total"><td>Restant à reporter à la clôture</td><td class="r">{{ $fmt($def['carryforward']) }} €</td></tr>
     </table>
     </div>

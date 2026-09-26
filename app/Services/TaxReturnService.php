@@ -124,12 +124,20 @@ class TaxReturnService
      *  - 350 déduit les amortissements différés des exercices antérieurs repris cette année
      *    (« déductions diverses ») — sans elle, la partie B ne bouclait pas dès qu'un report
      *    était consommé : 310 + 318 ne retombait pas sur 352 ;
-     *  - 360 porte les DÉFICITS antérieurs imputés. Elle a porté jusqu'en v1.6.7 le report
-     *    d'amortissements différés (`previous_deferred`), sous l'intitulé des déficits, et
-     *    370/372 recopiaient 352/354 sans rien retrancher.
+     *  - 360 reste À ZÉRO, et 370/372 = 352/354. ⚠️ Un déficit LMNP ne s'impute PAS sur la
+     *    liasse : l'administration le pré-remplit en cases 5GA à 5GJ de la 2042-C-PRO et
+     *    l'impute elle-même sur les revenus de location meublée du FOYER (CGI art. 156,
+     *    I-1° ter). La 5NA reçoit donc le bénéfice AVANT imputation — l'imputer aussi ici,
+     *    c'est le déduire deux fois si l'utilisateur reporte la 370.
      *
-     * L'imputation suit `FiscalYearService` : dotation de l'exercice d'abord, report ensuite,
-     * déficits antérieurs sur le résultat déjà déterminé.
+     *    Historique : jusqu'en v1.6.7 la 360 portait le report d'amortissements différés
+     *    (`previous_deferred`) sous l'intitulé des déficits. Une première correction l'avait
+     *    remplacé par `deficit_imputed` avec 370 = 352 − 360, jamais publiée : c'est l'erreur
+     *    ci-dessus. `deficit_imputed` reste calculé par `FiscalYearService` pour SUIVRE le stock
+     *    (annexe, 2033-D), pas pour le déduire.
+     *
+     * L'imputation des amortissements suit `FiscalYearService` : dotation de l'exercice
+     * d'abord, report ensuite.
      */
     public function compute2033B(FiscalYear $fy, $properties, int $year, ?array $breakdown = null): array
     {
@@ -143,7 +151,6 @@ class TaxReturnService
         $line310 = $line270 - $lines['294']; // Résultat comptable
 
         $fiscalResult = (int) $fy->fiscal_result;
-        $imputed = (int) $fy->deficit_imputed;
 
         return [
             '218' => $lines['218'],
@@ -162,8 +169,8 @@ class TaxReturnService
             '350' => $capping['deducted_carried'],
             '352' => $fiscalResult > 0 ? $fiscalResult : 0,
             '354' => $fiscalResult < 0 ? abs($fiscalResult) : 0,
-            '360' => $imputed,
-            '370' => $fiscalResult > 0 ? $fiscalResult - $imputed : 0,
+            '360' => 0, // déficits LMNP : cases 5GA à 5GJ de la 2042-C-PRO, jamais ici
+            '370' => $fiscalResult > 0 ? $fiscalResult : 0,
             '372' => $fiscalResult < 0 ? abs($fiscalResult) : 0,
         ];
     }

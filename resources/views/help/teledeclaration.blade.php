@@ -30,9 +30,9 @@
     <ul>
         <li data-icon="&#x2795;"><strong>318</strong> &mdash; la part de la dotation de l'année que le plafonnement (art. 39 C) empêche de déduire : elle est réintégrée au résultat et mise en report.</li>
         <li data-icon="&#x2796;"><strong>350</strong> &mdash; les amortissements mis en report les années précédentes et déduits cette année (« déductions diverses »).</li>
-        <li data-icon="&#x1F4C9;"><strong>360</strong> &mdash; les déficits des années précédentes imputés sur le bénéfice de l'année. La ligne 370 est le bénéfice qui reste après cette imputation.</li>
+        <li data-icon="&#x1F4C9;"><strong>360</strong> &mdash; toujours à zéro. En location meublée non professionnelle, les déficits des années précédentes ne s'imputent pas sur la liasse : l'administration les reprend en cases 5GA à 5GJ de la 2042-C-PRO et les impute elle-même. La ligne 370 est donc égale à la ligne 352, et c'est ce bénéfice, avant imputation, qui va en 5NA. Les imputer aussi sur la liasse les déduirait deux fois.</li>
     </ul>
-    <p>Jusqu'à la version 1.6.7, la ligne 360 affichait par erreur le report d'amortissements au lieu des déficits, et la ligne 350 manquait. Si vous avez déjà déposé une liasse avec des reports ou des déficits antérieurs, comparez ces trois lignes avec la nouvelle version.</p>
+    <p>Jusqu'à la version 1.6.7, la ligne 360 affichait par erreur le report d'amortissements, et la ligne 350 manquait. Si vous avez déjà déposé une liasse avec des amortissements différés antérieurs, comparez ces lignes avec la nouvelle version.</p>
 
     <h3>D'où vient le résultat : le détail du résultat</h3>
     <p>Le PDF contient, juste après le 2033-B, une annexe <strong>« Détail du résultat »</strong> qui permet de refaire chaque ligne à la main, avec votre expert-comptable ou seul :</p>
@@ -41,7 +41,7 @@
         <li data-icon="&#x1F9FE;"><strong>Charges</strong> &mdash; chaque charge avec sa date, sa catégorie, sa ligne (242 ou 244) et son affectation. Une charge dédiée compte en totalité ; les charges partagées sont additionnées, puis la quote-part locative s'applique au total.</li>
         <li data-icon="&#x1F3E6;"><strong>Emprunts</strong> &mdash; intérêts et assurance de l'année, et la part retenue.</li>
         <li data-icon="&#x1F9EE;"><strong>Plafonnement des amortissements</strong> &mdash; le résultat avant amortissement, la dotation de l'année et le report des années passées, ce qui est déduit, ce qui part en report.</li>
-        <li data-icon="&#x1F4C9;"><strong>Déficits antérieurs</strong> &mdash; millésime par millésime : imputé, périmé, restant.</li>
+        <li data-icon="&#x1F4C9;"><strong>Déficits antérieurs</strong> &mdash; millésime par millésime : imputable, périmé, restant. De quoi vérifier les cases 5GA à 5GJ de votre 2042-C-PRO, où l'administration les reprend.</li>
     </ul>
     <p>Comme le détail des immobilisations, cette annexe n'est pas à recopier sur votre déclaration.</p>
 

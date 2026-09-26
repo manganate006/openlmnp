@@ -11,7 +11,8 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   et commissions, chaque charge avec sa date, sa catégorie, sa ligne (242 ou 244) et son
   affectation, le calcul de la quote-part sur les charges partagées, les intérêts et
   l'assurance des emprunts ; puis le plafonnement des amortissements (art. 39 C) étape par
-  étape et l'imputation des déficits antérieurs, millésime par millésime
+  étape et le suivi des déficits antérieurs, millésime par millésime — de quoi vérifier les
+  cases 5GA à 5GJ de la 2042-C-PRO
   ([#13](https://github.com/manganate006/openlmnp/issues/13))
 - **Un contrôle de plus** sur l'écran de télédéclaration et dans le PDF : la partie B du
   2033-B (310 + 318 − 350) doit retomber sur le résultat fiscal de l'exercice
@@ -21,9 +22,10 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 ### Corrections
 
 - **2033-B, ligne 360** : elle affichait le report d'amortissements différés sous
-  l'intitulé « Déficits antérieurs imputés ». Elle porte désormais les déficits imputés, et
-  les lignes 370/372 le résultat **après** cette imputation — elles recopiaient jusqu'ici
-  les lignes 352/354
+  l'intitulé « Déficits antérieurs imputés ». Elle reste désormais à zéro : en location
+  meublée non professionnelle, les déficits antérieurs ne s'imputent pas sur la liasse,
+  l'administration les reprend en cases 5GA à 5GJ de la 2042-C-PRO. Le bénéfice à reporter
+  en 5NA est donc celui d'avant imputation (lignes 352 et 370, égales)
 - **2033-B, ligne 350** : les amortissements différés des années passées, déduits cette
   année, n'apparaissaient nulle part ; la partie B ne se refaisait donc pas à la main dès
   qu'un report était consommé
@@ -31,8 +33,8 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   alors que le résultat de l'exercice les prend hors taxe. Les deux sont maintenant calculés
   selon les mêmes règles, quote-part comprise, au centime près
 
-Si vous avez déjà déposé une liasse avec des déficits ou des amortissements différés
-antérieurs, comparez les lignes 350, 360 et 370 avec celles de cette version. Le résultat
+Si vous avez déjà déposé une liasse avec des amortissements différés antérieurs, comparez
+les lignes 350 et 360 avec celles de cette version. Le résultat
 fiscal de l'exercice (352/354) et la 2042-C-PRO ne changent pas.
 
 ## [1.6.7] - 2026-09-15

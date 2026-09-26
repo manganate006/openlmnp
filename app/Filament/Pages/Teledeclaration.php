@@ -190,7 +190,7 @@ class Teledeclaration extends Page
                     ['line' => '350', 'desc' => 'Déduction : amortissements différés antérieurs repris (art. 39 C)', 'value' => $fmt($f2033B['350']), 'raw' => $f2033B['350']],
                     ['line' => '352', 'desc' => 'Résultat fiscal — bénéfice (avant imputation)', 'value' => $fmt($f2033B['352']), 'raw' => $f2033B['352']],
                     ['line' => '354', 'desc' => 'Résultat fiscal — déficit (avant imputation)', 'value' => $fmt($f2033B['354']), 'raw' => $f2033B['354']],
-                    ['line' => '360', 'desc' => 'Déficits antérieurs imputés', 'value' => $fmt($f2033B['360']), 'raw' => $f2033B['360']],
+                    ['line' => '360', 'desc' => 'Déficits antérieurs imputés — à zéro en LMNP (cases 5GA à 5GJ de la 2042-C-PRO)', 'value' => $fmt($f2033B['360']), 'raw' => $f2033B['360']],
                     ['line' => '370', 'desc' => 'Résultat fiscal définitif — bénéfice', 'value' => $fmt($f2033B['370']), 'raw' => $f2033B['370']],
                     ['line' => '372', 'desc' => 'Résultat fiscal définitif — déficit', 'value' => $fmt($f2033B['372']), 'raw' => $f2033B['372']],
                 ],

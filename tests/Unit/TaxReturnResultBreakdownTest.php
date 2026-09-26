@@ -17,9 +17,9 @@ use App\Services\TaxReturnService;
  *
  * Avant : le 2033-B était calculé À CÔTÉ de `FiscalYearService::computeTotals()`, avec ses
  * propres règles (TTC là où l'exercice prend le HT, quote-part tronquée charge par charge),
- * la ligne 360 portait l'amortissement différé sous l'intitulé des déficits, 370 recopiait
- * 352, et rien ne montrait la reprise d'un report d'amortissement : la partie B ne bouclait
- * pas. Aucun contrôle ne le signalait.
+ * la ligne 360 portait l'amortissement différé sous l'intitulé des déficits, et rien ne
+ * montrait la reprise d'un report d'amortissement : la partie B ne bouclait pas. Aucun
+ * contrôle ne le signalait.
  */
 
 beforeEach(function () {
@@ -203,7 +203,10 @@ it('reintegrates on line 318 the depreciation of the year that exceeds the ceili
         ->and($form['310'] + $form['318'] - $form['350'])->toBe(0);
 });
 
-it('puts the imputed previous deficits on line 360 and subtracts them on line 370', function () {
+// Un déficit LMNP ne s'impute PAS sur la liasse : l'administration le reprend en cases 5GA à
+// 5GJ de la 2042-C-PRO et l'impute elle-même (CGI art. 156, I-1° ter). L'imputer aussi en 360,
+// et reporter la 370 en 5NA, le déduirait deux fois.
+it('keeps line 360 at zero and line 370 before imputation, the deficits going to boxes 5GA-5GJ', function () {
     $property = breakdownProperty($this->user, ['rented_area' => 100]);
     breakdownIncome($property, '2026-07-01', 100000);
 
@@ -215,13 +218,15 @@ it('puts the imputed previous deficits on line 360 and subtracts them on line 37
     $this->fiscal->calculate($fy);
     $fy->refresh();
 
-    $form = $this->tax->compute2033B($fy, collect([$property]), 2026);
+    $breakdown = $this->tax->resultBreakdown($fy, collect([$property]), 2026);
+    $form = $this->tax->compute2033B($fy, collect([$property]), 2026, $breakdown);
 
-    expect($fy->deficit_imputed)->toBe(30000)
+    expect($fy->deficit_imputed)->toBe(30000)               // le stock est bien suivi…
+        ->and($breakdown['deficits']['imputed'])->toBe(30000) // …et montré dans l'annexe,
         ->and($form['352'])->toBe(100000)
-        ->and($form['360'])->toBe(30000)
-        ->and($form['370'])->toBe(70000)
-        ->and($form['372'])->toBe(0);
+        ->and($form['360'])->toBe(0)                          // …mais jamais déduit ici
+        ->and($form['370'])->toBe(100000)
+        ->and($this->tax->compute2042($fy)['montant'])->toBe($form['370']);
 });
 
 // === CONTRÔLE DE BOUCLAGE ===
