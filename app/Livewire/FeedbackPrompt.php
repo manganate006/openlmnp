@@ -9,6 +9,7 @@ use App\Support\FeedbackEligibility;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Notification;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -27,6 +28,7 @@ use Livewire\Component;
 class FeedbackPrompt extends Component
 {
     /** « idle » | « ask » | « positive » | « negative » | « done » */
+    #[Locked]
     public string $step = 'idle';
 
     #[Validate('nullable|string|max:2000')]
@@ -57,7 +59,11 @@ class FeedbackPrompt extends Component
     /** Mise en forme tirée au sort : « a », « b » ou « c ». */
     public string $variant = FeedbackEligibility::VARIANT_FALLBACK;
 
-    /** Ligne créée à l'affichage, complétée ensuite par les réponses. */
+    /**
+     * Ligne créée à l'affichage, complétée ensuite par les réponses. Verrouillée : sinon
+     * le navigateur peut la remplacer par l'id du retour de quelqu'un d'autre.
+     */
+    #[Locked]
     public ?int $feedbackId = null;
 
     /**
@@ -254,7 +260,9 @@ class FeedbackPrompt extends Component
 
     private function currentFeedback(): ?Feedback
     {
-        return $this->feedbackId ? Feedback::find($this->feedbackId) : null;
+        return $this->feedbackId
+            ? Feedback::where('user_id', Auth::id())->find($this->feedbackId)
+            : null;
     }
 
     private function forward(Feedback $feedback): void

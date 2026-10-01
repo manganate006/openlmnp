@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\Income;
 use App\Models\Property;
 use App\Services\AirbnbImportService;
+use App\Support\DocumentStorage;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -183,6 +184,7 @@ class AnnualImportWizard extends Page implements HasForms
                             )),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV Airbnb')
+                            ->directory(DocumentStorage::IMPORT_DIRECTORY)
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', '.csv'])
                             ->maxSize(10240),
                     ]),
@@ -317,7 +319,7 @@ class AnnualImportWizard extends Page implements HasForms
             $csvField?->saveUploadedFiles();
             $tempFile = is_string($state = $csvField?->getState()) ? $state : null;
 
-            if ($tempFile !== null && $tempFile !== '') {
+            if ($tempFile !== null && DocumentStorage::isImportUpload($tempFile)) {
                 $disk = \Illuminate\Support\Facades\Storage::disk('local');
 
                 if ($disk->exists($tempFile)) {

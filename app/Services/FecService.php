@@ -144,7 +144,9 @@ class FecService
         $content = implode("\r\n", $lines) . "\r\n";
 
         // Sauvegarder
-        $path = "fec/{$fiscalYear->year}/{$filename}";
+        // Un dossier par utilisateur, comme la liasse : sans SIREN renseigné, tous les
+        // comptes produisent le même nom de fichier pour une même année.
+        $path = "fec/{$fiscalYear->user_id}/{$fiscalYear->year}/{$filename}";
         Storage::put($path, $content);
 
         $fiscalYear->update(['fec_path' => $path]);

@@ -61,7 +61,8 @@ it('generates a PDF tax return', function () {
 
     $path = $this->service->generatePdf($fiscalYear);
 
-    expect($path)->toContain('liasse_fiscale_2024');
+    expect($path)->toContain('liasse_fiscale_2024')
+        ->toStartWith("tax-returns/{$this->user->id}/2024/");
     expect(Storage::exists($path))->toBeTrue();
 
     $fiscalYear->refresh();

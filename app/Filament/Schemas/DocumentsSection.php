@@ -63,6 +63,7 @@ class DocumentsSection
                             // toujours — c'est l'écart qui a rendu le défaut invisible en relecture.
                             ->openable()
                             ->downloadable()
+                            ->preventFilePathTampering(allowFilePathUsing: DocumentStorage::belongsToCurrentUser())
                             // Pré-remplit le libellé avec le nom du fichier déposé, s'il est
                             // vide. Sans quoi un dépôt suivi d'un enregistrement échoue en
                             // silence pour l'utilisateur (voir le commentaire du champ Libellé).

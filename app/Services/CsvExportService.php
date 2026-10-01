@@ -16,16 +16,30 @@ class CsvExportService
             fwrite($handle, "\xEF\xBB\xBF");
 
             // En-tête
-            fputcsv($handle, $headers, ';');
+            fputcsv($handle, array_map(self::cell(...), $headers), ';');
 
             // Données
             foreach ($records as $record) {
-                fputcsv($handle, $rowMapper($record), ';');
+                fputcsv($handle, array_map(self::cell(...), $rowMapper($record)), ';');
             }
 
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * Excel et LibreOffice exécutent une cellule qui commence par = + - @ comme une formule.
+     * Un libellé saisi par l'utilisateur (ou importé d'un relevé) ne doit pas pouvoir le faire :
+     * on le préfixe d'une apostrophe. Les montants (« -12,50 ») passent tels quels.
+     */
+    public static function cell(mixed $value): mixed
+    {
+        if (! is_string($value) || $value === '' || is_numeric(str_replace(',', '.', $value))) {
+            return $value;
+        }
+
+        return in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true) ? "'".$value : $value;
     }
 }

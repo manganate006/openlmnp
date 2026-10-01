@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Support\McpDemo;
 use DateTimeZone;
 use Filament\Actions\Action;
 use Filament\Auth\Pages\EditProfile as BaseEditProfile;
@@ -62,5 +63,14 @@ class EditProfile extends BaseEditProfile
                     ->helperText('Permet aux assistants IA (Claude, etc.) d\'accéder à vos données comptables via le protocole MCP.')
                     ->visible(fn () => config('mcp.enabled')),
             ]);
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (McpDemo::isDemoUser($this->getUser())) {
+            unset($data['email'], $data['password'], $data['mcp_enabled']);
+        }
+
+        return $data;
     }
 }

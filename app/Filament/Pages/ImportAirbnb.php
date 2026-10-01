@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\Property;
 use App\Services\AirbnbImportService;
 use App\Services\BadgeService;
+use App\Support\DocumentStorage;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -65,6 +66,7 @@ class ImportAirbnb extends Page implements HasForms
                             ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV')
+                            ->directory(DocumentStorage::IMPORT_DIRECTORY)
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', '.csv'])
                             ->maxSize(10240),
                     ])
@@ -80,6 +82,10 @@ class ImportAirbnb extends Page implements HasForms
     private function resolveUploadedFile(mixed $csvFile): ?UploadedFile
     {
         if (is_string($csvFile)) {
+            if (! DocumentStorage::isImportUpload($csvFile)) {
+                return null;
+            }
+
             // Filament FileUpload stores to the default disk (local → storage/app/private/)
             $disk = Storage::disk();
             if (! $disk->exists($csvFile)) {

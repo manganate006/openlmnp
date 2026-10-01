@@ -52,7 +52,9 @@ class TaxReturnService
         $pdf->setPaper('A4', 'portrait');
 
         $filename = "liasse_fiscale_{$year}.pdf";
-        $path = "tax-returns/{$year}/{$filename}";
+        // Un dossier par utilisateur : deux comptes qui génèrent la même année
+        // écrivaient le même fichier, et chacun pouvait télécharger celui de l'autre.
+        $path = "tax-returns/{$fiscalYear->user_id}/{$year}/{$filename}";
 
         Storage::put($path, $pdf->output());
         $fiscalYear->update(['pdf_path' => $path]);

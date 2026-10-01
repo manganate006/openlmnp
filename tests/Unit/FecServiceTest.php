@@ -32,7 +32,8 @@ it('generates a valid fec file with correct column names', function () {
     $path = $this->service->generate($fiscalYear);
 
     // File naming: {SIREN}FEC{YYYYMMDD}.txt
-    expect($path)->toContain('123456789FEC20241231');
+    expect($path)->toContain('123456789FEC20241231')
+        ->toStartWith("fec/{$this->user->id}/2024/");
 
     $content = Storage::get($path);
     $lines = explode("\r\n", trim($content));

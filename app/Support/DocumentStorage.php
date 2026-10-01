@@ -59,6 +59,36 @@ class DocumentStorage
     }
 
     /**
+     * Pour `preventFilePathTampering()` des FileUpload rangés par `directory()`.
+     *
+     * Le chemin d'un fichier déjà enregistré vient de l'état Livewire, donc du
+     * navigateur. Sans ce contrôle, un chemin vers le dossier d'un autre
+     * utilisateur est enregistré tel quel, puis signé et servi. La règle par
+     * défaut de Filament ne suffit pas : elle refuse aussi les fichiers qu'on
+     * vient de déposer dans un Repeater lié à une relation.
+     */
+    public static function belongsToCurrentUser(): Closure
+    {
+        return fn (string $file): bool => str_starts_with($file, 'documents/' . auth()->id() . '/')
+            && ! str_contains($file, '..');
+    }
+
+    /** Dossier où les écrans d'import rangent le CSV déposé. */
+    public const IMPORT_DIRECTORY = 'imports';
+
+    /**
+     * Le chemin d'un CSV à importer vient de l'état Livewire, donc du navigateur.
+     * Sans ce contrôle, `documents/7/...` ou le FEC d'un autre compte serait lu
+     * et renvoyé dans l'aperçu. On n'accepte qu'un fichier posé dans `imports/`.
+     */
+    public static function isImportUpload(mixed $path): bool
+    {
+        return is_string($path)
+            && preg_match('#^' . self::IMPORT_DIRECTORY . '/[^/\\\\]+$#', $path) === 1
+            && ! str_contains($path, '..');
+    }
+
+    /**
      * Retourne une closure pour nommer le fichier uploadé.
      * Format : {YYYY-MM-DD}_{description-slugifiée}.{ext}
      */

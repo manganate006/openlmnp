@@ -192,6 +192,7 @@ class OnboardingWizard extends Page implements HasForms
                     ->imagePreviewHeight('250')
                     ->panelLayout('integrated')
                     ->openable()
+                    ->preventFilePathTampering(allowFilePathUsing: DocumentStorage::belongsToCurrentUser())
                     ->columnSpanFull(),
                 TextInput::make('name')
                     ->label('Nom du bien')

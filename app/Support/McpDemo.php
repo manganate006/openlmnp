@@ -24,9 +24,21 @@ class McpDemo
             return false;
         }
 
-        $user = ($request ?? request())->user();
+        return self::isDemoUser(($request ?? request())->user());
+    }
 
-        return $user instanceof User
+    /**
+     * Est-ce le compte démo public ?
+     *
+     * Il est reconnu à son e-mail, que tout le monde peut modifier puisque ses
+     * identifiants sont publics. EditProfile et McpTokens bloquent donc pour lui
+     * l'e-mail, le mot de passe, la bascule MCP et la révocation des jetons :
+     * sinon un visiteur rend le jeton public lecture-écriture, ou casse la démo.
+     */
+    public static function isDemoUser(mixed $user): bool
+    {
+        return config('mcp.demo.enabled')
+            && $user instanceof User
             && $user->email === config('mcp.demo.email');
     }
 

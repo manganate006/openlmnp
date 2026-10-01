@@ -6,6 +6,7 @@ use App\Models\Property;
 use App\Services\BadgeService;
 use App\Services\Csv\CsvImportService;
 use App\Services\Csv\CsvProfile;
+use App\Support\DocumentStorage;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -87,6 +88,7 @@ class ImportCsv extends Page implements HasForms
                             ->helperText('Un fichier, une nature. Un inventaire de cabinet mélange rarement le mobilier et les charges.'),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV')
+                            ->directory(DocumentStorage::IMPORT_DIRECTORY)
                             ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel', '.csv'])
                             ->maxSize(10240),
                     ])
@@ -267,6 +269,10 @@ class ImportCsv extends Page implements HasForms
     private function resolveUploadedFile(mixed $csvFile): ?UploadedFile
     {
         if (is_string($csvFile)) {
+            if (! DocumentStorage::isImportUpload($csvFile)) {
+                return null;
+            }
+
             $disk = Storage::disk();
 
             if (! $disk->exists($csvFile)) {

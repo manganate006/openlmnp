@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Support\McpDemo;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -50,7 +51,7 @@ class McpTokens extends Page
                 ->icon(fn () => auth()->user()->mcp_enabled ? 'heroicon-o-lock-closed' : 'heroicon-o-lock-open')
                 ->color(fn () => auth()->user()->mcp_enabled ? 'danger' : 'success')
                 ->requiresConfirmation()
-                ->visible(fn () => config('mcp.enabled'))
+                ->visible(fn () => config('mcp.enabled') && ! McpDemo::isDemoUser(auth()->user()))
                 ->action(function () {
                     $user = auth()->user();
                     $user->update(['mcp_enabled' => ! $user->mcp_enabled]);
@@ -104,6 +105,8 @@ class McpTokens extends Page
 
     public function revokeToken(int $tokenId): void
     {
+        abort_if(McpDemo::isDemoUser(auth()->user()), 403);
+
         $token = auth()->user()->tokens()->findOrFail($tokenId);
         $token->delete();
 

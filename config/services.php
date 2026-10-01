@@ -37,7 +37,7 @@ return [
 
     'github' => [
         'token' => env('GITHUB_TOKEN'),
-        'repo' => env('GITHUB_REPO', 'openlmnp/openlmnp'),
+        'repo' => env('GITHUB_REPO', 'manganate006/openlmnp'),
     ],
 
     // API de provisioning de comptes (POST /api/admin/users). Désactivée (404)

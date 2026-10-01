@@ -16,6 +16,12 @@ class DocumentController extends Controller
             abort(403);
         }
 
+        // Flysystem résout les « .. » internes sans lever d'erreur : documents/5/../7/x
+        // passerait le contrôle ci-dessous puis ouvrirait le dossier de l'utilisateur 7.
+        if (str_contains($path, '..')) {
+            abort(404);
+        }
+
         // Le path est de la forme : documents/{user_id}/{type}/{filename}
         // Vérifier que le user_id dans le path correspond à l'utilisateur connecté.
         if (! preg_match('#^documents/(\d+)/#', $path, $matches)) {
