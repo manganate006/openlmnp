@@ -2,6 +2,32 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.6.9] - 2026-10-01
+
+### Sécurité
+
+Version corrective, **à installer sans attendre** sur toute instance qui a plusieurs comptes
+ou qui est ouverte sur Internet. Le détail est dans l'avis
+[GHSA-j4gm-g8m8-93x2](https://github.com/manganate006/openlmnp/security/advisories/GHSA-j4gm-g8m8-93x2).
+Merci à [@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), qui a signalé ces failles en
+privé avec un correctif et ses tests.
+
+- **Justificatifs, photos et imports** : un compte ne peut plus lire, effacer ni importer un
+  fichier rangé dans le dossier d'un autre compte
+- **Liasse et FEC** : chaque compte a désormais son propre dossier de génération
+- **Compte démo public** : son nom, son e-mail, son mot de passe, l'accès MCP et ses jetons ne sont
+  plus modifiables depuis l'interface
+- **Recueil d'avis** : un compte ne peut plus modifier le retour d'un autre
+- **Exports CSV** : un libellé qui commence par `=`, `+`, `-` ou `@` n'est plus interprété
+  comme une formule par Excel ou LibreOffice
+- **Mises à jour** : le dépôt par défaut est désormais `manganate006/openlmnp`. L'ancien
+  défaut visait un compte GitHub qui n'appartenait pas au projet. **Installation sans Docker
+  (script LXC ou `git clone`)** : vérifiez que la page « Mises à jour » affiche bien ce dépôt
+- **En-tête Host** : quand `APP_URL` porte un nom de domaine, les requêtes adressées à un
+  autre nom sont refusées (erreur 400). Si votre instance est aussi ouverte par une IP ou un
+  autre nom, ajoutez-les dans `TRUSTED_HOSTS` (liste séparée par des virgules). Rien ne
+  change si `APP_URL` vaut `localhost` ou une IP, ce qui est le cas par défaut avec Docker
+
 ## [1.6.8] - 2026-09-26
 
 ### Ajouts
