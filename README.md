@@ -39,6 +39,7 @@ et produisez votre liasse fiscale au régime réel — sans abonnement, chez vou
 - [Tests](#tests)
 - [Contribution](#contribution)
 - [Comment nous soutenir ?](#comment-nous-soutenir-)
+- [Remerciements](#remerciements)
 - [Licence](#licence)
 
 ## Pourquoi OpenLMNP ?
@@ -274,6 +275,14 @@ m'aider à continuer :
 - 🔧 **Contribuez du code** — voir [CONTRIBUTING.md](CONTRIBUTING.md)
 
 Merci à toutes celles et ceux qui soutiennent le projet !
+
+## Remerciements
+
+OpenLMNP doit beaucoup à celles et ceux qui l'ont installé, confronté à leur propre dossier
+et nous ont dit ce qui n'allait pas : [@cocool97](https://github.com/cocool97),
+[@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), [@ovrtn](https://github.com/ovrtn)
+et [@DamienFr](https://github.com/DamienFr). Le détail de leurs contributions (correctifs,
+signalements, sécurité) est sur la page [Remerciements](https://openlmnp.fr/remerciements).
 
 ## Licence
 

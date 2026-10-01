@@ -38,6 +38,7 @@ and produce your French tax return under the « régime réel » — no subscrip
 - [Tests](#tests)
 - [Contributing](#contributing)
 - [How to support us?](#how-to-support-us)
+- [Acknowledgements](#acknowledgements)
 - [License](#license)
 
 ## Why OpenLMNP?
@@ -245,6 +246,14 @@ can help keep it going:
 - 🔧 **Contribute code** — see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 Thanks to everyone who supports the project!
+
+## Acknowledgements
+
+OpenLMNP owes a lot to the people who installed it, tried it on their own books and told
+us what was wrong: [@cocool97](https://github.com/cocool97),
+[@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), [@ovrtn](https://github.com/ovrtn)
+and [@DamienFr](https://github.com/DamienFr). Their contributions (fixes, reports, security)
+are listed on the [acknowledgements page](https://openlmnp.fr/remerciements) (in French).
 
 ## License
 
