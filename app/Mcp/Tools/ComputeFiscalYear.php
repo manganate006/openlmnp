@@ -28,8 +28,9 @@ class ComputeFiscalYear extends Tool
         $user = $request->user();
         $year = (int) $validated['year'];
 
-        // Crée ou récupère l'exercice et (re)calcule tous les totaux
-        $fiscalYear = $this->fiscalYearService->getOrCreate($user, $year);
+        // Calcule les totaux sans rien enregistrer : l'outil consulte, il ne crée
+        // ni ne recalcule d'exercice (un exercice clôturé est rendu tel quel)
+        $fiscalYear = $this->fiscalYearService->preview($user, $year);
 
         return Response::json([
             'year'   => $fiscalYear->year,

@@ -40,6 +40,11 @@ class CsvExportService
             return $value;
         }
 
-        return in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true) ? "'".$value : $value;
+        // ltrim : LibreOffice interprète aussi « ␣␣=1+1 » comme une formule.
+        $first = ltrim($value, " \t\r\n")[0] ?? '';
+
+        return in_array($first, ['=', '+', '-', '@'], true) || in_array($value[0], ["\t", "\r"], true)
+            ? "'".$value
+            : $value;
     }
 }

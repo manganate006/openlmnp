@@ -486,6 +486,37 @@ class FiscalYearService
      * Un exercice clôturé est retourné tel quel, sans recalcul : ses totaux
      * sont figés par la clôture et font foi.
      */
+    /**
+     * L'exercice tel qu'un recalcul le donnerait, SANS rien écrire.
+     *
+     * Pour les outils de consultation (MCP « compute_fiscal_year », comparaison
+     * micro-BIC, simulation) : ils passaient par `getOrCreate()`, qui crée l'exercice,
+     * réécrit ses totaux et ses écritures et recalcule l'exercice suivant — même
+     * clôturé (GHSA-j4gm-g8m8-93x2, point 9). Un exercice clôturé est rendu tel quel,
+     * ses totaux faisant foi ; sinon on part de la ligne existante (ou d'une ligne
+     * neuve jamais enregistrée) et on y pose les totaux calculés.
+     */
+    public function preview(User $user, int $year): FiscalYear
+    {
+        $fiscalYear = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where('year', $year)
+            ->first();
+
+        if ($fiscalYear?->status === FiscalYear::STATUS_CLOSED) {
+            return $fiscalYear;
+        }
+
+        $fiscalYear ??= new FiscalYear([
+            'user_id' => $user->id,
+            'year' => $year,
+            'status' => FiscalYear::STATUS_DRAFT,
+        ]);
+        $fiscalYear->setRelation('user', $user);
+
+        return $fiscalYear->fill($this->computeTotals($fiscalYear));
+    }
+
     public function getOrCreate(User $user, int $year): FiscalYear
     {
         $fiscalYear = FiscalYear::withoutGlobalScopes()
@@ -702,8 +733,9 @@ class FiscalYearService
             0
         );
 
-        // Régime réel : résultat fiscal calculé
-        $fiscalYear = $this->getOrCreate($user, $year);
+        // Régime réel : résultat fiscal calculé, sans rien enregistrer (une comparaison
+        // ne doit ni créer ni recalculer d'exercice)
+        $fiscalYear = $this->preview($user, $year);
         $realResult = (string) $fiscalYear->fiscal_result;
 
         // Avantage du réel (positif = le réel est mieux)

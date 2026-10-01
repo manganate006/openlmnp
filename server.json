@@ -11,7 +11,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://app.openlmnp.fr/mcp?demo_token=openlmnp_demo_ro_ebd891f45e8a771ca1a718f239b733b438a31d48",
+      "url": "https://app.openlmnp.fr/mcp",
       "headers": [
         {
           "name": "Authorization",

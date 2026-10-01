@@ -19,6 +19,14 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Où renvoyer un visiteur non connecté. Sans cette ligne, Laravel cherche une route
+        // « login » que l'application n'a pas : /mcp sans jeton ni Accept JSON répondait 500
+        // au lieu de 401 (GHSA-j4gm-g8m8-93x2, point 21). Pour /mcp, pas de redirection : le
+        // rendu de l'AuthenticationException plus bas répond en 401 JSON.
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('mcp', 'mcp/*')
+            ? null
+            : (\Illuminate\Support\Facades\Route::has('filament.admin.auth.login') ? route('filament.admin.auth.login') : '/'));
+
         // Proxies de confiance (F7) : par défaut les plages privées + loopback — le
         // reverse proxy (NPM) est sur le LAN, on ne fait plus confiance à un proxy
         // arbitraire d'Internet pour les en-têtes X-Forwarded-*. Surchargeable via

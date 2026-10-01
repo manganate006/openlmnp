@@ -2,6 +2,7 @@
 
 namespace App\Mcp;
 
+use App\Models\Scopes\UnresolvedUser;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Server;
@@ -120,6 +121,12 @@ class OpenLmnpServer extends Server
 
         if ($user) {
             Auth::setUser($user);
+
+            return;
         }
+
+        // Aucun compte désigné : les scopes ne rendront rien (voir UnresolvedUser),
+        // plutôt que les données de tous les comptes de l'instance.
+        UnresolvedUser::mark();
     }
 }

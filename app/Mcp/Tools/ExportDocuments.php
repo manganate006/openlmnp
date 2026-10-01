@@ -5,6 +5,8 @@ namespace App\Mcp\Tools;
 use App\Services\DocumentExportService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -45,12 +47,18 @@ class ExportDocuments extends Tool
             ]);
         }
 
+        // L'archive est rangée dans le dossier de l'utilisateur, seul endroit que la route
+        // de téléchargement accepte de servir, et le lien est réellement signé. L'ancien
+        // `?signature=mcp` était refusé à tous les coups (GHSA-j4gm-g8m8-93x2, point 14).
+        $path = 'documents/' . Auth::id() . '/exports/' . basename($result['path']);
+        Storage::disk('local')->move($result['path'], $path);
+
         return Response::json([
             'success'      => true,
             'count'        => $result['count'],
-            'download_url' => url('/d/' . $result['path']) . '?signature=mcp',
-            'file_path'    => $result['path'],
-            'note'         => 'Le fichier ZIP est temporaire et sera supprimé automatiquement.',
+            'download_url' => URL::temporarySignedRoute('documents.show', now()->addHour(), ['path' => $path]),
+            'expires_in'   => '1 heure',
+            'note'         => 'Lien valable une heure, pour le compte connecté. L\'archive est supprimée au bout de 24 heures.',
         ]);
     }
 

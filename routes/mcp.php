@@ -4,7 +4,7 @@ use Laravel\Mcp\Facades\Mcp;
 
 Mcp::web('/mcp', \App\Mcp\OpenLmnpServer::class)
     ->middleware([
-        \App\Http\Middleware\DemoTokenQuery::class, // promeut ?demo_token= en Bearer (avant auth)
+        \App\Http\Middleware\DemoTokenQuery::class, // requête sans Authorization → jeton démo (avant auth)
         'auth:sanctum',
         \App\Http\Middleware\McpGuard::class,
     ]);

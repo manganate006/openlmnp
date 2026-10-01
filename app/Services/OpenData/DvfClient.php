@@ -36,6 +36,13 @@ class DvfClient
      */
     public function samples(string $insee, int $year): array
     {
+        // Le code arrive du formulaire ou de l'outil MCP : « ../35238 » tombait sur la même
+        // clé de cache que « 35238 », cache commun à tous les comptes (GHSA-j4gm-g8m8-93x2,
+        // point 17). Cinq chiffres, ou 2A/2B suivis de trois chiffres pour la Corse.
+        if (preg_match('/^(\d{5}|2[AB]\d{3})$/', $insee) !== 1) {
+            throw DvfUnavailable::unknownCommune();
+        }
+
         if (in_array(self::department($insee), self::UNCOVERED_DEPARTMENTS, true)) {
             throw DvfUnavailable::uncoveredDepartment();
         }

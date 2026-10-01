@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\McpAuditLog;
 use App\Models\User;
+use App\Support\McpAuditRedactor;
 use App\Support\McpDemo;
 use Closure;
 use Illuminate\Http\Request;
@@ -37,12 +38,9 @@ class McpGuard
 
         if ($method === 'tools/call') {
             $toolName = $body['params']['name'] ?? 'unknown';
-            $params = $body['params']['arguments'] ?? null;
-
-            // Redact sensitive binary data from audit logs
-            if (is_array($params) && isset($params['file_base64'])) {
-                $params['file_base64'] = '[REDACTED — ' . strlen($params['file_base64']) . ' chars]';
-            }
+            // Masqués avant journalisation : contenus de fichiers, URL signées,
+            // chaînes longues (voir McpAuditRedactor).
+            $params = McpAuditRedactor::redact($body['params']['arguments'] ?? null);
         } elseif ($method) {
             $toolName = $method;
         }
@@ -81,6 +79,27 @@ class McpGuard
                     ],
                 ]);
             }
+        }
+
+        // === Limite de débit des autres comptes (MCP_RATE_LIMIT appels par minute et par
+        // compte, 0 = aucune). Avant ce garde, la valeur n'était lue que pour l'affichage
+        // (GHSA-j4gm-g8m8-93x2, point 10).
+        $perMinute = (int) config('mcp.rate_limit', 60);
+
+        if (! McpDemo::isDemoRequest($request) && $perMinute > 0) {
+            $limiterKey = 'mcp-user:' . $user->id;
+
+            if (RateLimiter::tooManyAttempts($limiterKey, $perMinute)) {
+                return response()->json([
+                    'jsonrpc' => '2.0',
+                    'id' => $rpcId,
+                    'error' => [
+                        'code' => -32000,
+                        'message' => 'Trop de requêtes MCP : ' . $perMinute . ' par minute au plus. Réessayez dans un instant.',
+                    ],
+                ], 429);
+            }
+            RateLimiter::hit($limiterKey, 60);
         }
 
         $start = microtime(true);

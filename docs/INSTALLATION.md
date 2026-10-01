@@ -191,6 +191,8 @@ L'image utilise le fichier `.env.docker` fourni. Les variables non sensibles uti
 | `TELEMETRY_URL` | Endpoint recevant le check-in de télémétrie | `https://openlmnp.fr/api/instances/checkin` |
 | `TRUSTED_PROXIES` | Proxies dont les en-têtes `X-Forwarded-*` sont crus (liste séparée par des virgules, ou `*`). Utile derrière un reverse proxy ou un PaaS | plages privées + loopback |
 | `TRUSTED_HOSTS` | Noms d'hôte acceptés en plus de celui d'`APP_URL`, de ses sous-domaines et de `localhost` (liste séparée par des virgules, `*` pour couper le filtre). Le filtre ne s'applique que si `APP_URL` porte un nom de domaine : une instance dont `APP_URL` vaut `localhost` ou une IP n'est pas filtrée. Si `APP_URL` porte un domaine et que l'instance est aussi ouverte par une IP ou un autre nom, ajouter ces noms ici, sinon ils reçoivent une erreur 400 | vide |
+| `MCP_RATE_LIMIT` | Appels MCP autorisés par minute et par compte (`0` = aucune limite). La démo publique a sa propre limite, `MCP_DEMO_RATE_LIMIT` | `60` |
+| `MCP_AUDIT_RETENTION` | Durée de conservation du journal des appels MCP, en jours ; purge quotidienne (`0` = jamais). Les contenus de fichiers, URL signées et valeurs longues n'y sont pas enregistrés | `90` |
 | `PHP_CLI_SERVER_WORKERS` | Nombre de requêtes servies simultanément (voir ci-dessous) | `4` |
 | `DB_JOURNAL_MODE` | Journal SQLite. `WAL` par défaut ; `delete` si la base est sur un stockage réseau | `WAL` |
 | `DB_SYNCHRONOUS` | Politique de `fsync` de SQLite | `NORMAL` |

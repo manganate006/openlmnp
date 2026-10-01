@@ -276,8 +276,9 @@ class AnnualImportWizard extends Page implements HasForms
 
                         $rows = implode('', array_map(function ($line) {
                             return '<tr class="border-b border-gray-100 dark:border-gray-700">'
-                                . '<td class="py-2 pr-4 text-sm font-medium text-gray-600 dark:text-gray-400">' . $line[0] . '</td>'
-                                . '<td class="py-2 text-sm text-gray-900 dark:text-white">' . $line[1] . '</td>'
+                                // e() : la valeur vient de la saisie (nom, adresse…).
+                                . '<td class="py-2 pr-4 text-sm font-medium text-gray-600 dark:text-gray-400">' . e($line[0]) . '</td>'
+                                . '<td class="py-2 text-sm text-gray-900 dark:text-white">' . e($line[1]) . '</td>'
                                 . '</tr>';
                         }, $lines));
 

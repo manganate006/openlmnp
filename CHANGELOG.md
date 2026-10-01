@@ -2,6 +2,37 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié]
+
+### Sécurité
+
+Suite de l'avis [GHSA-j4gm-g8m8-93x2](https://github.com/manganate006/openlmnp/security/advisories/GHSA-j4gm-g8m8-93x2) :
+les points de gravité moyenne et faible du même signalement.
+
+- **Outils MCP de consultation** : calculer un exercice, comparer micro-BIC et réel ou lancer
+  une simulation n'enregistre plus rien. Ces outils créaient l'exercice et le recalculaient
+  au passage, y compris l'exercice suivant quand il était clôturé. Le simulateur de
+  l'application suit la même règle
+- **Limite d'appels MCP** : `MCP_RATE_LIMIT` (60 par minute et par compte par défaut) est
+  désormais appliquée ; elle n'était qu'affichée
+- **Journal des appels MCP** : il n'enregistre plus le contenu des fichiers importés, les
+  URL signées ni les valeurs longues, et se purge chaque jour au-delà de
+  `MCP_AUDIT_RETENTION` jours (90 par défaut)
+- **Serveur MCP local** (`php artisan mcp:start`) : sur une instance à plusieurs comptes,
+  sans `OPENLMNP_MCP_USER`, il ne montre plus aucune donnée au lieu de celles de tous les
+  comptes
+- **Import de document par URL** : plus de plages d'adresses internes refusées, et la
+  connexion se fait à l'adresse vérifiée. Le contenu doit correspondre à son extension
+  (un fichier HTML nommé `.pdf` est refusé)
+- **Export MCP des justificatifs** : le lien de téléchargement fonctionne enfin (une heure),
+  et les archives sont supprimées au bout de 24 heures
+- **HTTPS** : en-tête HSTS et cookie de session `Secure` sur les requêtes servies en HTTPS
+- Récapitulatifs des assistants échappés, code INSEE validé, libellés du FEC sans tabulation
+  ni saut de ligne, formules CSV précédées d'espaces neutralisées, chemin des fichiers d'un
+  exercice retiré de `get_fiscal_year`, réponse 401 au lieu d'une erreur 500 sur `/mcp`
+- Dépendances : Laravel 13.34, league/commonmark 2.10.3, league/flysystem 3.36
+  (`composer audit` sans avis)
+
 ## [1.6.9] - 2026-10-01
 
 ### Sécurité

@@ -33,6 +33,16 @@ class AttachDocument extends Tool
     /** Extensions de fichiers autorisées */
     private const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'];
 
+    /** Types réels acceptés pour chaque extension (détectés par finfo). */
+    private const MIME_TYPES = [
+        'pdf' => ['application/pdf'],
+        'jpg' => ['image/jpeg'],
+        'jpeg' => ['image/jpeg'],
+        'png' => ['image/png'],
+        'webp' => ['image/webp'],
+        'heic' => ['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'],
+    ];
+
     /** Taille maximum du fichier décodé : 10 Mo */
     private const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -100,6 +110,14 @@ class AttachDocument extends Tool
         if (! in_array($extension, self::ALLOWED_EXTENSIONS, strict: true)) {
             $allowed = implode(', ', self::ALLOWED_EXTENSIONS);
             return Response::error("Extension de fichier non autorisée. Extensions acceptées : {$allowed}.");
+        }
+
+        // L'extension se choisit, le contenu non : un HTML nommé facture.pdf était stocké
+        // tel quel (GHSA-j4gm-g8m8-93x2, point 16). On vérifie le type réel du contenu.
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($decoded) ?: '';
+
+        if (! in_array($mime, self::MIME_TYPES[$extension], strict: true)) {
+            return Response::error("Le contenu du fichier ({$mime}) ne correspond pas à son extension .{$extension}.");
         }
 
         // Build a safe, unique filename to avoid collisions
@@ -206,14 +224,25 @@ class AttachDocument extends Tool
             return Response::error('file_url doit contenir un nom d\'hôte valide.');
         }
 
-        if (! $this->isHostAllowed($host)) {
+        $pinnedIp = $this->resolveAllowedIp($host);
+
+        if ($pinnedIp === null) {
             return Response::error('file_url refusée : l\'hôte cible pointe vers une adresse IP privée, locale ou réservée (protection anti-SSRF).');
         }
 
         // Ne PAS suivre les redirections : une URL dont l'hôte initial est public
         // pourrait sinon renvoyer un 3xx vers une IP interne (169.254.169.254…) et
         // contourner le contrôle anti-SSRF ci-dessus (l'hôte redirigé n'étant pas revalidé).
-        $response = Http::withoutRedirecting()->timeout(30)->get($url);
+        //
+        // Et se connecter à l'IP VÉRIFIÉE : sans CURLOPT_RESOLVE, le client résolvait le
+        // nom une seconde fois, et un DNS qui change de réponse entre les deux (rebinding)
+        // passait le contrôle (GHSA-j4gm-g8m8-93x2, point 15).
+        $port = parse_url($url, PHP_URL_PORT) ?: ($scheme === 'https' ? 443 : 80);
+        $options = filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) !== false
+            ? []
+            : ['curl' => [CURLOPT_RESOLVE => [$host . ':' . $port . ':' . (str_contains($pinnedIp, ':') ? '[' . $pinnedIp . ']' : $pinnedIp)]]];
+
+        $response = Http::withoutRedirecting()->withOptions($options)->timeout(30)->get($url);
 
         if ($response->redirect()) {
             return Response::error('file_url refusée : les redirections ne sont pas suivies (protection anti-SSRF). Fournissez l\'URL finale directe.');
@@ -230,18 +259,19 @@ class AttachDocument extends Tool
     }
 
     /**
-     * Vérifier que l'hôte ne résout vers aucune adresse IP privée/loopback/
-     * link-local/réservée (protection anti-SSRF sur file_url).
+     * L'adresse IP à laquelle se connecter, si l'hôte ne résout vers AUCUNE adresse
+     * privée/loopback/link-local/réservée (protection anti-SSRF sur file_url) ; null sinon.
      *
-     * Toutes les IP résolues (IPv4 et IPv6) doivent être publiques.
+     * Toutes les IP résolues (IPv4 et IPv6) doivent être publiques. La première est
+     * rendue pour être épinglée à la connexion.
      */
-    private function isHostAllowed(string $host): bool
+    private function resolveAllowedIp(string $host): ?string
     {
         // Hôte fourni directement sous forme d'IP littérale (avec ou sans crochets IPv6)
         $literalIp = trim($host, '[]');
 
         if (filter_var($literalIp, FILTER_VALIDATE_IP) !== false) {
-            return $this->isPublicIp($literalIp);
+            return $this->isPublicIp($literalIp) ? $literalIp : null;
         }
 
         $ips = [];
@@ -266,16 +296,16 @@ class AttachDocument extends Tool
 
         if ($ips === []) {
             // Résolution impossible : on refuse par précaution.
-            return false;
+            return null;
         }
 
         foreach ($ips as $ip) {
             if (! $this->isPublicIp($ip)) {
-                return false;
+                return null;
             }
         }
 
-        return true;
+        return $ips[0];
     }
 
     /** Déterminer si une IP (v4 ou v6) est publique, c'est-à-dire ni privée, ni loopback, ni réservée. */
@@ -288,10 +318,18 @@ class AttachDocument extends Tool
         // Garde-fous explicites supplémentaires (au cas où les filtres ci-dessus
         // ne couvriraient pas une plage particulière selon l'implémentation).
         $blockedCidrs = [
+            '0.0.0.0/8',      // « ce réseau »
+            '100.64.0.0/10',  // CGNAT (adresses partagées, souvent internes chez les hébergeurs)
             '169.254.0.0/16', // link-local IPv4 (metadata cloud AWS/GCP/Azure)
+            '192.0.0.0/24',   // affectations IETF
+            '198.18.0.0/15',  // bancs de test réseau
+            '224.0.0.0/4',    // multicast
             'fc00::/7',       // unique local address IPv6
             'fe80::/10',      // link-local IPv6
+            'ff00::/8',       // multicast IPv6
             '::1/128',        // loopback IPv6
+            '64:ff9b::/96',   // traduction NAT64 : peut viser une IPv4 interne
+            '::ffff:0:0/96',  // IPv4 mappée en IPv6 : l'IPv4 sous-jacente n'est pas revérifiée
         ];
 
         foreach ($blockedCidrs as $cidr) {

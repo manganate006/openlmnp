@@ -79,10 +79,10 @@ class GetFiscalYear extends Tool
                 'balance_eur'           => bcdiv((string) $fy->tva_balance, '100', 2),
             ],
             'form_data'           => $fy->form_data,
+            // Le chemin n'est plus exposé : c'est un détail de stockage, et les anciens
+            // fichiers partagés entre comptes y étaient lisibles (GHSA-j4gm-g8m8-93x2).
             'has_pdf'             => $fy->pdf_path !== null,
-            'pdf_path'            => $fy->pdf_path,
             'has_fec'             => $fy->fec_path !== null,
-            'fec_path'            => $fy->fec_path,
             'transmitted_at'      => $fy->transmitted_at?->toDateTimeString(),
             'ack_number'          => $fy->ack_number ?? null,
             'created_at'          => $fy->created_at?->toDateTimeString(),

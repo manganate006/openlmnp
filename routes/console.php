@@ -15,6 +15,12 @@ Schedule::command('openlmnp:demo-expiry-notify')->hourly();
 Schedule::command('openlmnp:demo-cleanup')->hourly();
 // Check-in anonyme quotidien (télémétrie opt-out) — compte les instances self-hosted.
 Schedule::command('app:instance-checkin')->daily();
+
+// Journal MCP : purge au-delà de MCP_AUDIT_RETENTION jours (voir McpAuditLog::prunable()).
+Schedule::command('model:prune', ['--model' => [\App\Models\McpAuditLog::class]])->daily();
+
+// Archives de justificatifs laissées par l'outil MCP export_documents (lien valable 1 h).
+Schedule::command('openlmnp:purge-exports')->daily();
 // Relève les millésimes DVF publiés (data.gouv.fr en republie deux par an). Hors requête :
 // `DvfClient::years()` ne fait AUCUN appel réseau, l'appel sortant reste déclenché par un clic.
 // Sans effet si DVF_ENABLED=false.

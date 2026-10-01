@@ -27,6 +27,9 @@ class BelongsToUserThroughFiscalYearScope implements Scope
                     ->select('id')
                     ->where('user_id', Auth::id())
             );
+        } elseif (UnresolvedUser::isMarked()) {
+            // Serveur MCP local sans compte désigné : rien plutôt que tout.
+            $builder->whereRaw('1 = 0');
         }
     }
 }

@@ -99,6 +99,12 @@ class FecService
     /**
      * Génère le FEC pour un exercice fiscal.
      */
+    /** Une valeur de colonne : tabulations et sauts de ligne remplacés par une espace. */
+    public static function field(mixed $value): string
+    {
+        return trim(preg_replace('/[\t\r\n]+/', ' ', (string) $value));
+    }
+
     public function generate(FiscalYear $fiscalYear): string
     {
         $entries = AccountingEntry::where('fiscal_year_id', $fiscalYear->id)
@@ -119,7 +125,9 @@ class FecService
 
         // Écritures — même EcritureNum pour les lignes d'une écriture équilibrée
         foreach ($entries as $entry) {
-            $lines[] = implode("\t", [
+            // field() : une tabulation ou un saut de ligne dans un libellé saisi décalait
+            // les colonnes du fichier (GHSA-j4gm-g8m8-93x2, point 21).
+            $lines[] = implode("\t", array_map(self::field(...), [
                 $entry->journal,                                          // JournalCode
                 self::JOURNAL_LABELS[$entry->journal] ?? $entry->journal, // JournalLib
                 str_pad((string) $entry->piece_ref, 6, '0', STR_PAD_LEFT), // EcritureNum
@@ -138,7 +146,7 @@ class FecService
                 $entry->entry_date->format('Ymd'),                        // ValidDate
                 '',                                                       // Montantdevise (vide pour EUR)
                 '',                                                       // Idevise (vide pour EUR)
-            ]);
+            ]));
         }
 
         $content = implode("\r\n", $lines) . "\r\n";
