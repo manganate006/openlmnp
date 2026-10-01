@@ -13,7 +13,8 @@ aux contributions de sa communauté. Ce guide explique comment participer effica
 
 ## Signaler un bug ou proposer une idée
 
-Ouvrez une **issue** sur le dépôt GitHub. Avant de créer une issue :
+Ouvrez une **issue** sur le dépôt GitHub. Une **faille de sécurité** ne se signale pas en
+issue publique : voir [SECURITY.md](SECURITY.md). Avant de créer une issue :
 
 - Vérifiez qu'une issue similaire n'existe pas déjà.
 - Pour un **bug** : décrivez le comportement attendu, le comportement observé, et les étapes
