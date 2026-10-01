@@ -184,7 +184,7 @@ class AnnualImportWizard extends Page implements HasForms
                             )),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV Airbnb')
-                            ->directory(DocumentStorage::IMPORT_DIRECTORY)
+                            ->directory(DocumentStorage::importDirectory())
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', '.csv'])
                             ->maxSize(10240),
                     ]),

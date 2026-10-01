@@ -164,3 +164,67 @@ it('neutralise les formules dans les exports CSV', function () {
         ->and(CsvExportService::cell('Assurance PNO'))->toBe('Assurance PNO')
         ->and(CsvExportService::cell(1250))->toBe(1250);
 });
+
+/*
+ * Compléments au correctif du rapporteur : un file_path enregistré AVANT le correctif peut
+ * encore viser le dossier d'un autre compte. La lecture et la suppression le vérifient donc
+ * aussi, pas seulement le formulaire.
+ */
+
+function pieceQuiPointeChez(User $proprietaire, string $chemin): App\Models\Document
+{
+    $expense = Expense::create([
+        'property_id' => bienDe($proprietaire)->id, 'category' => 'insurance',
+        'description' => 'Assurance PNO', 'amount' => 25000,
+        'expense_date' => '2024-05-10',
+    ]);
+
+    return $expense->documents()->create([
+        'label' => 'Avis', 'file_path' => $chemin, 'document_date' => '2024-05-10',
+    ]);
+}
+
+it('ne supprime pas le fichier d\'un autre utilisateur par delete_document', function () {
+    config()->set('mcp.enabled', true);
+    $this->user->forceFill(['mcp_enabled' => true])->save();
+    $jeton = $this->user->createToken('test');
+
+    $this->actingAs($this->user);
+    $piece = pieceQuiPointeChez($this->user, $this->secret);
+    // Repartir sans session : la requête MCP s'authentifie par son seul jeton.
+    $this->app['auth']->forgetGuards();
+
+    $this->withToken($jeton->plainTextToken)->postJson('/mcp', [
+        'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+        'params' => ['name' => 'delete_document', 'arguments' => ['document_id' => $piece->id]],
+    ])->assertOk();
+
+    expect(Storage::disk('local')->exists($this->secret))->toBeTrue();
+});
+
+it('n\'archive pas le fichier d\'un autre utilisateur dans l\'export ZIP', function () {
+    $this->actingAs($this->user);
+    pieceQuiPointeChez($this->user, $this->secret);
+
+    $resultat = app(App\Services\DocumentExportService::class)->exportZip($this->user, 2024);
+
+    expect($resultat['count'])->toBe(0);
+});
+
+it('ne lit pas le CSV déposé par un autre utilisateur dans son dossier d\'import', function () {
+    $this->actingAs($this->user);
+
+    expect(App\Support\DocumentStorage::isImportUpload("imports/{$this->user->id}/releve.csv"))->toBeTrue()
+        ->and(App\Support\DocumentStorage::isImportUpload("imports/{$this->other->id}/releve.csv"))->toBeFalse()
+        ->and(App\Support\DocumentStorage::isImportUpload('imports/releve.csv'))->toBeFalse()
+        ->and(App\Support\DocumentStorage::isImportUpload("imports/{$this->user->id}/../{$this->other->id}/r.csv"))->toBeFalse();
+});
+
+it('ne laisse pas le navigateur forcer l\'affichage ou la variante du recueil d\'avis', function () {
+    config()->set('feedback.enabled', true);
+
+    $page = Livewire::actingAs($this->user)->test(FeedbackPrompt::class);
+
+    expect(fn () => $page->set('eligible', true))->toThrow(CannotUpdateLockedPropertyException::class)
+        ->and(fn () => $page->set('variant', 'b'))->toThrow(CannotUpdateLockedPropertyException::class);
+});

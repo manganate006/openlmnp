@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Property;
 use App\Models\PropertyWork;
+use App\Support\DocumentStorage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Storage;
@@ -42,7 +43,10 @@ class DeleteDocument extends Tool
 
         $id = $document->id;
 
-        Storage::delete($document->file_path);
+        // Un file_path enregistré avant GHSA-j4gm-g8m8-93x2 peut viser le dossier d'un autre compte.
+        if (DocumentStorage::isOwnedBy($document->file_path, (int) auth()->id())) {
+            Storage::delete($document->file_path);
+        }
         $document->delete();
 
         return Response::json(['success' => true, 'deleted_id' => $id]);

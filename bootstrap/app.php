@@ -34,12 +34,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_AWS_ELB,
         );
 
-        // Hôtes acceptés : celui d'APP_URL et ses sous-domaines. Sans ce filtre, un en-tête
-        // Host forgé se retrouve dans les liens absolus, dont celui du mail de
-        // réinitialisation du mot de passe. TRUSTED_HOSTS ajoute d'autres noms (CSV).
-        $hosts = array_filter(array_map('trim', explode(',', (string) env('TRUSTED_HOSTS', ''))));
+        // Hôtes acceptés : celui d'APP_URL et ses sous-domaines, localhost, et TRUSTED_HOSTS
+        // (CSV, `*` pour couper le filtre). Sans filtre, un en-tête Host forgé se retrouve
+        // dans le lien du mail de réinitialisation. Inactif si APP_URL est localhost ou une
+        // IP : voir App\Support\TrustedHosts.
         $middleware->trustHosts(
-            at: array_values(array_map(fn (string $host) => '^'.preg_quote($host).'$', $hosts)),
+            at: fn () => \App\Support\TrustedHosts::patterns(config('app.url'), env('TRUSTED_HOSTS')),
         );
 
         // En-têtes de sécurité côté app (F8) : défense en profondeur quand l'app est

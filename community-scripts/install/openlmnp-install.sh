@@ -39,6 +39,7 @@ APP_ENV=production
 APP_KEY=${APP_KEY}
 APP_DEBUG=false
 APP_URL=http://${LOCAL_IP}
+GITHUB_REPO=manganate006/openlmnp
 
 LOG_CHANNEL=stack
 LOG_LEVEL=warning

@@ -42,7 +42,8 @@ class FeedbackPrompt extends Component
 
     public bool $canPublish = false;
 
-    /** Renseignés au montage, lus par le minuteur côté navigateur. */
+    /** Renseignés au montage, lus par le minuteur côté navigateur (lecture seule pour lui). */
+    #[Locked]
     public bool $eligible = false;
 
     public int $minSeconds = 0;
@@ -57,6 +58,7 @@ class FeedbackPrompt extends Component
     public string $audience = Feedback::AUDIENCE_USER;
 
     /** Mise en forme tirée au sort : « a », « b » ou « c ». */
+    #[Locked]
     public string $variant = FeedbackEligibility::VARIANT_FALLBACK;
 
     /**

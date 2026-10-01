@@ -49,6 +49,12 @@ class DocumentExportService
         $count = 0;
 
         foreach ($documents as $document) {
+            // Un file_path enregistré avant GHSA-j4gm-g8m8-93x2 peut viser le dossier d'un
+            // autre compte : il n'entre pas dans l'archive.
+            if (! DocumentStorage::isOwnedBy($document->file_path, $user->id)) {
+                continue;
+            }
+
             // ⚠️ Même repli que `DocumentController` : un justificatif déposé avant que
             // Laravel 11 ne déplace le disque `local` vers `storage/app/private` vit encore
             // sous l'ancienne racine. Sans ce repli, `file_exists()` rendait false et le

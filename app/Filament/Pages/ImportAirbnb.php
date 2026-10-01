@@ -66,7 +66,7 @@ class ImportAirbnb extends Page implements HasForms
                             ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV')
-                            ->directory(DocumentStorage::IMPORT_DIRECTORY)
+                            ->directory(DocumentStorage::importDirectory())
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', '.csv'])
                             ->maxSize(10240),
                     ])

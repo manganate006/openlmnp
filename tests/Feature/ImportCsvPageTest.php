@@ -46,9 +46,10 @@ function importCsvProperty(User $user): Property
  *
  * @return array<string, string>
  */
-function uploadedCsv(string $content): array
+function uploadedCsv(string $content, ?User $owner = null): array
 {
-    $path = 'imports/' . uniqid('olmnp-page-') . '.csv';
+    // Dossier d'import de l'utilisateur du test : l'écran refuse tout autre chemin.
+    $path = 'imports/' . ($owner ?? test()->user)->id . '/' . uniqid('olmnp-page-') . '.csv';
     Storage::disk()->put($path, $content);
 
     return [uniqid('u') => $path];
@@ -128,7 +129,7 @@ it('lets the user repair a mapping the guess got wrong', function () {
 
 it('never imports another user property', function () {
     $intruder = User::factory()->create();
-    $file = uploadedCsv("Date;Montant;Libellé\n15/03/2024;100,00;Charge\n");
+    $file = uploadedCsv("Date;Montant;Libellé\n15/03/2024;100,00;Charge\n", $intruder);
 
     $component = Livewire::actingAs($intruder)
         ->test(ImportCsv::class)

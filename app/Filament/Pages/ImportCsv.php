@@ -88,7 +88,7 @@ class ImportCsv extends Page implements HasForms
                             ->helperText('Un fichier, une nature. Un inventaire de cabinet mélange rarement le mobilier et les charges.'),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV')
-                            ->directory(DocumentStorage::IMPORT_DIRECTORY)
+                            ->directory(DocumentStorage::importDirectory())
                             ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel', '.csv'])
                             ->maxSize(10240),
                     ])

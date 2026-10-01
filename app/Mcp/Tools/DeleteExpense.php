@@ -30,7 +30,10 @@ class DeleteExpense extends Tool
 
         // Delete associated documents' files
         foreach ($expense->documents as $doc) {
-            \Illuminate\Support\Facades\Storage::delete($doc->file_path);
+            // Un file_path enregistré avant GHSA-j4gm-g8m8-93x2 peut viser le dossier d'un autre compte.
+            if (\App\Support\DocumentStorage::isOwnedBy($doc->file_path, (int) auth()->id())) {
+                \Illuminate\Support\Facades\Storage::delete($doc->file_path);
+            }
         }
 
         $expense->delete();

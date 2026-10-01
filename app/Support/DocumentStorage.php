@@ -69,22 +69,42 @@ class DocumentStorage
      */
     public static function belongsToCurrentUser(): Closure
     {
-        return fn (string $file): bool => str_starts_with($file, 'documents/' . auth()->id() . '/')
-            && ! str_contains($file, '..');
+        return fn (string $file): bool => auth()->check() && self::isOwnedBy($file, (int) auth()->id());
     }
 
-    /** Dossier où les écrans d'import rangent le CSV déposé. */
+    /**
+     * Le chemin est-il dans le dossier de cet utilisateur ? À vérifier avant toute
+     * lecture ou suppression d'un `file_path` lu en base : une ligne enregistrée avant
+     * le correctif de GHSA-j4gm-g8m8-93x2 peut encore pointer chez un autre compte.
+     */
+    public static function isOwnedBy(mixed $path, int $userId): bool
+    {
+        return is_string($path)
+            && str_starts_with($path, 'documents/' . $userId . '/')
+            && ! str_contains($path, '..')
+            && ! str_contains($path, "\0");
+    }
+
+    /** Dossier où les écrans d'import rangent le CSV déposé : un sous-dossier par utilisateur. */
     public const IMPORT_DIRECTORY = 'imports';
+
+    /** Pour le `directory()` des FileUpload d'import. */
+    public static function importDirectory(): Closure
+    {
+        return fn () => self::IMPORT_DIRECTORY . '/' . auth()->id();
+    }
 
     /**
      * Le chemin d'un CSV à importer vient de l'état Livewire, donc du navigateur.
      * Sans ce contrôle, `documents/7/...` ou le FEC d'un autre compte serait lu
-     * et renvoyé dans l'aperçu. On n'accepte qu'un fichier posé dans `imports/`.
+     * et renvoyé dans l'aperçu. On n'accepte qu'un fichier posé dans le dossier
+     * d'import de l'utilisateur connecté.
      */
     public static function isImportUpload(mixed $path): bool
     {
         return is_string($path)
-            && preg_match('#^' . self::IMPORT_DIRECTORY . '/[^/\\\\]+$#', $path) === 1
+            && auth()->check()
+            && preg_match('#^' . self::IMPORT_DIRECTORY . '/' . (int) auth()->id() . '/[^/\\\\]+$#', $path) === 1
             && ! str_contains($path, '..');
     }
 
