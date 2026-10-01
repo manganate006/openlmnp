@@ -69,6 +69,10 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Noms d'hôte acceptés en plus de celui d'APP_URL (CSV, `*` pour couper le filtre).
+    // Voir App\Support\TrustedHosts et bootstrap/app.php.
+    'trusted_hosts' => env('TRUSTED_HOSTS', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

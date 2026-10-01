@@ -46,15 +46,20 @@ class FeedbackPrompt extends Component
     #[Locked]
     public bool $eligible = false;
 
+    #[Locked]
     public int $minSeconds = 0;
 
+    #[Locked]
     public int $minActions = 0;
 
     /** @var list<string> */
+    #[Locked]
     public array $trackedActions = [];
 
+    #[Locked]
     public string $trigger = Feedback::TRIGGER_SESSION;
 
+    #[Locked]
     public string $audience = Feedback::AUDIENCE_USER;
 
     /** Mise en forme tirée au sort : « a », « b » ou « c ». */
@@ -72,6 +77,7 @@ class FeedbackPrompt extends Component
      * Route de la PAGE qui portait le composant. Capturée au montage : dans une requête
      * Livewire, `request()->route()` désigne l'endpoint de mise à jour, pas la page.
      */
+    #[Locked]
     public ?string $pageRoute = null;
 
     public function mount(): void

@@ -68,7 +68,8 @@ class EditProfile extends BaseEditProfile
     protected function mutateFormDataBeforeSave(array $data): array
     {
         if (McpDemo::isDemoUser($this->getUser())) {
-            unset($data['email'], $data['password'], $data['mcp_enabled']);
+            // Nom et SIREN aussi : ils s'affichent chez tous les visiteurs de la démo.
+            unset($data['name'], $data['email'], $data['password'], $data['siren'], $data['mcp_enabled']);
         }
 
         return $data;

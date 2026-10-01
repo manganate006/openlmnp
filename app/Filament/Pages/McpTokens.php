@@ -68,7 +68,7 @@ class McpTokens extends Page
                 ->label('Nouveau token')
                 ->icon('heroicon-o-plus')
                 ->color('primary')
-                ->visible(fn () => auth()->user()->mcp_enabled)
+                ->visible(fn () => auth()->user()->mcp_enabled && ! McpDemo::isDemoUser(auth()->user()))
                 ->form([
                     TextInput::make('name')
                         ->label('Nom du token')

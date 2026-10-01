@@ -122,6 +122,14 @@ class ExportDossierCommand extends Command
                     continue;
                 }
 
+                // Un file_path enregistré avant GHSA-j4gm-g8m8-93x2 peut viser le dossier
+                // d'un autre compte : il ne part pas dans ce dossier.
+                if (! DocumentStorage::isOwnedBy($document->file_path, $user->id)) {
+                    $this->warn("  justificatif hors du dossier du compte, ignoré : {$document->file_path}");
+
+                    continue;
+                }
+
                 // ⚠️ Repli sur l'ancienne racine `storage/app`, comme le contrôleur de
                 // documents depuis la v1.4.1. Laravel 11 a déplacé le disque `local` vers
                 // `storage/app/private` : un justificatif déposé avant cette montée de

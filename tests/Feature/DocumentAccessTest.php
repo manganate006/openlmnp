@@ -129,11 +129,17 @@ it('garde l\'e-mail et les jetons du compte démo public', function () {
 
     Livewire::actingAs($demo)
         ->test(EditProfile::class)
-        ->fillForm(['email' => 'pirate@exemple.test', 'timezone' => 'Europe/Paris'])
+        ->fillForm(['name' => 'Pirate', 'email' => 'pirate@exemple.test', 'siren' => '666666666', 'timezone' => 'Europe/Paris'])
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($demo->fresh()->email)->toBe('demo@exemple.test');
+    expect($demo->fresh()->email)->toBe('demo@exemple.test')
+        ->and($demo->fresh()->name)->not->toBe('Pirate')
+        ->and($demo->fresh()->siren)->not->toBe('666666666');
+
+    Livewire::actingAs($demo)
+        ->test(McpTokens::class)
+        ->assertActionHidden('createToken');
 
     Livewire::actingAs($demo)
         ->test(McpTokens::class)

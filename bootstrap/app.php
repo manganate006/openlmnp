@@ -39,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // dans le lien du mail de réinitialisation. Inactif si APP_URL est localhost ou une
         // IP : voir App\Support\TrustedHosts.
         $middleware->trustHosts(
-            at: fn () => \App\Support\TrustedHosts::patterns(config('app.url'), env('TRUSTED_HOSTS')),
+            at: fn () => \App\Support\TrustedHosts::patterns(config('app.url'), config('app.trusted_hosts')),
         );
 
         // En-têtes de sécurité côté app (F8) : défense en profondeur quand l'app est
