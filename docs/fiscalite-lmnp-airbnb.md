@@ -53,7 +53,7 @@ Sources : [jedeclaremonmeuble.com](https://www.jedeclaremonmeuble.com/abattement
 
 ## Quote-part du bien principal : c'est autorisé
 
-Le [BOFiP (BOI-BIC-CHAMP-40-20)](https://bofip.impots.gouv.fr/bofip/3610-PGP.html/identifiant=BOI-BIC-CHAMP-40-20-20260819) encadre la location meublée dans une partie de la résidence principale :
+Le [BOFiP (BOI-BIC-CHAMP-40-20)](https://bofip.impots.gouv.fr/bofip/3610-PGP.html/identifiant=BOI-BIC-CHAMP-40-20-20260819) traite la location d'une partie de la résidence principale sous l'angle de l'exonération de l'article 35 bis du CGI (§ 100 et suivants) : il ne fixe pas de règle de répartition des charges ni des amortissements. La méthode retenue ici répartit selon la surface louée :
 
 - **Amortissement au prorata de la surface louée** (27,8 %) sur la structure commune
 - **Charges communes proratisées** de la même manière
