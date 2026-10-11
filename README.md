@@ -5,7 +5,7 @@
 **Logiciel open source de comptabilité LMNP (Location Meublée Non Professionnelle)**
 
 Gérez vos biens en location meublée, calculez vos amortissements,
-et produisez votre liasse fiscale au régime réel — sans abonnement, chez vous.
+et produisez votre liasse fiscale au régime réel, sans abonnement et chez vous.
 
 [![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
 [![Release](https://img.shields.io/github/v/release/manganate006/openlmnp?label=Release&color=blue)](https://github.com/manganate006/openlmnp/releases)
@@ -21,8 +21,8 @@ et produisez votre liasse fiscale au régime réel — sans abonnement, chez vou
 
 </div>
 
-> **🎯 Essayez sans rien installer** — la [démo en ligne](https://app.openlmnp.fr) crée un bac à sable
-> éphémère et isolé pour chaque visiteur, pré-rempli avec 4 années de comptabilité fictive.
+> **🎯 Essayez sans rien installer** : la [démo en ligne](https://app.openlmnp.fr) crée un bac à sable
+> éphémère et isolé pour chaque visiteur, pré-rempli avec plusieurs exercices de comptabilité fictive (depuis 2022).
 > Connexion : `demo@openlmnp.fr` / `demo2026`.
 
 ## Sommaire
@@ -36,9 +36,10 @@ et produisez votre liasse fiscale au régime réel — sans abonnement, chez vou
 - [Installation LXC Proxmox](#installation-lxc-proxmox-script-communautaire)
 - [Installation développement](#installation-développement)
 - [Configuration](#configuration)
+- [Sauvegarde](#sauvegarde)
 - [Tests](#tests)
 - [Contribution](#contribution)
-- [Comment nous soutenir ?](#comment-nous-soutenir-)
+- [Comment nous soutenir ?](#-comment-nous-soutenir-)
 - [Remerciements](#remerciements)
 - [Licence](#licence)
 
@@ -57,39 +58,43 @@ conforme. Les options habituelles ont chacune leur défaut :
 | **Calculs au centime (bcmath)** | ✅ | ⚠️ Arrondis flottants | ✅ | ✅ |
 
 OpenLMNP automatise le régime réel de bout en bout et reste un **outil d'aide** : pour les
-situations complexes (indivision, TVA para-hôtelière, passage en LMP…), un expert-comptable
+situations complexes (indivision, TVA para-hôtelière, passage en LMP...), un expert-comptable
 reste recommandé.
 
 ## Fonctionnalités
 
 ### 🏠 Comptabilité & amortissements
-- **Amortissement par composant** — gros œuvre, toiture, plomberie, agencements (durées standards)
-- **Travaux & mobilier** — amortissement dédié ou au prorata, gestion neuf/occasion
-- **Emprunts** — tableau d'amortissement automatique, intérêts déductibles
-- **Écritures comptables** — génération automatique selon le plan comptable LMNP
-- **Multi-biens** — adresse, surfaces, quote-part résidence principale, valeur vénale
+- **Amortissement par composant** : gros œuvre, toiture, plomberie, agencements (durées standards), ventilés en pourcentage ou en montants
+- **Travaux & mobilier** : amortissement dédié ou au prorata, gestion neuf/occasion
+- **Emprunts** : tableau d'amortissement automatique, intérêts déductibles
+- **Charges récurrentes** : génération des échéances mensuelles ou trimestrielles, duplication d'une charge
+- **Écritures comptables** : génération automatique selon le plan comptable LMNP
+- **Multi-biens** : adresse, surfaces, quote-part résidence principale, valeur vénale estimée d'après les ventes réelles de la commune (données DVF)
+- **Reprise d'un dossier existant** : assistant en 5 étapes à partir de la dernière liasse de votre cabinet, contrôlée chiffre à chiffre
 
 ### 📋 Fiscal & déclarations
-- **Exercices chaînés** — reports N−1, amortissements différés, plafonnement
-- **Simulateur micro-BIC vs régime réel** — avec verdict chiffré
-- **Projection pluriannuelle** — tableau sur 5 à 20 ans, année de bascule des régimes
-- **Télédéclaration interactive** — lignes Cerfa 2031, 2033-A/B/C/D, 2042-C-PRO avec boutons « Copier »
-- **Liasse fiscale PDF** — génération complète
-- **FEC conforme** — article A.47 A-1 du LPF, 18 colonnes, format légal
+- **Exercices chaînés** : reports N-1, amortissements différés, plafonnement, suivi des déficits reportables
+- **Simulateur micro-BIC vs régime réel** : avec verdict chiffré
+- **Projection pluriannuelle** : tableau sur 5 à 20 ans, année de bascule des régimes
+- **Télédéclaration interactive** : lignes Cerfa 2031, 2033-A/B/C/D, 2042-C-PRO avec boutons « Copier », date et numéro de dépôt notés
+- **Liasse fiscale PDF** : 2031-SD et 2033-A à D, annexes « détail du résultat » et « détail des immobilisations », contrôles de cohérence entre formulaires
+- **FEC conforme** : article A.47 A-1 du LPF, 18 colonnes, format légal
+- **Déclaration de TVA** : pour un bien assujetti
 
 ### 🔌 Import & intégrations
-- **Import CSV Airbnb / Booking** — formats FR/EN, détection des doublons
-- **Export CSV** — recettes, charges, télédéclaration
-- **API MCP (45 outils)** — pilotez votre comptabilité depuis un assistant IA (Claude, etc.)
-- **Mises à jour automatiques** — notification et déploiement depuis GitHub
+- **Import CSV Airbnb / Booking** : formats FR/EN, détection des doublons ; import CSV générique des recettes, charges, mobilier et travaux
+- **Export CSV** : recettes, charges, télédéclaration
+- **API MCP (45 outils)** : pilotez votre comptabilité depuis un assistant IA (Claude, etc.)
+- **Nouvelles versions signalées** : dans l'application, d'après les releases GitHub (mise à jour d'une instance Docker par `docker pull`)
 
 ### 🛡️ Confort & sécurité
-- **Multi-utilisateurs** — chaque propriétaire voit uniquement ses données
-- **Assistants guidés** — onboarding, création de bien, clôture fiscale, emprunt, import annuel
-- **Justificatifs** — pièces uploadées sur charges, travaux et mobilier
-- **Guide intégré & badges de progression** — mise en route, suivi régulier, déclaration annuelle
-- **Dark mode** — natif Filament
-- **234 tests automatisés** — Pest PHP, 629 assertions ([détail](docs/TESTS.md))
+- **Multi-utilisateurs** : chaque propriétaire voit uniquement ses données
+- **Assistants guidés** : onboarding, création de bien, clôture fiscale, emprunt, import annuel
+- **Justificatifs** : pièces jointes aux charges, travaux et mobilier, export ZIP
+- **Guide intégré & badges de progression** : mise en route, suivi régulier, déclaration annuelle
+- **Rapport de diagnostic** : tout ce qui produit vos amortissements et votre liasse, en un texte, pour signaler un problème de calcul
+- **Dark mode** : natif Filament
+- **Tests automatisés** : suite Pest PHP rejouée à chaque push ([détail](docs/TESTS.md))
 
 ## Captures d'écran
 
@@ -106,10 +111,12 @@ D'autres captures : [tableau de bord](docs/screenshots/dashboard.png) · [charge
 | [Installation](docs/INSTALLATION.md) | Auto-hébergement via Docker : build, run, volumes de persistance, variables d'environnement, mise à jour et sauvegarde |
 | [Fonctionnalités](docs/FONCTIONNALITES.md) | Amortissement par composant, FEC, liasse fiscale 2031/2033, import CSV, simulateur, multi-biens, emprunts, justificatifs |
 | [Mode démonstration](docs/DEMO.md) | Activer et utiliser le mode démo multi-utilisateurs (sandbox éphémère isolé par visiteur) |
-| [FAQ](docs/FAQ.md) | Questions courantes : gratuité, confidentialité des données, régime réel vs micro-BIC, sauvegardes… |
+| [FAQ](docs/FAQ.md) | Questions courantes : gratuité, confidentialité des données, régime réel vs micro-BIC, sauvegardes... |
 | [Guide fiscal LMNP / Airbnb](docs/fiscalite-lmnp-airbnb.md) | Règles fiscales du régime réel : amortissements, abattements, plafonds, réforme 2026 |
-| [Couverture de tests](docs/TESTS.md) | Détail des 234 tests automatisés, suite par suite |
+| [Couverture de tests](docs/TESTS.md) | Détail des tests automatisés, suite par suite |
 | [Guide de conception UI](docs/ui-design-openlmnp.md) | Choix de design de l'interface Filament |
+| [Journal des versions](CHANGELOG.md) | Nouveautés et corrections, version par version |
+| [Sécurité](SECURITY.md) | Signaler une faille en privé |
 
 Pour contribuer au projet, voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -137,17 +144,16 @@ docker run -d --name openlmnp -p 8090:8000 \
   --restart unless-stopped manganate06/openlmnp:latest
 ```
 
-Ou en construisant l'image depuis les sources :
+Ou en construisant l'image depuis les sources, avec le [`docker-compose.yml`](docker-compose.yml) fourni :
 
 ```bash
 git clone https://github.com/manganate006/openlmnp.git
 cd openlmnp
-docker build -t openlmnp .
-docker run -d --name openlmnp -p 8090:8000 --restart unless-stopped openlmnp
+docker compose up -d
 ```
 
 Accès : `http://localhost:8090`
-Première connexion : créez votre compte sur `/register` — le premier compte devient
+Première connexion : créez votre compte sur `/register` : le premier compte devient
 administrateur, et l'inscription se referme ensuite d'elle-même.
 
 ## Déploiement sur un PaaS (Coolify, Dokploy, Easypanel)
@@ -169,8 +175,6 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/manganate006/openlmnp/ma
 Debian 13 · nginx + PHP 8.4-FPM · SQLite. Un mot de passe admin **aléatoire** est généré à
 l'installation et enregistré dans `/opt/openlmnp/admin_credentials.txt`.
 
-> ℹ️ Nécessite un dépôt public avec une *release* publiée (le script récupère la dernière release GitHub).
-
 ## Installation développement
 
 ```bash
@@ -188,16 +192,20 @@ php artisan serve
 
 À la première visite, créez votre compte sur `/register` : il devient
 **administrateur**, puis la page d'inscription **se referme automatiquement**
-(instance personnelle par défaut — réglable via `ALLOW_REGISTRATION`).
+(instance personnelle par défaut, réglable via `ALLOW_REGISTRATION`).
 Ajoutez ensuite votre SIREN dans votre profil pour les documents fiscaux.
 
 | Variable | Description | Défaut |
 |----------|-------------|--------|
 | `DB_CONNECTION` | Base de données | `sqlite` |
 | `DB_DATABASE` | Chemin SQLite | `database/database.sqlite` |
+| `APP_URL` | Adresse publique de l'instance, schéma compris (`https://lmnp.exemple.fr`) | `http://localhost` |
+| `TRUSTED_HOSTS` | Autres noms d'hôte acceptés quand `APP_URL` porte un domaine (IP, alias), séparés par des virgules (sinon erreur 400) | vide |
 | `APP_LOCALE` | Langue | `fr` |
 | `ALLOW_REGISTRATION` | Inscription : `auto` (jusqu'au premier compte), `true` (toujours), `false` (jamais) | `auto` |
 | `FEEDBACK_ENABLED` | Invitation ponctuelle à donner son avis sur le logiciel (voir ci-dessous) | `true` |
+| `TELEMETRY_ENABLED` | Signal quotidien anonyme (identifiant aléatoire + version) pour compter les instances installées ; aucune donnée comptable ni personnelle | `true` |
+| `DVF_ENABLED` | Bouton d'estimation de la valeur vénale ; au clic seulement, il interroge data.gouv.fr avec la commune du bien | `true` |
 
 ### Donner son avis (et comment l'éteindre)
 
@@ -221,7 +229,7 @@ Les seuils sont réglables sans toucher au code : `FEEDBACK_MIN_SECONDS` (240),
 
 ### Emails (optionnel)
 
-Aucun email ne part par défaut (`MAIL_MAILER=log`) — l'application fonctionne très
+Aucun email ne part par défaut (`MAIL_MAILER=log`), et l'application fonctionne très
 bien sans. Pour activer le lien « Mot de passe oublié », branchez le SMTP de votre
 choix via les variables `MAIL_*` (l'expéditeur est votre propre adresse ; SPF/DKIM
 sont gérés par votre fournisseur). Et en cas d'oubli sans SMTP, depuis le serveur :
@@ -230,15 +238,24 @@ sont gérés par votre fournisseur). Et en cas d'oubli sans SMTP, depuis le serv
 php artisan openlmnp:reset-password vous@exemple.fr
 ```
 
-📖 **Référence complète** — toutes les variables, volumes de persistance, comptes,
+📖 **Référence complète** : toutes les variables, volumes de persistance, comptes,
 SMTP pas à pas, sauvegarde : [docs/INSTALLATION.md](docs/INSTALLATION.md)
+
+## Sauvegarde
+
+Tout tient dans deux volumes : `database` (la base SQLite) et `storage` (vos justificatifs).
+La base est en mode WAL : **ne copiez pas `database.sqlite` pendant que l'instance tourne**,
+la copie perdrait ses dernières écritures sans le moindre message. Prenez un instantané
+cohérent avec `sqlite3 database.sqlite ".backup 'instantane.sqlite'"`, ou arrêtez le
+conteneur avant de copier. Procédure complète et restauration :
+[docs/INSTALLATION.md](docs/INSTALLATION.md#sauvegarde-et-restauration).
 
 ## Tests
 
 [![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
 
-**234 tests Pest PHP, 629 assertions** — services de calcul, pages Filament, isolation
-multi-utilisateurs, mode démo. Détail suite par suite : [docs/TESTS.md](docs/TESTS.md).
+Suite Pest PHP rejouée à chaque push : services de calcul, liasse et FEC, pages Filament,
+isolation multi-utilisateurs, mode démo. Détail suite par suite : [docs/TESTS.md](docs/TESTS.md).
 
 ```bash
 # Lancer tous les tests
@@ -252,7 +269,9 @@ vendor/bin/pest --filter="Filament"
 
 ## Contribution
 
-Les contributions sont les bienvenues ! Merci d'ouvrir une issue avant de soumettre une PR.
+Les contributions sont les bienvenues ! Merci d'ouvrir une issue avant de soumettre une PR,
+et de lire [CONTRIBUTING.md](CONTRIBUTING.md). Une faille de sécurité se signale **en privé**,
+jamais dans une issue publique : voir [SECURITY.md](SECURITY.md).
 
 ```bash
 # Fork + clone
@@ -269,10 +288,10 @@ git push origin feature/ma-fonctionnalite
 OpenLMNP est développé sur mon temps libre. Si l'outil vous rend service, voici comment
 m'aider à continuer :
 
-- ⭐ **Mettez une étoile** sur le repo — ça aide d'autres loueurs meublés à découvrir le projet
-- 💛 **Devenez sponsor** via [GitHub Sponsors](https://github.com/sponsors/manganate006) — quelques euros par mois financent le temps de développement
+- ⭐ **Mettez une étoile** sur le dépôt, ça aide d'autres loueurs meublés à découvrir le projet
+- 💛 **Devenez sponsor** via [GitHub Sponsors](https://github.com/sponsors/manganate006) : quelques euros par mois financent le temps de développement
 - 🐛 **Signalez un bug** ou proposez une fonctionnalité via les [issues](https://github.com/manganate006/openlmnp/issues)
-- 🔧 **Contribuez du code** — voir [CONTRIBUTING.md](CONTRIBUTING.md)
+- 🔧 **Contribuez du code** : voir [CONTRIBUTING.md](CONTRIBUTING.md)
 
 Merci à toutes celles et ceux qui soutiennent le projet !
 
@@ -286,14 +305,14 @@ signalements, sécurité) est sur la page [Remerciements](https://openlmnp.fr/re
 
 ## Licence
 
-[AGPLv3](LICENSE) — Logiciel libre. Vous pouvez l'utiliser, le modifier et le redistribuer
+[AGPLv3](LICENSE), logiciel libre. Vous pouvez l'utiliser, le modifier et le redistribuer
 à condition de partager les modifications sous la même licence.
 
 ## Crédits
 
-- [Laravel](https://laravel.com) — Framework PHP
-- [Filament](https://filamentphp.com) — Admin panel
-- [Pest PHP](https://pestphp.com) — Framework de tests
+- [Laravel](https://laravel.com) : framework PHP
+- [Filament](https://filamentphp.com) : panneau d'administration
+- [Pest PHP](https://pestphp.com) : framework de tests
 
 ---
 
