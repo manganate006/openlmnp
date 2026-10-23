@@ -256,6 +256,16 @@ docker run -d --name openlmnp -p 8090:8000 \
 Aucune requête n'est alors émise. Vous pouvez aussi le rediriger vers votre propre
 collecteur avec `TELEMETRY_URL`.
 
+**Avis de sécurité.** Depuis la version 1.6.11, la réponse du check-in peut porter des
+avis de sécurité publiés par le projet (une faille corrigée dans une version donnée, par
+exemple). Ils s'affichent en bandeau en haut de l'application, **pour les administrateurs
+seulement**, et uniquement si la version installée est concernée : le bandeau disparaît
+de lui-même une fois l'instance mise à jour. Aucune donnée supplémentaire n'est envoyée
+pour cela. En revanche, couper la télémétrie (`TELEMETRY_ENABLED=false`) coupe aussi ces
+avis : suivez alors les publications de sécurité sur
+[GitHub](https://github.com/manganate006/openlmnp/security/advisories) ou le
+[CHANGELOG](../CHANGELOG.md).
+
 Pour surcharger une variable au lancement, utilisez `-e` :
 
 ```bash

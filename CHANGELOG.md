@@ -17,6 +17,11 @@ Version corrective, **à installer sans attendre** sur toute instance accessible
 - La construction de l'image échoue désormais si PHP est antérieur à 8.4.27
 - **Script d'installation Proxmox** : la mise à jour met aussi à niveau les paquets PHP du
   conteneur
+- **Avis de sécurité dans l'application** : la réponse du check-in quotidien de télémétrie
+  peut désormais porter des avis de sécurité. Ils s'affichent en bandeau en haut du panel,
+  pour les administrateurs seulement, tant que la version installée est concernée, et
+  disparaissent après la mise à jour. Rien de plus n'est envoyé ; une instance qui a coupé
+  la télémétrie (`TELEMETRY_ENABLED=false`) ne reçoit pas ces avis
 
 **Pour mettre à jour** :
 

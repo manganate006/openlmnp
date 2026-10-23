@@ -105,6 +105,27 @@ class AdminPanelProvider extends PanelProvider
             // un compte promu n'est plus une démonstration, et il doit pouvoir trancher même
             // si le mode démonstration a été coupé entre-temps sur l'instance.
             ->renderHook('panels::body.end', fn () => view('livewire.demo-seed-choice-hook'))
+            // Avis de sécurité reçus par le check-in de télémétrie : administrateurs seulement,
+            // et seulement s'ils concernent la version installée (le bandeau disparaît après
+            // la mise à jour). Le test d'admin passe AVANT la lecture en base : un compte
+            // ordinaire ne paie aucune requête.
+            ->renderHook(\Filament\View\PanelsRenderHook::CONTENT_START, function () {
+                if (! auth()->user()?->isAdmin()) {
+                    return '';
+                }
+
+                $advisories = (new \App\Services\SecurityAdvisoryService())->applicable();
+
+                if ($advisories === []) {
+                    return '';
+                }
+
+                return view('filament.partials.security-advisories-banner', [
+                    'advisories' => $advisories,
+                    'updateCommand' => (new \App\Services\UpdateService())->dockerUpdateInstructions(),
+                    'updateUrl' => \App\Filament\Pages\AdminUpdate::getUrl(),
+                ]);
+            })
             ->renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.auth.demo-button'))
             ->renderHook(\Filament\View\PanelsRenderHook::HEAD_START, fn () => config('services.gtm.id') ? view('partials.gtm-head') : '')
             ->renderHook(\Filament\View\PanelsRenderHook::BODY_START, fn () => config('services.gtm.id') ? view('partials.gtm-body') : '')

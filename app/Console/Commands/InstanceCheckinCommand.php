@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Setting;
+use App\Services\SecurityAdvisoryService;
 use App\Services\UpdateService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
@@ -14,6 +15,10 @@ use Illuminate\Support\Str;
  * Envoie au projet un identifiant aléatoire stable + la version de l'app afin de
  * compter les instances auto-hébergées. Ne transmet AUCUNE donnée comptable,
  * personnelle ou fiscale. Entièrement désactivable via TELEMETRY_ENABLED=false.
+ *
+ * La réponse peut porter des avis de sécurité (clé `advisories`), affichés ensuite aux
+ * administrateurs par un bandeau du panel : voir SecurityAdvisoryService. Sans
+ * télémétrie, aucun avis n'est reçu ; c'est voulu, il n'existe pas d'autre flux sortant.
  */
 class InstanceCheckinCommand extends Command
 {
@@ -37,12 +42,17 @@ class InstanceCheckinCommand extends Command
         }
 
         try {
-            Http::timeout(5)->asJson()->post($url, [
+            $response = Http::timeout(5)->asJson()->post($url, [
                 'instance_id' => $this->instanceId(),
                 'version' => (new UpdateService())->getCurrentVersion(),
                 'install_type' => config('services.telemetry.install_type'),
             ]);
             $this->info('Check-in envoyé.');
+
+            // Réponse en erreur ou illisible : on garde les avis déjà connus.
+            if ($response->successful()) {
+                (new SecurityAdvisoryService())->storeFromResponse($response->json());
+            }
         } catch (\Throwable) {
             // Silencieux : la télémétrie ne doit jamais perturber l'app.
         }
