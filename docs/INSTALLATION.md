@@ -300,7 +300,8 @@ php artisan serve
 
 L'application tourne alors sur `http://localhost:8000`.
 
-Prérequis : **PHP 8.4** (extensions `pdo_sqlite`, `bcmath`, `intl`, `gd`, `zip`),
+Prérequis : **PHP 8.4.27 ou plus récent** (ou 8.3.36 sur la branche 8.3 : les versions
+antérieures sont exposées à CVE-2026-109618 et CVE-2026-109619) (extensions `pdo_sqlite`, `bcmath`, `intl`, `gd`, `zip`),
 **Composer**, et **Node.js 22+** si vous devez recompiler les assets CSS
 (`npm install && npm run build`).
 

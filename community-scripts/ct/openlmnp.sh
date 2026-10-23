@@ -35,6 +35,11 @@ function update_script() {
     systemctl stop nginx php8.4-fpm
     msg_ok "Stopped Services"
 
+    msg_info "Updating PHP"
+    $STD apt update
+    $STD apt install -y --only-upgrade $(dpkg-query -W -f='${Package}\n' 'php8.4*')
+    msg_ok "Updated PHP"
+
     create_backup /opt/openlmnp/.env /opt/openlmnp/database /opt/openlmnp/storage/app /opt/openlmnp/storage/logs
 
     CLEAN_INSTALL=1 fetch_and_deploy_gh_release "openlmnp" "manganate006/openlmnp" "tarball"

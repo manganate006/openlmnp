@@ -2,6 +2,29 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [1.6.11] - 2026-10-23
+
+### Sécurité
+
+Version corrective, **à installer sans attendre** sur toute instance accessible depuis Internet.
+
+- **PHP 8.4.27** dans l'image Docker (au lieu de 8.4.24). Cette version corrige deux failles
+  critiques de PHP, [CVE-2026-109618](https://www.cve.org/CVERecord?id=CVE-2026-109618) et
+  [CVE-2026-109619](https://www.cve.org/CVERecord?id=CVE-2026-109619), qui permettent
+  d'exécuter du code à distance sans authentification sur toute installation PHP qui répond à
+  des requêtes web ([bulletin PHP du 21 octobre 2026](https://www.php.net/archive/2026.php#2026-10-21-5)).
+  Le code d'OpenLMNP n'est pas en cause et ne change pas
+- La construction de l'image échoue désormais si PHP est antérieur à 8.4.27
+- **Script d'installation Proxmox** : la mise à jour met aussi à niveau les paquets PHP du
+  conteneur
+
+**Pour mettre à jour** :
+
+- avec l'image Docker : `docker pull manganate06/openlmnp:latest`, puis recréez le conteneur
+  avec la même commande `docker run` (vos données, dans les volumes, ne sont pas touchées) ;
+- sans Docker : mettez à jour le PHP de votre serveur par son gestionnaire de paquets (8.4.27,
+  ou 8.3.36 sur la branche 8.3). Mettre à jour OpenLMNP seul ne suffit pas.
+
 ## [1.6.10] - 2026-10-01
 
 ### Sécurité

@@ -1,7 +1,7 @@
 # Images de base épinglées par digest d'INDEX (manifest list) et non par digest de
 # plateforme : l'image officielle est publiée en amd64 + arm64 (docker-publish.yml), un
 # digest mono-plateforme ferait échouer le leg arm64 avec « no match for platform ».
-ARG PHP_IMAGE=php:8.4-cli-alpine@sha256:26e3f1de7f6aa3e8ea15584d803c5e088c57df89ff02a3ecf2dc855a4282d8d7
+ARG PHP_IMAGE=php:8.4.27-cli-alpine@sha256:7a8ab5b60ecd4aa1a1e47120390b5d044c11a8067936e496cdde89040d857c80
 ARG COMPOSER_IMAGE=composer:2@sha256:4d71c3c2109c61d5415544264b59ad4087e4c5b7244481723664138fd36d5040
 ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
 
@@ -115,6 +115,14 @@ RUN rm -rf /database-dist && cp -a database /database-dist
 # 5. RUNTIME STAGE
 # ============================================================
 FROM ${PHP_IMAGE} AS runtime
+
+# Plancher de sécurité : PHP 8.4.27 corrige CVE-2026-109618 et CVE-2026-109619 (exécution de
+# code à distance sans authentification, bulletin PHP du 21/10/2026). Si l'épinglage ci-dessus
+# revient un jour sur une image plus ancienne, le build échoue au lieu de publier une image
+# vulnérable.
+ARG PHP_MIN_VERSION=8.4.27
+RUN php -r "exit(version_compare(PHP_VERSION, '${PHP_MIN_VERSION}', '>=') ? 0 : 1);" \
+    || { echo "PHP $(php -r 'echo PHP_VERSION;') < ${PHP_MIN_VERSION} : image de base vulnérable" >&2; exit 1; }
 
 RUN apk add --no-cache \
     bash \
