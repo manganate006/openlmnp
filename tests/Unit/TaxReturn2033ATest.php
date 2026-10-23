@@ -65,7 +65,7 @@ function form2033A(User $user, int $year): array
 
 it('counts works and furniture among the gross corporeal assets', function () {
     // Le défaut d'origine : 028 valait le seul prix d'acquisition. Sur la liasse réelle, il y
-    // manquait exactement les travaux et le mobilier — 9 144 € sur 226 645 €.
+    // manquait exactement les travaux et le mobilier — 7 610 € sur 188 400 €.
     $property = balanceProperty($this->user);
     $this->depreciation->generateDefaultComponents($property);
 

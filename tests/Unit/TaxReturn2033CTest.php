@@ -181,8 +181,8 @@ it('still counts the gross value of fees once they are fully depreciated', funct
 
 it('carries the land in the total gross assets, where the table ignored it', function () {
     // Le terrain ne sort d'aucune ligne du détail d'amortissement — il ne s'amortit pas —, et
-    // la ligne 490 l'oubliait donc : 32 625 € manquants sur 245 643 € pour la liasse réelle
-    // rejouée le 2026-09-05. Ici : 250 000 € à 20 % de terrain, soit 50 000 €.
+    // la ligne 490 l'oubliait donc : 27 150 € manquants sur 203 900 € pour le dossier de
+    // test rejoué le 2026-09-05. Ici : 250 000 € à 20 % de terrain, soit 50 000 €.
     $property = taxProperty($this->user);
     $this->depreciation->generateDefaultComponents($property);
 

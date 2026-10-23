@@ -252,7 +252,7 @@ ETAPE 1/4 : Informations generales
 
   Surface totale (m2) *      [______]
   Surface louee (m2) *       [______]
-  Quote-part calculee :      >> 27,8 % <<   (auto, affiche en temps reel)
+  Quote-part calculee :      >> 26,3 % <<   (auto, affiche en temps reel)
 
   [ ] Ce bien fait partie de ma residence principale
       (coche qui active le calcul de quote-part)
@@ -321,7 +321,7 @@ ETAPE 3/4 : Composants d'amortissement
   [+ Ajouter un composant]
 
   Amortissement annuel total : >> 4 845 EUR / an <<
-  Amortissement avec quote-part (27,8%) : >> 1 347 EUR / an <<
+  Amortissement avec quote-part (26,3%) : >> 1 273 EUR / an <<
 
                               [<< Precedent]  [Suivant >>]
 
@@ -334,12 +334,12 @@ ETAPE 4/4 : Recapitulatif
   |  12 rue de la Republique, 69003 Lyon           |
   |                                                |
   |  Type : Appartement                            |
-  |  Surface : 35 m2 / 126 m2 (quote-part 27,8%)  |
+  |  Surface : 31 m2 / 118 m2 (quote-part 26,3%)  |
   |  Acquisition : 15/03/2022 - 150 000 EUR        |
   |  Terrain : 15% (22 500 EUR)                    |
   |  Construction : 127 500 EUR                    |
   |  Amortissement annuel : 4 845 EUR              |
-  |  Amort. avec quote-part : 1 347 EUR            |
+  |  Amort. avec quote-part : 1 273 EUR            |
   +-----------------------------------------------+
 
   [ ] J'ai verifie que les informations sont correctes
@@ -383,7 +383,7 @@ NOUVELLE CHARGE
   -------------------------------------------------------
 
   (o) Charge 100% dediee au bien
-  ( ) Charge commune (appliquer la quote-part : 27,8%)
+  ( ) Charge commune (appliquer la quote-part : 26,3%)
   ( ) Quote-part personnalisee : [____] %
 
   Montant deductible :       >> 85,00 EUR << (ou 23,63 EUR si QP)
@@ -485,7 +485,7 @@ NOUVEL EMPRUNT
   +---------------------------------------------------+
 
   Interets deductibles (exercice 2025) : >> 2 840 EUR <<
-  Avec quote-part (27,8%) :              >> 789 EUR <<
+  Avec quote-part (26,3%) :              >> 746 EUR <<
 
                               [Annuler]  [Enregistrer]
 ```

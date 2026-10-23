@@ -258,7 +258,7 @@ class Property extends Model
 
     /**
      * Retourne la quote-part de superficie louée (rented_area / total_area).
-     * Exemple : 35m² loués / 126m² total = 0.2778
+     * Exemple : 31m² loués / 118m² total = 0.2627
      */
     public function getQuotaShareAttribute(): string
     {

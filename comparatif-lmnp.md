@@ -56,9 +56,9 @@
 
 ## Cas d'usage : location partielle de résidence principale
 
-Si vous louez une partie de votre habitation principale (ex : 2 pièces / 35 m² sur 126 m², soit 27,8 % de quote-part) :
+Si vous louez une partie de votre habitation principale (ex : 2 pièces / 31 m² sur 118 m², soit 26,3 % de quote-part) :
 
-1. **Charges mixtes** : taxe foncière, assurance habitation, intérêts d'emprunt → appliquées au prorata (27,8 %)
+1. **Charges mixtes** : taxe foncière, assurance habitation, intérêts d'emprunt → appliquées au prorata (26,3 %)
 2. **Charges dédiées** : travaux dans les pièces louées, mobilier → 100 % déductibles
 3. **Amortissements** : immeuble au prorata, mobilier dédié à 100 %
 4. **Plafond 120 jours/an** pour les meublés de tourisme en résidence principale

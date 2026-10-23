@@ -75,7 +75,7 @@ it('accepts a freshly created property despite the truncation dust', function ()
     // qui font 100 %, mais tronque chaque part séparément et n'appelle PAS
     // `absorbTruncationDust()` : le bien porte donc réellement quelques centimes de
     // reliquat. Un contrôle strict crierait au loup sur un dossier intact — et le PDF,
-    // qui arrondit à l'euro, afficherait « Écart : 245 643 € ≠ 245 643 € ».
+    // qui arrondit à l'euro, afficherait « Écart : 234 568 € ≠ 234 568 € ».
     //
     // ⚠️⚠️ Le prix n'est PAS décoratif. Les six pourcentages par défaut sont tous des
     // multiples de 5 %, donc un prix rond (250 000 €) tombe juste et ne produit AUCUNE

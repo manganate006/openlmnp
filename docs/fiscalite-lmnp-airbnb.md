@@ -5,9 +5,9 @@
 | Élément | Valeur |
 |---|---|
 | Type | Résidence principale avec logement 2 pièces dédié Airbnb |
-| Surface déclarée RP | 126 m² |
-| Surface Airbnb | 35 m² |
-| **Quote-part Airbnb** | **35 ÷ 126 = 27,8 %** |
+| Surface déclarée RP | 118 m² |
+| Surface Airbnb | 31 m² |
+| **Quote-part Airbnb** | **31 ÷ 118 = 26,3 %** |
 | Achat RP | Juin 2020, 575 000 € hors frais de notaire |
 | Piscine | 46 m², construite 2023, coût 40 000 € |
 | Travaux dédiés Airbnb | 32 000 € (avril 2023) |
@@ -55,7 +55,7 @@ Sources : [jedeclaremonmeuble.com](https://www.jedeclaremonmeuble.com/abattement
 
 Le [BOFiP (BOI-BIC-CHAMP-40-20)](https://bofip.impots.gouv.fr/bofip/3610-PGP.html/identifiant=BOI-BIC-CHAMP-40-20-20260819) traite la location d'une partie de la résidence principale sous l'angle de l'exonération de l'article 35 bis du CGI (§ 100 et suivants) : il ne fixe pas de règle de répartition des charges ni des amortissements. La méthode retenue ici répartit selon la surface louée :
 
-- **Amortissement au prorata de la surface louée** (27,8 %) sur la structure commune
+- **Amortissement au prorata de la surface louée** (26,3 %) sur la structure commune
 - **Charges communes proratisées** de la même manière
 - **Travaux et équipements 100 % dédiés** au logement Airbnb : amortis à 100 %
 
@@ -66,8 +66,8 @@ Le [BOFiP (BOI-BIC-CHAMP-40-20)](https://bofip.impots.gouv.fr/bofip/3610-PGP.htm
 | Partie louée clairement identifiable | 2 pièces distinct = OK | Indispensable |
 | Accès indépendant | À vérifier — c'est un plus | Recommandé |
 | Compteurs séparés | Pas indispensable si prorata cohérent | Optionnel |
-| Clé de répartition justifiable | Surface 35/126 = 27,8 % | Indispensable |
-| Déclaration aux impôts | Bien déclaré à 126 m² | OK |
+| Clé de répartition justifiable | Surface 31/118 = 26,3 % | Indispensable |
+| Déclaration aux impôts | Bien déclaré à 118 m² | OK |
 
 ### Limite des 120 jours
 
@@ -159,7 +159,7 @@ Sources : [lmnp.ai — Passer au régime réel](https://lmnp.ai/passer-au-regime
 
 ### 5. Charges déductibles
 
-#### Charges au prorata (27,8 %)
+#### Charges au prorata (26,3 %)
 
 | Charge | Total annuel | Part Airbnb (28 %) |
 |---|---|---|
@@ -278,7 +278,7 @@ Depuis 2025, en cas de vente, les amortissements déduits sont **réintégrés d
 
 | Question | Réponse |
 |---|---|
-| Quote-part du bien principal autorisée ? | **Oui** (BOFiP, prorata surface 27,8 %) |
+| Quote-part du bien principal autorisée ? | **Oui** (BOFiP, prorata surface 26,3 %) |
 | Rattrapage amortissement années micro-BIC ? | **Non** (années perdues, mais base revalorisée) |
 | Meilleur régime 2026-2032 ? | **Régime réel** (~1 500 €/an d'économie) |
 | Meilleur régime 2038+ ? | Micro-BIC classé (amortissements épuisés) |

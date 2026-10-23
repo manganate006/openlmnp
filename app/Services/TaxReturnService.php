@@ -508,7 +508,7 @@ class TaxReturnService
             // corporel même s'il ne s'amortit pas) PLUS les travaux et le mobilier. Jusqu'au
             // 2026-09-05 la case 028 ne portait que la valeur de référence du bien : rejouer
             // une liasse réelle a montré qu'il y manquait exactement les travaux et le
-            // mobilier — 9 144 € sur 226 645 —, alors que notre propre 2033-C les liste.
+            // mobilier — 7 610 € sur 188 400 € dans cet exemple —, alors que notre propre 2033-C les liste.
             // Sans effet sur le résultat, mais l'écran de contrôle de reprise compare cette
             // ligne : l'utilisateur voyait un écart rouge qui ne venait pas de lui.
             $corpBrut += (int) bcmul($prop->referenceValue(), $prop->quota_share, 0);
@@ -602,7 +602,7 @@ class TaxReturnService
             // ⚠️ Le terrain ne sort d'AUCUNE ligne du détail : il n'est pas amortissable, donc
             // le service d'amortissement l'ignore. Il n'en reste pas moins une immobilisation,
             // que la liasse d'un cabinet porte bien en 420 — sans lui, notre total 490 était
-            // amputé de la part terrain (32 625 € sur 245 643 € pour la liasse réelle rejouée
+            // amputé de la part terrain (27 150 € sur 203 900 € dans le dossier de test rejoué
             // le 2026-09-05). On le déduit de la valeur de référence, dont la base amortissable
             // est justement le complément.
             $land = bcsub(
