@@ -5,17 +5,32 @@
     <h3>Types de charges</h3>
     <ul>
         <li data-icon="&#x1F3E0;"><strong>Charge dédiée</strong> &mdash; 100 % liée à la location (ménage Airbnb, linge, consommables). Déduite intégralement.</li>
-        <li data-icon="&#x1F504;"><strong>Charge partagée</strong> &mdash; Partagée avec votre usage personnel (électricité, internet, assurance). La quote-part s'applique automatiquement.</li>
+        <li data-icon="&#x1F504;"><strong>Charge partagée</strong> &mdash; Concerne tout le logement, dont seule une partie est louée (électricité, assurance, taxe foncière). La quote-part surface du bien s'applique automatiquement.</li>
     </ul>
+
+    <h3>Charge en partie personnelle</h3>
+    <p>Un forfait téléphone, un abonnement internet ou un logiciel qui vous sert aussi à titre personnel ne se partage pas à la surface, mais à l'usage. Indiquez dans <strong>« Part d'usage pour la location »</strong> la part qui revient à la location : seule cette part est déduite.</p>
+    <ul>
+        <li data-icon="&#x1F4F1;"><strong>Exemple</strong> &mdash; Forfait de 30 € par mois utilisé à 30 % pour la location : saisissez 30 € et 30 %, la charge retenue est de 9 €.</li>
+        <li data-icon="&#x2795;"><strong>Avec la quote-part</strong> &mdash; Si la charge n'est pas cochée « 100% dédiée », la quote-part surface du bien s'applique en plus, après la part d'usage. Un téléphone ou un logiciel n'a rien à voir avec la surface : cochez « 100% dédiée » pour que seule la part d'usage compte. Si vous louez tout le logement, la quote-part vaut 100 % et ne change rien.</li>
+        <li data-icon="&#x1F4CE;"><strong>Justificatif</strong> &mdash; Joignez la facture complète et notez dans les Notes comment vous avez estimé la part d'usage : c'est ce que l'administration vous demandera en cas de contrôle.</li>
+    </ul>
+    <p>Laissez le champ vide pour une charge qui sert entièrement à la location : c'est le cas de la plupart des charges.</p>
 
     <h3>Charges courantes</h3>
     <ul>
-        <li data-icon="&#x1F4CB;"><strong>Taxe foncière</strong> &mdash; Charge partagée, au prorata de la quote-part</li>
+        <li data-icon="&#x1F4CB;"><strong>Taxe foncière</strong> &mdash; La taxe foncière se saisit ici, catégorie « Taxe foncière », en charge partagée au prorata de la quote-part (ou déposez l'avis dans « Importer un justificatif »)</li>
         <li data-icon="&#x1F50C;"><strong>Énergie</strong> &mdash; Électricité, gaz, eau</li>
         <li data-icon="&#x1F6E1;"><strong>Assurances</strong> &mdash; Habitation, PNO, RC</li>
         <li data-icon="&#x1F9F9;"><strong>Entretien</strong> &mdash; Ménage, petites réparations</li>
         <li data-icon="&#x1F4BB;"><strong>Frais divers</strong> &mdash; Comptabilité, abonnements, déplacements</li>
     </ul>
+
+    <div class="ctx-tip">
+        <strong>Logement indépendant dans votre résidence principale :</strong> la CFE (due en principe) et les
+        charges propres au logement (compteur électrique séparé, par exemple) sont à marquer <strong>dédiées</strong>
+        &mdash; elles ne concernent que le logement loué, pas le reste de la propriété.
+    </div>
 
     <h3>Charges récurrentes</h3>
     <p>Le champ <strong>Récurrence</strong> décrit une échéance, pas un total : le montant que vous saisissez est celui d'<strong>un</strong> prélèvement.</p>
@@ -50,5 +65,9 @@
 
     <div class="ctx-warning">
         <strong>Important :</strong> Conservez tous les justificatifs pendant 6 ans minimum (10 ans recommandés). Joignez-les directement à chaque charge.
+    </div>
+
+    <div class="ctx-tip">
+        <strong>Coffre-fort verrouill&eacute;&nbsp;?</strong> Vous pouvez quand m&ecirc;me joindre une pi&egrave;ce&nbsp;: le chiffrement n'a besoin que de la moiti&eacute; publique de votre cl&eacute;. Seule l'<em>ouverture</em> d'un justificatif d&eacute;j&agrave; d&eacute;pos&eacute; vous demandera votre phrase de passe, une fois pour la visite.
     </div>
 </div>

@@ -257,7 +257,7 @@ it('gives the screen and the PDF the same verdict on the same fiscal year', func
 });
 
 /**
- * Rend la vue du PDF en HTML, avec exactement les données que `generatePdf()` lui passe.
+ * Rend la vue du PDF en HTML, avec exactement les données que `renderPdf()` lui passe.
  *
  * Passe par `pdfData()` au lieu d'en recopier la liste : la copie qui vivait ici a cassé dès
  * que la vue a reçu une donnée de plus (le détail du résultat, issue #13).

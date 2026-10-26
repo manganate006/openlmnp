@@ -22,4 +22,10 @@ class EditIncome extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    /** Retour à la liste après « Enregistrer » (#16), comme EditExpense. */
+    protected function getRedirectUrl(): ?string
+    {
+        return static::$resource::getUrl();
+    }
 }

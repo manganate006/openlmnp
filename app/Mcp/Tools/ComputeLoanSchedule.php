@@ -11,7 +11,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
-#[Description('Génère (ou régénère) le tableau d\'amortissement d\'un emprunt immobilier. Supprime les échéances existantes et recalcule toutes les mensualités (capital, intérêts, assurance). Retourne un résumé financier ainsi que la première et la dernière échéance. Tous les montants sont en euros.')]
+#[Description('Génère (ou régénère) le tableau d\'amortissement théorique d\'un emprunt immobilier. Supprime les échéances existantes et recalcule toutes les mensualités (capital, intérêts, assurance). Un emprunt dont les échéances ont été importées depuis le tableau de la banque est protégé : utilisez force=true pour l\'écraser volontairement. Retourne un résumé financier ainsi que la première et la dernière échéance. Tous les montants sont en euros.')]
 #[IsDestructive]
 class ComputeLoanSchedule extends Tool
 {
@@ -30,8 +30,16 @@ class ComputeLoanSchedule extends Tool
         // n'appartient pas à l'utilisateur courant
         \App\Models\Property::findOrFail($loan->property_id);
 
-        // (Re)génère toutes les échéances
-        $this->loanService->generateSchedule($loan);
+        // (Re)génère toutes les échéances. Les échéances importées depuis le
+        // tableau de la banque portent le réel (différé, assurance dégressive) :
+        // les écraser ferait varier des intérêts déductibles déjà déclarés.
+        if (! $this->loanService->generateSchedule($loan, force: (bool) $request->get('force', false))) {
+            return Response::error(
+                'Cet emprunt utilise le tableau d\'amortissement importé de votre banque. '
+                . 'Le recalculer remplacerait les échéances réelles par des échéances théoriques. '
+                . 'Rappelez cet outil avec force=true pour le faire volontairement.'
+            );
+        }
 
         // Rafraîchir pour avoir la mensualité éventuellement mise à jour
         $loan->refresh();
@@ -94,6 +102,7 @@ class ComputeLoanSchedule extends Tool
     {
         return [
             'loan_id' => $schema->integer('Identifiant de l\'emprunt à recalculer')->required(),
+            'force'   => $schema->boolean('Écraser volontairement un tableau d\'amortissement importé depuis la banque (défaut : false)')->nullable(),
         ];
     }
 }

@@ -1,0 +1,14 @@
+{
+  "document_type": "property_tax_notice",
+  "confidence": 0.95,
+  "fields": [
+    { "name": "issue_date", "value": "2026-10-15", "confidence": 0.96, "evidence": "Date limite de paiement : 15/10/2026" },
+    { "name": "total_ttc", "value": "1187.00", "confidence": 0.97, "evidence": "Total à payer 1 187 €" },
+    { "name": "vendor", "value": "DGFiP", "confidence": 0.99, "evidence": "Direction générale des Finances publiques" },
+    { "name": "subject", "value": "Taxe foncière 2026", "confidence": 0.95, "evidence": "TAXE FONCIÈRE 2026" },
+    { "name": "address_on_document", "value": "12 rue des Lilas, 69003 Lyon", "confidence": 0.93, "evidence": "12 RUE DES LILAS" }
+  ],
+  "items": [],
+  "schedule": [],
+  "lines": []
+}

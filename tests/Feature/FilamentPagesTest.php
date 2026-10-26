@@ -492,6 +492,20 @@ it('simulator switches to a closed year via livewire without error', function ()
         ->assertSet('year', 2024);
 });
 
+it('simulator only offers the two micro-BIC rates of a furnished rental', function () {
+    $this->actingAs($this->user);
+
+    // 71 % est le taux des ventes de marchandises, hors sujet pour un loueur meublé.
+    Livewire::test(\App\Filament\Pages\Simulator::class)
+        ->assertDontSeeHtml('value="71"')
+        ->assertSeeHtml('value="30"')
+        ->assertSeeHtml('value="50"')
+        ->set('abatement', '30')
+        ->assertSet('abatement', '30')
+        ->set('abatement', '71')
+        ->assertSet('abatement', '50');
+});
+
 // === TELEDECLARATION WITH CLOSED YEAR ===
 
 it('teledeclaration shows a closed fiscal year with frozen totals', function () {
@@ -529,7 +543,8 @@ it('teledeclaration shows a closed fiscal year with frozen totals', function () 
         ->get('/teledeclaration?year=2024')
         ->assertOk()
         ->assertSee('2031')
-        ->assertSee('9 999,99');
+        // Les totaux figés de l'exercice clôturé, à l'euro comme tout formulaire (issue #21).
+        ->assertSee('10 000');
 });
 
 // === PROJECTION WITH DATA ===
@@ -560,6 +575,93 @@ it('projection shows table with property data', function () {
         ->assertOk()
         ->assertSee('Projection')
         ->assertSee('Immeuble');
+});
+
+// === PANNEAU D'AIDE CONTEXTUELLE ===
+
+it('affiche le panneau d\'aide sur une page du panel', function () {
+    $this->actingAs($this->user)
+        ->get('/expenses')
+        ->assertOk()
+        ->assertSee('Aide contextuelle')
+        ->assertSee('Voir le guide complet');
+});
+
+it('ajoute l\'onglet Assistant quand l\'IA est disponible', function () {
+    config([
+        'ai.enabled' => true,
+        'ai.api_key' => 'sk-or-v1-cle-factice-panneau',
+        'demo.email' => 'demo@openlmnp.fr',
+    ]);
+
+    $this->actingAs($this->user)
+        ->get('/expenses')
+        ->assertOk()
+        ->assertSee('ctx-panel-tabs', false)
+        ->assertSee('>Assistant<', false);
+});
+
+it('garde le panneau en aide seule quand l\'IA est désactivée', function () {
+    config(['ai.enabled' => false]);
+
+    $this->actingAs($this->user)
+        ->get('/expenses')
+        ->assertOk()
+        ->assertSee('Voir le guide complet')
+        // Les règles CSS du panneau sont toujours présentes : c'est le bouton
+        // d'onglet qui ne doit pas être rendu.
+        ->assertDontSee('>Assistant<', false)
+        ->assertDontSee('wire:stream', false);
+});
+
+it('affiche les compteurs de l\'assistant dans les statistiques admin', function () {
+    config(['ai.enabled' => true]);
+
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    \App\Models\AiUsageLog::create([
+        'user_id' => $admin->id,
+        'feature' => 'chat',
+        'status' => 'ok',
+        'model' => 'google/gemini-3.7-flash',
+        'cost_usd' => '0.001200',
+        'meta' => ['feedback' => 'up'],
+        'created_at' => now(),
+    ]);
+
+    // Les compteurs de l'assistant vivent dans la page « Intelligence artificielle »,
+    // pas dans les statistiques générales (intégration du 2026-08-21).
+    $this->actingAs($admin)
+        ->get('/admin-ai')
+        ->assertOk()
+        ->assertSee('Assistant conversationnel')
+        ->assertSee('Questions');
+
+    $this->actingAs($admin)
+        ->get('/admin-stats')
+        ->assertOk()
+        ->assertDontSee('Assistant conversationnel');
+});
+
+it('affiche l\'aide « Profil et assistant » sur la page de profil', function () {
+    $this->actingAs($this->user)
+        ->get('/profile')
+        ->assertOk()
+        ->assertSee('Profil et assistant')
+        ->assertSee("L'assistant OpenLMNP", false);
+});
+
+it('dispose d\'une aide contextuelle dédiée pour la supervision MCP', function () {
+    $aide = App\Support\HelpContentRegistry::resolve('filament.admin.pages.admin-mcp');
+
+    expect($aide['view'])->toBe('help.admin-mcp')
+        ->and($aide['title'])->toBe('API MCP');
+
+    $html = view('help.admin-mcp')->render();
+
+    expect($html)->toContain('journal d\'audit')
+        ->and($html)->toContain('jamais affichée')
+        ->and($html)->toContain('Purger les anciens logs');
 });
 
 // === RENDU DES WIDGETS ET VUES DU PANEL ===

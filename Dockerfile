@@ -54,7 +54,10 @@ RUN COMPOSER_ALLOW_SUPERUSER=1 \
 # ============================================================
 # 3. FRONTEND BUILD STAGE
 # ============================================================
-FROM ${NODE_IMAGE} AS frontend-builder
+# Construit sur la plateforme de la machine de build, jamais sous émulation : seul
+# public/build (JS et CSS, identiques sur toutes les architectures) en sort. Sous QEMU,
+# `npm ci` a calé près de 3 h sur l'image arm64 de la 2.0.0-beta.1, jusqu'à annulation.
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS frontend-builder
 
 WORKDIR /app
 
@@ -78,6 +81,12 @@ FROM composer-builder AS app-builder
 
 WORKDIR /var/www/html
 
+# Commit d'origine de l'image, lisible sur la cible : `docker exec openlmnp cat /image-commit`.
+# Sans lui, retrouver ce qui tourne en production oblige à comparer des empreintes de
+# fichiers. L'ARG change à chaque commit et invalide aussi le cache de ce stage.
+ARG GIT_COMMIT=inconnu
+RUN echo "$GIT_COMMIT" > /image-commit
+
 # vendor/ est déjà en place (hérité du stage composer) et absent du contexte de build
 # (.dockerignore) : ce COPY ne peut donc pas l'écraser.
 COPY . .
@@ -91,6 +100,11 @@ RUN composer dump-autoload \
         --no-dev \
         --optimize \
         --classmap-authoritative
+
+# Index documentaire de l'assistant IA (aucun accès réseau ni base de données). Écrit
+# ici pour une image autonome ; l'entrypoint le régénère de toute façon au démarrage,
+# car un volume monté sur storage/ masquerait cette copie.
+RUN php artisan ai:build-help-index || true
 
 # Assets compilés.
 COPY --from=frontend-builder /app/public/build ./public/build
@@ -131,7 +145,8 @@ RUN apk add --no-cache \
     libjpeg-turbo \
     freetype \
     sqlite-libs \
-    icu-libs
+    icu-libs \
+    su-exec
 
 # Extensions PHP compilées.
 COPY --from=php-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
@@ -149,12 +164,25 @@ COPY --from=app-builder /var/www/html /var/www/html
 
 # Copie de référence database/ utilisée par l'entrypoint.
 COPY --from=app-builder /database-dist /database-dist
+COPY --from=app-builder /image-commit /image-commit
 
 # Pas de key:generate ici : une APP_KEY figée au build serait partagée par toutes
 # les installations qui pullent l'image — l'entrypoint la génère par instance.
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY docker/php-as-app.sh /usr/local/sbin/php
+
+# Utilisateur non privilégié (GHSA-j4gm-g8m8-93x2, point 20) : le serveur et le
+# planificateur tournent sous « www-data » (UID/GID 82, fourni par l'image PHP alpine).
+# Le code reste à root, en lecture seule pour lui ; il n'écrit que dans storage/,
+# database/ et bootstrap/cache/. Le conteneur démarre quand même en root :
+# l'entrypoint remet ces dossiers à www-data (volumes d'une installation antérieure
+# compris), puis abaisse ses privilèges avec su-exec. Pas de directive USER : elle
+# empêcherait cette reprise des volumes existants, qui appartiennent à root.
+# /usr/local/sbin/php : relais qui fait tourner sous www-data un `docker exec … php`
+# lancé en root (voir docker/php-as-app.sh).
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/sbin/php \
+    && chown -R www-data:www-data storage database bootstrap/cache
 
 EXPOSE 8000
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

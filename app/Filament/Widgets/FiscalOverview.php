@@ -6,10 +6,13 @@ use App\Models\Expense;
 use App\Models\Income;
 use App\Models\Property;
 use App\Services\DepreciationService;
+use App\Support\MicroBicRules;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 class FiscalOverview extends StatsOverviewWidget
 {
+    use Concerns\HiddenForMemberPrincipal;
+
     protected static ?int $sort = 1;
 
     protected int | string | array $columnSpan = [
@@ -81,8 +84,8 @@ class FiscalOverview extends StatsOverviewWidget
             $totalIncome += $property->incomes()->whereYear('income_date', $year)->sum('amount');
             $incomeCount += $property->incomes()->whereYear('income_date', $year)->count();
 
-            $dedicated = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', true)->sum('amount');
-            $shared = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', false)->sum('amount');
+            $dedicated = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', true)->sum(Expense::usageAdjustedSql('amount'));
+            $shared = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', false)->sum(Expense::usageAdjustedSql('amount'));
             $totalExpenses += $dedicated + (int) bcmul((string) $shared, $property->quota_share, 0);
             $expenseCount += $property->expenses()->whereYear('expense_date', $year)->count();
 
@@ -93,13 +96,33 @@ class FiscalOverview extends StatsOverviewWidget
         $resultBefore = $totalIncome - $totalExpenses;
         $cappedDepreciation = min($totalDepreciation, max(0, $resultBefore));
         $fiscalResult = max(0, $resultBefore - $cappedDepreciation);
-        $microBicResult = (int) bcmul((string) $totalIncome, '0.50', 0);
+
+        // Classement le plus restrictif du portefeuille (celui qui plafonne le plus
+        // tôt) : un dashboard qui agrège plusieurs biens ne peut pas choisir le
+        // régime le plus flatteur sans risquer d'annoncer un micro-BIC qui ne serait
+        // en réalité pas disponible pour l'activité la moins bien lotie.
+        $classification = self::mostRestrictiveClassification($properties, $year, $totalIncome);
+        $microBicResult = (int) bcmul((string) $totalIncome, bcdiv(MicroBicRules::rate($classification, $year), '100', 10), 0);
+        // Micro-BIC : mêmes règles qu'un dossier individuel pour une indivision (piège P13,
+        // simplification du 2026-10-15 — voir App\Support\Indivision).
+        $microBicAvailable = MicroBicRules::isAvailable($classification, $year, $totalIncome);
 
         return compact(
             'totalIncome', 'totalExpenses', 'totalDepreciation',
             'incomeCount', 'expenseCount',
-            'fiscalResult', 'microBicResult',
+            'fiscalResult', 'microBicResult', 'microBicAvailable',
         );
+    }
+
+    private static function mostRestrictiveClassification($properties, int $year, int $totalIncome): string
+    {
+        $classifications = $properties->pluck('tourism_classification')->filter()->unique();
+
+        if ($classifications->isEmpty()) {
+            return MicroBicRules::UNCLASSIFIED;
+        }
+
+        return $classifications->sortBy(fn (string $c) => MicroBicRules::ceilingCents($c, $year) ?: PHP_INT_MAX)->first();
     }
 
     private function buildYearStats(array $data, int $year, int $propertyCount, bool $isCurrent): array
@@ -126,9 +149,11 @@ class FiscalOverview extends StatsOverviewWidget
                 ->color($color('info')),
 
             Stat::make("Résultat {$year} (réel)", "{$fmt($data['fiscalResult'])} €")
-                ->description("Micro-BIC : {$fmt($data['microBicResult'])} € · " . ($data['fiscalResult'] < $data['microBicResult'] ? '✓ Réel avantageux' : '⚠ Micro-BIC avantageux'))
+                ->description($data['microBicAvailable']
+                    ? "Micro-BIC : {$fmt($data['microBicResult'])} € · " . ($data['fiscalResult'] < $data['microBicResult'] ? '✓ Réel avantageux' : '⚠ Micro-BIC avantageux')
+                    : 'Micro-BIC non disponible (plafond dépassé) · régime réel obligatoire')
                 ->icon('heroicon-o-calculator')
-                ->color($data['fiscalResult'] < $data['microBicResult'] ? ($isCurrent ? 'success' : 'gray') : ($isCurrent ? 'danger' : 'gray'))
+                ->color((! $data['microBicAvailable'] || $data['fiscalResult'] < $data['microBicResult']) ? ($isCurrent ? 'success' : 'gray') : ($isCurrent ? 'danger' : 'gray'))
                 ->url($isCurrent ? '/simulator' : null),
         ];
     }

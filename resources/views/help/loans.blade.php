@@ -11,7 +11,10 @@
     </ul>
 
     <h3>Ce qui est déductible</h3>
-    <p>Seuls les <strong>intérêts d'emprunt</strong> et l'<strong>assurance emprunteur</strong> sont déductibles (pas le capital remboursé). La quote-part s'applique si le bien est partiellement loué.</p>
+    <p>Seuls les <strong>intérêts d'emprunt</strong> et l'<strong>assurance emprunteur</strong> sont déductibles (pas le capital remboursé). La quote-part surface s'applique si le bien est partiellement loué.</p>
+
+    <h3>Emprunt dédié</h3>
+    <p>Si un emprunt finance <strong>exclusivement</strong> le logement loué (ex : prêt travaux du studio indépendant, distinct du prêt de la résidence principale), cochez <strong>« Emprunt dédié à ce logement »</strong> &mdash; les intérêts et l'assurance sont alors déduits à 100 %, sans quote-part. Un emprunt qui finance l'achat de toute la propriété reste proratisé.</p>
 
     <h3>Tableau d'amortissement</h3>
     <p>Le tableau d'amortissement est calculé automatiquement. Vous pouvez le consulter en détail en cliquant sur un emprunt.</p>

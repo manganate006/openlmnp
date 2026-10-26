@@ -47,6 +47,7 @@ class ListLoans extends Tool
                 'end_date'              => $loan->end_date?->toDateString(),
                 'monthly_payment_eur'   => $loan->monthly_payment_euros,
                 'insurance_monthly_eur' => $loan->insurance_monthly_euros,
+                'is_dedicated'          => $loan->is_dedicated,
                 'total_cost_eur'        => bcdiv((string) $loan->total_cost, '100', 2),
                 'has_schedule'          => $loan->payments()->exists(),
                 'payments_count'        => $loan->payments()->count(),

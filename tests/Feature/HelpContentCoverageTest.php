@@ -89,6 +89,57 @@ it('résout la fiche de reprise depuis sa route, sans retomber sur le repli', fu
 });
 
 /**
+ * Le coffre-fort est le seul écran dont la contrepartie est la PERTE DÉFINITIVE des
+ * documents : y laisser « Aucune aide spécifique n'est disponible » n'est pas la même
+ * chose qu'ailleurs. Ancre explicite plutôt que couverture générique — si un merge
+ * emporte l'entrée du registre ET la vue, les deux tests ci-dessus restent verts.
+ */
+it('résout la fiche du coffre-fort depuis sa route', function () {
+    expect(HelpContentRegistry::resolve('filament.admin.pages.vault'))
+        ->toBe(['view' => 'help.vault', 'title' => 'Coffre-fort']);
+});
+
+it('avertit de ce qui ne se récupère pas, là où la question se pose', function () {
+    $vault = file_get_contents(resource_path('views/help/vault.blade.php'));
+
+    expect($vault)
+        // La contrepartie, et l'absence de recours.
+        ->toContain('aucune procédure de récupération')
+        // Le contresens le plus coûteux : croire que le mot de passe de connexion
+        // ouvre le coffre, ou qu'une réinitialisation restitue les fichiers.
+        ->toContain('mot de passe de connexion')
+        ->toContain('réinitialisation de mot de passe')
+        // Les deux outils MCP refusés tant que le coffre est activé.
+        ->toContain('attach_document')
+        ->toContain('export_documents');
+
+    // ⚠️ Ce bloc épinglait le suffixe « — coffre-fort verrouillé », c'est-à-dire
+    // le SYMPTÔME que la refonte a supprimé : la photo ne porte plus une mention
+    // d'échec, elle porte un cadenas qu'on clique. Un test qui fige un défaut
+    // corrigé empêche la correction — il a d'ailleurs bien fait de s'y opposer,
+    // c'est comme ça qu'on relit l'aide.
+    //
+    // Ce qui est épinglé désormais est la PROMESSE, pas l'implémentation : que
+    // l'aide dise où se fait le déchiffrement, et qu'un dépôt reste possible
+    // coffre verrouillé — les deux choses qu'un utilisateur ne devinera jamais.
+    $properties = file_get_contents(resource_path('views/help/properties.blade.php'));
+
+    expect($vault)->toContain('dans votre navigateur')
+        ->and($properties)->toContain('votre navigateur')
+        ->and($properties)->toContain('Coffre-fort')
+        // Verrouillé n'empêche plus d'écrire : si l'aide cesse de le dire,
+        // l'utilisateur continuera de croire le champ bloqué.
+        // ⚠️ Sans balise au milieu : « Seule la <em>lecture</em> demande » ne
+        // contient PAS la chaîne « seule la lecture ». Une assertion sur du texte
+        // rendu doit viser un fragment que le balisage ne coupe pas.
+        // ⚠️ Ancres choisies sur le texte RÉEL, vérifiées présentes : une
+        // assertion écrite de mémoire vise souvent une chaîne que le balisage
+        // coupe (« Seule la <em>lecture</em> » ne contient pas « seule la lecture »).
+        ->and($vault)->toContain('Seule la lecture demande la phrase')
+        ->and($vault)->toContain('D&eacute;poser un justificatif fonctionne');
+});
+
+/**
  * Les fiches mises à jour pour la reprise décrivent des champs qui existent VRAIMENT à
  * l'écran. Une aide qui documente un champ inexistant coûte plus cher qu'une aide absente ;
  * ces ancres échouent si l'écran correspondant est renommé sans que l'aide suive.
@@ -186,9 +237,9 @@ it('décrit des libellés réellement présents à l\'écran', function () {
 });
 
 /**
- * Le 2033-D : 982/983/984 suivent les DÉFICITS, 870 les amortissements différés.
- * Les confondre était le défaut de conformité corrigé en v1.4.0 — l'aide doit dire
- * lequel est lequel, et le dire comme le code le calcule.
+ * Le 2033-D : cadre « Déficits reportables » (982 à 870) laissé vide en LMNP (notice
+ * 2033-NOT-SD, issue #19), déficits en 5GA à 5GJ, amortissements différés suivis à part.
+ * L'aide doit le dire comme le code le calcule.
  */
 it('explique le 2033-D comme le code le calcule', function () {
     $help = file_get_contents(resource_path('views/help/teledeclaration.blade.php'));
@@ -198,7 +249,9 @@ it('explique le 2033-D comme le code le calcule', function () {
         ->toContain('984')
         ->toContain('870')
         ->toContain('dix ans')
-        ->toContain('sans limite de durée');
+        ->toContain('sans limite de durée')
+        ->toContain('870 = 984 + 860')
+        ->toContain('5GA à 5GJ');
 
     // La case de déficit du 2042-C-PRO est bien celle que produit TaxReturnService.
     $cases = app(App\Services\TaxReturnService::class)->compute2042(new App\Models\FiscalYear([

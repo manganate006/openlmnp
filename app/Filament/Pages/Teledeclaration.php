@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Actions\RecordTransmissionAction;
+use App\Filament\Actions\SireneCheckAction;
 use App\Filament\Pages\Concerns\NavigationAware;
 use App\Filament\Pages\Concerns\ShowsDiagnosticReport;
 use App\Models\FiscalYear;
@@ -49,6 +50,12 @@ class Teledeclaration extends Page
             // l'accusé sous les yeux, que le numéro est disponible — pas plus tard.
             RecordTransmissionAction::forYear(fn () => $this->fiscalYearForYear)
                 ->after(fn () => $this->resetTransmission()),
+            // Proposée seulement si un SIREN est déjà renseigné : sans lui, il n'y a rien
+            // à vérifier, et le bouton ne doit pas envoyer chercher une saisie vide.
+            SireneCheckAction::make(
+                fn () => auth()->user()->siren,
+                fn () => filled(auth()->user()->siren),
+            ),
         ];
     }
 
@@ -88,17 +95,26 @@ class Teledeclaration extends Page
     {
         // BelongsToUserScope limite déjà la requête à l'utilisateur courant.
         //
-        // ⚠️ On ne teste QUE `pdf_path`, et c'est délibéré : l'encart s'adresse à qui a
-        // DÉJÀ imprimé une liasse avec l'ancien calcul, transmise ou non. `transmitted_at`
-        // (colonne créée le 2026-09-04) ne couvrirait que les déclarations déposées et
-        // raterait exactement ceux qui ont un PDF faux entre les mains.
+        // ⚠️ On ne teste QUE la date de génération, et c'est la branche « fichiers en clair »
+        // qui l'impose : elle cesse d'écrire le PDF sur le disque, donc `pdf_path` n'est plus
+        // renseigné et l'ancien test ne trouverait plus personne. L'encart s'adresse à qui a
+        // DÉJÀ imprimé une liasse avec l'ancien calcul, transmise ou non — `transmitted_at`
+        // ne couvrirait que les déclarations déposées et raterait exactement ceux qui ont un
+        // PDF faux entre les mains.
         //
-        // ⚠️ `transmitted_at` et `ack_number` sont deux vraies colonnes depuis les migrations
-        // des 2026-09-04 et 2026-09-05, et l'action « Dépôt » les renseigne — mais elles
-        // restent nulles partout où l'utilisateur n'a rien saisi. Un filtre posé dessus ne
-        // sélectionne donc pas « les liasses transmises », seulement celles dont le dépôt a
-        // été noté.
-        return FiscalYear::query()->whereNotNull('pdf_path')->exists();
+        // ⚠️ RÉSOLUTION DE FUSION (2026-09-11) : `tax_return_generated_at` l'emporte sur le
+        // `pdf_path` venu de `main`, et ce n'est pas un réflexe de garder « sa » version. Sur
+        // cette branche, « fichiers en clair » cesse d'écrire le PDF sur le disque : `pdf_path`
+        // y reste vide, et le test de `main` ne trouverait donc plus PERSONNE — l'encart
+        // disparaîtrait silencieusement pour tous ceux qu'il doit avertir.
+        //
+        // ⚠️ `transmitted_at` et `ack_number` sont en revanche de vraies colonnes depuis les
+        // migrations des 2026-09-04 et 2026-09-05 : l'avertissement « ne jamais les interroger
+        // en SQL » qui vivait ici est périmé et a été retiré. Elles restent malgré tout
+        // inutilisables pour ce test-ci, mais pour une autre raison — elles sont nulles partout
+        // où l'utilisateur n'a rien saisi, donc elles sélectionnent « les dépôts notés », pas
+        // « les liasses imprimées ».
+        return FiscalYear::query()->whereNotNull('tax_return_generated_at')->exists();
     }
 
     #[Computed]
@@ -115,30 +131,43 @@ class Teledeclaration extends Page
         $tax = app(TaxReturnService::class);
 
         $form2031 = $tax->compute2031($fy);
-        $form2033A = $tax->compute2033A($fy, $properties, $this->year);
         $form2033B = $tax->compute2033B($fy, $properties, $this->year);
+        $form2033A = $tax->compute2033A($fy, $properties, $this->year, $form2033B['310']);
         $form2033C = $tax->compute2033C($properties, $this->year);
         $form2033D = $tax->compute2033D($fy);
         $form2042 = $tax->compute2042($fy);
+        $form2031bis = $tax->compute2031bis($fy, $user);
+
+        // Contrôles sur les centimes, AVANT l'arrondi : un écart d'un centime y reste visible.
+        $checks = $tax->checks($form2033A, $form2033B, $form2033C, $properties, $form2031bis);
+
+        // Les montants se télédéclarent en euros entiers (issue #21) : chaque ligne arrondie,
+        // chaque total recalculé sur les lignes arrondies, comme dans le PDF.
+        [
+            'form2031' => $form2031, 'form2033A' => $form2033A, 'form2033B' => $form2033B,
+            'form2033C' => $form2033C, 'form2033D' => $form2033D, 'form2042' => $form2042,
+            'form2031bis' => $form2031bis,
+        ] = $tax->wholeEuros(compact('form2031', 'form2033A', 'form2033B', 'form2033C', 'form2033D', 'form2042', 'form2031bis'));
 
         return [
             'fiscal_year' => $fy,
             'siren' => $user->siren ?? 'Non renseigné',
-            'forms' => $this->buildFormSections($fy, $form2031, $form2033A, $form2033B, $form2033C, $form2033D, $form2042),
+            'forms' => $this->buildFormSections($fy, $form2031, $form2033A, $form2033B, $form2033C, $form2033D, $form2042, $form2031bis),
+            'form2031bis' => $form2031bis,
             // Les contrôles viennent du service, jamais d'un calcul refait ici : le PDF les
             // affiche à partir de la même source, sinon les deux écrans peuvent diverger.
-            'checks' => $tax->checks($form2033A, $form2033B, $form2033C, $properties),
+            'checks' => $checks,
             // Le détail actif par actif — d'où vient chaque ligne du cadre I ci-dessus.
             // Même source que les tableaux, pour la même raison que les contrôles.
             'breakdown' => $tax->assetBreakdown($properties, $this->year),
         ];
     }
 
-    private function buildFormSections($fy, array $f2031, array $f2033A, array $f2033B, array $f2033C, array $f2033D, array $f2042): array
+    private function buildFormSections($fy, array $f2031, array $f2033A, array $f2033B, array $f2033C, array $f2033D, array $f2042, ?array $f2031bis = null): array
     {
-        $fmt = fn($v) => number_format($v / 100, 2, ',', ' ');
+        $fmt = fn($v) => number_format($v / 100, 0, ',', ' ');
 
-        return [
+        $sections = [
             '2031' => [
                 'title' => '2031-SD — Déclaration de résultat',
                 'cerfa' => 'CERFA 11085',
@@ -212,16 +241,22 @@ class Teledeclaration extends Page
                     ['line' => '572', 'desc' => 'Total dotations aux amortissements', 'value' => $fmt($f2033C['total_dotation']), 'raw' => $f2033C['total_dotation']],
                 ],
             ],
+            // Cadre « Déficits reportables » VIDE en LMNP (notice 2033-NOT-SD, issue #19) : on
+            // ne liste que le suivi des amortissements différés, qui n'a pas de case Cerfa.
             '2033-D' => [
-                'title' => '2033-D — Déficits et amortissements différés',
+                'title' => '2033-D — Suivi des amortissements différés (art. 39 C)',
                 'cerfa' => 'CERFA 10959',
                 'open' => false,
+                'note' => 'Laissez vide le cadre « Déficits reportables » du 2033-D (cases 982 à 870) : '
+                    . 'la notice le réserve aux sociétés à l\'impôt sur les sociétés. Vos déficits LMNP '
+                    . 'sont repris par l\'administration en cases 5GA à 5GJ de la 2042-C-PRO. Les '
+                    . 'amortissements différés n\'ont pas de case : ce suivi est à conserver, et à joindre '
+                    . 'sur papier libre si vous le souhaitez.',
                 'lines' => [
-                    ['line' => '982', 'desc' => 'Déficits restant à reporter (N-1)', 'value' => $fmt($f2033D['982']), 'raw' => $f2033D['982']],
-                    ['line' => '983', 'desc' => 'Déficits imputés sur le résultat', 'value' => $fmt($f2033D['983']), 'raw' => $f2033D['983']],
-                    ['line' => '984', 'desc' => 'Déficits reportables restants', 'value' => $fmt($f2033D['984']), 'raw' => $f2033D['984']],
-                    ['line' => '860', 'desc' => 'Déficit de l\'exercice', 'value' => $fmt($f2033D['860']), 'raw' => $f2033D['860']],
-                    ['line' => '870', 'desc' => 'Total amortissements différés reportables', 'value' => $fmt($f2033D['870']), 'raw' => $f2033D['870']],
+                    ['line' => '39 C', 'desc' => 'Amortissements différés à l\'ouverture', 'value' => $fmt($f2033D['suivi_39c']['ouverture']), 'raw' => $f2033D['suivi_39c']['ouverture']],
+                    ['line' => '318', 'desc' => '+ Différés de l\'exercice (dotation non déduite)', 'value' => $fmt($f2033D['suivi_39c']['differes']), 'raw' => $f2033D['suivi_39c']['differes']],
+                    ['line' => '350', 'desc' => '− Repris cette année', 'value' => $fmt($f2033D['suivi_39c']['repris']), 'raw' => $f2033D['suivi_39c']['repris']],
+                    ['line' => '39 C', 'desc' => '= Amortissements différés à reporter à la clôture', 'value' => $fmt($f2033D['suivi_39c']['cloture']), 'raw' => $f2033D['suivi_39c']['cloture']],
                 ],
             ],
             '2042-C-PRO' => [
@@ -238,6 +273,127 @@ class Teledeclaration extends Page
                 ],
             ],
         ];
+
+        if ($f2031bis === null) {
+            return $sections;
+        }
+
+        // Indivision : la 2031 bis-SD (cadre E) répartit le résultat, et chaque indivisaire
+        // reporte SA quote-part sur sa propre 2042-C-PRO — pas le résultat entier.
+        $pct = fn (int $bp) => \App\Support\Indivision::basisPointsToPercent($bp) . ' %';
+        $bisLines = [];
+        $bisRows = [];
+        $pcLines = [];
+        $pcCards = [];
+        foreach ($f2031bis['rows'] as $row) {
+            $isDeficit = $row['deficit'] > 0;
+            $amount = $isDeficit ? $row['deficit'] : $row['benefice'];
+            $bisLines[] = [
+                'line' => 'E',
+                'desc' => $row['name'] . ' — indivisaire, BIC « M », quote-part ' . $pct($row['share_bp'])
+                    . ($isDeficit ? ' (déficit)' : ' (bénéfice)'),
+                'value' => $f2031bis['complete'] ? $fmt($amount) : '—',
+                'raw' => $f2031bis['complete'] ? $amount : 0,
+            ];
+            // Maquette écran 3, variante B : le cadre E tel qu'imprimé (une colonne par
+            // information du Cerfa), pas une ligne de texte composée à plat.
+            $bisRows[] = [
+                'name' => $row['name'],
+                'identity' => $this->coOwnerIdentitySummary($row),
+                'quality' => $row['quality'],
+                'bic_type' => $row['bic_type'],
+                'share_pct' => $pct($row['share_bp']),
+                'benefice' => $f2031bis['complete'] ? $fmt($row['benefice']) : '—',
+                'deficit' => $f2031bis['complete'] ? $fmt($row['deficit']) : '—',
+            ];
+            $pcLines[] = [
+                'line' => $isDeficit ? $f2042['case_deficit'] : $f2042['case_benefice'],
+                'desc' => ($isDeficit ? 'Déficit' : 'Bénéfice') . ' LMNP — ' . $row['name'] . ' (' . $pct($row['share_bp']) . ')',
+                'value' => $f2031bis['complete'] ? $fmt($amount) : '—',
+                'raw' => $f2031bis['complete'] ? $amount : 0,
+            ];
+            // Maquette écran 3, variante B : une carte par indivisaire (case, montant, Copier)
+            // plutôt qu'une ligne de tableau générique — c'est SA déclaration, pas celle de
+            // l'indivision.
+            $pcCards[] = [
+                'name' => $row['name'],
+                'initials' => $this->coOwnerInitials($row['name']),
+                'share_pct' => $pct($row['share_bp']),
+                'case' => $isDeficit ? $f2042['case_deficit'] : $f2042['case_benefice'],
+                'label' => $isDeficit ? 'Déficit LMNP' : 'Bénéfice LMNP',
+                'value' => $f2031bis['complete'] ? $fmt($amount) : '—',
+                'raw' => $f2031bis['complete'] ? $amount : 0,
+            ];
+        }
+
+        $ordered = [];
+        foreach ($sections as $key => $section) {
+            $ordered[$key] = $section;
+            // `'2031'` est une clé numérique : PHP la range en entier, d'où la comparaison en chaîne.
+            if ((string) $key === '2031') {
+                $ordered['2031-bis'] = [
+                    'title' => '2031 bis-SD — Répartition du résultat entre indivisaires (cadre E)',
+                    'cerfa' => 'annexe au CERFA 11085',
+                    'open' => true,
+                    'lines' => $bisLines,
+                    'rows' => $bisRows,
+                    // Ligne de total du cadre E (maquette, variante B) : elle prouve que la
+                    // somme des quotes-parts et des montants retombe sur le résultat de la
+                    // 2031-SD (case CB/CC), affiché même répartition incomplète (0 €/0 %).
+                    'total' => [
+                        'share_pct' => $pct($f2031bis['total_share_bp']),
+                        'benefice' => $fmt($f2031bis['result'] > 0 ? $f2031bis['result'] : 0),
+                        'deficit' => $fmt($f2031bis['result'] < 0 ? -$f2031bis['result'] : 0),
+                    ],
+                    'complete' => $f2031bis['complete'],
+                ];
+            }
+        }
+        // Répartition incomplète : aucun montant à reporter, comme dans le PDF. Laisser la ligne
+        // d'origine afficherait le résultat ENTIER de l'indivision, qu'aucun indivisaire ne doit
+        // reporter.
+        $ordered['2042-C-PRO']['lines'] = $f2031bis['complete'] ? $pcLines : [[
+            'line' => '—',
+            'desc' => 'Répartition entre indivisaires incomplète : aucun montant à reporter tant que les quotes-parts ne totalisent pas 100 %',
+            'value' => '—',
+            'raw' => 0,
+        ]];
+        $ordered['2042-C-PRO']['persons'] = $f2031bis['complete'] ? $pcCards : [];
+
+        return $ordered;
+    }
+
+    /** Sous-titre d'une ligne du cadre E : adresse et naissance, ou leur absence. */
+    private function coOwnerIdentitySummary(array $row): string
+    {
+        $address = $row['address'] ?? null;
+        $birth = $row['birth'] ?? null;
+
+        if (blank($address) && blank($birth)) {
+            return 'Adresse et naissance non renseignées';
+        }
+
+        $parts = array_filter([
+            $address,
+            filled($birth) ? 'né(e) ' . $birth : null,
+        ]);
+
+        return implode(' · ', $parts);
+    }
+
+    /** Initiales d'un indivisaire pour l'avatar de sa carte 2042-C-PRO (maquette, variante B). */
+    private function coOwnerInitials(string $name): string
+    {
+        $words = array_values(array_filter(preg_split('/\s+/', trim($name)) ?: []));
+
+        if ($words === []) {
+            return '??';
+        }
+
+        $first = mb_strtoupper(mb_substr($words[0], 0, 1));
+        $last = count($words) > 1 ? mb_strtoupper(mb_substr($words[count($words) - 1], 0, 1)) : '';
+
+        return $first . $last;
     }
 
     public function exportCsv()

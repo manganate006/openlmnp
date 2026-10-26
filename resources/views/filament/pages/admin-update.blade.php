@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     <style>
         .au-card { background: var(--olmnp-surface); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: 1px solid var(--olmnp-border); margin-bottom: 16px; }
-        .au-version { font-size: 32px; font-weight: 800; color: var(--olmnp-success-accent); }
+        .au-badge-pending { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--olmnp-surface-muted); color: var(--olmnp-fg-muted); border-radius: 20px; font-size: 12px; font-weight: 600; }
         .au-commit { font-family: monospace; font-size: 13px; color: var(--olmnp-fg-muted); }
         .au-badge-new { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--olmnp-warning-bg-strong); color: var(--olmnp-warning-fg); border-radius: 20px; font-size: 12px; font-weight: 600; }
         .au-badge-ok { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--olmnp-success-bg); color: var(--olmnp-success-fg); border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -18,10 +18,6 @@
         .au-commit-date { color: var(--olmnp-fg-subtle); font-size: 11px; white-space: nowrap; }
         .au-result-ok { background: var(--olmnp-success-bg); border: 1px solid var(--olmnp-success-border); border-radius: 12px; padding: 16px; margin-top: 16px; }
         .au-result-fail { background: var(--olmnp-danger-bg); border: 1px solid var(--olmnp-danger-border); border-radius: 12px; padding: 16px; margin-top: 16px; }
-        .au-changelog { padding: 16px; background: var(--olmnp-surface-muted); border-radius: 8px; margin-top: 12px; }
-        .au-changelog h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-        .au-changelog p { font-size: 13px; color: var(--olmnp-fg); white-space: pre-wrap; }
-        .au-changelog-date { font-size: 11px; color: var(--olmnp-fg-subtle); }
         .au-input { width: 100%; padding: 8px 12px; border: 1px solid var(--olmnp-border-strong); border-radius: 8px; font-size: 13px; font-family: monospace; background: var(--olmnp-surface); color: var(--olmnp-fg); }
         .au-input:focus { outline: none; border-color: var(--olmnp-success-solid); box-shadow: 0 0 0 2px color-mix(in oklab, var(--olmnp-success-accent) 20%, transparent); }
         .au-label { font-size: 12px; font-weight: 600; color: var(--olmnp-fg); margin-bottom: 4px; display: block; }
@@ -49,6 +45,10 @@
         </div>
     @endunless
 
+    {{-- Version installée, dernière version publiée et changelog : markup partagé avec la
+         page « Nouveautés », ouverte à tous. C'est lui qui porte le `wire:init`. --}}
+    @include('filament.partials.version-changelog')
+
     {{-- ================================================================== --}}
     {{-- Section Déploiement branche (développement)                        --}}
     {{-- ================================================================== --}}
@@ -57,7 +57,6 @@
             <div>
                 <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Déploiement développement</div>
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <div class="au-version">v{{ $this->getCurrentVersion() }}</div>
                     @if($this->getCurrentCommit())
                         <span class="au-commit">commit {{ substr($this->getCurrentCommit(), 0, 7) }}</span>
                     @else
@@ -66,7 +65,9 @@
                 </div>
             </div>
             <div>
-                @if($branchInfo && isset($branchInfo['error']))
+                @if($branchInfo === null)
+                    <span class="au-badge-pending">Vérification en cours&hellip;</span>
+                @elseif(isset($branchInfo['error']))
                     <span class="au-badge-error">Erreur</span>
                 @elseif($branchInfo && ($branchInfo['available'] ?? false))
                     @if($branchInfo['ahead_by'] !== null)
@@ -155,25 +156,12 @@
     <div class="au-card">
         <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Releases</div>
 
-        @if($updateInfo === null)
-            <p style="font-size:13px;color:var(--olmnp-fg-muted);">Cliquez sur « Vérifier » pour consulter les releases GitHub.</p>
-        @else
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    @if($updateInfo && ($updateInfo['available'] ?? false))
-                        <span class="au-badge-new">v{{ $updateInfo['latest_version'] }} disponible</span>
-                    @elseif($updateInfo && !isset($updateInfo['error']))
-                        <span class="au-badge-ok">{{ ($updateInfo['info'] ?? '') === 'no_release' ? 'Aucune release publiée' : 'À jour' }}</span>
-                    @endif
-                </div>
-            </div>
-
-            @if($updateInfo && isset($updateInfo['error']))
-                <div style="margin-top:12px;padding:12px;background:var(--olmnp-danger-bg);border-radius:8px;font-size:13px;color:var(--olmnp-danger-fg);">
-                    {{ $updateInfo['error'] }}
-                </div>
-            @endif
-        @endif
+        {{-- L'état (version disponible, à jour, erreur) est affiché par le partial en tête de
+             page : ici, seulement les actions. « Vérifier » force un relevé neuf. --}}
+        <p style="font-size:13px;color:var(--olmnp-fg-muted);">
+            Le relevé des releases est automatique et mis en cache
+            {{ (int) config('updater.check_ttl') / 3600 }} h. « Vérifier » interroge GitHub immédiatement.
+        </p>
 
         <div style="margin-top:12px;display:flex;gap:8px;">
             <button wire:click="checkUpdate" wire:loading.attr="disabled" wire:target="checkUpdate" class="au-btn au-btn-secondary">
@@ -204,27 +192,9 @@
         @endif
     </div>
 
-    {{-- ================================================================== --}}
-    {{-- Changelog des releases                                             --}}
-    {{-- ================================================================== --}}
-    @if($changelog && count($changelog) > 0)
-        <div class="au-card">
-            <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">Changelog</h3>
-            @foreach($changelog as $release)
-                <div class="au-changelog">
-                    <h4>v{{ $release['version'] }} — {{ $release['name'] }}</h4>
-                    <div class="au-changelog-date">
-                        @if($release['published_at'])
-                            {{ \Carbon\Carbon::parse($release['published_at'])->format('d/m/Y') }}
-                        @endif
-                    </div>
-                    @if($release['changelog'])
-                        <p style="margin-top:8px;">{!! nl2br(e($release['changelog'])) !!}</p>
-                    @endif
-                </div>
-            @endforeach
-        </div>
-    @endif
+    {{-- Le changelog est rendu par le partial inclus en tête de page (markup partagé avec
+         « Nouveautés »), plus ici : deux rendus, c'était deux mises en forme à maintenir. --}}
+
     {{-- ================================================================== --}}
     {{-- Configuration GitHub                                              --}}
     {{-- ================================================================== --}}

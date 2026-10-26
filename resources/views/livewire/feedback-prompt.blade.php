@@ -294,16 +294,26 @@
             l'émeraude claire ne donne que ~2,5:1 de contraste contre ~4,0:1 pour la foncée.
             Même parti pris que `.fb-submit` et que `.ctx-help-btn` du panneau d'aide.
         */
+        /*
+            Porté par un <a> (offre externe) ET par un <button> (prolongation, qui reste
+            dans l'app) : d'où la remise à zéro des styles natifs du bouton — bordure,
+            police et largeur — sans laquelle les deux ne se ressemblent pas.
+        */
         .fb-cta-pro {
             display: flex;
+            width: 100%;
             align-items: center;
             gap: 0.75rem;
             padding: 0.75rem 0.875rem;
             margin-bottom: 0.875rem;
+            border: 0;
             border-radius: 0.625rem;
             background: var(--olmnp-success-solid-hover);
             color: var(--olmnp-on-solid);
+            font-family: inherit;
+            text-align: left;
             text-decoration: none;
+            cursor: pointer;
         }
 
         .fb-cta-pro:hover { background: var(--olmnp-success-solid); }
@@ -419,6 +429,32 @@
             font-size: 0.75rem;
             color: var(--olmnp-fg-muted);
         }
+
+        /*
+            Freins déclarés. Chaque case est une cible de clic à part entière : sur mobile,
+            un intitulé de deux lignes doit rester cliquable sur toute sa surface, pas
+            seulement sur la coche.
+        */
+        .fb-blockers {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .fb-blocker {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.375rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.8125rem;
+            line-height: 1.35;
+            color: var(--olmnp-fg);
+            cursor: pointer;
+        }
+
+        .fb-blocker:hover { background: var(--olmnp-surface-muted); }
 
         .fb-consent {
             display: flex;

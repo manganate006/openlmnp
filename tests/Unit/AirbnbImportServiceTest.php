@@ -30,9 +30,13 @@ beforeEach(function () {
 });
 
 it('imports airbnb csv with english headers', function () {
+    // ⚠️ « Reservation », pas « Payout » : un `Payout` n'a jamais de Amount/Host fee
+    // détaillés dans un export réel (c'est le virement qui RÈGLE des réservations déjà
+    // détaillées ailleurs) — l'utiliser ici testait un cas qui n'existe pas, et masquait
+    // le vrai défaut de double comptage (voir AirbnbImportTransactionTypesTest).
     $csv = "Date,Type,Confirmation code,Start date,Nights,Guest,Listing,Amount,Host fee,Paid out\n";
-    $csv .= "2024-06-15,Payout,ABC123,2024-06-10,3,John Doe,My Listing,150.00,4.50,145.50\n";
-    $csv .= "2024-07-20,Payout,DEF456,2024-07-18,2,Jane Smith,My Listing,200.00,6.00,194.00\n";
+    $csv .= "2024-06-15,Reservation,ABC123,2024-06-10,3,John Doe,My Listing,150.00,4.50,145.50\n";
+    $csv .= "2024-07-20,Reservation,DEF456,2024-07-18,2,Jane Smith,My Listing,200.00,6.00,194.00\n";
 
     $file = UploadedFile::fake()->createWithContent('airbnb.csv', $csv);
     $result = $this->service->import($file, $this->property);

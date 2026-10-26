@@ -24,6 +24,7 @@ use App\Filament\Pages\RepriseDossier;
 use App\Filament\Pages\Simulator;
 use App\Filament\Pages\Teledeclaration;
 use App\Filament\Pages\TvaDeclaration;
+use App\Filament\Pages\WhatsNew;
 use App\Filament\Pages\AdminStats;
 use App\Filament\Pages\AdminUpdate;
 use App\Filament\Pages\SystemStatus;
@@ -45,6 +46,7 @@ function allUserPages(): array
     return [
         'Dashboard' => Dashboard::class,
         'HelpPage' => HelpPage::class,
+        'WhatsNew' => WhatsNew::class,
         'Badges' => Badges::class,
         'Properties' => PropertyResource::class,
         'Incomes' => IncomeResource::class,

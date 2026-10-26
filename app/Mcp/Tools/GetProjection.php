@@ -2,8 +2,10 @@
 
 namespace App\Mcp\Tools;
 
+use App\Models\Expense;
 use App\Models\Property;
 use App\Services\DepreciationService;
+use App\Support\MicroBicRules;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -67,11 +69,11 @@ class GetProjection extends Tool
                 }
                 $totalIncome += $income;
 
-                $dedicated = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', true)->sum('amount');
-                $shared    = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', false)->sum('amount');
+                $dedicated = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', true)->sum(Expense::usageAdjustedSql('amount'));
+                $shared    = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', false)->sum(Expense::usageAdjustedSql('amount'));
                 if ($dedicated == 0 && $shared == 0 && $i > 0) {
-                    $dedicated = $property->expenses()->where('is_dedicated', true)->sum('amount');
-                    $shared    = $property->expenses()->where('is_dedicated', false)->sum('amount');
+                    $dedicated = $property->expenses()->where('is_dedicated', true)->sum(Expense::usageAdjustedSql('amount'));
+                    $shared    = $property->expenses()->where('is_dedicated', false)->sum(Expense::usageAdjustedSql('amount'));
                     $expYears  = $property->expenses()->selectRaw('COUNT(DISTINCT strftime("%Y", expense_date)) as y')->value('y') ?: 1;
                     $dedicated = (int) ($dedicated / $expYears);
                     $shared    = (int) ($shared / $expYears);
@@ -101,8 +103,17 @@ class GetProjection extends Tool
             }
 
             $fiscalResult = max(0, $resultBefore - $capped);
-            $microBic50   = (int) ($totalIncome * 0.50);
-            $microBic30   = (int) ($totalIncome * 0.70);
+
+            // Taux centralisés (App\Support\MicroBicRules) : varient selon l'année.
+            $classifiedRate   = (float) MicroBicRules::rate(Property::CLASSIFICATION_CLASSIFIED, $year);
+            $unclassifiedRate = (float) MicroBicRules::rate(Property::CLASSIFICATION_UNCLASSIFIED, $year);
+            $microBic50 = (int) ($totalIncome * $classifiedRate / 100);
+            $microBic30 = (int) ($totalIncome * (100 - $unclassifiedRate) / 100);
+
+            // Micro-BIC : mêmes règles qu'un dossier individuel pour une indivision (piège P13,
+            // simplification du 2026-10-15 — voir App\Support\Indivision).
+            $microBic50Available = MicroBicRules::isAvailable(Property::CLASSIFICATION_CLASSIFIED, $year, $totalIncome);
+            $microBic30Available = MicroBicRules::isAvailable(Property::CLASSIFICATION_UNCLASSIFIED, $year, $totalIncome);
 
             $rows[] = [
                 'year'            => $year,
@@ -117,7 +128,9 @@ class GetProjection extends Tool
                 'fiscal_result_euros' => round($fiscalResult / 100, 2),
                 'micro_bic_50_euros'  => round($microBic50 / 100, 2),
                 'micro_bic_30_euros'  => round($microBic30 / 100, 2),
-                'recommended'     => $fiscalResult < $microBic50 ? 'real' : 'micro_bic',
+                'micro_bic_50_available' => $microBic50Available,
+                'micro_bic_30_available' => $microBic30Available,
+                'recommended'     => ($microBic50Available && $fiscalResult >= $microBic50) ? 'micro_bic' : 'real',
             ];
         }
 

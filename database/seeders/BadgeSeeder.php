@@ -257,6 +257,18 @@ class BadgeSeeder extends Seeder
                 'sort_order' => 34,
                 'unlock_conditions' => ['type' => 'closed_fiscal_years', 'min' => 3],
             ],
+            [
+                'code' => 'lecteur_automatique',
+                'category' => 'exploration',
+                'name' => 'Lecteur automatique',
+                'description' => 'Premier justificatif analysé par l\'intelligence artificielle. Fini la saisie ligne à ligne.',
+                'hint' => 'Déposez une facture dans Au quotidien → Importer un justificatif.',
+                'icon' => 'heroicon-o-sparkles',
+                'color' => 'danger',
+                'is_yearly' => false,
+                'sort_order' => 35,
+                'unlock_conditions' => ['type' => 'ai_import_used'],
+            ],
         ];
 
         foreach ($badges as $badge) {

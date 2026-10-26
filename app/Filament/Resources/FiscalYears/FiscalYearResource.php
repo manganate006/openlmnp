@@ -6,6 +6,7 @@ use App\Filament\Resources\FiscalYears\Pages\EditFiscalYear;
 use App\Filament\Resources\FiscalYears\Pages\ListFiscalYears;
 use App\Filament\Resources\FiscalYears\Tables\FiscalYearsTable;
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Resources\Concerns\BlocksMemberPrincipal;
 use App\Models\FiscalYear;
 use BackedEnum;
 use Filament\Forms\Components\Select;
@@ -17,6 +18,7 @@ use Filament\Tables\Table;
 
 class FiscalYearResource extends Resource
 {
+    use BlocksMemberPrincipal;
     use NavigationAware;
 
     protected static ?string $model = FiscalYear::class;

@@ -2,11 +2,14 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\Properties\PropertyResource;
 use App\Models\Property;
 use Filament\Widgets\Widget;
 
 class AlertBanner extends Widget
 {
+    use Concerns\HiddenForMemberPrincipal;
+
     protected static ?int $sort = 0;
 
     protected string $view = 'filament.widgets.alert-banner';
@@ -43,6 +46,20 @@ class AlertBanner extends Widget
                 'message' => "Ajoutez vos recettes {$year} — Saisie manuelle ou import CSV Airbnb",
                 'url' => '/incomes/create',
             ];
+        }
+
+        foreach ($properties as $property) {
+            if ($property->dpeExpired()) {
+                $alerts[] = [
+                    'message' => "DPE expiré — {$property->name}",
+                    'url' => PropertyResource::getUrl('edit', ['record' => $property]),
+                ];
+            } elseif ($property->dpeExpiringSoon()) {
+                $alerts[] = [
+                    'message' => "DPE bientôt expiré — {$property->name}",
+                    'url' => PropertyResource::getUrl('edit', ['record' => $property]),
+                ];
+            }
         }
 
         return $alerts;

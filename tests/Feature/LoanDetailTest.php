@@ -101,3 +101,110 @@ it('does not list other users loans on the loans page', function () {
         ->assertSee('Ma Banque Test')
         ->assertDontSee('Banque Étrangère');
 });
+
+// === TABLEAU IMPORTÉ : garde et recalcul explicite ===
+
+it('protège les échéances importées d\'un recalcul silencieux', function () {
+    $loan = createLoanForUser($this->user, 'Studio', 'Banque A');
+
+    // L'utilisateur remplace le tableau calculé par celui de sa banque.
+    $loan->payments()->delete();
+    $loan->payments()->create([
+        'payment_date' => '2026-02-01',
+        'month_number' => 1,
+        'capital_amount' => 50000,
+        'interest_amount' => 25000,
+        'insurance_amount' => 3000,
+        'remaining_capital' => 19950000,
+    ]);
+    $loan->forceFill(['schedule_source' => Loan::SCHEDULE_IMPORTED])->save();
+
+    // Un appel ordinaire ne doit rien écraser.
+    $recalcule = app(LoanService::class)->generateSchedule($loan->refresh());
+
+    expect($recalcule)->toBeFalse()
+        ->and($loan->payments()->count())->toBe(1)
+        ->and($loan->refresh()->hasImportedSchedule())->toBeTrue();
+});
+
+it('recalcule le tableau théorique sur demande explicite et repasse en calculé', function () {
+    $loan = createLoanForUser($this->user, 'Studio', 'Banque A');
+
+    $loan->payments()->delete();
+    $loan->payments()->create([
+        'payment_date' => '2026-02-01',
+        'month_number' => 1,
+        'capital_amount' => 50000,
+        'interest_amount' => 25000,
+        'insurance_amount' => 3000,
+        'remaining_capital' => 19950000,
+    ]);
+    $loan->forceFill(['schedule_source' => Loan::SCHEDULE_IMPORTED])->save();
+
+    $recalcule = app(LoanService::class)->generateSchedule($loan->refresh(), force: true);
+
+    expect($recalcule)->toBeTrue()
+        ->and($loan->payments()->count())->toBe(240)
+        // Sans ce retour à « computed », la garde protégerait des lignes qui ne
+        // viennent plus de la banque.
+        ->and($loan->refresh()->hasImportedSchedule())->toBeFalse();
+});
+
+it('n\'offre l\'action de recalcul que sur un tableau importé', function () {
+    $loan = createLoanForUser($this->user, 'Studio', 'Banque A');
+
+    $this->actingAs($this->user);
+
+    // Tableau calculé : l'action n'a pas lieu d'être.
+    Livewire\Livewire::test(\App\Filament\Pages\LoanDetail::class, ['loanId' => $loan->id])
+        ->assertActionHidden('recomputeSchedule');
+
+    $loan->forceFill(['schedule_source' => Loan::SCHEDULE_IMPORTED])->save();
+
+    Livewire\Livewire::test(\App\Filament\Pages\LoanDetail::class, ['loanId' => $loan->id])
+        ->assertActionVisible('recomputeSchedule')
+        ->assertSee('Échéances importées de votre banque');
+});
+
+it('affiche l\'écart d\'intérêts entre tableau importé et tableau théorique', function () {
+    $loan = createLoanForUser($this->user, 'Studio', 'Banque A');
+    $annee = (int) date('Y');
+
+    // Échéances « réelles » de l'année en cours, volontairement différentes.
+    $loan->payments()->delete();
+    foreach (range(1, 12) as $mois) {
+        $loan->payments()->create([
+            'payment_date' => sprintf('%d-%02d-01', $annee, $mois),
+            'month_number' => $mois,
+            'capital_amount' => 60000,
+            'interest_amount' => 20000,
+            'insurance_amount' => 3000,
+            'remaining_capital' => 20000000 - 60000 * $mois,
+        ]);
+    }
+    $loan->forceFill(['schedule_source' => Loan::SCHEDULE_IMPORTED])->save();
+
+    $this->actingAs($this->user);
+
+    $ecart = Livewire\Livewire::test(\App\Filament\Pages\LoanDetail::class, ['loanId' => $loan->id])
+        ->instance()->theoreticalGap;
+
+    expect($ecart['year'])->toBe($annee)
+        ->and($ecart['imported'])->toBe(240000)
+        ->and($ecart['gap'])->toBe($ecart['imported'] - $ecart['theoretical'])
+        // La simulation théorique ne doit RIEN écrire : le tableau reste intact.
+        ->and($loan->payments()->count())->toBe(12);
+});
+
+it('rattache un justificatif à un emprunt', function () {
+    $loan = createLoanForUser($this->user, 'Studio', 'Banque A');
+
+    $loan->documents()->create([
+        'label' => 'Tableau d\'amortissement 2026',
+        'file_path' => "documents/{$this->user->id}/emprunts/tableau.pdf",
+        'sort_order' => 0,
+    ]);
+
+    expect($loan->documents)->toHaveCount(1)
+        ->and($loan->documents->first()->label)->toBe('Tableau d\'amortissement 2026');
+});

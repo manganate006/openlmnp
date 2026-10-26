@@ -43,6 +43,24 @@
         .td-check-ko { background: var(--olmnp-danger-bg); color: var(--olmnp-danger-fg); }
         .td-check-warn { background: var(--olmnp-warning-bg); color: var(--olmnp-warning-fg); }
         .td-breakdown-note { font-size: 12px; color: var(--olmnp-fg-muted); margin-bottom: 12px; }
+
+        /* Cadre E (2031 bis-SD) et cartes 2042-C-PRO par indivisaire — maquette écran 3, variante B. */
+        .td-table tfoot td { font-weight: 700; border-top: 2px solid var(--olmnp-border-strong); border-bottom: none; }
+        .td-identity-sub { display: block; font-size: 11px; color: var(--olmnp-fg-muted); margin-top: 2px; }
+        .td-inline-check { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; }
+        .td-inline-check.td-check-ok { border: 1px solid var(--olmnp-success-border); }
+        .td-inline-check.td-check-warn { border: 1px solid var(--olmnp-warning-border); }
+        .td-inline-check.td-check-ko { border: 1px solid var(--olmnp-danger-border); }
+        .td-person-cards { display: flex; flex-direction: column; gap: 10px; }
+        .td-person-card { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 10px; background: var(--olmnp-surface-muted); border: 1px solid var(--olmnp-border); flex-wrap: wrap; }
+        .td-person-avatar { flex: none; width: 34px; height: 34px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--olmnp-accent-bg); color: var(--olmnp-accent-fg); border: 1px solid var(--olmnp-accent-border); }
+        .td-person-name { font-weight: 600; color: var(--olmnp-fg-strong); }
+        .td-person-share { font-size: 12px; color: var(--olmnp-fg-muted); }
+        .td-person-case { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 52px; height: 42px; border-radius: 8px; background: var(--olmnp-surface); border: 1px solid var(--olmnp-border-strong); font-weight: 700; font-size: 13px; color: var(--olmnp-success-fg); }
+        .td-person-case small { font-size: 9px; font-weight: 500; color: var(--olmnp-fg-muted); text-transform: uppercase; }
+        .td-person-amount-label { font-size: 11px; color: var(--olmnp-fg-muted); }
+        .td-person-amount { font-weight: 700; font-family: monospace; color: var(--olmnp-fg-strong); }
+        .td-person-copy { margin-left: auto; }
     </style>
 
     <script>
@@ -121,7 +139,8 @@
                     </p>
                     <p style="font-size:14px;color:var(--olmnp-warning-fg);">
                         Les liasses que vous avez déjà téléchargées ou transmises portent l'ancienne valeur : elles affichent
-                        des déficits que vous n'aviez pas. Les valeurs ci-dessous sont les valeurs corrigées. Si une
+                        des déficits que vous n'aviez pas. Depuis la 2.0, ce cadre est laissé vide, comme le prévoit la
+                        notice pour une location meublée non professionnelle. Si une
                         déclaration déjà déposée est concernée, votre suivi de déficits peut être reconstitué
                         (<code>php artisan openlmnp:repair-deficits</code>), puis la liasse régénérée.
                     </p>
@@ -162,10 +181,10 @@
                                             <td class="line-cell">{{ $line['line'] }}</td>
                                             <td>{{ $line['desc'] }}</td>
                                             <td class="value-cell">{{ $line['value'] }} &euro;</td>
-                                            <td><button class="copy-btn" onclick="copyValue('{{ number_format($line['raw'] / 100, 2, '.', '') }}')">Copier</button></td>
+                                            <td><button class="copy-btn" onclick="copyValue('{{ number_format($line['raw'] / 100, 0, '.', '') }}')">Copier</button></td>
                                             @if(isset($line['dotation']))
                                                 <td class="value-cell">{{ $line['dotation'] }} &euro;</td>
-                                                <td><button class="copy-btn" onclick="copyValue('{{ number_format($line['dotation_raw'] / 100, 2, '.', '') }}')">Copier</button></td>
+                                                <td><button class="copy-btn" onclick="copyValue('{{ number_format($line['dotation_raw'] / 100, 0, '.', '') }}')">Copier</button></td>
                                             @else
                                                 <td class="value-cell">—</td>
                                                 <td></td>
@@ -175,8 +194,83 @@
                                 </tbody>
                             </table>
                             </div>
+                        @elseif($formKey === '2031-bis')
+                            {{-- Cadre E tel qu'imprimé (maquette écran 3, variante B) : les colonnes du
+                                 Cerfa (indivisaire, qualité, BIC, quote-part, bénéfice, déficit) plutôt
+                                 qu'une description à plat, et une ligne de total qui prouve que la somme
+                                 des parts retombe sur le résultat de la 2031-SD. --}}
+                            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                            <table class="td-table">
+                                <thead>
+                                    <tr>
+                                        <th>Indivisaire</th>
+                                        <th>Qualité</th>
+                                        <th>BIC</th>
+                                        <th style="text-align:right;">Quote-part</th>
+                                        <th style="text-align:right;">Bénéfice</th>
+                                        <th style="text-align:right;">Déficit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($form['rows'] as $row)
+                                        <tr>
+                                            <td>{{ $row['name'] }}<span class="td-identity-sub">{{ $row['identity'] }}</span></td>
+                                            <td>{{ $row['quality'] }}</td>
+                                            <td>{{ $row['bic_type'] }}</td>
+                                            <td class="value-cell">{{ $row['share_pct'] }}</td>
+                                            <td class="value-cell">{{ $row['benefice'] !== '—' ? $row['benefice'] . ' €' : '—' }}</td>
+                                            <td class="value-cell">{{ $row['deficit'] !== '—' ? $row['deficit'] . ' €' : '—' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3">Total (= 2031-SD, case CB/CC)</td>
+                                        <td class="value-cell">{{ $form['total']['share_pct'] }}</td>
+                                        <td class="value-cell">{{ $form['total']['benefice'] }} &euro;</td>
+                                        <td class="value-cell">{{ $form['total']['deficit'] }} &euro;</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                            </div>
+                            {{-- Contrôle de la répartition, à côté du tableau qu'il vérifie — le même
+                                 contrôle (venu de `checks()`) figure aussi plus bas, dans les « Contrôles
+                                 de cohérence » : pas recalculé ici, seulement répété. --}}
+                            @foreach($data['checks'] as $check)
+                                @continue($check['id'] !== 'indivision')
+                                <div class="td-inline-check
+                                    @if($check['status'] === \App\Services\TaxReturnService::CHECK_OK) td-check-ok
+                                    @elseif($check['status'] === \App\Services\TaxReturnService::CHECK_WARNING) td-check-warn
+                                    @else td-check-ko
+                                    @endif
+                                ">{{ $check['message'] }}</div>
+                            @endforeach
+                        @elseif($formKey === '2042-C-PRO' && !empty($form['persons']))
+                            {{-- Une carte par indivisaire (maquette écran 3, variante B) : SA case, SON
+                                 montant, sur SA propre déclaration de revenus — jamais une ligne de
+                                 tableau qui pourrait laisser croire à un report commun. --}}
+                            <div class="td-person-cards">
+                                @foreach($form['persons'] as $person)
+                                    <div class="td-person-card">
+                                        <span class="td-person-avatar" aria-hidden="true">{{ $person['initials'] }}</span>
+                                        <div>
+                                            <div class="td-person-name">{{ $person['name'] }}</div>
+                                            <div class="td-person-share">Quote-part {{ $person['share_pct'] }} · sur sa propre déclaration de revenus</div>
+                                        </div>
+                                        <span class="td-person-case"><small>case</small>{{ $person['case'] }}</span>
+                                        <div>
+                                            <div class="td-person-amount-label">{{ $person['label'] }}</div>
+                                            <div class="td-person-amount">{{ $person['value'] }} &euro;</div>
+                                        </div>
+                                        <button class="copy-btn td-person-copy" onclick="copyValue('{{ number_format($person['raw'] / 100, 0, '.', '') }}')">Copier</button>
+                                    </div>
+                                @endforeach
+                            </div>
                         @else
                             {{-- Tableau standard --}}
+                            @if(! empty($form['note']))
+                                <p style="font-size:13px;color:var(--olmnp-fg-muted);margin-bottom:8px;">{{ $form['note'] }}</p>
+                            @endif
                             <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
                             <table class="td-table">
                                 <thead>
@@ -193,7 +287,7 @@
                                             <td class="line-cell">{{ $line['line'] }}</td>
                                             <td>{{ $line['desc'] }}</td>
                                             <td class="value-cell">{{ $line['value'] }} &euro;</td>
-                                            <td><button class="copy-btn" onclick="copyValue('{{ number_format($line['raw'] / 100, 2, '.', '') }}')">Copier</button></td>
+                                            <td><button class="copy-btn" onclick="copyValue('{{ number_format($line['raw'] / 100, 0, '.', '') }}')">Copier</button></td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -272,9 +366,13 @@
                         <li><span class="td-step">1</span>Connectez-vous sur <strong>impots.gouv.fr</strong> &rarr; Espace professionnel</li>
                         <li><span class="td-step">2</span>Si c'est votre 1ère déclaration, créez votre espace pro avec votre <strong>SIREN</strong></li>
                         <li><span class="td-step">3</span>Menu <strong>&laquo; Déclarer &raquo;</strong> &rarr; <strong>&laquo; Résultat &raquo;</strong> (BIC réel simplifié)</li>
-                        <li><span class="td-step">4</span>Remplissez les formulaires <strong>2033-B</strong>, <strong>2033-A</strong>, <strong>2033-C</strong> et <strong>2033-D</strong> en reportant les valeurs ci-dessus ligne par ligne</li>
+                        <li><span class="td-step">4</span>Remplissez les formulaires <strong>2033-B</strong>, <strong>2033-A</strong>, <strong>2033-C</strong> et <strong>2033-D</strong> en reportant les valeurs ci-dessus ligne par ligne{!! $data['form2031bis'] ? ', puis l\'annexe <strong>2031 bis</strong> (cadre E : un indivisaire par ligne, avec sa quote-part)' : '' !!}</li>
                         <li><span class="td-step">5</span>Validez et transmettez</li>
+                        @if($data['form2031bis'])
+                        <li><span class="td-step">6</span>Chaque indivisaire, sur sa <strong>déclaration de revenus personnelle</strong> (2042), reporte <strong>sa quote-part</strong> en <strong>2042-C-PRO</strong> (montants ci-dessous)</li>
+                        @else
                         <li><span class="td-step">6</span>Sur votre <strong>déclaration de revenus personnelle</strong> (2042), allez dans <strong>2042-C-PRO</strong> et reportez le résultat en case <strong>{{ $data['forms']['2042-C-PRO']['lines'][0]['line'] }}</strong></li>
+                        @endif
                         <li><span class="td-step">7</span>De retour ici, cliquez sur <strong>&laquo; Dépôt &raquo;</strong> en haut de l'écran et notez la date et le numéro du <strong>certificat de dépôt</strong> : sans lui, rien ne distingue cette liasse d'un brouillon</li>
                     </ol>
                     <p style="font-size:12px;color:var(--olmnp-fg-muted);margin-top:8px;">Date limite : 2ème jour ouvré après le 1er mai (environ 18-20 mai selon les années).</p>
@@ -300,12 +398,32 @@
             {{-- Rappel 2042-C-PRO --}}
             <div class="td-card" style="background:var(--olmnp-success-bg);border-color:var(--olmnp-success-border);">
                 <h3 style="font-size:16px;font-weight:600;color:var(--olmnp-success-fg);margin-bottom:8px;">Ne pas oublier : déclaration de revenus personnelle</h3>
+                @if($data['form2031bis'])
+                    {{-- Indivision : chacun reporte SA quote-part (2031 bis-SD), pas le résultat entier. --}}
+                    <p style="font-size:14px;color:var(--olmnp-success-accent);">
+                        Après avoir transmis la liasse de l'indivision (2031, 2031 bis et 2033), chaque indivisaire
+                        reporte <strong>sa quote-part</strong> sur sa propre <strong>déclaration de revenus 2042</strong>,
+                        rubrique <strong>2042-C-PRO</strong> :
+                    </p>
+                    @if($data['form2031bis']['complete'])
+                        <ul style="font-size:14px;color:var(--olmnp-success-accent);margin-top:6px;padding-left:18px;list-style:disc;">
+                            @foreach($data['forms']['2042-C-PRO']['lines'] as $line)
+                                <li>{{ $line['desc'] }} : case <strong>{{ $line['line'] }}</strong>, <strong>{{ $line['value'] }} &euro;</strong></li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p style="font-size:14px;color:var(--olmnp-warning-fg);margin-top:6px;">
+                            La répartition entre indivisaires est incomplète : complétez-la dans votre profil, rubrique « Indivision ».
+                        </p>
+                    @endif
+                @else
                 <p style="font-size:14px;color:var(--olmnp-success-accent);">
                     Après avoir transmis la liasse fiscale (2031 + 2033), reportez le résultat fiscal sur votre
                     <strong>déclaration de revenus personnelle 2042</strong>, rubrique <strong>2042-C-PRO</strong>,
                     case <strong>{{ $data['forms']['2042-C-PRO']['lines'][0]['line'] }}</strong> :
                     <strong>{{ $data['forms']['2042-C-PRO']['lines'][0]['value'] }} &euro;</strong>
                 </p>
+                @endif
             </div>
         @endif
     </div>

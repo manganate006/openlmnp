@@ -1,0 +1,154 @@
+{
+  "document_type": "loan_schedule",
+  "confidence": 0.91,
+  "fields": [
+    {
+      "name": "bank_name",
+      "value": "Crédit Mutuel du Rhône",
+      "confidence": 0.96,
+      "evidence": "CRÉDIT MUTUEL DU RHÔNE"
+    },
+    {
+      "name": "principal",
+      "value": "12000.00",
+      "confidence": 0.95,
+      "evidence": "Capital emprunté : 12 000,00 €"
+    },
+    {
+      "name": "annual_rate",
+      "value": "1.250",
+      "confidence": 0.93,
+      "evidence": "Taux nominal 1,25 %"
+    },
+    {
+      "name": "duration_months",
+      "value": "12",
+      "confidence": 0.94,
+      "evidence": "Durée : 12 mois"
+    },
+    {
+      "name": "first_payment_date",
+      "value": "2026-01-05",
+      "confidence": 0.92,
+      "evidence": "1re échéance le 05/01/2026"
+    },
+    {
+      "name": "monthly_payment",
+      "value": "1006.83",
+      "confidence": 0.9,
+      "evidence": "Mensualité 1 006,83 €"
+    },
+    {
+      "name": "insurance_monthly",
+      "value": "14.50",
+      "confidence": 0.88,
+      "evidence": "Assurance 14,50 €"
+    },
+    {
+      "name": "insurance_type",
+      "value": "fixed",
+      "confidence": 0.8,
+      "evidence": "Cotisation constante"
+    }
+  ],
+  "items": [],
+  "schedule": [
+    {
+      "n": 1,
+      "date": "2026-01-05",
+      "capital": "1000.00",
+      "interest": "12.50",
+      "insurance": "14.50",
+      "remaining": "11000.00"
+    },
+    {
+      "n": 2,
+      "date": "2026-02-05",
+      "capital": "1000.00",
+      "interest": "11.46",
+      "insurance": "14.50",
+      "remaining": "10000.00"
+    },
+    {
+      "n": 3,
+      "date": "2026-03-05",
+      "capital": "1000.00",
+      "interest": "10.42",
+      "insurance": "14.50",
+      "remaining": "9000.00"
+    },
+    {
+      "n": 4,
+      "date": "2026-04-05",
+      "capital": "1000.00",
+      "interest": "9.38",
+      "insurance": "14.50",
+      "remaining": "8000.00"
+    },
+    {
+      "n": 5,
+      "date": "2026-05-05",
+      "capital": "1000.00",
+      "interest": "8.33",
+      "insurance": "14.50",
+      "remaining": "7000.00"
+    },
+    {
+      "n": 6,
+      "date": "2026-06-05",
+      "capital": "1000.00",
+      "interest": "7.29",
+      "insurance": "14.50",
+      "remaining": "6000.00"
+    },
+    {
+      "n": 7,
+      "date": "2026-07-05",
+      "capital": "1000.00",
+      "interest": "6.25",
+      "insurance": "14.50",
+      "remaining": "5000.00"
+    },
+    {
+      "n": 8,
+      "date": "2026-08-05",
+      "capital": "1000.00",
+      "interest": "5.21",
+      "insurance": "14.50",
+      "remaining": "4000.00"
+    },
+    {
+      "n": 9,
+      "date": "2026-09-05",
+      "capital": "1000.00",
+      "interest": "4.17",
+      "insurance": "14.50",
+      "remaining": "3000.00"
+    },
+    {
+      "n": 10,
+      "date": "2026-10-05",
+      "capital": "1000.00",
+      "interest": "3.12",
+      "insurance": "14.50",
+      "remaining": "2000.00"
+    },
+    {
+      "n": 11,
+      "date": "2026-11-05",
+      "capital": "1000.00",
+      "interest": "2.08",
+      "insurance": "14.50",
+      "remaining": "1000.00"
+    },
+    {
+      "n": 12,
+      "date": "2026-12-05",
+      "capital": "1000.00",
+      "interest": "1.04",
+      "insurance": "14.50",
+      "remaining": "0.00"
+    }
+  ],
+  "lines": []
+}

@@ -6,7 +6,12 @@ use App\Filament\Pages\Concerns\NavigationAware;
 use App\Services\BadgeService;
 use App\Services\DepreciationService;
 use App\Services\FiscalYearService;
+use App\Models\Expense;
 use App\Models\Property;
+use App\Models\RentMapIndicator;
+use App\Services\OpenData\RentMapDiscovery;
+use App\Services\OpenData\RentMapSource;
+use App\Support\MicroBicRules;
 use BackedEnum;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -39,6 +44,9 @@ class Simulator extends Page implements HasForms
     public int $year = 2026;
     public string $abatement = '50';
 
+    /** Taux micro-BIC d'une location meublée : 30 % tourisme non classé, 50 % sinon. */
+    public const ABATEMENTS = ['30', '50'];
+
     private const CATEGORY_LABELS = [
         'property_tax' => 'Taxes (TF, CFE)',
         'insurance'    => 'Assurance',
@@ -56,6 +64,14 @@ class Simulator extends Page implements HasForms
     public function mount(): void
     {
         $this->year = (int) (request()->query('year', date('Y')));
+
+        // Classement du premier bien (ordre alphabétique) comme repère : mieux qu'un
+        // 50 % systématique, qui pouvait laisser croire un micro-BIC classé possible
+        // à qui loue en meublé de tourisme non classé.
+        $firstClassification = Property::query()->orderBy('name')->value('tourism_classification');
+        if ($firstClassification) {
+            $this->abatement = MicroBicRules::rate($firstClassification, $this->year);
+        }
 
         app(BadgeService::class)->evaluate(auth()->user(), 'simulator_used');
 
@@ -103,7 +119,7 @@ class Simulator extends Page implements HasForms
             $amountField = $property->isTvaLiable() ? 'amount_ht' : 'amount';
             $expenses = $property->expenses()
                 ->whereYear('expense_date', $this->year)
-                ->selectRaw("category, is_dedicated, SUM({$amountField}) as total")
+                ->selectRaw('category, is_dedicated, SUM(' . Expense::usageAdjustedSqlFragment($amountField) . ') as total')
                 ->groupBy('category', 'is_dedicated')
                 ->get();
 
@@ -131,10 +147,10 @@ class Simulator extends Page implements HasForms
         foreach ($properties as $property) {
             foreach ($property->loans as $loan) {
                 $interest = $loan->payments()->whereYear('payment_date', $this->year)->sum('interest_amount');
-                $loanInterest += (int) bcmul((string) $interest, $property->quota_share, 0);
+                $loanInterest += (int) $loan->prorate((string) $interest, $property->quota_share);
 
                 $insurance = $loan->payments()->whereYear('payment_date', $this->year)->sum('insurance_amount');
-                $loanInsurance += (int) bcmul((string) $insurance, $property->quota_share, 0);
+                $loanInsurance += (int) $loan->prorate((string) $insurance, $property->quota_share);
             }
         }
 
@@ -185,7 +201,10 @@ class Simulator extends Page implements HasForms
             'micro_bic_result' => $this->formatCents($comparison['micro_bic_result']),
             'real_result' => $this->formatCents($comparison['real_result']),
             'advantage' => $this->formatCents($comparison['advantage']),
-            'recommended' => $comparison['recommended'],
+            'recommended' => $comparison['available'] ? $comparison['recommended'] : 'real',
+            'micro_bic_available' => $comparison['available'],
+            'micro_bic_unavailable_reason' => $comparison['unavailable_reason'],
+            'micro_bic_warning' => $comparison['warning'] ?? null,
             // Charges détaillées
             'expenses_dedicated' => $this->fmt($totalExpensesDedicated),
             'expenses_shared' => $this->fmt($totalExpensesShared),
@@ -227,9 +246,93 @@ class Simulator extends Page implements HasForms
         ];
     }
 
+    /**
+     * Repère de loyer du marché (« Carte des loyers », ANIL), bien par bien.
+     *
+     * ⚠️ Indépendant de l'année et de l'abattement : ce n'est PAS un terme de la simulation
+     * fiscale, seulement un repère affiché à côté. Aucune requête HTTP ici — uniquement une
+     * lecture de `rent_map_indicators`, alimentée à l'avance par `openlmnp:refresh-rent-map`.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    #[Computed]
+    public function rentBenchmarks(): array
+    {
+        if (! RentMapSource::enabled()) {
+            return [];
+        }
+
+        return Property::all()
+            ->map(fn (Property $property) => $this->rentBenchmarkFor($property))
+            ->all();
+    }
+
+    /**
+     * Millésime RÉELLEMENT en base (le plus récent) — jamais `RentMapSource::VINTAGE`, qui
+     * n'est qu'un repli de bootstrap. `null` si la table est vide (aucun import n'a encore
+     * réussi).
+     */
+    #[Computed]
+    public function rentMapVintage(): ?int
+    {
+        return RentMapIndicator::currentVintage();
+    }
+
+    /** Page du jeu data.gouv.fr du millésime en base, calculée à partir du slug — ou `null`. */
+    #[Computed]
+    public function rentMapDatasetUrl(): ?string
+    {
+        $vintage = $this->rentMapVintage();
+
+        return $vintage !== null ? RentMapDiscovery::datasetPageUrl($vintage) : null;
+    }
+
+    /** @return array<string, mixed> */
+    private function rentBenchmarkFor(Property $property): array
+    {
+        $base = [
+            'property_name' => $property->name,
+            'city' => $property->city,
+        ];
+
+        if ($property->insee_code === null) {
+            return $base + ['status' => 'unknown_commune'];
+        }
+
+        $indicator = RentMapIndicator::forProperty($property);
+
+        if ($indicator === null) {
+            return $base + ['status' => 'not_covered', 'insee_code' => $property->insee_code];
+        }
+
+        $surface = max(0, (int) $property->total_area);
+        $estimatedMonthlyCents = (int) bcmul((string) $indicator->per_m2_cents, (string) $surface, 0);
+
+        return $base + [
+            'status' => 'ok',
+            'insee_code' => $property->insee_code,
+            'surface_m2' => $surface,
+            // 1 décimale pour le €/m² (jamais rond), 0 pour le montant estimé — même
+            // convention que la colonne « Loyer vide / m² » du tableau `/lmnp` côté vitrine.
+            'per_m2' => $this->fmtPerM2($indicator->per_m2_cents),
+            'low_per_m2' => $this->fmtPerM2($indicator->low_per_m2_cents),
+            'high_per_m2' => $this->fmtPerM2($indicator->high_per_m2_cents),
+            'estimated_monthly' => $this->fmt($estimatedMonthlyCents),
+            'vintage' => $indicator->vintage,
+            'prediction_level' => $indicator->prediction_level,
+            'observations' => $indicator->observations,
+            'caution' => $indicator->callsForCaution(),
+        ];
+    }
+
     private function fmt(int $cents): string
     {
         return number_format($cents / 100, 0, ',', ' ');
+    }
+
+    private function fmtPerM2(int $cents): string
+    {
+        return number_format($cents / 100, 1, ',', ' ');
     }
 
     private function formatCents(string $cents): string
@@ -243,8 +346,17 @@ class Simulator extends Page implements HasForms
         $this->dispatch('sim-chart-update', data: $this->simulationResults['chart_data'] ?? []);
     }
 
+    /**
+     * Une propriété Livewire publique s'écrit depuis le navigateur : sans la garde, un
+     * ancien choix « 71 » resté dans le localStorage (ou toute autre valeur) passait tel
+     * quel au calcul.
+     */
     public function updatedAbatement(): void
     {
+        if (! in_array($this->abatement, self::ABATEMENTS, true)) {
+            $this->abatement = '50';
+        }
+
         unset($this->simulationResults);
         $this->dispatch('sim-chart-update', data: $this->simulationResults['chart_data'] ?? []);
     }

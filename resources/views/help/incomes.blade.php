@@ -12,6 +12,10 @@
 
     <h3>Import CSV</h3>
     <p>Plutôt que de saisir manuellement, vous pouvez importer un fichier CSV depuis Airbnb via le menu <strong>Import Airbnb</strong>. Les doublons sont détectés automatiquement.</p>
+    <p>Vous pouvez aussi déposer le <strong>rapport annuel de revenus</strong> de la plateforme dans <strong>Importer un justificatif</strong> : il crée une recette par mois loué, au montant brut, commission enregistrée à part.</p>
+    <div class="ctx-warning">
+        <strong>Un seul des deux chemins.</strong> Le CSV et le relevé annuel portent les mêmes euros, l'un par réservation, l'autre par mois. Les importer tous les deux compte votre année en double &mdash; et comme les montants ne coïncident jamais, la détection de doublons ne peut rien y voir.
+    </div>
 
     <div class="ctx-warning">
         <strong>Attention :</strong> Ne pas inclure la taxe de séjour dans les recettes &mdash; elle est collectée pour le compte de la commune et n'est pas un revenu.

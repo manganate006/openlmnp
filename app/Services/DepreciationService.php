@@ -357,10 +357,14 @@ class DepreciationService
         $allocated = array_reduce($resolved, fn ($carry, $l) => bcadd($carry, $l['base_amount'], 0), '0');
 
         if ($refuseOverAllocation && bccomp($allocated, $depreciableBase, 0) > 0) {
+            // Centimes affichés dès que l'un des deux montants en porte : arrondis à l'euro,
+            // deux montants distants de quelques centimes s'affichaient identiques.
+            $decimals = ((int) $allocated % 100 === 0 && (int) $depreciableBase % 100 === 0) ? 0 : 2;
+
             throw new \RuntimeException(sprintf(
                 'La ventilation dépasse la base amortissable : %s € répartis pour %s € disponibles.',
-                number_format((int) $allocated / 100, 0, ',', ' '),
-                number_format((int) $depreciableBase / 100, 0, ',', ' '),
+                number_format((int) $allocated / 100, $decimals, ',', ' '),
+                number_format((int) $depreciableBase / 100, $decimals, ',', ' '),
             ));
         }
 
@@ -567,7 +571,7 @@ class DepreciationService
             ];
         }
 
-        // Amortissement frais de notaire et honoraires agence (25 ans, avec quote-part si RP)
+        // Amortissement frais de notaire et honoraires agence (25 ans, quote-part toujours appliquée)
         $notaryTotal = '0';
         foreach (['notary_fees' => 'Frais de notaire', 'agency_fees' => 'Honoraires agence'] as $field => $label) {
             if ($property->$field > 0) {
@@ -689,6 +693,12 @@ class DepreciationService
             // Émise même à dotation nulle, contrairement à calculateAnnualDepreciation() :
             // sans quoi la valeur BRUTE des frais disparaîtrait du bilan une fois amortis.
             // La somme des dotations n'en est pas affectée, une ligne à zéro ajoute zéro.
+            //
+            // Quote-part appliquée inconditionnellement (plus de condition sur la
+            // situation du bien) : les frais d'acquisition portent sur la propriété
+            // ENTIÈRE, au même titre que le prix d'achat dont `depreciable_base` tient
+            // déjà compte via `quota_share`. Cohérent avec travaux/mobilier, qui ne
+            // regardent que `is_dedicated` ci-dessous — jamais la situation du bien.
             $lines[] = [
                 'type'   => 'notary',
                 'name'   => $label,
@@ -754,7 +764,7 @@ class DepreciationService
      * pour 4 736 € déclarés — soit exactement ses 4 736 € plus 4 760 € de reconstitution.
      *
      * ⚠️ Ne PAS confondre avec `depreciation_start_date`, qui est l'ORIGINE DU PLAN : elle
-     * ancre le terme (`$startYear + duration - 1`) et le prorata de première année. La
+     * ancre le terme (`planAnnuityForYear()`) et le prorata de première année. La
      * détourner pour retarder le rejeu repousserait la fin des plans d'autant. Ici on ne
      * touche qu'à la borne basse de la SOMME, jamais au plan lui-même.
      *
@@ -811,23 +821,12 @@ class DepreciationService
      */
     private function calculateComponentForYear(PropertyComponent $component, Property $property, int $year): string
     {
-        $startDate = $this->componentStartDate($component, $property);
-        $startYear = (int) $startDate->format('Y');
-        $endYear = $startYear + $component->duration_years - 1;
-
-        // Pas encore commencé ou déjà terminé
-        if ($year < $startYear || $year > $endYear) {
-            return '0';
-        }
-
-        $annual = (string) $component->annual_depreciation;
-
-        // Prorata temporis la 1ère année
-        if ($year === $startYear) {
-            $annual = $this->prorateFirstYear($annual, $startDate);
-        }
-
-        return $annual;
+        return $this->planAnnuityForYear(
+            (string) $component->annual_depreciation,
+            $this->componentStartDate($component, $property),
+            (int) $component->duration_years,
+            $year,
+        );
     }
 
     /**
@@ -835,14 +834,6 @@ class DepreciationService
      */
     private function calculateWorkForYear(PropertyWork $work, Property $property, int $year): string
     {
-        $workDate = $work->work_date;
-        $startYear = (int) $workDate->format('Y');
-        $endYear = $startYear + $work->duration_years - 1;
-
-        if ($year < $startYear || $year > $endYear) {
-            return '0';
-        }
-
         // ⚠️ PAS de quote-part ici : `annual_depreciation` la porte DÉJÀ.
         // `PropertyWork::expectedAnnualDepreciation()` l'applique à l'assiette avant division,
         // et le hook `saving` fige le résultat en base. La réappliquer à la lecture donnait
@@ -850,14 +841,12 @@ class DepreciationService
         // dossiers, et 47,50 €/an d'écart sur 10 000 € de travaux à 95 %. Elle rendait aussi
         // la ligne incohérente avec sa propre valeur brute, qui n'applique `q` qu'une fois
         // (`grossAmount()`) : `base / durée` ne retombait pas sur `annual`.
-        $annual = (string) $work->annual_depreciation;
-
-        // Prorata temporis la 1ère année
-        if ($year === $startYear) {
-            $annual = $this->prorateFirstYear($annual, $workDate);
-        }
-
-        return $annual;
+        return $this->planAnnuityForYear(
+            (string) $work->annual_depreciation,
+            $work->work_date,
+            (int) $work->duration_years,
+            $year,
+        );
     }
 
     /**
@@ -865,23 +854,13 @@ class DepreciationService
      */
     private function calculateFurnitureForYear(Furniture $item, Property $property, int $year): string
     {
-        $purchaseDate = $item->purchase_date;
-        $startYear = (int) $purchaseDate->format('Y');
-        $endYear = $startYear + $item->duration_years - 1;
-
-        if ($year < $startYear || $year > $endYear) {
-            return '0';
-        }
-
         // ⚠️ Idem : `Furniture::expectedAnnualDepreciation()` a déjà appliqué la quote-part.
-        $annual = (string) $item->annual_depreciation;
-
-        // Prorata temporis
-        if ($year === $startYear) {
-            $annual = $this->prorateFirstYear($annual, $purchaseDate);
-        }
-
-        return $annual;
+        return $this->planAnnuityForYear(
+            (string) $item->annual_depreciation,
+            $item->purchase_date,
+            (int) $item->duration_years,
+            $year,
+        );
     }
 
     /**
@@ -901,11 +880,8 @@ class DepreciationService
         }
 
         $duration = $property->acquisitionFeesDurationYears();
-        $startDate = $property->rental_start_date;
-        $startYear = (int) $startDate->format('Y');
-        $endYear = $startYear + $duration - 1;
 
-        if ($year < $startYear || $year > $endYear) {
+        if ($duration <= 0) {
             return '0';
         }
 
@@ -916,12 +892,44 @@ class DepreciationService
         // amortir 100 % de ses frais face à une base déjà proratisée.
         $annual = bcmul($annual, $property->quota_share, 0);
 
-        // Prorata temporis la 1ère année
-        if ($year === $startYear) {
-            $annual = $this->prorateFirstYear($annual, $startDate);
+        return $this->planAnnuityForYear($annual, $property->rental_start_date, $duration, $year);
+    }
+
+    /**
+     * Dotation d'un plan linéaire pour une année : prorata la première, annuité pleine
+     * ensuite, et le RELIQUAT de la première année l'année qui suit le terme nominal.
+     *
+     * ⚠️ Un plan qui ne démarre pas un 1er janvier dure `duration + 1` exercices. Jusqu'au
+     * 2026-10-16, les quatre familles d'actifs arrêtaient le plan à `startYear + duration - 1` :
+     * la part rognée la première année n'était jamais reprise, et un meuble mis en service
+     * le 1er juillet sur 10 ans n'amortissait que 95 % de sa base (ticket Zammad #30065).
+     * Le reliquat se calcule par différence, jamais par un second prorata : c'est ce qui
+     * garantit que le cumul retombe exactement sur `annual × duration`, au centime.
+     */
+    private function planAnnuityForYear(string $annual, CarbonInterface $start, int $duration, int $year): string
+    {
+        $startYear = (int) $start->format('Y');
+
+        if ($duration <= 0 || $year < $startYear) {
+            return '0';
         }
 
-        return $annual;
+        $firstYear = $this->prorateFirstYear($annual, $start);
+
+        if ($year === $startYear) {
+            return $firstYear;
+        }
+
+        $nominalEnd = $startYear + $duration - 1;
+
+        if ($year <= $nominalEnd) {
+            return $annual;
+        }
+
+        // Exercice de rattrapage : n'existe que si la première année a été rognée.
+        return $year === $nominalEnd + 1
+            ? bcsub($annual, $firstYear, 0)
+            : '0';
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\AccountKind;
 use App\Filament\Pages\Concerns\RequiresAdmin;
 use BackedEnum;
 use Filament\Pages\Page;
@@ -33,18 +34,32 @@ class AdminStats extends Page
 
     private function getUserStats(): array
     {
-        $total = DB::table('users')->count();
+        // Un dossier lié (App\Support\DossierContext) n'est pas un compte qui s'est
+        // « inscrit » : il est créé par un principal, offert, sans connexion directe.
+        // Le compter ici doublerait artificiellement la croissance de l'instance.
+        $total = DB::table('users')->where('is_linked_dossier', false)->count();
         $lastMonth = DB::table('users')
+            ->where('is_linked_dossier', false)
             ->where('created_at', '>=', now()->subDays(30))
             ->count();
         $lastRegistered = DB::table('users')
+            ->where('is_linked_dossier', false)
             ->orderByDesc('created_at')
             ->value('created_at');
+
+        // Comptes « membres » (lot « dossiers membre », décision du 2026-10-15) : des
+        // accès gratuits d'indivisaire, jamais des abonnés — comptés À PART pour ne
+        // pas gonfler artificiellement la croissance payante de l'instance.
+        $members = DB::table('users')
+            ->where('is_linked_dossier', false)
+            ->where('account_kind', AccountKind::Member->value)
+            ->count();
 
         return [
             'total' => $total,
             'last_30_days' => $lastMonth,
             'last_registered' => $lastRegistered,
+            'members' => $members,
         ];
     }
 
@@ -119,6 +134,12 @@ class AdminStats extends Page
             'total_works' => DB::table('property_works')->count(),
             'total_components' => DB::table('property_components')->count(),
             'total_accounting_entries' => DB::table('accounting_entries')->count(),
+            // Analyses de justificatifs abouties (hors appels de suivi
+            // automatiques, qui ne correspondent à aucun document de plus).
+            'total_ai_documents' => DB::table('ai_usage_logs')
+                ->where('feature', 'documents')
+                ->where('status', 'ok')
+                ->count(),
         ];
     }
 
@@ -130,10 +151,10 @@ class AdminStats extends Page
             ->pluck('count', 'status')
             ->toArray();
         $withPdf = DB::table('fiscal_years')
-            ->whereNotNull('pdf_path')
+            ->whereNotNull('tax_return_generated_at')
             ->count();
         $withFec = DB::table('fiscal_years')
-            ->whereNotNull('fec_path')
+            ->whereNotNull('fec_generated_at')
             ->count();
         $totalDeferred = DB::table('fiscal_years')
             ->sum('deferred_depreciation');

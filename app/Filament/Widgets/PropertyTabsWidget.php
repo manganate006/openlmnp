@@ -6,6 +6,8 @@ use Filament\Widgets\Widget;
 
 class PropertyTabsWidget extends Widget
 {
+    use Concerns\HiddenForMemberPrincipal;
+
     protected string $view = 'filament.widgets.property-tabs';
 
     protected int | string | array $columnSpan = 'full';

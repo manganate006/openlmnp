@@ -21,7 +21,7 @@ return [
     | (config('demo.email')), pour permettre aux annuaires MCP (Smithery,
     | inspecteur Glama) et aux curieux d'essayer le serveur sans compte.
     |
-    | Les 44 outils restent visibles (marketing), mais SEULS les outils de
+    | Tous les outils restent visibles (marketing), mais SEULS les outils de
     | l'allowlist `tools` s'exécutent : les autres renvoient un message
     | d'upsell (barrière appliquée dans App\Http\Middleware\McpGuard).
     | La détection se fait par COMPTE (email démo), car les identifiants du

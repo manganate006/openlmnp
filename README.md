@@ -15,7 +15,7 @@ et produisez votre liasse fiscale au régime réel, sans abonnement et chez vous
 ![Filament](https://img.shields.io/badge/Filament-5-FBBF24)
 ![Docker Pulls](https://img.shields.io/docker/pulls/manganate06/openlmnp?logo=docker&logoColor=white&label=Docker%20pulls)
 
-**[🚀 Démo live](https://app.openlmnp.fr)** · **[📦 Installation](#installation-rapide-docker)** · **[📚 Documentation](#documentation)** · **[🇬🇧 English](README.en.md)**
+**[🌐 Site officiel](https://openlmnp.fr)** · **[🚀 Démo live](https://app.openlmnp.fr)** · **[📦 Installation](#installation-rapide-docker)** · **[📚 Documentation](#documentation)** · **[🇬🇧 English](README.en.md)**
 
 ![Démonstration d'OpenLMNP : tableau de bord, simulateur, projection et télédéclaration](docs/screenshots/demo.gif)
 
@@ -69,7 +69,7 @@ reste recommandé.
 - **Emprunts** : tableau d'amortissement automatique, intérêts déductibles
 - **Charges récurrentes** : génération des échéances mensuelles ou trimestrielles, duplication d'une charge
 - **Écritures comptables** : génération automatique selon le plan comptable LMNP
-- **Multi-biens** : adresse, surfaces, quote-part résidence principale, valeur vénale estimée d'après les ventes réelles de la commune (données DVF)
+- **Multi-biens** : adresse, surfaces, quote-part, situation (logement distinct, pièce ou logement indépendant de la résidence principale), valeur vénale estimée d'après les ventes réelles de la commune (données DVF)
 - **Reprise d'un dossier existant** : assistant en 5 étapes à partir de la dernière liasse de votre cabinet, contrôlée chiffre à chiffre
 
 ### 📋 Fiscal & déclarations
@@ -83,8 +83,10 @@ reste recommandé.
 
 ### 🔌 Import & intégrations
 - **Import CSV Airbnb / Booking** : formats FR/EN, détection des doublons ; import CSV générique des recettes, charges, mobilier et travaux
+- **Analyse de justificatifs par IA** *(optionnel)* — déposez une facture, un avis de taxe foncière, un tableau d'amortissement ou un relevé : les champs sont proposés, vous relisez avant d'enregistrer. Clé OpenRouter, Anthropic ou Google — ou un modèle installé chez vous, et rien n'en sort
 - **Export CSV** : recettes, charges, télédéclaration
-- **API MCP (45 outils)** : pilotez votre comptabilité depuis un assistant IA (Claude, etc.)
+- **API MCP (46 outils)** : pilotez votre comptabilité depuis un assistant IA (Claude, etc.)
+- **Assistant intégré (optionnel)** : répond à vos questions d'utilisation, sans jamais donner de conseil fiscal ni toucher à vos données
 - **Nouvelles versions signalées** : dans l'application, d'après les releases GitHub (mise à jour d'une instance Docker par `docker pull`)
 
 ### 🛡️ Confort & sécurité

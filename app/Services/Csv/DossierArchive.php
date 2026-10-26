@@ -54,7 +54,8 @@ class DossierArchive
             'acquisition_date', 'acquisition_price', 'notary_fees', 'agency_fees',
             'acquisition_fees_treatment', 'acquisition_fees_duration',
             'market_value', 'market_value_date', 'land_percentage', 'rental_start_date',
-            'airbnb_commission_rate', 'rental_type', 'tva_regime', 'is_primary_residence', 'notes',
+            'airbnb_commission_rate', 'rental_type', 'tva_regime', 'is_primary_residence',
+            'residence_situation', 'tourism_classification', 'notes',
         ],
         'components' => [
             'name', 'percentage', 'duration_years', 'base_amount', 'annual_depreciation',
@@ -77,11 +78,12 @@ class DossierArchive
         ],
         'expenses' => [
             'expense_date', 'amount', 'tva_rate', 'category', 'description',
-            'is_dedicated', 'recurring_type', 'notes',
+            'is_dedicated', 'business_use_bp', 'recurring_type', 'notes',
         ],
         'loans' => [
             'bank_name', 'amount', 'annual_rate', 'duration_months', 'start_date',
             'monthly_payment', 'insurance_monthly', 'insurance_type', 'insurance_rate',
+            'is_dedicated',
         ],
     ];
 

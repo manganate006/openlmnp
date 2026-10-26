@@ -14,7 +14,6 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Storage;
 
 class FiscalYearsTable
 {
@@ -206,7 +205,9 @@ class FiscalYearsTable
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('success')
                     ->action(function (FiscalYear $record, $livewire) {
-                        $path = app(TaxReturnService::class)->generatePdf($record);
+                        // Produite en mémoire et servie telle quelle : la liasse n'est jamais
+                        // déposée sur le disque, où elle restait en clair indéfiniment.
+                        $pdf = app(TaxReturnService::class)->renderPdf($record);
 
                         app(BadgeService::class)->evaluate(auth()->user(), 'tax_return_generated', [
                             'fiscal_year' => $record->year,
@@ -218,7 +219,7 @@ class FiscalYearsTable
                         $livewire->dispatch('analytics', ['event' => 'cerfa_generated', 'fiscal_year' => $record->year]);
 
                         return response()->streamDownload(
-                            fn () => print(Storage::get($path)),
+                            fn () => print($pdf),
                             "liasse_fiscale_{$record->year}.pdf"
                         );
                     }),
@@ -231,7 +232,8 @@ class FiscalYearsTable
                         if ($record->status !== FiscalYear::STATUS_CLOSED) {
                             app(FiscalYearService::class)->calculate($record);
                         }
-                        $path = app(FecService::class)->generate($record);
+                        // Même règle que la liasse : produit en mémoire, jamais posé sur le disque.
+                        $fec = app(FecService::class)->render($record);
 
                         app(BadgeService::class)->evaluate(auth()->user(), 'fec_generated', [
                             'fiscal_year' => $record->year,
@@ -241,7 +243,7 @@ class FiscalYearsTable
                         $livewire->dispatch('analytics', ['event' => 'fec_exported', 'fiscal_year' => $record->year]);
 
                         return response()->streamDownload(
-                            fn () => print(Storage::get($path)),
+                            fn () => print($fec),
                             "FEC_{$record->year}.txt"
                         );
                     }),

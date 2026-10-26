@@ -3,6 +3,7 @@
 use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Income;
+use App\Models\Loan;
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\PropertyWork;
@@ -179,6 +180,35 @@ it('reads an archive written by an older version that lacked a column', function
 
     // La colonne retombe sur le défaut de la base, et l'import ne casse pas.
     expect($imported->emitsSeparateAcquisitionFeeLine())->toBeTrue();
+});
+
+it('carries residence_situation, tourism_classification and a dedicated loan through the round trip', function () {
+    $this->property->update([
+        'residence_situation' => Property::RESIDENCE_INDEPENDENT_UNIT,
+        'tourism_classification' => Property::CLASSIFICATION_CLASSIFIED,
+    ]);
+
+    Loan::create([
+        'property_id' => $this->property->id,
+        'bank_name' => 'Banque du studio',
+        'amount' => 5000000,
+        'annual_rate' => 1.8,
+        'duration_months' => 180,
+        'start_date' => '2022-06-01',
+        'monthly_payment' => 0,
+        'insurance_monthly' => 0,
+        'is_dedicated' => true,
+    ]);
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $this->archive->export($this->user), allowForeignOwner: true);
+
+    $imported = Property::withoutGlobalScopes()->where('user_id', $target->id)->first();
+    $importedLoan = Loan::withoutGlobalScopes()->where('property_id', $imported->id)->first();
+
+    expect($imported->residence_situation)->toBe(Property::RESIDENCE_INDEPENDENT_UNIT)
+        ->and($imported->tourism_classification)->toBe(Property::CLASSIFICATION_CLASSIFIED)
+        ->and($importedLoan->is_dedicated)->toBeTrue();
 });
 
 it('never mixes two users data in one archive', function () {

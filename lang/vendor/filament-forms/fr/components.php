@@ -124,6 +124,21 @@ return [
 
     'file_upload' => [
 
+        // Absent de la traduction française de Filament, et la langue de repli de
+        // l'application est le français : sans ces lignes, l'infobulle et le libellé
+        // d'accessibilité des icônes d'un justificatif affichaient la clé brute.
+        'actions' => [
+
+            'download' => [
+                'label' => 'Télécharger',
+            ],
+
+            'open' => [
+                'label' => 'Ouvrir dans un nouvel onglet',
+            ],
+
+        ],
+
         'editor' => [
 
             'actions' => [

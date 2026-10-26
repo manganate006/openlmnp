@@ -17,6 +17,7 @@
 /public/hot
 /public/storage
 /public/js/filament/
+/public/js/openlmnp/
 /public/css/filament/
 /public/fonts/filament/
 .phpunit.result.cache
@@ -30,3 +31,6 @@ yarn-error.log
 *.swo
 /_data/
 /CLAUDE.md
+
+# Jeu d'évaluation IA : justificatifs RÉELS + vérité terrain (jamais publiés)
+/tests/Fixtures/ai/real

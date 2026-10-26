@@ -12,7 +12,7 @@ use App\Services\TaxReturnService;
  * Le bilan 2033-A.
  *
  * Ce formulaire n'avait AUCUN test jusqu'au 2026-09-05, et c'est ce qui a laissé passer trois
- * lignes fausses, découvertes en rejouant la liasse réelle d'un cabinet :
+ * lignes fausses, découvertes en rejouant la liasse d'un dossier de test :
  *
  *   1. la case 028 ne portait que la valeur de référence du bien — travaux et mobilier, qui
  *      sont pourtant des immobilisations corporelles et figurent dans notre propre 2033-C,
@@ -64,8 +64,8 @@ function form2033A(User $user, int $year): array
 }
 
 it('counts works and furniture among the gross corporeal assets', function () {
-    // Le défaut d'origine : 028 valait le seul prix d'acquisition. Sur la liasse réelle, il y
-    // manquait exactement les travaux et le mobilier — 7 610 € sur 188 400 €.
+    // Le défaut d'origine : 028 valait le seul prix d'acquisition. Sur le dossier de test, il
+    // y manquait exactement les travaux et le mobilier — 7 610 € sur 188 400 €.
     $property = balanceProperty($this->user);
     $this->depreciation->generateDefaultComponents($property);
 

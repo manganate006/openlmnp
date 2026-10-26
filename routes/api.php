@@ -12,6 +12,7 @@ Route::middleware([ProvisioningGuard::class, 'throttle:30,1'])
         Route::post('/', [ProvisioningController::class, 'store']);
         Route::post('/suspend', [ProvisioningController::class, 'suspend']);
         Route::post('/unsuspend', [ProvisioningController::class, 'unsuspend']);
+        Route::post('/entitlements', [ProvisioningController::class, 'entitlements']);
     });
 
 // Signaux d'usage agrégés (lecture seule) — même garde, donc 404 en self-hosted.

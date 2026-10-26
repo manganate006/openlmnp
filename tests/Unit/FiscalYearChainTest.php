@@ -162,3 +162,71 @@ it('proposes the previous year when the chain is complete', function () {
 
     expect($this->service->nextYearToCreate($this->user))->toBe($currentYear - 1);
 });
+
+// === nextYearToCreate après une reprise ===
+
+function makeChainRepriseYear(User $user, int $year, string $status = FiscalYear::STATUS_DRAFT): FiscalYear
+{
+    return FiscalYear::forceCreate([
+        'user_id' => $user->id,
+        'year' => $year,
+        'status' => $status,
+        'opening_deferred_depreciation' => 0,
+        'opening_source' => FiscalYear::OPENING_SOURCE_MANUAL,
+    ]);
+}
+
+it('proposes the year that follows the reprise, not the year declared by the accountant', function () {
+    // Liasse N-1 déposée par le cabinet, reprise portée par l'exercice N (brouillon).
+    // Avant le correctif, la boucle ne tournait pas et l'assistant proposait N-1.
+    $currentYear = (int) date('Y');
+    $property = makeChainProperty($this->user, '2019-03-01', '2019-06-01');
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    makeChainRepriseYear($this->user, $currentYear);
+
+    expect($this->service->nextYearToCreate($this->user))->toBe($currentYear);
+});
+
+it('skips the years closed after an older reprise', function () {
+    $currentYear = (int) date('Y');
+    $property = makeChainProperty($this->user, '2019-03-01', '2019-06-01');
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    makeChainRepriseYear($this->user, $currentYear - 3, FiscalYear::STATUS_CLOSED);
+    FiscalYear::forceCreate(['user_id' => $this->user->id, 'year' => $currentYear - 2, 'status' => FiscalYear::STATUS_CLOSED]);
+
+    expect($this->service->nextYearToCreate($this->user))->toBe($currentYear - 1);
+
+    // Une fois N-1 clôturé, on ne propose pas de le reclôturer : c'est au tour de N.
+    FiscalYear::forceCreate(['user_id' => $this->user->id, 'year' => $currentYear - 1, 'status' => FiscalYear::STATUS_CLOSED]);
+
+    expect($this->service->nextYearToCreate($this->user))->toBe($currentYear);
+});
+
+it('proposes a draft that follows an older reprise rather than a later missing year', function () {
+    $currentYear = (int) date('Y');
+    $property = makeChainProperty($this->user, '2019-03-01', '2019-06-01');
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    makeChainRepriseYear($this->user, $currentYear - 2, FiscalYear::STATUS_CLOSED);
+    FiscalYear::forceCreate(['user_id' => $this->user->id, 'year' => $currentYear - 1, 'status' => FiscalYear::STATUS_DRAFT]);
+
+    expect($this->service->nextYearToCreate($this->user))->toBe($currentYear - 1);
+});
+
+it('keeps proposing the first missing year when nothing was taken over', function () {
+    // Contre-épreuve : un exercice sans provenance de reprise ne change rien à la règle.
+    $currentYear = (int) date('Y');
+    $property = makeChainProperty($this->user, '2019-03-01', '2019-06-01');
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => $currentYear - 3,
+        'status' => FiscalYear::STATUS_CLOSED,
+        'opening_accumulated_depreciation' => 4_739_400,
+    ]);
+
+    expect($this->service->nextYearToCreate($this->user))->toBe($currentYear - 2);
+});

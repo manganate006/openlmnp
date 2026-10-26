@@ -34,4 +34,15 @@ class EditExpense extends EditRecord
         return GenerateOccurrencesAction::proposal($this->getRecord(), $this->getSavedNotificationTitle() ?? 'Charge enregistrée')
             ?? parent::getSavedNotification();
     }
+
+    /**
+     * Retour à la liste après « Enregistrer » (#16) : Filament reste sur le formulaire tant
+     * que le panel ne fixe pas `resourceEditPageRedirect()`, réglage écarté car il
+     * s'appliquerait aussi à la fiche d'un bien et à l'exercice, où l'on enchaîne plusieurs
+     * enregistrements.
+     */
+    protected function getRedirectUrl(): ?string
+    {
+        return static::$resource::getUrl();
+    }
 }

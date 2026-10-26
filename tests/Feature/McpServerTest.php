@@ -567,12 +567,12 @@ it('generates a tax return for a closed fiscal year from frozen totals', functio
     expect($result['declaration_summary']['total_income_eur'])->toBe('9999.99');
     expect($result['pdf']['filename'])->toBe('liasse_fiscale_2024.pdf');
 
-    // La génération a abouti (chemin persisté) et les totaux figés n'ont pas bougé
+    // La génération a abouti (date enregistrée) et les totaux figés n'ont pas bougé
     $fiscalYear = FiscalYear::withoutGlobalScopes()
         ->where('user_id', $this->user->id)
         ->where('year', 2024)
         ->first();
-    expect($fiscalYear->pdf_path)->not->toBeNull();
+    expect($fiscalYear->tax_return_generated_at)->not->toBeNull();
     expect($fiscalYear->total_income)->toBe(999999);
 });
 
@@ -678,4 +678,212 @@ it('reports no opening balance on an ordinary fiscal year', function () {
     expect($result['opening']['is_opening_year'])->toBeFalse()
         ->and($result['opening']['source'])->toBeNull()
         ->and($result['opening']['deficits'])->toBe([]);
+});
+
+// === ANALYSE DE JUSTIFICATIFS (analyze_document) ===
+
+/**
+ * Le nombre d'outils est une promesse publique (README, vitrine, annuaires MCP,
+ * server.json). Il a déjà dérivé silencieusement : ce test l'ancre au dossier.
+ */
+it('garde le nombre d\'outils annoncé en phase avec le serveur', function () {
+    $declares = (new ReflectionClass(\App\Mcp\OpenLmnpServer::class))
+        ->getDefaultProperties()['tools'];
+
+    $fichiers = glob(app_path('Mcp/Tools/*.php'));
+
+    expect($declares)->toHaveCount(count($fichiers))
+        ->and($declares)->toHaveCount(46);
+
+    // La documentation publique annonce le même nombre.
+    foreach (['README.md', 'README.en.md'] as $doc) {
+        expect(file_get_contents(base_path($doc)))->toContain('46');
+    }
+});
+
+it('analyse un justificatif via MCP et renvoie des euros sans rien créer', function () {
+    config([
+        'ai.enabled' => true,
+        'ai.api_key' => 'sk-or-v1-factice',
+        // Épinglé : l'hôte de test n'est pas openrouter.ai, la détection
+        // automatique le classerait donc en serveur local.
+        'ai.provider' => 'openrouter',
+        'ai.base_url' => 'https://openrouter.test/api/v1',
+        'ai.models.documents' => 'modele/test',
+        'ai.models.documents_fallback' => '',
+        'ai.pdf_text_fallback' => 'never',
+        'demo.email' => 'demo@openlmnp.fr',
+    ]);
+
+    Http::fake(['https://openrouter.test/api/v1/chat/completions' => Http::response([
+        'id' => 'gen-1',
+        'model' => 'modele/test',
+        'choices' => [[
+            'message' => [
+                'role' => 'assistant',
+                'content' => file_get_contents(base_path('tests/Fixtures/ai/facture-energie.json')),
+            ],
+            'finish_reason' => 'stop',
+        ]],
+        'usage' => ['prompt_tokens' => 100, 'completion_tokens' => 50, 'cost' => 0.0012],
+    ])]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'analyze_document',
+                'arguments' => [
+                    'property_id' => $this->property->id,
+                    'file_base64' => base64_encode("%PDF-1.4\n%\xE2\xE3\xCF\xD3\ntrailer\n<<>>\n%%EOF"),
+                    'filename' => 'facture.pdf',
+                ],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->not->toBeTrue();
+
+    $result = json_decode($response->json('result.content.0.text', '{}'), true);
+
+    expect($result['document_type'])->toBe('expense_invoice')
+        ->and($result['target_entity'])->toBe('expense')
+        // Convention MCP : des EUROS, et une clé qui le dit.
+        ->and($result['proposal']['amount_eur'])->toBe('143.20')
+        ->and($result['proposal'])->not->toHaveKey('amount')
+        ->and($result['proposal']['category'])->toBe('energy')
+        // Outil non destructif : rien n'est créé.
+        ->and(\App\Models\Expense::withoutGlobalScopes()->count())->toBe(0)
+        ->and(\App\Models\Document::count())->toBe(0);
+
+    // Journalisé des deux côtés : audit MCP et journal d'usage IA.
+    expect(McpAuditLog::where('tool_name', 'analyze_document')->count())->toBe(1)
+        ->and(\App\Models\AiUsageLog::withoutGlobalScopes()->where('feature', 'documents')->count())->toBe(1);
+});
+
+it('refuse d\'analyser un justificatif pour le bien d\'un autre utilisateur', function () {
+    config(['ai.enabled' => true, 'ai.api_key' => 'sk-or-v1-factice', 'demo.email' => 'demo@openlmnp.fr']);
+
+    $autre = User::factory()->create();
+    $bienDeLAutre = Property::forceCreate([
+        'user_id' => $autre->id,
+        'name' => 'Bien de B',
+        'address' => '9 rue B',
+        'city' => 'Nice',
+        'postal_code' => '06000',
+        'type' => 'apartment',
+        'total_area' => 50,
+        'rented_area' => 50,
+        'acquisition_date' => '2020-01-01',
+        'acquisition_price' => 20000000,
+        'notary_fees' => 1200000,
+        'land_percentage' => 20,
+        'rental_start_date' => '2022-01-01',
+        'rental_type' => 'seasonal',
+        'tva_regime' => 'exempt',
+        'is_primary_residence' => false,
+    ]);
+
+    Http::fake();
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'analyze_document',
+                'arguments' => [
+                    'property_id' => $bienDeLAutre->id,
+                    'file_base64' => base64_encode('%PDF-1.4'),
+                ],
+            ],
+        ]);
+
+    // Le bien d'autrui est INTROUVABLE (BelongsToUserScope) : findOrFail
+    // remonte en 404 HTTP, comme pour tous les outils du serveur. L'essentiel
+    // est qu'aucun document ne parte chez le fournisseur.
+    $response->assertNotFound();
+    Http::assertNothingSent();
+});
+
+it('n\'expose pas analyze_document à la démo publique', function () {
+    // L'allowlist démo est explicite : tout outil non listé est bloqué. Un
+    // compte à identifiants publics ne doit pas pouvoir dépenser nos jetons.
+    expect(config('mcp.demo.tools'))->not->toContain('analyze_document');
+});
+
+
+it('refuse un fichier dont le contenu ne correspond pas à son extension', function () {
+    // Une extension est DÉCLARATIVE. Sans contrôle du contenu, un HTML piégé
+    // nommé « facture.pdf » finirait stocké puis servi depuis notre origine.
+    $expense = Expense::create([
+        'property_id' => $this->property->id,
+        'expense_date' => '2026-02-04',
+        'amount' => 14320,
+        'tva_rate' => 2000,
+        'category' => 'energy',
+        'description' => 'EDF',
+        'is_dedicated' => true,
+        'recurring_type' => 'once',
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'attach_document',
+                'arguments' => [
+                    'type' => 'expense',
+                    'record_id' => $expense->id,
+                    'label' => 'Facture piégée',
+                    'file_base64' => base64_encode('<html><body><script>alert(1)</script></body></html>'),
+                    'filename' => 'facture.pdf',
+                ],
+            ],
+        ]);
+
+    $response->assertOk();
+
+    expect($response->json('result.isError'))->toBeTrue()
+        ->and($response->json('result.content.0.text'))->toContain('ne correspond pas à son extension')
+        ->and(\App\Models\Document::count())->toBe(0);
+});
+
+it('accepte un vrai PDF via attach_document', function () {
+    $expense = Expense::create([
+        'property_id' => $this->property->id,
+        'expense_date' => '2026-02-04',
+        'amount' => 14320,
+        'tva_rate' => 2000,
+        'category' => 'energy',
+        'description' => 'EDF',
+        'is_dedicated' => true,
+        'recurring_type' => 'once',
+    ]);
+
+    $response = $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'attach_document',
+                'arguments' => [
+                    'type' => 'expense',
+                    'record_id' => $expense->id,
+                    'label' => 'Facture EDF',
+                    'file_base64' => base64_encode("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
+                    'filename' => 'facture.pdf',
+                ],
+            ],
+        ]);
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->not->toBeTrue()
+        ->and(\App\Models\Document::count())->toBe(1);
 });

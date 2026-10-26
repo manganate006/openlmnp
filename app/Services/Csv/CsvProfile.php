@@ -159,6 +159,87 @@ class CsvProfile
         return $mapping;
     }
 
+    /**
+     * Intitulés de colonne qui ne laissent guère de doute sur la nature d'un fichier.
+     *
+     * ⚠️ Rien à voir avec `aliases()`, et c'est délibéré. Là-bas, « Montant » désigne le
+     * champ *montant* pour les quatre cibles ; ici on ne retient que ce qui n'existe QUE
+     * dans un export de cette nature-là. « Code de confirmation » ne figure pas dans un
+     * inventaire de mobilier ; « Acheté d'occasion » ne figure pas dans un relevé de
+     * loyers. Un intitulé partagé — date, montant, libellé, catégorie — ne prouve rien et
+     * n'a pas sa place dans cette liste.
+     *
+     * ⚠️ Cette liste se périmera : un nouvel export inventera des intitulés qu'elle
+     * ignore. C'est pourquoi elle ne sert QU'À POSER UNE QUESTION (`suspectedTarget()`),
+     * jamais à décider. Une liste d'intitulés qui imposerait une nature finirait par
+     * imposer la fausse, en silence — et se tromper de nature inverse le signe du
+     * résultat fiscal.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function signatures(): array
+    {
+        return [
+            self::TARGET_INCOME => [
+                'code de confirmation', 'confirmation code', 'reference de reservation',
+                'numero de reservation', 'booking id', 'gross earnings', 'payout date',
+                'date de versement', 'voyageur', 'nom du voyageur', 'guest', 'guest name',
+                'taxe de sejour', 'tourist tax', 'host fee', 'frais de service hote',
+                'debut du sejour', 'fin du sejour', 'check-in', 'check-out', 'nuits', 'nights',
+                'loyer', 'loyers', 'date d\'encaissement', 'date de la recette',
+            ],
+            self::TARGET_EXPENSE => [
+                'date de la charge', 'fournisseur', 'taxe fonciere', 'charge', 'charges',
+                'depense', 'depenses', 'facture fournisseur',
+            ],
+            self::TARGET_FURNITURE => [
+                'occasion', 'd\'occasion', 'seconde main', 'second hand', 'used',
+                'meuble', 'meubles', 'mobilier', 'equipement', 'equipements',
+            ],
+            self::TARGET_WORK => [
+                'nature des travaux', 'travaux', 'chantier', 'devis travaux',
+            ],
+        ];
+    }
+
+    /**
+     * Nature que les intitulés du fichier suggèrent, si elle contredit celle choisie.
+     *
+     * Rend `null` dès qu'il y a le moindre doute — c'est le comportement recherché. Le
+     * seuil de DEUX intitulés distincts n'est pas décoratif : « Travaux » peut figurer
+     * comme catégorie dans un tableau de charges, « Loyer » comme libellé dans un relevé
+     * bancaire. Un seul indice ne vaut rien ; deux, sur une cible autre que celle choisie,
+     * et mieux notés qu'elle, valent une question.
+     *
+     * ⚠️ Cette question est le second filet, pas le premier. Le premier est la
+     * PRÉSÉLECTION, qui vient de l'écran d'où l'on arrive et ne devine rien. Deviner la
+     * nature d'après le contenu du fichier serait exactement ce que l'import CSV refuse
+     * de faire pour le mappage des colonnes, et pour la même raison.
+     *
+     * @param  list<string>  $header
+     */
+    public static function suspectedTarget(string $chosen, array $header): ?string
+    {
+        $normalized = array_map(fn ($column) => self::normalize($column), $header);
+        $scores = [];
+
+        foreach (self::signatures() as $target => $markers) {
+            $scores[$target] = count(array_unique(array_intersect(
+                array_map(fn ($marker) => self::normalize($marker), $markers),
+                $normalized,
+            )));
+        }
+
+        arsort($scores);
+        $best = array_key_first($scores);
+
+        if ($best === $chosen || $scores[$best] < 2) {
+            return null;
+        }
+
+        return $scores[$best] > ($scores[$chosen] ?? 0) ? $best : null;
+    }
+
     /** Minuscules, sans accents ni ponctuation superflue — pour comparer des intitulés. */
     public static function normalize(string $value): string
     {

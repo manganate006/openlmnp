@@ -7,8 +7,23 @@ use App\Models\LoanPayment;
 
 class LoanService
 {
-    public function generateSchedule(Loan $loan): void
+    /**
+     * (Re)calcule le tableau d'amortissement théorique.
+     *
+     * ⚠️ Un emprunt dont les échéances ont été IMPORTÉES depuis le tableau de la
+     * banque (`schedule_source = imported`) porte le réel : différé, assurance
+     * dégressive, modulation. Le recalculer effacerait des intérêts déductibles
+     * déjà déclarés — on ne le fait donc que sur demande explicite ($force),
+     * via l'action « Recalculer le tableau théorique » de la fiche emprunt.
+     *
+     * @return bool Faux si le tableau importé a été préservé.
+     */
+    public function generateSchedule(Loan $loan, bool $force = false): bool
     {
+        if ($loan->hasImportedSchedule() && ! $force) {
+            return false;
+        }
+
         $loan->payments()->delete();
 
         $capitalCents = $loan->amount;
@@ -65,6 +80,15 @@ class LoanService
                 'remaining_capital' => max(0, $remaining),
             ]);
         }
+
+        // Un recalcul forcé remet l'emprunt sur le tableau théorique : sans
+        // cela, la garde ci-dessus continuerait de protéger des lignes qui ne
+        // viennent plus de la banque.
+        if ($loan->hasImportedSchedule()) {
+            $loan->forceFill(['schedule_source' => Loan::SCHEDULE_COMPUTED])->save();
+        }
+
+        return true;
     }
 
     public function getDeductibleInterest(Loan $loan, int $year): int
@@ -73,6 +97,7 @@ class LoanService
         $totalInsurance = $loan->payments()->whereYear('payment_date', $year)->sum('insurance_amount');
         $total = $totalInterest + $totalInsurance;
         $quotaShare = $loan->property->quota_share;
-        return (int) bcmul((string) $total, $quotaShare, 0);
+
+        return (int) $loan->prorate((string) $total, $quotaShare);
     }
 }

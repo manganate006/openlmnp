@@ -8,6 +8,8 @@ use Filament\Widgets\Widget;
 
 class ExpenseCompletionGrid extends Widget
 {
+    use Concerns\HiddenForMemberPrincipal;
+
     protected string $view = 'filament.widgets.expense-completion-grid';
     protected int | string | array $columnSpan = [
         'default' => 1,

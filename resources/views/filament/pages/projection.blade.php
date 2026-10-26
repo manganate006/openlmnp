@@ -87,7 +87,12 @@
                                     <td class="result-cell" style="color: {{ $row['recommended'] === 'real' ? 'var(--olmnp-success-accent)' : 'var(--olmnp-warning-accent)' }}">
                                         {{ number_format($row['fiscal_result'] / 100, 0, ',', ' ') }} €
                                     </td>
-                                    <td style="color:var(--olmnp-warning-fg);">{{ number_format($row['micro_bic_50'] / 100, 0, ',', ' ') }} €</td>
+                                    <td style="color:var(--olmnp-warning-fg);">
+                                        {{ number_format($row['micro_bic_50'] / 100, 0, ',', ' ') }} €
+                                        @unless($row['micro_bic_50_available'] ?? true)
+                                            <br><span style="font-size:11px;color:var(--olmnp-danger-accent);">plafond dépassé</span>
+                                        @endunless
+                                    </td>
                                     <td>
                                         @if($row['recommended'] === 'real')
                                             <span style="color:var(--olmnp-success-fg);font-weight:600;">Réel ✓</span>

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AccountKind;
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\FiscalYear;
 use App\Models\Income;
+use App\Models\LinkedDossier;
 use App\Models\Loan;
 use App\Models\McpAuditLog;
 use App\Models\Property;
@@ -55,6 +57,13 @@ class LifecycleSignalsController extends Controller
             // Les comptes de démonstration ne sont jamais des destinataires.
             ->where('is_demo', false)
             ->where('email', '!=', (string) config('demo.email'))
+            // Un compte « membre » (lot « dossiers membre », décision du 2026-10-15)
+            // n'est pas un prospect ni un abonné : il n'a ni bien ni exercice à lui,
+            // et les scénarios de cycle de vie (onboarding, relance...) lui
+            // parleraient d'une activité qu'il ne peut PAS avoir. La vitrine ne
+            // connaît de toute façon pas son adresse par une facture Stripe — ce
+            // filtre est une sécurité, pas un contournement d'un cas déjà rencontré.
+            ->where('account_kind', '!=', AccountKind::Member->value)
             ->get();
 
         return response()->json([
@@ -85,8 +94,8 @@ class LifecycleSignalsController extends Controller
 
             'closed_fiscal_years' => $fiscalYears
                 ->where('status', FiscalYear::STATUS_CLOSED)->count(),
-            'has_tax_return' => $fiscalYears->contains(fn ($fy) => $fy->pdf_path !== null),
-            'has_fec' => $fiscalYears->contains(fn ($fy) => $fy->fec_path !== null),
+            'has_tax_return' => $fiscalYears->contains(fn ($fy) => $fy->tax_return_generated_at !== null),
+            'has_fec' => $fiscalYears->contains(fn ($fy) => $fy->fec_generated_at !== null),
             'current_year_status' => $currentYear?->status,
 
             // Pour un logiciel de comptabilité, le bon signal d'activité n'est
@@ -102,6 +111,16 @@ class LifecycleSignalsController extends Controller
                 ->pluck('source')->unique()->filter()->values()->all(),
 
             'mcp_used' => McpAuditLog::query()->where('user_id', $user->id)->exists(),
+
+            // Dossiers d'indivision actifs (non archivés) dont ce compte est le
+            // propriétaire — segmentation Brevo (lot 4, plan « dossiers liés »).
+            // Toujours 0 pour un dossier lié lui-même (il ne possède jamais de
+            // dossier), mais la vitrine ne l'interroge de toute façon jamais par
+            // son adresse `@dossiers.invalid`.
+            'linked_dossiers' => LinkedDossier::query()
+                ->active()
+                ->where('owner_id', $user->id)
+                ->count(),
 
             // Un emprunt enregistre : les interets sont deductibles, et leur
             // absence est l'oubli le plus couteux du regime reel.

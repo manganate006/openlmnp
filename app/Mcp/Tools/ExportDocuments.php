@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Services\DocumentExportService;
+use App\Support\Vault;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +24,17 @@ class ExportDocuments extends Tool
 
     public function handle(Request $request): Response
     {
+        // L'export produit un ZIP en clair sur le disque du serveur : le générer
+        // depuis l'API viderait le coffre-fort de son sens, et rien ici ne peut
+        // demander la phrase de passe. L'export reste disponible depuis
+        // l'interface web, où le fichier est supprimé après envoi.
+        if (Vault::isEnabledFor(Auth::user())) {
+            return Response::error(
+                'Coffre-fort activé : l\'export groupé par l\'API MCP est désactivé. '
+                . 'Utilisez l\'export depuis la page « Exercices fiscaux » de l\'interface web.'
+            );
+        }
+
         $year = $request->get('year');
         $type = $request->get('type');
 

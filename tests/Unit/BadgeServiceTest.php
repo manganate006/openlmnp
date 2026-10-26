@@ -350,6 +350,43 @@ it('backdates all earned badges', function () {
     expect($this->user->hasBadge('mois_complet', 2025))->toBeTrue();
 });
 
+// === Badges sans trace en base : seul le déclencheur fait foi ===
+//
+// Consulter le simulateur ou la projection ne laisse rien derrière soi. Leurs conditions
+// valaient `true` sans condition : toute évaluation de badges, quelle qu'en soit la cause,
+// les décernait — et le rattrapage les offrait à qui n'avait jamais ouvert ces pages.
+
+it('awards the simulator badge only on its own trigger', function () {
+    $this->service->evaluate($this->user, 'simulator_used');
+
+    expect($this->user->hasBadge('simulateur'))->toBeTrue();
+});
+
+it('awards the projection badge only on its own trigger', function () {
+    $this->service->evaluate($this->user, 'projection_used');
+
+    expect($this->user->hasBadge('prospecteur'))->toBeTrue();
+});
+
+it('does not award trigger-only badges to a passer-by', function () {
+    // Un déclencheur sans rapport : créer un bien n'apprend rien sur le simulateur.
+    createTestProperty($this->user);
+    $this->service->evaluate($this->user, 'property_created');
+
+    expect($this->user->hasBadge('premier_bien'))->toBeTrue()
+        ->and($this->user->hasBadge('simulateur'))->toBeFalse()
+        ->and($this->user->hasBadge('prospecteur'))->toBeFalse();
+});
+
+it('does not backdate trigger-only badges', function () {
+    createTestProperty($this->user);
+
+    $this->service->evaluateAll($this->user, silent: true);
+
+    expect($this->user->hasBadge('simulateur'))->toBeFalse()
+        ->and($this->user->hasBadge('prospecteur'))->toBeFalse();
+});
+
 // === Completeness score ===
 
 it('calculates completeness score', function () {

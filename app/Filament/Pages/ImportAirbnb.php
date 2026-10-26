@@ -6,6 +6,8 @@ use App\Models\Property;
 use App\Services\AirbnbImportService;
 use App\Services\BadgeService;
 use App\Support\DocumentStorage;
+use App\Support\DossierContext;
+use App\Support\ImportUpload;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -34,6 +36,15 @@ class ImportAirbnb extends Page implements HasForms
     protected static bool $shouldRegisterNavigation = false;
 
     protected string $view = 'filament.pages.import-airbnb';
+
+    /**
+     * Un compte « membre » n'a jamais de biens à lui : cet import rattache des
+     * revenus à un bien du principal (lot « dossiers membre », décision du 2026-10-15).
+     */
+    public static function canAccess(): bool
+    {
+        return parent::canAccess() && ! DossierContext::isMemberActingAsPrincipal();
+    }
 
     public ?array $data = [];
     public ?array $previewData = null;
@@ -66,8 +77,11 @@ class ImportAirbnb extends Page implements HasForms
                             ->default(fn () => ($ids = Property::where('user_id', auth()->id())->pluck('id'))->count() === 1 ? $ids->first() : null),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV')
-                            ->directory(DocumentStorage::importDirectory())
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', '.csv'])
+                            // ⚠️ Sans `directory()`, Filament dépose à la RACINE du disque privé :
+                            // un export Airbnb, avec les noms des voyageurs, y restait pour
+                            // toujours, hors du périmètre du coffre-fort. Voir `ImportUpload`.
+                            ->directory(DocumentStorage::directory(ImportUpload::SUBDIRECTORY))
                             ->maxSize(10240),
                     ])
                     ->footerActions([
@@ -173,6 +187,10 @@ class ImportAirbnb extends Page implements HasForms
             'status' => $result['imported'] > 0 ? 'success' : 'error',
             'rows_bucket' => \App\Support\Analytics::rowsBucket((int) $result['imported']),
         ]);
+
+        // Le CSV a fini son office : il ne survit pas à l'import. Le laisser serait garder
+        // sur le disque les noms et les montants de tous les voyageurs de l'année.
+        ImportUpload::discard($this->previewFilePath);
 
         $this->lastResult = $result;
         $this->previewData = null;

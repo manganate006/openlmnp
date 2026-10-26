@@ -132,11 +132,21 @@ it('keeps the apply button on a mutable instance', function () {
 // L'entrypoint ne recopie vers .env qu'une liste fixe de variables : toute variable
 // oubliée est silencieusement ignorée en production, `-e` ou pas.
 
-it('propagates the updater variables through the docker entrypoint allowlist', function () {
+// Relit les `env()` de `config/updater.php` plutôt que d'en tenir une copie : ajouter un
+// réglage sans l'ajouter à l'allowlist fait échouer la suite, au lieu de produire une
+// option muette en production. Même patron que `FeedbackRuntimeConfigTest`.
+it('propagates every updater setting through the docker entrypoint allowlist', function () {
+    $config = file_get_contents(config_path('updater.php'));
     $entrypoint = file_get_contents(base_path('docker-entrypoint.sh'));
 
-    expect($entrypoint)->toContain('UPDATE_SELF_APPLY')
-        ->and($entrypoint)->toContain('UPDATE_DOCKER_IMAGE');
+    preg_match_all("/env\(\s*'([A-Z0-9_]+)'/", $config, $matches);
+    $variables = array_unique($matches[1]);
+
+    expect($variables)->toContain('UPDATE_SELF_APPLY', 'UPDATE_DOCKER_IMAGE');
+
+    foreach ($variables as $variable) {
+        expect($entrypoint)->toContain($variable);
+    }
 });
 
 it('disables self-apply in the docker environment template', function () {

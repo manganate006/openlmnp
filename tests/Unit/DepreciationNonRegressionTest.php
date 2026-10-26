@@ -22,7 +22,7 @@ use App\Services\DepreciationService;
  *   - mobilier acheté deux ans après ;
  *   - frais de notaire (25 ans) ;
  *   - une année où une partie des composants est arrivée à terme (2038) ;
- *   - une année où tout est fini (2073).
+ *   - une année où tout est fini (2074, après le rattrapage du gros œuvre en 2073).
  *
  * Si l'un de ces montants change, ce n'est pas au test de s'adapter : c'est qu'un calcul
  * a bougé, et il faut alors une commande de réparation pour les bases déjà en production
@@ -115,13 +115,24 @@ it('keeps every yearly depreciation unchanged', function (int $year, array $expe
     // figés dans `fiscal_years` d'un exercice clôturé portant un actif non dédié sont, eux,
     // sous-évalués — c'est « Recalculer la chaîne » qui les reprend.
     //
+    // ⚠️ RÉVISÉ LE 2026-10-16 : RATTRAPAGE DE FIN DE PLAN (ticket Zammad #30065). Un plan
+    // qui ne démarre pas un 1er janvier dure un exercice de plus, qui reçoit la part rognée
+    // la première année. Les valeurs d'avant figeaient l'arrêt anticipé. Chaque écart se
+    // recalcule à la main, mise en location au 15 mars = 292 jours sur 365, reliquat 73/365 :
+    //   - 2029, mobilier (2024-05-02, 5 ans) : 85 600 − 57 066 = 28 534 ;
+    //   - 2038, composants de 15 ans (25 580 + 76 740 + 51 160) × 73/365 = 30 696 ;
+    //   - 2073, gros œuvre (50 ans) : 76 740 × 73/365 = 15 348.
+    // Les années intermédiaires ne bougent pas d'un centime.
+    //
     // année      bâti       travaux    mobilier  notaire   total
     'travaux seuls, avant la mise en location' => [2022, ['0', '15123', '0', '0', '15123']],
     'première année, au prorata'               => [2023, ['233288', '53593', '0', '23678', '310559']],
     'première année pleine, avec mobilier'     => [2024, ['291612', '53593', '57066', '29598', '431869']],
-    'mobilier arrivé à terme'                  => [2029, ['291612', '53593', '0', '29598', '374803']],
-    'composants partiellement à terme'         => [2038, ['138132', '0', '0', '29598', '167730']],
-    'plan entièrement amorti'                  => [2073, ['0', '0', '0', '0', '0']],
+    'rattrapage du mobilier'                   => [2029, ['291612', '53593', '28534', '29598', '403337']],
+    'mobilier arrivé à terme'                  => [2030, ['291612', '53593', '0', '29598', '374803']],
+    'rattrapage des composants de 15 ans'      => [2038, ['168828', '0', '0', '29598', '198426']],
+    'rattrapage du gros œuvre'                 => [2073, ['15348', '0', '0', '0', '15348']],
+    'plan entièrement amorti'                  => [2074, ['0', '0', '0', '0', '0']],
 ]);
 
 it('sums the component details to the building total', function () {

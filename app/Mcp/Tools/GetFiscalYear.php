@@ -79,10 +79,15 @@ class GetFiscalYear extends Tool
                 'balance_eur'           => bcdiv((string) $fy->tva_balance, '100', 2),
             ],
             'form_data'           => $fy->form_data,
-            // Le chemin n'est plus exposé : c'est un détail de stockage, et les anciens
-            // fichiers partagés entre comptes y étaient lisibles (GHSA-j4gm-g8m8-93x2).
-            'has_pdf'             => $fy->pdf_path !== null,
-            'has_fec'             => $fy->fec_path !== null,
+            // Dossier d'indivision : répartition du résultat (2031 bis-SD, cadre E), une ligne
+            // par indivisaire ; `null` pour un dossier individuel.
+            'indivision'          => $this->indivision($fy),
+            // La liasse et le FEC ne sont plus conservés sur le disque : plus de chemin à
+            // exposer, seulement la date de leur dernière génération.
+            'has_pdf'             => $fy->tax_return_generated_at !== null,
+            'tax_return_generated_at' => $fy->tax_return_generated_at?->toDateTimeString(),
+            'has_fec'             => $fy->fec_generated_at !== null,
+            'fec_generated_at'    => $fy->fec_generated_at?->toDateTimeString(),
             'transmitted_at'      => $fy->transmitted_at?->toDateTimeString(),
             'ack_number'          => $fy->ack_number ?? null,
             'created_at'          => $fy->created_at?->toDateTimeString(),
@@ -94,6 +99,25 @@ class GetFiscalYear extends Tool
     {
         return [
             'year' => $schema->integer('Année fiscale à récupérer, ex: 2024')->required(),
+        ];
+    }
+
+    private function indivision(FiscalYear $fy): ?array
+    {
+        $form = app(\App\Services\TaxReturnService::class)->compute2031bis($fy, $fy->user);
+        if ($form === null) {
+            return null;
+        }
+
+        return [
+            'complete' => $form['complete'],
+            'total_share_percent' => \App\Support\Indivision::basisPointsToPercent($form['total_share_bp']),
+            'co_owners' => array_map(fn (array $row) => [
+                'name' => $row['name'],
+                'share_percent' => \App\Support\Indivision::basisPointsToPercent($row['share_bp']),
+                'profit_eur' => $form['complete'] ? bcdiv((string) $row['benefice'], '100', 2) : null,
+                'deficit_eur' => $form['complete'] ? bcdiv((string) $row['deficit'], '100', 2) : null,
+            ], $form['rows']),
         ];
     }
 }

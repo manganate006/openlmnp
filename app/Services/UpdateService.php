@@ -3,12 +3,18 @@
 namespace App\Services;
 
 use App\Models\Setting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
 class UpdateService
 {
     private const GITHUB_API = 'https://api.github.com/repos/';
+
+    /** Relevés mis en cache, par nature — voir `remember()`. */
+    public const KIND_RELEASE = 'release';
+    public const KIND_CHANGELOG = 'changelog';
+    public const KIND_BRANCH = 'branch';
 
     private function repo(): string
     {
@@ -27,20 +33,109 @@ class UpdateService
     }
 
     // -------------------------------------------------------------------------
+    // Relevé des versions publiées : cache et lecture sans réseau
+    // -------------------------------------------------------------------------
+
+    /**
+     * Le relevé des versions publiées est-il autorisé à sortir sur le réseau ?
+     *
+     * Faux sur une instance sans accès sortant (UPDATE_CHECK_ENABLED=false). La
+     * version installée, lue localement, reste affichée dans tous les cas.
+     */
+    public function checkEnabled(): bool
+    {
+        return (bool) config('updater.check_enabled', true);
+    }
+
+    private function cacheKey(string $kind): string
+    {
+        // Le dépôt est réglable à l'exécution (page « Mises à jour ») : le changer doit
+        // repartir d'un relevé neuf, pas resservir celui de l'ancien dépôt.
+        return 'updater:'.$kind.':'.sha1($this->repo());
+    }
+
+    /**
+     * Relevé déjà connu, SANS aucun appel réseau — `null` si le cache est froid.
+     *
+     * C'est par là que passe le montage des pages : attendre GitHub au montage coûtait
+     * jusqu'à 10 s d'écran blanc par affichage sur une instance hors ligne.
+     */
+    public function cached(string $kind, string $branch = 'main'): ?array
+    {
+        if (! $this->checkEnabled()) {
+            return $this->disabledResult($kind);
+        }
+
+        return Cache::get($this->cacheKey($kind === self::KIND_BRANCH ? $kind.':'.$branch : $kind));
+    }
+
+    /**
+     * @template T of array
+     *
+     * @param  callable(): T  $fetch
+     * @return T
+     */
+    private function remember(string $kind, bool $fresh, callable $fetch): array
+    {
+        if (! $this->checkEnabled()) {
+            return $this->disabledResult($kind);
+        }
+
+        $key = $this->cacheKey($kind);
+
+        if (! $fresh) {
+            $hit = Cache::get($key);
+
+            if ($hit !== null) {
+                return $hit;
+            }
+        }
+
+        $result = $fetch();
+
+        // Un échec (réseau coupé, quota GitHub atteint) est retenu BRIÈVEMENT plutôt que
+        // pas du tout : sans ça, chaque affichage repaie le délai d'attente HTTP.
+        $failed = isset($result['error']) || $result === [];
+
+        Cache::put($key, $result, $failed
+            ? (int) config('updater.failure_ttl', 300)
+            : (int) config('updater.check_ttl', 3600));
+
+        return $result;
+    }
+
+    private function disabledResult(string $kind): array
+    {
+        return $kind === self::KIND_CHANGELOG
+            ? []
+            : ['available' => false, 'current_version' => $this->getCurrentVersion(), 'info' => 'disabled'];
+    }
+
+    // -------------------------------------------------------------------------
     // Version locale
     // -------------------------------------------------------------------------
 
     public function getCurrentVersion(): string
     {
-        // version.json (embarqué dans l'image) pour la version sémantique
-        $path = base_path('version.json');
-        if (file_exists($path)) {
-            $data = json_decode(file_get_contents($path), true);
+        return $this->getVersionInfo()['version'] ?? '0.0.0';
+    }
 
-            return $data['version'] ?? '0.0.0';
+    /**
+     * Contenu de `version.json`, embarqué dans l'image au moment de la release.
+     *
+     * @return array{version?: string, released_at?: string, channel?: string}
+     */
+    public function getVersionInfo(): array
+    {
+        $path = base_path('version.json');
+
+        if (! file_exists($path)) {
+            return [];
         }
 
-        return '0.0.0';
+        $data = json_decode(file_get_contents($path), true);
+
+        return is_array($data) ? $data : [];
     }
 
     public function getCurrentCommit(): ?string
@@ -118,7 +213,12 @@ class UpdateService
     // Déploiement branche (développement)
     // -------------------------------------------------------------------------
 
-    public function checkBranchUpdates(string $branch = 'main'): array
+    public function checkBranchUpdates(string $branch = 'main', bool $fresh = false): array
+    {
+        return $this->remember(self::KIND_BRANCH.':'.$branch, $fresh, fn () => $this->fetchBranchUpdates($branch));
+    }
+
+    private function fetchBranchUpdates(string $branch): array
     {
         try {
             $localCommit = $this->getCurrentCommit();
@@ -226,18 +326,38 @@ class UpdateService
         $tarballUrl = self::GITHUB_API . $this->repo() . '/tarball/' . $branch;
         $result = $this->applyFromTarball($tarballUrl);
 
-        if ($result['success'] && $commitSha) {
-            $this->saveDeployInfo($commitSha, $branch);
+        if ($result['success']) {
+            if ($commitSha) {
+                $this->saveDeployInfo($commitSha, $branch);
+            }
+
+            $this->forgetCache($branch);
         }
 
         return $result;
+    }
+
+    /**
+     * Oublie les relevés : après un déploiement, la version installée a changé et le
+     * cache annoncerait encore une mise à jour disponible.
+     */
+    public function forgetCache(string $branch = 'main'): void
+    {
+        foreach ([self::KIND_RELEASE, self::KIND_CHANGELOG, self::KIND_BRANCH.':'.$branch] as $kind) {
+            Cache::forget($this->cacheKey($kind));
+        }
     }
 
     // -------------------------------------------------------------------------
     // Releases (production)
     // -------------------------------------------------------------------------
 
-    public function checkForUpdates(): array
+    public function checkForUpdates(bool $fresh = false): array
+    {
+        return $this->remember(self::KIND_RELEASE, $fresh, fn () => $this->fetchLatestRelease());
+    }
+
+    private function fetchLatestRelease(): array
     {
         try {
             $response = Http::timeout(10)
@@ -286,7 +406,12 @@ class UpdateService
         }
     }
 
-    public function getChangelog(int $limit = 5): array
+    public function getChangelog(int $limit = 5, bool $fresh = false): array
+    {
+        return $this->remember(self::KIND_CHANGELOG, $fresh, fn () => $this->fetchChangelog($limit));
+    }
+
+    private function fetchChangelog(int $limit): array
     {
         try {
             $response = Http::timeout(10)
@@ -319,7 +444,9 @@ class UpdateService
         $result = $this->applyFromTarball($downloadUrl);
 
         if ($result['success']) {
-            // Pour les releases, pas de commit spécifique à stocker
+            // Pour les releases, pas de commit spécifique à stocker — mais la version
+            // installée vient de changer : le relevé en cache est périmé.
+            $this->forgetCache();
         }
 
         return $result;

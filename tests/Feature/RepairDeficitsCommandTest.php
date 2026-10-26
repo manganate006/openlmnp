@@ -64,7 +64,7 @@ function seedLegacyDeficitChain(User $user): array
         'status' => FiscalYear::STATUS_CLOSED,
         'total_expenses' => 40000,
         'fiscal_result' => -40000,
-        'pdf_path' => 'tax-returns/2024/liasse_fiscale_2024.pdf',
+        'tax_return_generated_at' => '2025-03-01 10:00:00',
     ]);
 
     $y2025 = FiscalYear::forceCreate([

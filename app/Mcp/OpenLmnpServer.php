@@ -21,9 +21,14 @@ Ce serveur permet de gérer les données comptables d'un loueur meublé :
 - Comparer les régimes micro-BIC et réel
 - Générer les exports comptables (FEC) et la liasse fiscale (PDF)
 - Joindre des justificatifs aux dépenses, travaux et mobilier
+- Analyser un justificatif (`analyze_document`) pour en extraire une proposition de saisie
 
 Tous les montants sont exprimés en euros dans les entrées et sorties.
 Les dates sont au format ISO 8601 (YYYY-MM-DD).
+
+⚠️ `analyze_document` ne crée rien : il propose. Les valeurs qu'il renvoie sont
+extraites par un modèle de langage et peuvent être erronées — faites-les valider
+par l'utilisateur avant d'appeler un outil de création.
 MARKDOWN)]
 class OpenLmnpServer extends Server
 {
@@ -85,6 +90,7 @@ class OpenLmnpServer extends Server
 
         // Import & analyse
         Tools\ImportAirbnbCsv::class,
+        Tools\AnalyzeDocument::class,
         Tools\ExportDocuments::class,
         Tools\GetProjection::class,
         Tools\GetSimulation::class,
@@ -110,7 +116,12 @@ class OpenLmnpServer extends Server
             if ($email = config('mcp.local_user')) {
                 $user = User::where('email', $email)->first();
             } else {
-                $realUsers = User::where('is_demo', false)->limit(2)->get();
+                // ⚠️ `is_linked_dossier` exclu : un dossier lié n'a aucun jeton MCP qui lui
+                // soit propre (lots 1-4, voir le plan) et n'a pas vocation à être
+                // l'« unique compte réel » d'une instance qui n'en aurait qu'un — ce serait
+                // authentifier silencieusement le MCP local contre un sous-compte sans
+                // connexion directe plutôt que contre son principal.
+                $realUsers = User::where('is_demo', false)->where('is_linked_dossier', false)->limit(2)->get();
                 $user = $realUsers->count() === 1 ? $realUsers->first() : null;
             }
         } catch (\Throwable) {

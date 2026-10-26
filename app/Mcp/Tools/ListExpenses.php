@@ -71,6 +71,7 @@ class ListExpenses extends Tool
                 'tva_rate'         => $expense->tva_rate,
                 'amount_tva_eur'   => $expense->amount_tva_euros,
                 'is_dedicated'     => $expense->is_dedicated,
+                'business_use_percent' => $expense->business_use_bp === null ? null : $expense->business_use_bp / 100,
                 'recurring_type'   => $expense->recurring_type,
             ];
         });

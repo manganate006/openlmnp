@@ -113,6 +113,9 @@ class AdminMcp extends Page
     {
         return DB::table('personal_access_tokens')
             ->join('users', 'users.id', '=', 'personal_access_tokens.tokenable_id')
+            // Lot 5 des dossiers liés : jointure externe pour nommer le dossier
+            // visé, s'il y en a un (`dossier_user_id` NULL = jeton personnel).
+            ->leftJoin('users as dossier_users', 'dossier_users.id', '=', 'personal_access_tokens.dossier_user_id')
             ->select(
                 'personal_access_tokens.id',
                 'personal_access_tokens.name as token_name',
@@ -121,6 +124,7 @@ class AdminMcp extends Page
                 'users.id as user_id',
                 'users.name as user_name',
                 'users.email as user_email',
+                'dossier_users.name as dossier_name',
             )
             ->where('personal_access_tokens.tokenable_type', User::class)
             ->orderByDesc('personal_access_tokens.last_used_at')
@@ -130,6 +134,7 @@ class AdminMcp extends Page
                 'token_name' => $row->token_name,
                 'user_name' => $row->user_name,
                 'user_email' => $row->user_email,
+                'dossier_name' => $row->dossier_name,
                 'last_used_at' => $row->last_used_at
                     ? \Carbon\Carbon::parse($row->last_used_at)->diffForHumans()
                     : 'Jamais',
@@ -140,7 +145,7 @@ class AdminMcp extends Page
 
     public function getRecentAudit(): array
     {
-        return McpAuditLog::with('user:id,name,email')
+        return McpAuditLog::with(['user:id,name,email', 'dossier:id,name'])
             ->latest('created_at')
             ->limit(100)
             ->get()
@@ -148,6 +153,7 @@ class AdminMcp extends Page
                 'id' => $log->id,
                 'user_name' => $log->user?->name ?? '—',
                 'user_email' => $log->user?->email ?? '—',
+                'dossier_name' => $log->dossier?->name,
                 'token_name' => $log->token_name ?? '—',
                 'tool_name' => $log->tool_name,
                 'result_status' => $log->result_status,

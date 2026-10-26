@@ -16,6 +16,7 @@
         <li data-icon="&#x1F4C4;"><strong>Liasse fiscale PDF</strong> &mdash; Formulaires 2031, 2033-A, 2033-B, 2033-C et 2033-D pré-remplis, avec en annexe le détail des immobilisations et le détail du résultat (chaque charge, la quote-part, le plafonnement des amortissements, les déficits)</li>
         <li data-icon="&#x1F4BE;"><strong>FEC</strong> &mdash; Fichier des Écritures Comptables (obligatoire en cas de contrôle)</li>
     </ul>
+    <p>Ces deux documents sont <strong>reconstruits à chaque téléchargement</strong> et ne sont jamais conservés sur le serveur : ils portent l'intégralité de votre comptabilité (adresses, SIREN, résultats, écritures), et rien de tout cela n'a de raison de séjourner sur le disque. Conservez le fichier que vous téléchargez : c'est lui qui fait foi de ce que vous avez déclaré, et le régénérer plus tard, après une correction de saisie, ne donnera pas les mêmes chiffres.</p>
 
     <h3>La colonne « Dépôt »</h3>
     <p>Un badge <strong>Déposée</strong> marque l'exercice dont la liasse a réellement été transmise. Il ne se pose pas tout seul : le bouton <strong>« Dépôt »</strong> de la ligne enregistre la date du dépôt et le numéro de l'accusé (certificat de dépôt en saisie en ligne, compte rendu de traitement en EDI). Survolez le badge pour les relire.</p>
@@ -24,7 +25,7 @@
     <h3>Exercice de reprise : les soldes d'ouverture</h3>
     <p>Vous arrivez d'un expert-comptable ou d'un autre logiciel ? Le bouton <strong>« Reprendre un dossier »</strong>, en haut de cette liste, saisit d'un coup ce que votre dernière liasse vous laisse en report. On ne renseigne pas ces montants exercice par exercice.</p>
     <ul>
-        <li data-icon="&#x1F522;"><strong>Amortissements différés</strong> &mdash; 2033-D case 870. La part d'amortissement que vous n'avez pas pu déduire faute de bénéfice : elle se reporte <strong>sans limite de durée</strong>.</li>
+        <li data-icon="&#x1F522;"><strong>Amortissements différés</strong> &mdash; souvent portés en 2033-D case 870 par les cabinets, ou dans leur état de suivi. La part d'amortissement que vous n'avez pas pu déduire faute de bénéfice : elle se reporte <strong>sans limite de durée</strong>.</li>
         <li data-icon="&#x1F4C9;"><strong>Déficits reportables</strong> &mdash; 2033-D case 984, à ventiler <strong>par année d'origine</strong> : chacun ne s'impute que sur vos bénéfices de location meublée des <strong>dix</strong> années suivantes. L'assistant affiche, pour chaque ligne, sa dernière année d'imputation.</li>
         <li data-icon="&#x1F5C3;"><strong>Amortissements cumulés</strong> &mdash; 2033-A case 030. Donnée de contrôle : elle sert à vérifier que la reprise tombe juste, elle n'entre dans aucun calcul de résultat.</li>
     </ul>
@@ -39,6 +40,13 @@
     <div class="ctx-tip" style="margin-top:12px;">
         <strong>Après avoir corrigé un montant ancien :</strong> les exercices déjà enregistrés gardent leurs totaux figés. Le bouton <strong>« Recalculer la chaîne »</strong> les rejoue dans l'ordre chronologique pour que les reports redeviennent cohérents.
     </div>
+
+    <h3>Export groupé des justificatifs</h3>
+    <p>Le bouton <strong>« Justificatifs »</strong> réunit dans une archive ZIP les pièces d'une année ou d'un type. Deux points à connaître si vous avez activé le coffre-fort :</p>
+    <ul>
+        <li data-icon="&#x1F512;"><strong>Coffre verrouillé, l'export est refusé</strong> &mdash; plutôt que de produire une archive silencieusement amputée des fichiers illisibles. Déverrouillez le coffre depuis <strong>Paramètres &rsaquo; Coffre-fort</strong>, puis recommencez.</li>
+        <li data-icon="&#x1F4E6;"><strong>L'archive produite est en clair</strong>, par nature : c'est un ZIP destiné à être ouvert ailleurs, il ne peut pas rester chiffré. Traitez-le comme n'importe quel dossier de pièces comptables une fois téléchargé.</li>
+    </ul>
 
     <div class="ctx-tip">
         <strong>Astuce :</strong> Comparez avec le micro-BIC dans le simulateur pour vérifier que le régime réel reste avantageux.

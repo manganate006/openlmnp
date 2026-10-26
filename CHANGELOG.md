@@ -2,6 +2,935 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [2.0.0-beta.1] - 2026-10-26
+
+> **Version de test, à installer seulement si vous le choisissez.** Elle n'est pas proposée
+> comme mise à jour par l'application, et l'image Docker `latest` reste en 1.6.11 : pour
+> l'essayer, demandez explicitement l'image `manganate06/openlmnp:2.0.0-beta.1`.
+>
+> **Avant de l'installer**
+> - Faites une sauvegarde complète de votre instance (base de données et dossier `storage/`).
+> - Le **coffre-fort des justificatifs** chiffre les fichiers de l'utilisateur qui l'active.
+>   Revenir ensuite à la 1.6 rend ses justificatifs illisibles par l'application : n'activez
+>   pas le coffre sur une instance que vous pourriez devoir ramener en 1.6, ou déchiffrez-les
+>   d'abord (`php artisan openlmnp:vault-migrate <email> --decrypt`). Sans coffre activé, le retour
+>   en 1.6 fonctionne : la 2.0 ne fait qu'ajouter des tables et des colonnes.
+> - L'**intelligence artificielle** reste désactivée (`AI_ENABLED=false`) tant que vous ne
+>   l'avez pas configurée avec votre propre clé.
+>
+> **Revenir à la 1.6.11** (installation Docker) : relancez l'image `manganate06/openlmnp:1.6.11`
+> sur les mêmes volumes, sans restaurer la base. Éprouvé aller-retour (2.0 → 1.6.11 → 2.0) :
+> recettes et charges saisies d'un côté comme de l'autre sont conservées. Pendant que vous
+> êtes en 1.6.11 :
+> - la **part d'usage des charges** est ignorée : ces charges sont déduites à 100 %, et un
+>   résultat recalculé ou une liasse produite en 1.6.11 est faux pour elles ;
+> - l'**indivision**, les **dossiers liés** et l'historique de l'**IA** ne s'affichent plus ;
+> - les justificatifs d'un **coffre-fort** activé sont illisibles (voir plus haut).
+>
+> Remonter ensuite en 2.0 fait tout réapparaître : la part d'usage et l'indivision sont
+> intactes, et les résultats se recalculent justes.
+>
+> Le détail des changements est celui de la 2.0.0 ci-dessous. Vos retours sont les
+> bienvenus dans les issues du dépôt.
+
+## [2.0.0] - NON PUBLIÉE
+
+> Version majeure : elle réunit le **coffre-fort des justificatifs** (d'abord prévu seul en
+> 1.7.0, jamais publié) et le **module d'intelligence artificielle**. Les deux parties restent
+> séparées ci-dessous : l'analyse de justificatifs ne relève pas du coffre-fort. L'IA est
+> **désactivée par défaut** (`AI_ENABLED=false`) ; aucune donnée ne sort d'une instance qui ne
+> l'a pas configurée. **Aucun tag définitif n'est posé** tant que le coffre-fort n'a pas été éprouvé à la
+> main : c'est une fonctionnalité dont l'échec se paie en fichiers définitivement illisibles.
+
+### Intelligence artificielle
+
+#### Nouveautés
+
+- **Signaler une mauvaise réponse de l'assistant, conversation jointe si vous le voulez.**
+  Après un pouce vers le bas, une case décochée par défaut transmet la conversation aux
+  administrateurs du service, masquée avant l'enregistrement : montants, noms et adresses
+  des biens, voyageurs, banques, libellés, nom et e-mail deviennent `[montant]`, `[bien]`…,
+  et aucune donnée lue par l'assistant n'est jointe. « Voir ce qui sera envoyé » affiche le
+  texte exact. Lisible dans *Administration › IA*, supprimé après 90 jours.
+- **Budget quotidien de l'instance** (`AI_DAILY_BUDGET_USD`, en dollars, `0` = désactivé) :
+  les quotas bornent chaque compte, ce plafond borne la facture de tous les comptes réunis.
+  Atteint, l'IA se met en pause jusqu'au lendemain sur la clé de l'instance ; une clé
+  personnelle n'est pas concernée.
+- **`php artisan ai:eval-chat`** éprouve aussi les consignes cachées dans les données
+  (nom de voyageur, libellé de charge, nom de bien), sur un compte temporaire créé puis
+  supprimé par la commande ; `--repeat=N` rejoue chaque cas.
+- **Les relevés annuels de plateforme sont reconnus et créent vos recettes.** Déposez le
+  rapport de revenus d'Airbnb, Booking ou Abritel dans *Importer un justificatif* : l'analyse
+  en tire **une recette par mois loué**, au montant **brut**, la commission de la plateforme
+  étant enregistrée à part et déduite de votre résultat. Rien n'est réparti au prorata — le
+  relevé publie déjà, mois par mois, un revenu brut et un total versé, et leur écart est la
+  retenue réelle de ce mois-là, régularisations comprises.
+  Les mois sans location ne créent aucune ligne, et la taxe de séjour collectée par la
+  plateforme n'est répartie sur aucun mois : elle n'entre pas dans vos revenus bruts.
+  ⚠️ **N'importez pas à la fois le relevé annuel et le CSV** : ce sont les mêmes euros sous
+  deux mailles différentes. L'écran vous prévient et décoche tout si l'exercice porte déjà des
+  recettes
+
+- **Choix du fournisseur d'IA** (`AI_PROVIDER`) : OpenRouter par défaut, mais aussi
+  Anthropic et Google Gemini **en protocole natif** — ils reçoivent alors vos PDF tels
+  quels — OpenAI, ou tout serveur compatible OpenAI installé chez vous. Les identifiants de modèles ne sont pas portables d'un fournisseur à l'autre :
+  laissez `AI_MODEL_*` vide pour prendre ceux du fournisseur configuré. Un
+  `AI_PROVIDER` inconnu fait échouer les fonctions d'IA avec un message explicite,
+  sans retomber en silence sur OpenRouter
+- **« Se connecter avec OpenRouter »** dans *Mon profil* : plus besoin de créer une
+  clé et de la copier-coller. Le bouton vous redirige, vous autorisez, et l'instance
+  reçoit une clé qui vous appartient — l'inscription est proposée si vous n'avez pas
+  encore de compte. Aucune inscription d'application n'est requise, et votre instance
+  n'a pas besoin d'être joignable depuis Internet. Désactivable par
+  `AI_OAUTH_ENABLED=false` (⚠️ incompatible avec `SESSION_SAME_SITE=strict`)
+- **`php artisan ai:check-provider`** : éprouve un fournisseur par de vrais appels — clé,
+  conversation en flux, JSON contraint, pièce jointe — et rend un code d'échec si l'un des
+  contrôles ne passe pas. Un catalogue peut annoncer une capacité qu'il n'honore pas ; c'est
+  le seul moyen de le savoir avant de confier ses justificatifs à un service
+- **Mistral AI** rejoint les fournisseurs : le seul de la liste dont les justificatifs
+  restent en Europe (`AI_PROVIDER=mistral`)
+- Le choix du modèle, dans *Mon profil*, devient une **liste de modèles retenus** au lieu
+  d'un identifiant à saisir à la main. Chacun porte le **drapeau du pays de son éditeur**,
+  et la ligne « Fournisseur » celui du service qui achemine la requête — les deux sont
+  distincts, et un modèle européen appelé via un intermédiaire américain transite malgré
+  tout par cet intermédiaire. Un modèle déjà choisi hors liste est conservé
+- Le message **« plus de crédit disponible »** propose désormais le lien de recharge,
+  dans l'import de justificatifs comme dans l'assistant, quand la clé est la vôtre
+- `AI_MODEL_PRICES` permet de renseigner les tarifs des modèles chez un fournisseur
+  qui ne renvoie pas le coût réel de l'appel — sans quoi aucun coût n'est journalisé,
+  ce qui reste préférable à un chiffre inventé
+- **Analyse de justificatifs par IA** (optionnelle, `AI_ENABLED=false` par défaut) :
+  déposez une facture, un avis de taxe foncière, une attestation d'assurance, un
+  tableau d'amortissement bancaire ou un relevé de compte, et OpenLMNP en propose
+  la saisie. **Rien n'est jamais créé sans votre relecture** : un écran de
+  confirmation affiche chaque champ avec un indicateur de confiance et l'extrait du
+  document qui l'a rempli (« Lu : *Total TTC 143,20 €* »). Nouvelle page
+  *Au quotidien → Importer un justificatif*
+- Les factures de **mobilier** se découpent en une ligne amortissable par article,
+  avec la durée d'amortissement déduite de la nature du bien ; les **travaux**
+  reçoivent 5, 10 ou 15 ans selon leur nature
+- Les **tableaux d'amortissement** de votre banque remplacent le tableau théorique :
+  vos intérêts déductibles deviennent les intérêts réels (différé, assurance
+  dégressive, modulation). Ces échéances sont protégées de tout recalcul automatique
+- Les **relevés bancaires** proposent leurs opérations une à une, déjà classées et
+  catégorisées ; les lignes déjà saisies sont détectées et décochées, et l'IBAN
+  n'est jamais conservé en entier
+- **Alerte doublon** : une écriture du même montant à trois jours près est signalée
+  avant l'enregistrement
+- Bouton **« Pré-remplir depuis ce document »** dans les formulaires de charge,
+  mobilier et travaux : il ne remplit que les champs vides et indique lesquels il
+  n'a pas touchés
+- **API MCP** : nouvel outil `analyze_document` (45 outils au total), non destructif —
+  il propose une saisie sans rien créer
+- Le bouton **« Réanalyser avec le modèle renforcé »** n'apparaît que lorsqu'il peut
+  servir : sous un seuil de confiance (`AI_REANALYSIS_THRESHOLD`, 85 % par défaut) et
+  tant que le modèle de repli n'a pas déjà été sollicité
+- Nouvelle page **Administration → Intelligence artificielle** : volumes, coût réel,
+  coût moyen par document, erreurs, refus de quota et consommation par compte
+- Les **PDF** sont pris en charge sur un serveur local : la couche texte est extraite
+  et envoyée au modèle (`AI_PDF_TEXT_FALLBACK`). Un PDF scanné, qui n'en contient
+  pas, doit toujours être déposé en image — l'application le dit explicitement
+- Les photos **HEIC** (iPhone) sont acceptées : elles sont converties en JPEG **dans le
+  navigateur** avant l'envoi (bibliothèque chargée uniquement à ce moment-là) — rien
+  n'est décodé côté serveur
+- **Lecture IA de la liasse dans l'assistant de reprise** : à l'étape 3 de
+  *Reprendre un dossier existant*, une troisième méthode propose de déposer votre
+  dernière liasse (PDF ou photos). Le tableau **2033-C** est lu ligne à ligne, les
+  cases de report (870, 030, 028, 014, déficits 980-984) pré-remplissent l'étape 4,
+  et la somme des dotations lues est confrontée à la **ligne 572** pour dire si le
+  tableau a été lu en entier. **Rien n'est recopié sans votre relecture** : les
+  lignes s'affichent face à votre document avec un indice de confiance chacune,
+  une case absente de la liasse reste vide — jamais remplacée par un zéro — et la
+  ligne des frais d'acquisition n'est pas recopiée, l'application les amortissant
+  déjà à partir des frais saisis à l'étape 2. Les soldes repris de cette façon
+  portent la provenance « lecture assistée » dans l'exercice, visible au contrôle
+- La page *Administration → Intelligence artificielle* affiche le **service amont**
+  ayant réellement servi chaque appel (colonne « Servi par ») quand la passerelle le
+  communique — un même modèle peut changer de comportement selon l'hébergeur qui le
+  sert, autant le savoir
+- **Assistant conversationnel intégré** (onglet « Assistant » du panneau d'aide,
+  désactivé par défaut avec le reste de l'IA) : répond en français aux questions sur
+  l'utilisation du logiciel, en s'appuyant sur la documentation embarquée (aide
+  contextuelle, FAQ, guide fiscal, outils MCP) indexée par la commande
+  `ai:build-help-index`. Réponse affichée au fil de l'eau, Markdown rendu côté serveur
+  avec liens limités aux pages du logiciel, suggestions par page, pouces 👍/👎.
+  Refuse tout conseil fiscal ou juridique, toute action sur les données et tout
+  hors-sujet ; un contrôle de sortie remplace les réponses qui s'en écartent.
+  Option `ai_data_access` dans *Mon profil* (désactivée par défaut) : l'assistant peut
+  alors consulter les données du compte **en lecture seule** via 16 outils MCP exécutés
+  en interne, et indique ce qu'il a consulté. Sans elle, aucune donnée comptable n'est
+  transmise. Quota `AI_CHAT_DAILY_QUOTA` par utilisateur, conversation jamais
+  enregistrée, compteurs d'usage dans *Administration → Intelligence artificielle*.
+  Validé sur 40 questions réelles (`php artisan ai:eval-chat`) : aucune question hors
+  périmètre acceptée.
+- **Socle d'intelligence artificielle** (désactivé par défaut, `AI_ENABLED=false`) :
+  configuration `config/ai.php`, client unique vers toute API compatible OpenAI
+  (OpenRouter par défaut, ou un modèle local via `AI_BASE_URL`), résolution de clé
+  (clé d'instance ou clé par utilisateur), plafonds d'usage par utilisateur et
+  journal d'appels. Ce socle ne fournit encore aucune fonctionnalité visible : il
+  prépare l'analyse de justificatifs et l'assistant intégré
+- **Mon profil** : section « Intelligence artificielle » — saisie d'une clé
+  OpenRouter (chiffrée en base, jamais réaffichée), bouton de vérification, et
+  option d'autorisation d'accès aux données pour le futur assistant
+- Page **Politique de confidentialité** complétée d'un paragraphe détaillant ce qui
+  est transmis à un service d'IA, ce qui ne l'est jamais, et comment tout désactiver
+
+#### Modifications
+
+- **L'écran d'import prévient les porteurs d'un coffre-fort** que l'analyse envoie le document
+  **en clair** au service d'intelligence artificielle : le coffre chiffre ce qui est
+  *enregistré*, il ne protège pas ce qu'on choisit de faire analyser
+- La politique de confidentialité décrit le coffre-fort, ce qu'il ne couvre pas, et ce qu'il
+  advient d'un document soumis à l'analyse
+
+- La page **Politique de confidentialité** ne dit plus à l'indicatif ce que fait un
+  tiers : la consigne de non-conservation envoyée à OpenRouter est une préférence
+  transmise à un intermédiaire, pas un engagement que nous pourrions tenir à sa
+  place — et les autres fournisseurs ne la reçoivent même pas
+- Un **serveur compatible OpenAI installé chez vous** ne reçoit plus les champs
+  propriétaires d'OpenRouter (politique de conservation, plugin de lecture de PDF,
+  en-têtes d'attribution), qu'il ignorait de toute façon. Aucun changement pour une
+  installation OpenRouter, dont la requête reste identique au champ près
+- L'écran **Administration → Intelligence artificielle** affiche les réglages
+  *effectifs* (fournisseur, adresse, identifiants de modèles réellement utilisés) et
+  non plus les variables brutes, qui apparaîtraient vides là où l'application appelle
+  bel et bien quelque chose
+- Les libellés de *Mon profil* nomment le fournisseur configuré au lieu d'écrire
+  « OpenRouter » en dur
+
+#### Corrections
+
+- **Un relevé bancaire ne pouvait pas être confirmé depuis l'écran d'import.** La relecture
+  affichait les champs d'une facture de charge — dont quatre obligatoires qu'aucune valeur de
+  relevé ne remplit — et la validation échouait systématiquement au moment d'enregistrer
+- **La TVA collectée était perdue sur les recettes issues d'un relevé bancaire.** Le taux était
+  forcé à zéro quel que soit le régime du bien : sur un bien assujetti, la TVA collectée
+  ressortait nulle dans la déclaration, sans aucun message
+
+- **Le réglage « 100 % dédié au bien loué » était écrasé quand on changeait le type de
+  document.** Un montant rectifié, une date corrigée ou cet interrupteur basculé
+  disparaissaient en silence, remplacés par la proposition du modèle — précisément les
+  gestes qu'on demande de faire à la relecture. Les corrections manuelles survivent
+  désormais, et seuls les champs que le nouveau type ne connaît pas sont abandonnés
+- **Sur une facture de mobilier à plusieurs articles, les lignes créées étaient marquées
+  « partagées » par défaut** au lieu de « dédiées », contrairement à ce que fait la même
+  fonctionnalité sur une facture à article unique. La quote-part de surface s'appliquait
+  donc à tort, rabotant la dotation d'amortissement pour toute la durée du plan
+- **Sur un relevé bancaire, le caractère dédié de chaque ligne n'était pas modifiable.**
+  La valeur était déduite du bien et appliquée sans que rien ne l'affiche : c'était le
+  seul chemin d'analyse où la proposition ne pouvait pas être corrigée
+
+- **Un justificatif rangé par l'analyse IA n'était pas chiffré.** Le fichier retenu à l'issue
+  d'une analyse était recopié tel quel sous vos justificatifs, sans passer par le coffre-fort :
+  une pièce **en clair** posée au milieu de pièces scellées, sur un compte dont le propriétaire
+  croit légitimement tout avoir chiffré. C'est le seul fichier qu'il n'a pas déposé lui-même,
+  donc celui qu'il ne pensera jamais à vérifier. Le chiffrement a désormais **un seul point
+  d'écriture**, par lequel passent le dépôt manuel, l'API MCP et l'analyse
+- **Activer son coffre-fort pendant une analyse en cours chiffrait le fichier en relecture.**
+  Les deux répertoires de transit (analyse IA, imports CSV) sont exclus du chiffrement : leur
+  contenu est en clair à dessein, le temps d'une relecture, et supprimé dès la validation
+- **« Pré-remplir depuis ce document » échouait systématiquement coffre-fort actif**, avec un
+  message trompeur (« Format non pris en charge »). L'action provoquait son propre échec : elle
+  déclenchait l'enregistrement — donc le chiffrement — du fichier avant d'avoir pu le lire
+- **Un justificatif déjà scellé soumis à l'analyse annonçait un « format non pris en charge ».**
+  Le format n'y était pour rien : le serveur ne peut plus lire un fichier scellé, et c'est
+  exactement ce que le coffre-fort garantit. Le refus le dit désormais, et indique quoi faire
+- **Un bien créé sans surface totale amortissait silencieusement à zéro.**
+  `Property::quota_share` (surface louée ÷ surface totale) rendait `'0'` quand la surface
+  totale était absente ou nulle — une valeur qui multiplie la base amortissable ET quasiment
+  toutes les charges au prorata, sans qu'aucun montant n'ait l'air faux : un zéro qui ressemble
+  exactement à un résultat fiscal exact. L'outil MCP `create_property` retombait sur cette
+  ombre dès que l'appelant (typiquement un assistant IA) omettait `total_area`/`rented_area`.
+  La surface totale est désormais refusée à la création comme à la mise à jour (formulaire,
+  assistant de premier lancement, outils MCP `create_property`/`update_property`) si elle est
+  absente, nulle ou inférieure à la surface louée, et l'accesseur `quota_share` REFUSE
+  maintenant de calculer plutôt que de rendre ce zéro en silence. Le formulaire du bien et
+  l'assistant de premier lancement acceptent aussi de saisir directement la **quote-part**
+  plutôt que la surface louée en m² — l'autre valeur se calcule et s'affiche en direct
+- **La lecture IA d'une liasse recopiait le terrain comme composant amortissable.** Le
+  tableau 2033-C porte une ligne « Terrains » (case 420) qui n'a jamais de durée ni de
+  dotation imprimées, un terrain ne s'amortissant JAMAIS. Faute de durée, l'assistant lui en
+  complétait une par défaut (10 ans) et le terrain se mettait à générer une dotation fictive —
+  constaté lors d'un test de reprise (ligne « Terrains », case 420 du 2033-C).
+  La ligne est désormais refusée à l'import, avec un message qui l'explique, et
+  `openlmnp:repair-land-components` (rapport par défaut, `--fix` pour agir) supprime les
+  composants déjà créés sur les comptes existants et recalcule les exercices non clôturés.
+  À cette occasion, la convention qui régit une base amortissable IMPORTÉE d'une liasse pour
+  un bien partiellement loué est désormais écrite en docblock (`Property`,
+  `RepriseDossier::applyLiasse()`) : le 2033-C d'un tel bien porte déjà la part
+  professionnelle de l'immobilisation, jamais la valeur du bien entier — une base `manual`
+  n'est donc jamais remultipliée par la quote-part de surface louée. Un test verrouille
+  désormais cette convention avec un dossier de test (base 152 340 €, dotation 5 790 €,
+  quote-part 26,09 %) : la dotation lue reste bien 5 790 €, jamais divisée
+  par la quote-part une seconde fois (~1 511 € sinon — l'écart redouté)
+- **Import Airbnb, format « Historique des transactions » : les recettes étaient
+  comptées deux fois, et la commission perdue.** Deux défauts distincts, une seule
+  cause : la colonne `Type` du fichier (`Payout`, `Réservation`, `Régularisation`,
+  `Versement de résolution`) n'était filtrée nulle part. Chaque ligne `Payout` (le
+  virement bancaire qui RÈGLE une ou plusieurs `Réservation` déjà détaillées) était
+  réimportée comme une recette à part entière, doublant le chiffre d'affaires déclaré
+  (≈ 84 000 € au lieu de ≈ 42 000 € sur un compte réel de test). Les lignes `Payout`
+  sont désormais explicitement écartées — visibles dans l'aperçu, avec leur raison —
+  et jamais silencieusement ignorées ni comptées. Une ligne `Versement de résolution`
+  (remboursement AirCover) porte le code de confirmation de la réservation d'origine :
+  la détection de doublons, qui ne comparait QUE ce code, la prenait à tort pour une
+  réimportation et la perdait silencieusement — elle compare désormais aussi le
+  montant et la date, ce qui préserve au passage les réservations légitimement scindées
+  en acompte puis solde sous le même code. Enfin, la colonne de commission réelle de cet
+  export s'appelle « Frais de service » (sans « hôte ») : absente de la liste des
+  libellés reconnus, elle faisait annoncer à tort le format « Réservations » (sans
+  détail de commission) sur un fichier qui la contient pourtant — la commission
+  n'atterrissait dans aucune écriture
+- **Un CSV anglo-saxon (Airbnb ou import générique) pouvait lire des dates à l'envers,
+  parfois de deux ans.** La garde qui devait rejeter un format de date invalide testait
+  le résultat APRÈS que Carbon ait silencieusement « reporté » un mois hors bornes
+  (`30/04/2026` lu jour-mois-année devenait juin 2028, une valeur en apparence valide) :
+  elle ne pouvait matériellement rien attraper. Elle est remplacée par un aller-retour
+  strict, et une date du fichier qui ne peut être lue QUE mois-jour-année fait désormais
+  basculer TOUT le fichier dans ce sens — y compris les dates ambiguës des douze premiers
+  jours du mois, qu'aucun aller-retour ne peut départager isolément. Un séjour dont la
+  date de fin précède la date de début est maintenant refusé plutôt qu'importé tel quel
+- **Un justificatif chiffré était impossible à consulter, coffre-fort actif.** Le clic sur
+  « ouvrir » ou « télécharger » échouait silencieusement (l'URL appelée valait
+  `/expenses/1/[object Object]`) : rien ne relayait ce clic vers le déchiffrement navigateur,
+  et Filament retombait sur un lien qui n'avait jamais reçu d'adresse valable. Corrigé à deux
+  endroits : le lien produit pour un fichier chiffré porte désormais son nom et pointe vers la
+  route de service, et cette route accepte le paramètre `raw` ajouté après coup par le
+  déchiffrement navigateur (il invalidait la signature de l'URL, donc l'aurait de toute façon
+  fait échouer même une fois le lien réparé)
+
+- **Justificatifs** : l'aperçu d'un document affichait « Cette page a été bloquée par
+  Chrome ». La politique de sécurité envoyée avec le fichier imposait un bac à sable
+  complet, qui empêchait le navigateur d'ouvrir sa visionneuse PDF. Le fichier est
+  désormais servi avec un type imposé d'après son extension — un document piégé ne peut
+  donc pas s'exécuter — et la politique n'a plus besoin d'être aussi radicale. Les images
+  s'affichent directement, sans cadre
+- **Pièces jointes par l'API MCP** : le contenu réel du fichier est vérifié, et plus
+  seulement son extension
+- **Docker** : `docker-entrypoint.sh` ne propageait pas `TELEMETRY_ENABLED` ni
+  `TELEMETRY_INSTALL_TYPE` vers `.env` — un `-e TELEMETRY_ENABLED=false` au
+  `docker run` restait donc sans effet. Un test échoue désormais si une variable
+  documentée manque à cette liste
+
+### Coffre-fort des justificatifs et autres évolutions
+
+#### Ajouts
+
+- **Dossier en indivision et annexe 2031 bis.** Un bien détenu à plusieurs sans société
+  dépose une liasse au nom de l'indivision, dont le résultat se répartit entre indivisaires.
+  Dans *Mon profil*, rubrique **Indivision**, déclarez le dossier comme tel et indiquez chaque
+  indivisaire avec sa quote-part (total de 100 %). La liasse PDF et l'écran *Télédéclaration*
+  ajoutent alors la **2031 bis-SD, cadre E**, et donnent à chacun le montant à reporter sur sa
+  propre 2042-C-PRO. La somme des parts égale exactement le résultat, au centime près, et un
+  contrôle signale une répartition incomplète — et, une fois celle-ci complète, un second
+  contrôle (sans bloquer) rappelle les indivisaires dont l'adresse ou la date de naissance
+  manquent encore, demandées sur la 2031 bis. Saisissez le bien, les emprunts et les charges
+  pour leur montant **total** : la quote-part ne s'applique qu'au résultat. Le micro-BIC d'une
+  indivision suit les mêmes règles que celui d'un dossier individuel, dans le tableau de bord, le
+  simulateur, la projection, l'assistant d'exercice et les outils MCP (une indivision gérée en
+  commun peut, en droit, former une société de fait exclue du micro-BIC — Conseil d'État,
+  14/11/2025, n° 495516 — mais le logiciel ne tranche pas cette question de fait : faites
+  valider votre situation par un expert-comptable). `generate_tax_return` annonce la 2031 bis-SD
+  pour ce dossier, et `get_fiscal_year` expose la répartition
+- **Indivision : présentation resserrée du profil et de la télédéclaration.** La fiche de
+  chaque indivisaire se replie et affiche en tête son nom, sa quote-part et un badge qui dit ce
+  qui manque pour la 2031 bis ; le total des quotes-parts se double d'une jauge pendant la
+  saisie. Le cadre E de la 2031 bis-SD (écran et PDF) reprend les colonnes du formulaire papier
+  et se termine par une ligne de total ; la 2042-C-PRO devient une carte par indivisaire (case,
+  montant, bouton Copier). Le contrôle qui rappelle une adresse ou une naissance manquante nomme
+  désormais chaque indivisaire concerné
+- **Une carte « Nouveauté » sur l'écran Quoi de neuf**, fermable et mémorisée par version :
+  elle revient à la prochaine release qui a quelque chose à annoncer, et adapte son contenu
+  selon que les dossiers liés sont actifs sur l'instance
+- **La vérification Sirene donne la forme juridique.** Le bouton « Vérifier dans Sirene » affiche
+  désormais la forme juridique du SIREN, et prévient quand elle ne correspond pas au dossier : un
+  dossier en indivision qui porte le SIREN personnel d'un indivisaire, ou un SIREN d'indivision
+  sans la rubrique « Indivision » activée
+- **L'adresse d'un bien se complète toute seule.** Sur les trois écrans qui en demandent une
+  — fiche d'un bien, premier lancement, reprise de dossier — commencez à taper : les
+  propositions de la [Base Adresse Nationale](https://adresse.data.gouv.fr) apparaissent, et
+  en choisir une remplit d'un coup l'**adresse**, le **code postal** et la **commune**. Fini
+  le code postal qui ne correspond pas à la ville saisie juste à côté.
+  **La saisie manuelle reste entière** : aucune validation ne dépend de ce service, et un
+  service injoignable, lent ou en erreur se traduit par une absence de propositions — jamais
+  par un formulaire qu'on ne peut plus valider.
+  ⚠️ C'est le **second appel sortant** du logiciel, après l'estimation DVF, et le plus
+  bavard : il révèle le début d'adresse en cours de frappe. Rien ne part avant trois
+  caractères ni avant 300 ms sans frappe, le débit est limité par compte, et
+  `ADDRESS_LOOKUP_ENABLED=false` coupe tout — le script n'est alors même pas injecté
+  dans les pages. Le service interrogé est l'API Adresse sur la Géoplateforme de l'IGN
+  (`data.geopf.fr/geocodage`), l'adresse que référence data.gouv.fr.
+
+- **Une variable d'environnement contenant un espace empêchait l'instance de démarrer.**
+  L'entrypoint Docker recopiait les valeurs passées en `-e` vers `.env` **sans guillemets** :
+  un `APP_NAME` ou un `MAIL_FROM_NAME` avec un espace — « OpenLMNP Support » suffit — cassait
+  le parsing du fichier, et le conteneur repartait en boucle sans qu'aucun message ne
+  l'explique côté déploiement
+
+- **Inscription sur invitation** (`ALLOW_REGISTRATION=invite`). Personne ne peut créer de
+  compte sans un lien nominatif, émis depuis *Administration → Invitations* ou par
+  `php artisan openlmnp:invite`. Le lien est **à usage unique**, il expire
+  (`INVITATION_TTL_DAYS`, 14 jours par défaut), il se relance et se révoque
+  individuellement, et l'adresse est verrouillée sur le formulaire — une invitation émise
+  pour quelqu'un ne peut pas servir à créer le compte d'un autre.
+  Seule une empreinte du jeton est enregistrée : le vol d'une sauvegarde ne livre aucun
+  lien utilisable. La contrepartie est que le lien ne s'affiche qu'une fois — il est donc
+  **toujours imprimé**, y compris quand l'envoi du courriel échoue, pour qu'une instance
+  sans SMTP reste utilisable
+
+- **En démonstration, l'écran qui suit « J'aime bien » ne parle plus de GitHub.** Il proposait
+  de mettre une étoile, de faire un don ou d'ouvrir une discussion : trois gestes qui ne veulent
+  rien dire pour quelqu'un qui découvre le logiciel et ne l'a pas encore adopté. À leur place,
+  une proposition qui correspond à ce moment-là : **garder son travail 7 jours de plus**, sans
+  carte bancaire. **Une instance auto-hébergée garde l'écran d'origine** — les gestes GitHub y
+  ont tout leur sens, et le basculement est verrouillé dans les deux sens.
+- **« Qu'est-ce qui vous manque pour franchir le pas ? »** — six cases à cocher sous le
+  formulaire de retour, en démonstration : reprendre une comptabilité déjà commencée ailleurs,
+  le coût de l'abonnement, l'absence d'un professionnel qui engage sa responsabilité, le manque
+  d'avis, l'impossibilité de télétransmettre, une fonctionnalité manquante. Chaque case est
+  enregistrée **dès le clic** : cocher puis refermer sans rien envoyer suffit à nous dire
+  quelque chose. Seuls les identifiants sont conservés, jamais les libellés — et parce que
+  c'est une collecte et non une préférence d'affichage, **la page de confidentialité le dit
+  désormais explicitement**.
+- Le formulaire de prolongation d'un bac à sable propose une **case facultative** pour recevoir
+  les rappels d'échéances fiscales. Elle est distincte du consentement au-dessus, qui ne sert
+  qu'à renvoyer le lien de reprise, et elle ne vaut pas inscription : un e-mail de confirmation
+  part d'abord, et rien ne suit tant qu'il n'a pas été cliqué. `DEMO_LEAD_URL` est **vide par
+  défaut** : sans elle la case ne s'affiche pas et rien ne sort de l'instance.
+- **Un coffre-fort pour vos justificatifs.** Le contenu des fichiers que vous déposez —
+  justificatifs comptables et photos de biens — est chiffré avec une clé dérivée d'une phrase
+  de passe que vous seul connaissez. Une copie du disque, d'une sauvegarde ou de la réplique
+  de secours ne contient alors rien de lisible. La fonctionnalité est **optionnelle et
+  réversible** : tant que vous ne l'activez pas, rien ne change ; si vous la désactivez, tout
+  redevient lisible à l'octet près.
+
+  ⚠️ **Perdre la phrase de passe, c'est perdre les fichiers.** Elle n'est enregistrée nulle
+  part, ni en clair ni sous forme dérivée : ni l'hébergeur de l'instance ni personne d'autre
+  ne peut restituer vos justificatifs, et il n'existe aucune procédure de récupération. Le
+  mot de passe de connexion et la phrase de passe sont **deux choses distinctes** — une
+  réinitialisation de mot de passe vous rend votre compte, pas vos fichiers.
+
+  La clé ne vit que le temps de la visite. Coffre verrouillé, plusieurs symptômes ressemblent
+  à des pannes sans en être : photo de bien absente, champs de dépôt grisés, export groupé
+  refusé pour ne pas produire une archive silencieusement amputée. L'aide contextuelle de la
+  page les énumère, avec ce que le coffre **ne** protège pas — les montants et libellés
+  restent en clair en base, et le nom d'un fichier en raconte souvent l'essentiel.
+
+- Changer de phrase de passe est **instantané**, quel que soit le nombre de justificatifs :
+  aucun fichier n'est réécrit, seule la clé est rescellée.
+
+- **Logement indépendant dans votre résidence principale.** Le booléen « fait partie de ma
+  résidence principale » est remplacé par une **situation du logement** à trois valeurs :
+  logement distinct, une ou plusieurs pièces de la résidence principale, ou **logement
+  indépendant** dans la résidence principale ou sur la même propriété (studio avec entrée
+  propre, rez-de-chaussée aménagé, dépendance). Ce dernier cas est, pour la loi, un meublé
+  **distinct** de la résidence principale : pas de limite de 120 jours, pas d'art. 35 bis (ses
+  exonérations ne couvrent qu'une partie de la résidence principale elle-même), CFE due en
+  principe, taxe d'habitation sur les résidences secondaires (THRS) si le foyer l'occupe une
+  partie de l'année. L'ancien champ est conservé et resynchronisé automatiquement pour les
+  intégrations tierces (outils MCP compris), mais plus aucun calcul ne s'y fie : la quote-part
+  de surface s'applique désormais **uniformément**, quelle que soit la situation (elle ne
+  regardait que `is_primary_residence` jusqu'au 2026-09-08 pour les frais de notaire et
+  d'agence, incohérent avec travaux et mobilier). L'estimation de valeur vénale (DVF) compare
+  alors le **bâtiment entier** et non le type du seul logement loué, la surface totale portant
+  celle de la propriété entière. L'exemption de décence énergétique des meublés de tourisme
+  (réservée à la résidence principale au sens strict) ne s'applique qu'aux pièces de la
+  résidence principale, jamais à un logement indépendant.
+- **Classement micro-BIC du bien** (`tourism_classification`) : non classé, classé, ou bail
+  meublé longue durée — dérivé par défaut du type de location, modifiable. Le simulateur, le
+  tableau de bord, l'assistant de clôture d'exercice et la projection pluriannuelle lisent
+  désormais les **taux et plafonds officiels** (CGI art. 50-0) depuis une source unique plutôt
+  que des 50 %/30 % recopiés en dur à six endroits, et **vérifient le plafond de chiffre
+  d'affaires** : au-delà, le micro-BIC est affiché « non disponible » avec son motif plutôt
+  qu'un montant que la loi interdirait en réalité.
+- **Emprunt dédié** (`is_dedicated` sur un emprunt) : un prêt qui finance exclusivement le
+  logement loué (ex : prêt travaux d'un studio indépendant, distinct de celui de la résidence
+  principale) se déduit désormais à 100 %, sans quote-part — au lieu d'être proratisé comme un
+  emprunt qui finance l'achat de toute la propriété.
+
+#### Corrections
+
+- **Un justificatif déposé coffre-fort actif ne s'ouvrait pas.** Les pièces déposées après
+  l'activation se déchiffrent dans votre navigateur : la fenêtre de déverrouillage affichait
+  une erreur technique, puis un faux manque de mémoire, et le document restait illisible.
+  Elles s'ouvrent désormais normalement, avec le bon type (un PDF s'affiche au lieu de se
+  télécharger)
+
+- **Désactiver le coffre-fort laissait ces mêmes pièces chiffrées**, avec le message
+  « fichier(s) non traités », et le coffre restait actif. La désactivation demande désormais
+  votre phrase de passe, qui sert uniquement à ce déchiffrement et n'est conservée nulle
+  part : tous les justificatifs redeviennent lisibles à l'identique. Même correction pour
+  `openlmnp:vault-migrate --decrypt`
+
+- **La dernière année d'un plan d'amortissement manquait.** Quand un bien, un meuble ou des
+  travaux sont mis en service en cours d'année, la première annuité est réduite au prorata
+  des jours, et la part non déduite se reprend l'année qui suit la fin nominale du plan. Le
+  logiciel arrêtait le plan un an trop tôt : un meuble mis en service le 1er juillet sur
+  10 ans n'amortissait que 95 % de sa valeur. Le plan dure désormais un exercice de plus et
+  le cumul des annuités retombe exactement sur la base. Les années précédentes ne changent
+  pas ; un exercice déjà clôturé qui aurait dû porter ce rattrapage n'est pas modifié
+
+- **Deux adresses rendaient une erreur 500 à un visiteur non connecté**, au lieu de la page
+  de connexion : l'autocomplétion d'adresse et le matériel de clé du coffre-fort, ouverts
+  dans un navigateur. Leur garde renvoyait vers une route de connexion que le logiciel
+  n'expose pas.
+
+- **Le dépôt de la liasse, à l'étape 3 de la reprise, était introuvable.** C'était le seul
+  champ de fichier « nu » du logiciel — partout ailleurs on passe par le composant de
+  Filament — et le navigateur le rendait en « Choisir un fichier / Aucun fichier choisi »,
+  minuscule, au milieu d'un écran qui demande par ailleurs un consentement. Il devient un
+  **grand cadre en pointillés** sur toute la largeur, avec son icône, son libellé et son
+  bouton, qui accepte le **glisser-déposer** et affiche le **nom du fichier retenu**.
+  Le champ de fichier reste dans le parcours de **tabulation** (masqué par l'opacité, jamais
+  par `display: none`) et le clic n'a besoin d'**aucun JavaScript** : le glisser-déposer est
+  celui du navigateur, le script n'ajoute que le surlignage du cadre
+
+- **L'attente de la lecture de la liasse annonçait des étapes qu'elle ne pouvait pas
+  connaître.** « Document transmis au modèle », « Tableaux 2033-A à 2033-D repérés »,
+  « Lignes extraites » s'allumaient sur une **minuterie de 4 secondes**, sans aucun rapport
+  avec le serveur — et la quatrième ligne ne s'allumait jamais. L'attente se joue désormais
+  dans une **fenêtre centrée**, qui affiche une durée indicative, des **astuces** sur la
+  reprise, et dit franchement qu'elle ne connaît pas l'avancement. Elle se **masque** (bouton
+  ou touche Échap) sans annuler la lecture, prévient quand c'est plus long que d'habitude, et
+  le motif d'un refus s'affiche maintenant en encart au lieu d'une ligne de 11 px sous le champ
+
+- **L'aperçu de la liasse, sur un demi-écran, était illisible.** L'écran de relecture posait
+  le document à gauche et la lecture à droite, pour une comparaison œil à œil qui n'existait
+  pas. Les **lignes du 2033-C** et les **cases de report** passent en deux colonnes en haut,
+  et **votre liasse occupe toute la largeur** en dessous. Puisque la comparaison se fait
+  désormais par le défilement, l'aperçu devient exploitable : **pagination**, **zoom**,
+  ouverture dans un onglet, et une hauteur qui montre une **page entière** au lieu des 420 px
+  d'avant — sans dévorer l'écran sur mobile
+
+- **« La ventilation dépasse la base amortissable » disait quoi faire, sans offrir aucun
+  moyen de le faire.** Le refus était juste — la recopie est rejetée en bloc, rien n'est
+  écrit à moitié — mais il tenait dans une ligne de 11 px qui renvoyait à l'étape 2. Il ouvre
+  désormais une **fenêtre avec les trois remèdes** : corriger le **prix d'acquisition** ou la
+  **part du terrain** sans quitter l'écran, **décocher** les lignes lues qui ne portent pas
+  sur le bâti (le total se recalcule à chaque décochage), ou revenir à l'étape 2
+
+- **⚠️ Enregistrer un plan d'amortissement en SUPPRIMAIT les composants absents, sans un
+  mot.** L'écriture est une réconciliation : tout composant qui ne figure pas dans le lot
+  enregistré disparaît, avec sa base, sa durée et son cumul repris. Le remplacement est
+  **voulu** — c'est ce qui permet de recopier le plan d'un cabinet par-dessus la ventilation
+  par défaut — mais rien ne le disait, et l'écran trompait activement : les lignes du
+  catalogue s'affichent à « 0,00 € » exactement comme un composant réel. Enregistrer avec une
+  seule ligne renseignée effaçait donc les autres (constaté : 6 composants ramenés à 1). Le
+  seul bandeau existant parlait de *ventilation*, jamais de *suppression*.
+  Désormais : un **encart rouge nomme et compte** ce qui va disparaître **avant** le clic,
+  une **confirmation** les nomme une seconde fois, la **notification** d'enregistrement les
+  liste, et les **lignes de gabarit** (proposées par le catalogue, jamais enregistrées) se
+  distinguent des composants réels par un repère **○**, une légende et un intitulé accessible
+
+- **« Enregistrer mon plan » flottait seul dans un bloc à lui.** Le bouton ferme maintenant le
+  bloc du mode courant — la carte du tableau en *Montants*, celle du bas de colonne en
+  *Ventilation* — et il y côtoie l'avertissement de ce qu'il va supprimer
+
+- **L'écran de correspondance des colonnes de l'import CSV ne montrait jamais le
+  fichier.** Les lignes affichées étaient construites *après* application de la
+  correspondance, et les intitulés réels du fichier ne servaient qu'à la deviner : on
+  demandait de vérifier une correspondance sans rien donner à vérifier. L'écran affiche
+  désormais, **avant** le bloc de correspondance, les **dix premières lignes brutes** du
+  fichier avec ses propres intitulés de colonnes — et, sous chaque liste déroulante, un
+  **exemple de valeur** tiré de la colonne choisie. Les deux tableaux se font défiler
+  horizontalement, première colonne figée, au lieu d'être tronqués sans un mot
+
+- **Les trois compteurs de l'aperçu ne pouvaient pas être vrais en même temps.** Sur un
+  fichier de 121 lignes, l'écran annonçait « 60 à importer / 61 doublons / 20 lignes en
+  erreur », soit 141 lignes. Deux erreurs superposées : « à importer » valait
+  *total − doublons*, donc y comptait les lignes en erreur et les lignes vides ; et
+  « lignes en erreur » affichait la taille d'une liste **tronquée à vingt**, c'est-à-dire
+  un plafond déguisé en décompte. Les compteurs se partagent maintenant exactement le
+  total — à importer, doublons, en erreur, vides ignorées — et la liste d'exemples
+  indique quand elle est tronquée. La notification de fin d'import cesse elle aussi
+  d'appeler « illisibles » des lignes simplement vides
+
+- **L'import CSV proposait « Charges » même en arrivant depuis *Recettes*.** La nature des
+  lignes était codée en dur ; elle suit désormais l'écran d'où l'on part — *Recettes*,
+  *Charges*, *Mobilier*, *Travaux* — et reste modifiable. La méprise était silencieuse et
+  coûteuse : importer des loyers en charges **inverse le signe du résultat fiscal**, et
+  aucun montant n'y paraît anormal.
+  Un second filet complète la présélection : quand les intitulés du fichier ressemblent
+  nettement à une autre nature, l'aperçu **pose la question** — « ce fichier ressemble à
+  des recettes, vous avez choisi Charges ». Il ne bloque rien et ne décide rien : la
+  présélection vient de l'écran appelant, jamais d'une devinette sur le contenu
+
+- **Le tableau des montants d'amortissement retrouve son rythme vertical.** La pastille
+  « saisi », posée sous le nom du composant, n'allongeait que les lignes qui la portaient :
+  le tableau alternait lignes hautes et lignes basses selon une information sans rapport
+  avec la mise en page. L'information passe maintenant par la **couleur de la ligne**, qui
+  ne prend aucune hauteur — accompagnée d'un repère **✎** devant le nom et d'une légende,
+  parce qu'une couleur seule ne se lit ni en noir et blanc, ni par un daltonien.
+  Même traitement pour « déjà portée par l'application », dans le tableau de lecture de
+  liasse, qui souffrait du même défaut
+
+- **Les dates de la reprise de dossier s'ouvrent enfin sur un calendrier.** « Depuis quand
+  louez-vous ce bien ? » et « Date d'acquisition » étaient des champs de texte, avec un
+  gabarit `jj/mm/aaaa` pour toute aide — alors que les dates de début de composant, deux
+  étapes plus loin dans le même assistant, offraient bien le calendrier du navigateur. La
+  page mélangeait deux conventions ; elle n'en a plus qu'une. Une date déjà enregistrée
+  s'affiche désormais dans le champ au lieu de le laisser paraître vide, et la saisie
+  française reste lue correctement sur un navigateur qui ne connaît pas le sélecteur
+
+- **« Vos 1 exercice seront supprimés »** — le bandeau d'expiration de la démonstration
+  accordait le nom mais pas le verbe, figé au pluriel dans la page. Un visiteur n'ayant créé
+  qu'une seule chose, le cas le plus courant, lisait donc une phrase fautive. La phrase entière
+  est désormais accordée, et la durée du bac à sable avec elle (« 1 heure » et non
+  « 1 heures » sur une instance réglée ainsi).
+- **« Guide de demarrage »**, affiché sans accent sur chaque tableau de bord, ainsi que cinq
+  libellés de la page *Statistiques* dans le même état.
+- La case de publication et le champ « Prénom » disparaissent de l'écran d'avis en
+  démonstration : le code refusait déjà par construction de publier un retour venu de la
+  démonstration. On demandait un consentement qu'on avait décidé de ne jamais honorer.
+
+#### Interne
+
+- **Piste notée, hors périmètre** : un avancement RÉEL de la lecture de liasse (« le document
+  est parti », « la réponse arrive ») supposerait de diffuser l'état depuis le serveur
+  pendant l'appel au modèle — `$this->stream()` de Livewire 4 — donc un traitement hors
+  requête. L'instance est en `QUEUE_CONNECTION=sync`, sans worker : rien de tel n'est
+  possible aujourd'hui, et c'est pourquoi la fenêtre d'attente n'affiche aucune étape.
+
+- Les accords du français passent par un utilitaire unique. `Str::plural()` est un pluraliseur
+  **anglais** — il rend « sas » pour « sa » — et zéro prend le **singulier** en français, là où
+  l'anglais met un pluriel. Une règle qui se retrouvait sinon réécrite à chaque affichage d'un
+  compteur.
+- **⚠️ Vos documents les plus complets restaient en clair sur le serveur, sans expiration.**
+  La liasse fiscale et le FEC étaient écrits dans `storage/app/private/{tax-returns,fec}` et
+  y demeuraient indéfiniment — or ils portent bien plus qu'un justificatif : adresse, SIREN,
+  résultat fiscal, l'intégralité des écritures. Ils ne sont plus écrits nulle part : ils sont
+  **reconstruits à chaque téléchargement** depuis vos données comptables, ce qu'ils faisaient
+  déjà (le fichier posé sur le disque était réécrit puis relu dans la même requête, jamais
+  servi plus tard). Rien ne change à l'usage ; ce qui change, c'est ce qui reste derrière.
+  `php artisan openlmnp:purge-legacy-files` supprime ceux que les versions antérieures ont
+  laissés (rapport par défaut, `--fix` pour agir)
+
+- **Les fichiers CSV que vous déposiez pour import n'étaient jamais supprimés.** Les trois
+  écrans d'import les déposaient à la **racine** du disque privé, sous un nom aléatoire, sans
+  aucun lien vers leur propriétaire — un export Airbnb, avec les noms de vos voyageurs, leurs
+  dates de séjour et les montants versés. Ils sont désormais rangés sous
+  `documents/{id}/imports`, **supprimés dès l'import terminé**, et une purge quotidienne
+  ramasse les aperçus abandonnés en cours de route. Les anciens sont traités par
+  `openlmnp:purge-legacy-files`
+
+- **L'étape « Recettes Airbnb » de l'assistant d'import annuel n'importait rien.** Le fichier
+  déposé n'était jamais lu : la condition qui gardait l'import portait sur une forme d'état
+  que Filament ne produit pas. L'assistant se terminait sur « Import terminé » sans avoir
+  créé la moindre recette, et sans le moindre message d'erreur
+
+#### Documentation
+
+- `FONCTIONNALITES.md` et `FAQ.md` décrivent enfin la **reprise d'une comptabilité
+  existante** (assistant en cinq étapes, cases Cerfa, contrôle de reprise) — la
+  fonctionnalité était livrée depuis la 1.5.0 sans sa page publique
+
+### Données publiques
+
+- **Vérification du SIREN dans la base Sirene.** Dans *Mon profil*, le champ SIREN contrôle
+  désormais la clé du numéro à la saisie. Le bouton « Vérifier dans Sirene », aussi présent sur
+  l'écran de télédéclaration, interroge l'API Recherche d'entreprises de l'État : entreprise
+  active ou cessée, date de création, code APE et ce qu'il signifie. Deux codes sont normaux
+  pour un loueur en meublé, 68.20A (location durable) et 55.20Z (courte durée) ; un autre code
+  est signalé comme à vérifier, jamais comme une erreur. Seul le SIREN part, et seulement au
+  clic. `SIRENE_ENABLED=false` retire le bouton
+- **Le DPE du bien, retrouvé et expliqué depuis sa fiche.** « Retrouver le DPE » cherche les
+  diagnostics publiés à l'adresse du bien dans la base de l'ADEME : s'il y en a plusieurs, ils
+  sont tous listés et rien n'est choisi à votre place. Le numéro peut aussi être saisi à la
+  main. La fiche indique ensuite ce que la classe permet : décence énergétique du bail meublé
+  (échéances 2025, 2028 et 2034, outre-mer compris) et obligation des meublés de tourisme, en
+  vigueur au 1er janvier 2034 sauf pour la résidence principale du loueur. Une alerte prévient
+  six mois avant l'expiration du DPE. ⚠️ Elle transmet l'**adresse** du bien (à
+  l'IGN, puis à l'ADEME), et seulement au clic — l'autocomplétion d'adresse ci-dessus est
+  l'autre fonctionnalité qui sort une adresse, et elle le fait au fil de la frappe. `DPE_ENABLED=false`
+  retire le bouton. Les outils MCP `get_property`, `create_property` et `update_property`
+  lisent et écrivent les quatre champs DPE
+- **Repère de loyer du marché dans le simulateur.** Quand la commune d'un bien est connue
+  (après une estimation DVF), le simulateur affiche un loyer d'annonce au m², avec son
+  intervalle à 95 %, tiré de la « Carte des loyers » de l'ANIL (data.gouv.fr, Licence
+  Ouverte 2.0). ⚠️ C'est le loyer d'une location **non meublée, charges comprises** : un
+  repère pour situer le bien, pas une recette de meublé, et il n'entre dans aucun calcul. À
+  Paris, Lyon et Marseille, la lecture se fait par arrondissement. La commande
+  `openlmnp:refresh-rent-map --if-missing`, planifiée chaque jour, importe les données sur une
+  instance neuve, puis **découvre seule le millésime suivant** sur l'API data.gouv.fr : elle
+  ne le cherche qu'à partir du 1er novembre (aucun appel le reste de l'année) et ne remplace
+  rien si le format d'un des quatre fichiers a changé. `RENT_MAP_ENABLED=false` coupe l'import
+  et l'affichage. Le simulateur et l'outil MCP `get_simulation` affichent le millésime
+  réellement importé, avec un lien vers sa fiche data.gouv.fr
+
+### Dossiers liés
+
+- **Dossier d'indivision offert, partagé entre indivisaires.** Depuis *Dossiers liés* (menu
+  Paramètres), créez un dossier séparé pour une indivision : son SIREN est vérifié dans la
+  base Sirene (nature juridique 2110, établissement actif) et verrouillé — lui comme le
+  caractère « indivision » du dossier ne changent plus ensuite. Un sélecteur dans le menu
+  utilisateur permet de l'ouvrir d'un clic (aucun mot de passe à retenir, aucune connexion
+  directe possible) ; un bandeau permanent rappelle le dossier ouvert et permet d'y revenir.
+  Biens, recettes, charges, justificatifs et coffre-fort restent propres à chaque dossier ; la
+  clé d'intelligence artificielle, le mode de navigation et les avis restent ceux du compte
+  principal, quel que soit le dossier ouvert. Nombre de dossiers illimité en auto-hébergement
+  (réglable), posé par abonnement sur le cloud. Fonctionnalité derrière
+  `LINKED_DOSSIERS_ENABLED`, désactivée par défaut
+- **Inviter le second indivisaire.** Depuis la fiche du dossier, saisissez son adresse
+  électronique : un courriel personnel lui parvient, valable 14 jours, révocable et relançable
+  tant qu'il n'a pas servi. Il l'accepte en se connectant avec cette même adresse, sur un
+  compte actif (ni suspendu, ni de démonstration, ni lui-même un dossier lié) — sans jamais
+  consommer d'offre. Chaque indivisaire peut ensuite quitter le dossier de son côté, et le
+  propriétaire peut révoquer un membre. Si le créateur du dossier résilie son abonnement ou le
+  quitte, l'administration passe automatiquement à un autre membre actif ; sans membre actif,
+  le dossier n'est jamais supprimé, seulement inaccessible le temps qu'il le redevienne
+- **Un indivisaire sans biens à lui accède gratuitement au dossier partagé.** Un héritier, un
+  conjoint ou une compagne sans location meublée personnelle n'a aucune raison de payer un
+  abonnement pour la seule indivision. Sur le lien d'invitation, qui n'a pas encore de compte
+  peut créer un accès gratuit d'indivisaire (nom et mot de passe seulement, l'adresse étant
+  celle de l'invitation et non modifiable) — même quand l'instance n'accepte aucune inscription
+  libre. Ce compte n'a jamais de dossier à lui : à la connexion, il arrive directement dans son
+  dossier lié, ou sur la liste s'il en a plusieurs, sans pouvoir saisir de biens personnels. Le
+  dossier reste accessible tant qu'il y subsiste au moins un autre membre abonné ou en compte
+  standard actif — pas de dossier gratuit perpétué sans personne pour le faire vivre — et
+  l'administration ne lui revient jamais. Un tel compte qui s'abonne un jour devient un compte
+  ordinaire sans perdre son accès au dossier
+- **Coffre-fort : une clé par personne, même en changeant de dossier.** Basculer vers un
+  dossier lié, ou en revenir, ne reverrouille plus le coffre de l'autre identité : chacune
+  garde sa propre clé déverrouillée tant que sa fenêtre d'inactivité ne l'a pas expirée
+- **Un jeton MCP peut agir pour un dossier lié.** Depuis *Jetons MCP* (toujours réservée au
+  compte principal), un nouveau jeton se crée désormais « pour » votre dossier personnel ou
+  pour un dossier dont vous êtes membre actif — un assistant IA connecté avec ce jeton
+  consulte et modifie alors les données du dossier, jamais les vôtres. L'appartenance est
+  **revérifiée à chaque appel** : membre révoqué, dossier archivé ou fermé, ou plus aucun
+  abonné actif derrière un accès gratuit d'indivisaire coupent le jeton dès l'appel suivant,
+  avec une erreur explicite — jamais un repli silencieux sur vos propres données. La limite de
+  débit, la suspension de compte et le journal d'audit (désormais complété du dossier visé)
+  restent ceux du compte principal, qui seul porte et révoque le jeton
+- **Deux onglets, deux dossiers : plus de saisie dans le mauvais.** La bascule vers un dossier
+  lié, ou le retour à votre dossier, vaut pour tout le navigateur. Un onglet resté ouvert sur
+  l'ancien dossier ne peut plus rien enregistrer : à sa première action, une fenêtre en français
+  (« Vous avez changé de dossier dans un autre onglet ») l'explique et propose de recharger la
+  page ; rien n'est enregistré. Une page simplement restée ouverte trop longtemps affiche, de
+  même, « Cette page a expiré » en français, là où apparaissait jusqu'ici un message en anglais
+- **Plus de déconnexion en revenant à votre dossier avec deux onglets ouverts.** Si l'autre
+  onglet envoyait une requête au moment précis de la bascule, le navigateur pouvait abandonner
+  la session ouverte par la bascule et renvoyer vers la page de connexion. L'ancienne session
+  est désormais marquée comme remplacée : la requête de l'autre onglet est refusée avec le
+  message ci-dessus, et votre session reste ouverte
+- **Interface des dossiers liés revue** (maquettes arbitrées le 2026-10-15) :
+  - *Dossiers liés* affiche désormais une **jauge** du quota, nomme chaque membre avec son
+    rôle, et « Archiver » passe par un menu puis une **vraie modale de confirmation**
+    (il ne se trouve plus à côté d'« Ouvrir »)
+  - **Créer un dossier lié** est un assistant en 3 étapes (SIREN, vérification Sirene,
+    nom) : un refus (forme juridique, SIREN déjà suivi, Sirene indisponible) s'affiche
+    **dans l'étape**, sans fermer la fenêtre ni perdre votre saisie, avec un lien vers le
+    support quand il peut aider. Le nom du dossier est proposé à partir de Sirene,
+    modifiable
+  - Dans un dossier lié, un **bandeau plein**, une **carte d'identité** dans la barre
+    latérale et un **rappel sur les formulaires de saisie** rendent l'interface impossible
+    à confondre avec votre dossier personnel. Le bouton de retour s'appelle désormais
+    « Revenir à mon dossier »
+  - **L'invitation à un second indivisaire explique ce qu'elle accorde avant l'envoi**, le
+    courriel (désormais aux couleurs de la marque) nomme l'expéditeur, le dossier et son
+    SIREN, et **la page d'acceptation demande une confirmation explicite** — là où
+    l'ouverture du lien suffisait jusque-là à rattacher le dossier. Un bouton « Refuser »
+    est proposé, et le cas « ce n'est pas le bon compte » se résout en un seul clic
+    (déconnexion puis retour au lien)
+
+### Suppression de compte
+
+- **« Supprimer mon compte »**, dans *Mon profil* : efface définitivement et
+  irréversiblement vos biens, exercices fiscaux, recettes, charges, amortissements,
+  travaux, mobilier, emprunts, justificatifs (coffre-fort compris, fichiers sur
+  disque compris) et jetons MCP. La confirmation demande le mot de passe actuel et
+  la ressaisie de l'adresse e-mail. Un dossier d'indivision dont vous êtes l'unique
+  membre actif est supprimé avec vous ; un dossier partagé reste accessible aux
+  autres membres, vous en êtes seulement retiré. Sur le cloud, la suppression est
+  refusée tant qu'un abonnement payant pourrait être actif, avec un renvoi vers la
+  résiliation (un compte membre d'indivision, gratuit par nature, n'est pas
+  concerné). Masquée pour un compte de démonstration et pour un dossier lié, qui
+  n'ont pas de suppression qui leur soit propre
+- **`php artisan openlmnp:account-delete {email}`** : la même suppression en ligne
+  de commande, pour un administrateur auto-hébergé. `--dry-run` affiche ce qui
+  serait supprimé sans rien effacer, `--force` saute la confirmation interactive.
+  Refuse le compte de démonstration public et le dernier administrateur de
+  l'instance
+- Droit à l'effacement (RGPD, art. 17) : jusqu'ici, aucune des deux voies n'existait
+  et les comptes de test devaient être effacés à la main dans `tinker`, sans purger
+  ni les justificatifs sur disque ni les jetons MCP
+- **Le journal des dossiers liés ne garde plus l'adresse d'un compte supprimé.**
+  Constaté sur la bêta : après une suppression, le journal d'un dossier supprimé
+  restait en base, avec l'adresse e-mail des personnes invitées et le SIREN. Le
+  journal d'un dossier supprimé part désormais avec lui, invitations à des adresses
+  sans compte comprises. Dans un dossier partagé qui survit, les lignes qui
+  concernent le compte supprimé gardent l'action et la date, sans son adresse, et
+  ses invitations à ce dossier sont effacées. `openlmnp:demo-cleanup` applique la
+  même règle
+- **`php artisan openlmnp:dossier-events-purge`** retire ces reliquats d'une base
+  existante (`--dry-run` pour compter sans rien modifier). Elle peut être relancée
+  sans effet
+
+#### Corrections (test de bout en bout du 2026-10-15)
+
+- **Dossier archivé pendant que vous y êtes encore** : la page d'erreur était un « 403 »
+  brut en anglais, et l'onglet resté ouvert pouvait produire une erreur 500 au lieu de vous
+  ramener proprement à votre dossier. Les pages 403, 404, 405 et 419 du panel sont désormais
+  en français, avec un bouton de retour
+- Le **guide de démarrage** ne propose plus « Créer votre bien » à un accès gratuit
+  d'indivisaire qui n'a aucun bien personnel à saisir
+- La **page d'invitation** n'affiche plus « l'inscription est fermée » juste au-dessus du
+  formulaire de compte gratuit d'indivisaire, qui fonctionne pourtant toujours
+- Un **nouveau dossier d'indivision** arrive désormais avec **deux lignes d'indivisaire
+  vides** prêtes à compléter (ou les indivisaires trouvés par Sirene, quand le registre les
+  donne), au lieu d'un formulaire vide malgré les deux lignes attendues par défaut
+- Une **invitation refusée** par l'invité s'affiche « Refusée », distincte d'une invitation
+  **révoquée** par le propriétaire du dossier
+- Le bouton **Suivant** de l'assistant de création se désactive tant que le SIREN saisi
+  n'est pas conforme, au lieu de rester cliquable sur un refus déjà affiché
+- Le **nom de dossier proposé par Sirene** ne se limite plus au seul mot « INDIVISION » : il
+  reprend les indivisaires du registre (dirigeants personnes physiques) quand ils sont
+  connus, ou reste vide sinon
+- Le sélecteur **« Pour »** d'un nouveau jeton MCP est désormais présélectionné sur « Mon
+  dossier personnel » au lieu de s'ouvrir vide
+- Le bouton d'aide flottant ne recouvre plus, sur mobile, le rappel « Sera enregistrée
+  dans » ni le bouton de validation d'un formulaire collé en bas d'écran
+- La colonne **« Avantage vs réel »** de l'assistant de clôture n'affiche plus en vert un
+  micro-BIC qui coûte en réalité plus cher que le régime réel
+- Correction d'une erreur JavaScript (« Livewire Entangle ») au chargement de l'assistant de
+  clôture, sur le bouton « Clôturer l'exercice »
+
+### Sécurité : conteneur sans root, CSP, cookie Secure
+
+Fin du point 20 de l'avis [GHSA-j4gm-g8m8-93x2](https://github.com/manganate006/openlmnp/security/advisories/GHSA-j4gm-g8m8-93x2).
+
+- **Image Docker sans root** : le serveur web et les tâches planifiées tournent sous
+  l'utilisateur `www-data` (UID 82). Le conteneur démarre en root le temps de remettre les
+  volumes `database/` et `storage/` à cet utilisateur, puis abaisse ses privilèges :
+  **aucune action à la mise à jour**, y compris avec des volumes créés par une version
+  précédente. Un `docker exec openlmnp php artisan …` s'exécute lui aussi sous `www-data`.
+  Si les volumes ne peuvent pas changer de propriétaire (NFS en `root_squash`…), le
+  conteneur le signale et continue en root. Le serveur reste celui de PHP (`artisan serve`)
+- **Content-Security-Policy** posée par l'application, compatible avec le panel : scripts,
+  styles et connexions limités à l'instance, à jsDelivr et, si GTM est configuré, à Google ;
+  ni plugin, ni formulaire envoyé ailleurs, ni affichage dans un cadre tiers. Réglable par
+  `CSP_ENABLED`, `CSP_REPORT_ONLY`, `CSP_EXTRA_SOURCES` et `CSP_POLICY`
+- **Cookie de session `Secure`** aussi sur le nom d'hôte d'un `APP_URL` en `https`, même
+  quand le proxy qui termine TLS n'est pas déclaré de confiance ; une instance du réseau
+  local servie en HTTP n'est pas concernée. `SESSION_SECURE_COOKIE` et `HSTS_MAX_AGE`
+  passent désormais par l'image Docker
+
+### Inscription, version et image Docker
+
+- **Page « Version et nouveautés » ouverte à tous les comptes** : version installée, dernière
+  version publiée et notes des dernières releases, jusqu'ici réservées à l'administrateur. Le
+  relevé GitHub est mis en cache une heure ; `UPDATE_CHECK_ENABLED=false` le coupe pour une
+  instance sans accès sortant. Une mise à jour n'est plus annoncée à qui ne peut pas
+  l'appliquer, et la liasse PDF indique la version qui l'a produite au lieu d'un « v0.1 » figé
+- **`/register` n'est plus une impasse quand l'inscription est fermée** : l'adresse renvoie
+  vers la page de souscription déclarée par `OPENLMNP_SIGNUP_URL`, ou vers la connexion avec
+  une explication. Le mode sur invitation garde sa propre page d'inscription
+- **PHP 8.4.27 dans l'image Docker**, comme en 1.6.11 : correctif des failles critiques
+  CVE-2026-109618 et CVE-2026-109619 (exécution de code à distance sans authentification).
+  La construction de l'image échoue si PHP est antérieur à 8.4.27, et la mise à jour par le
+  script Proxmox met aussi à niveau les paquets PHP
+- **Avis de sécurité dans l'application**, comme en 1.6.11 : la réponse du check-in quotidien
+  de télémétrie peut porter des avis de sécurité, affichés en bandeau aux administrateurs tant
+  que la version installée est concernée. Rien de plus n'est envoyé ; sans télémétrie
+  (`TELEMETRY_ENABLED=false`), aucun avis n'est reçu
+- **L'image Docker indique le commit dont elle est construite** (`/image-commit`)
+- **README et fiche du registre MCP** renvoient vers le site openlmnp.fr
+- **`UPDATE_SELF_APPLY_HINT`** est désormais transmise par l'image Docker : la consigne de mise
+  à jour propre à un hébergement était ignorée
+
+### Reprendre un dossier existant : corrections relevées en rejouant une liasse réelle
+
+- **Le contrôle ne confond plus un écart dû aux frais d'acquisition avec une convention de
+  prorata.** Quand l'écart sur le cumul d'amortissements correspond exactement à ce que
+  l'application amortit en frais capitalisés, l'écran le dit explicitement : ces frais sont
+  amortis en 030 dans OpenLMNP, en 016 chez votre cabinet. Les causes listées en cas d'écart
+  plus marqué citent désormais aussi les travaux et le mobilier
+- **L'assistant signale les travaux et le mobilier déjà amortis**, que son éditeur de
+  composants ne reprend pas lui-même, et renvoie vers leurs propres écrans de saisie, où une
+  section « Reprise d'une comptabilité existante » existait déjà. Leur cumul d'ouverture est
+  désormais borné sur le dernier exercice tenu par le cabinet, comme celui des composants
+- **Un rechargement de page après « Terminer la reprise » ne perd plus la méthode choisie ni
+  les reports saisis** : l'assistant se réveille depuis l'exercice déjà enregistré au lieu de
+  repartir d'un formulaire vierge. « Revoir ma reprise » retrouve aussi la case 044 et le
+  résultat fiscal lu sur la liasse, désormais conservés sur l'exercice, et l'étape 3 montre le
+  plan recopié plutôt qu'un nouveau dépôt de liasse
+- **Après une reprise, l'assistant de clôture ne réclame plus l'exercice précédent**, même
+  quand la liasse ne porte ni amortissement différé ni déficit (le cas le plus courant d'un
+  loueur bénéficiaire) : une reprise terminée est le point de départ de la chaîne d'exercices
+- **Après une reprise, l'assistant de clôture propose l'exercice qui suit la dernière liasse**
+  (2026 pour une liasse 2025 déposée par le cabinet), et non plus l'année déjà déclarée, qu'il
+  fallait corriger à la main. Si des exercices ont déjà été clôturés depuis la reprise, il
+  propose le premier qui ne l'est pas. Sans reprise, l'année proposée ne change pas
+- **Le contrôle range ses diagnostics par ce que les chiffres appuient.** Une cause qu'un
+  montant explique passe devant celles qu'une simple condition rend plausibles, et une cause
+  qui ne peut pas jouer sur la ligne n'y est plus citée (ni prorata ni part du terrain sur le
+  total des immobilisations brutes). Un écart sur la case 030 égal aux frais d'acquisition
+  amortis, avec une case 044 identique, est marqué « expliqué » : les frais sont amortis des
+  deux côtés, en 016 chez le cabinet
+- **Le bouton qui passe les frais d'acquisition en charges n'apparaît plus que si la case 044
+  montre que le cabinet ne les porte pas parmi ses immobilisations.** Il était proposé dès
+  que l'écart sur la case 030 valait leur cumul, y compris quand le cabinet les amortit : le
+  suivre aurait retiré les frais des immobilisations et supprimé leur dotation annuelle
+- **La recopie d'une liasse n'est plus refusée pour quelques centimes.** Une liasse arrondit
+  chaque ligne à l'euro : un dépassement de moins d'un euro par ligne est retiré de la plus
+  grosse ligne, et signalé. Un vrai dépassement reste refusé, mais s'affiche désormais au
+  centime près au lieu de « 0 € d'excédent »
+- **Les lignes lues gardent leur rubrique du 2033-C** : « Constructions » était rangée en
+  « Autres immobilisations (470 / 560) »
+- **La dotation lue sur la liasse est conservée** : l'éditeur d'amortissements la recalculait
+  (base divisée par la durée) et l'enregistrait ainsi au premier clic sur « Enregistrer »
+- **La case 044 n'est plus préremplie avec la case 028** : elle reçoit la somme des cases 028
+  et 014 lues (ou la case 044 elle-même si la lecture la fournit)
+- **Le champ « Prix d'acquisition » dit ce qu'il attend** (le prix payé pour le bien,
+  terrain compris, comptes 211 et 213 de la balance) sans plus citer de case Cerfa
+
+### Retours d'utilisateurs
+
+- **Liasse : cadre « Déficits reportables » du 2033-D laissé vide** ([#19](https://github.com/manganate006/openlmnp/issues/19),
+  merci @cocool97). La case 870, intitulée « Total des déficits restant à reporter », portait
+  les amortissements différés de l'art. 39 C, et la 984 comptait déjà le déficit de l'exercice.
+  La notice officielle (2033-NOT-SD) veut 870 = 984 + 860, et réserve surtout ce cadre aux
+  sociétés à l'impôt sur les sociétés : un déficit LMNP est repris par l'administration en
+  cases 5GA à 5GJ de la 2042-C-PRO. Le cadre est donc laissé vide, et les amortissements
+  différés, qui n'ont pas de case, sont suivis à part à l'écran et dans le PDF (ouverture,
+  différés de l'exercice en 318, repris en 350, clôture). La reprise d'un dossier continue de
+  les lire en case 870 de l'ancienne liasse, où beaucoup de cabinets les portent
+- **Liasse : case 136 du bilan (2033-A) = résultat comptable** ([#20](https://github.com/manganate006/openlmnp/issues/20),
+  merci @cocool97). Elle reprenait le résultat fiscal : dès qu'une part de l'amortissement
+  était mise en report (art. 39 C), le bilan affichait 0 € au lieu du déficit comptable de la
+  ligne 310, et le compte de l'exploitant (120), calculé par différence, était sous-évalué
+  d'autant. Un nouveau contrôle vérifie « case 136 = ligne 310 »
+- **Liasse : montants à l'euro, et plus de « ? » dans le PDF** ([#21](https://github.com/manganate006/openlmnp/issues/21)).
+  Le 2033-B, la 2031, la 2033-D et l'écran de télédéclaration étaient au centime, le 2033-A
+  et le 2033-C à l'euro. Tous les formulaires sont désormais à l'euro : chaque ligne est
+  arrondie, puis chaque total est recalculé sur les lignes arrondies, si bien que 254 = 572
+  aussi sur les montants imprimés. Quand l'amortissement est plafonné, l'écart d'arrondi est
+  porté par la ligne 318 et le résultat fiscal reste à 0 €. Les annexes de détail restent au
+  centime. Le signe moins des colonnes de montants du PDF s'imprimait « ? » (police Courier
+  sans ce caractère) : ces colonnes passent en DejaVu Sans Mono
+- **Coffre-fort : lien direct vers un justificatif scellé.** Un justificatif déposé coffre
+  verrouillé ne s'ouvre que dans le navigateur. Ouvert par son lien direct (clic du milieu,
+  nouvel onglet), il partait en téléchargement tronqué : une page explique désormais comment
+  l'ouvrir. La page « coffre verrouillé » (423) a le même habillage que les autres erreurs,
+  et les icônes d'un justificatif ont un libellé en français (« Ouvrir dans un nouvel
+  onglet », « Télécharger ») au lieu d'une clé technique
+- **L'application a son icône d'onglet** (#18) : `/favicon.ico` était le fichier vide du
+  squelette Laravel et le panel n'en déclarait aucune. L'icône est celle du site (maison
+  blanche sur carré émeraude), en SVG et en `.ico`, déclarée dans le panel comme sur les pages
+  publiques (invitation, confidentialité, erreurs)
+- **« Enregistrer » ramène à la liste** (#16) sur les charges, les recettes, les emprunts, le
+  mobilier et les travaux ; pour le mobilier et les travaux, à la liste du bien concerné. La
+  proposition de générer les échéances d'une charge mensuelle s'affiche sur la liste. La fiche
+  d'un bien et l'exercice restent sur le formulaire, où l'on enchaîne plusieurs enregistrements
+- **Part d'usage pour la location sur une charge** (#17) : un forfait téléphone, un abonnement
+  internet ou un logiciel qui sert aussi à titre personnel se déduit à l'usage, par exemple
+  30 %, et non plus seulement en entier ou à la quote-part surface (qui vaut 100 % pour un
+  logement loué en entier). La part d'usage s'applique à chaque charge, avant la quote-part
+  surface, partout où les charges sont comptées : résultat fiscal, écritures et FEC,
+  déclaration de TVA, liasse PDF (où elle figure ligne par ligne), simulateur, projection,
+  tableau de bord. Elle est recopiée sur les échéances générées et sur une charge dupliquée,
+  exportée avec le dossier, et exposée par le serveur MCP (`business_use_percent`). Champ
+  vide = 100 % : aucune charge existante ne change
+
 ## [1.6.11] - 2026-10-23
 
 ### Sécurité
@@ -275,6 +1204,7 @@ fiscal de l'exercice (352/354) et la 2042-C-PRO ne changent pas.
   terminer normalement en annonçant « Rappels envoyés : 0 ». Un envoi en échec n'étant jamais
   marqué comme fait, il était repris à chaque passage horaire sans que rien ne l'indique.
 
+
 ## [1.6.3] - 2026-09-06
 
 ### Corrections
@@ -291,6 +1221,7 @@ fiscal de l'exercice (352/354) et la 2042-C-PRO ne changent pas.
   alors *tout*, laissant les composants en pourcentage calculés sur une valeur du bien qui
   n'existait plus. L'écran affichait en conséquence deux chiffres contradictoires — un écart au
   bandeau, un autre déduit des compteurs. Les deux concordent maintenant par construction
+
 
 ## [1.6.2] - 2026-09-06
 
@@ -339,6 +1270,7 @@ fiscal de l'exercice (352/354) et la 2042-C-PRO ne changent pas.
   recalculés dès que la base change, quel que soit l'écran ou l'outil qui la modifie. Une base
   **saisie à la main** reste intouchée — c'est un choix explicite — et l'écart éventuel continue
   d'être signalé par les contrôles de cohérence (signalé par cocool97, issue #11)
+
 
 ## [1.6.0] - 2026-09-05
 

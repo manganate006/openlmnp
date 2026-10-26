@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\AccountingEntry;
 use App\Models\FiscalYear;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Génération du Fichier des Écritures Comptables (FEC).
@@ -97,7 +96,7 @@ class FecService
     ];
 
     /**
-     * Génère le FEC pour un exercice fiscal.
+     * Nom réglementaire du fichier : {SIREN}FEC{AAAAMMJJ}.txt (art. A.47 A-1 du LPF).
      */
     /** Une valeur de colonne : tabulations et sauts de ligne remplacés par une espace. */
     public static function field(mixed $value): string
@@ -105,18 +104,32 @@ class FecService
         return trim(preg_replace('/[\t\r\n]+/', ' ', (string) $value));
     }
 
-    public function generate(FiscalYear $fiscalYear): string
+    public function filename(FiscalYear $fiscalYear): string
+    {
+        $siren = $fiscalYear->user->siren ?? '000000000';
+
+        return "{$siren}FEC{$fiscalYear->year}1231.txt";
+    }
+
+    /**
+     * Produit le FEC de l'exercice et rend son contenu. **Rien n'est écrit sur le disque.**
+     *
+     * Le FEC était auparavant déposé en clair dans `storage/app/private/fec/` : c'est le
+     * document le plus complet que l'application sache produire — toutes les écritures, tous
+     * les montants, le SIREN — et il vivait sur le même volume que les justificatifs que le
+     * coffre-fort chiffre.
+     *
+     * Il se reconstruit intégralement depuis `accounting_entries`, et se reconstruisait déjà à
+     * chaque téléchargement : le fichier posé sur le disque était réécrit puis relu dans la
+     * même requête, jamais servi ensuite. Seule la date de génération est conservée.
+     */
+    public function render(FiscalYear $fiscalYear): string
     {
         $entries = AccountingEntry::where('fiscal_year_id', $fiscalYear->id)
             ->orderBy('entry_date')
             ->orderBy('piece_ref')
             ->orderBy('id')
             ->get();
-
-        $siren = $fiscalYear->user->siren ?? '000000000';
-        $yearEnd = $fiscalYear->year . '1231';
-        // Format légal : {SIREN}FEC{AAAAMMJJ}.txt
-        $filename = "{$siren}FEC{$yearEnd}.txt";
 
         $lines = [];
 
@@ -151,15 +164,9 @@ class FecService
 
         $content = implode("\r\n", $lines) . "\r\n";
 
-        // Sauvegarder
-        // Un dossier par utilisateur, comme la liasse : sans SIREN renseigné, tous les
-        // comptes produisent le même nom de fichier pour une même année.
-        $path = "fec/{$fiscalYear->user_id}/{$fiscalYear->year}/{$filename}";
-        Storage::put($path, $content);
+        $fiscalYear->update(['fec_generated_at' => now()]);
 
-        $fiscalYear->update(['fec_path' => $path]);
-
-        return $path;
+        return $content;
     }
 
     /**

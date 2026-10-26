@@ -15,7 +15,7 @@ use Illuminate\Notifications\Notification;
  *
  * ⚠️ Aucun filet chez le prestataire : un envoi transactionnel ne consulte PAS la liste de
  * désinscription de Brevo, et celui-ci part en SMTP direct. Le consentement repose
- * entièrement sur notre code — `demo_email_consent_at`, horodaté.
+ * entièrement sur notre code - `demo_email_consent_at`, horodaté.
  *
  * Contenu volontairement NEUTRE : ce dépôt est public. Le renvoi commercial n'apparaît que
  * si `demo.links.pro` est renseignée, vide par défaut.
@@ -34,7 +34,7 @@ class DemoExpiring extends Notification
     }
 
     /**
-     * ⚠️ Le destinataire ne se choisit PAS ici. `MailMessage` n'a pas de `->to()` — c'est une
+     * ⚠️ Le destinataire ne se choisit PAS ici. `MailMessage` n'a pas de `->to()` - c'est une
      * méthode de `Mailable`, et l'appeler lève une `Error` fatale AU MOMENT DE L'ENVOI. Ici
      * la fatale était en plus INVISIBLE : `DemoExpiryNotifyCommand` l'attrape, et son marqueur
      * d'envoi n'étant posé qu'après le `try`, le même compte serait réessayé toutes les heures

@@ -2,12 +2,18 @@
     <h3>Télédéclaration</h3>
     <p>Guide étape par étape pour reporter vos résultats LMNP sur votre déclaration de revenus en ligne.</p>
 
+    <h3>Vérifier mon SIREN</h3>
+    <p>Si un SIREN est renseigné dans votre profil, le bouton <strong>« Vérifier dans Sirene »</strong>, en haut de cet écran, interroge l'API Recherche d'entreprises (DINUM, données Insee) — uniquement à ce clic, jamais à l'ouverture de la page. Il affiche si l'entreprise est active ou cessée, sa date de création, son code APE et ce qu'il signifie pour un loueur en meublé (68.20A ou 55.20Z sont tous deux normaux, voir l'aide de la page Mon profil). Sans SIREN renseigné, le bouton n'apparaît pas.</p>
+
     <h3>Formulaire 2042-C-PRO</h3>
     <ul>
         <li data-icon="&#x2705;"><strong>Case 5NA</strong> &mdash; Si votre résultat est un <strong>bénéfice</strong> (5NK sans adhésion à un organisme de gestion agréé)</li>
         <li data-icon="&#x274C;"><strong>Case 5NY</strong> &mdash; Si votre résultat est un <strong>déficit</strong> (5NZ sans organisme de gestion agréé)</li>
     </ul>
     <p>L'écran vous indique la case retenue et le montant à y porter : recopiez-les tels quels.</p>
+
+    <h3>Montants à l'euro</h3>
+    <p>Les formulaires se déclarent en euros entiers : l'écran et le PDF arrondissent chaque ligne à l'euro, puis recalculent chaque total à partir des lignes arrondies. Un total est donc toujours la somme de ce qui est affiché au-dessus. Le montant à reporter sur la 2042-C-PRO peut ainsi différer d'un euro du résultat au centime affiché dans votre exercice. Les annexes de détail du PDF restent au centime, pour que vous puissiez refaire chaque ligne à la main.</p>
 
     <h3>Étapes sur impots.gouv.fr</h3>
     <div class="ctx-step"><span class="ctx-step-num">1</span><span class="ctx-step-text">Connectez-vous sur <strong>impots.gouv.fr</strong></span></div>
@@ -16,10 +22,16 @@
     <div class="ctx-step"><span class="ctx-step-num">4</span><span class="ctx-step-text">Reportez le montant du résultat dans la case appropriée</span></div>
     <div class="ctx-step"><span class="ctx-step-num">5</span><span class="ctx-step-text">Validez et conservez l'accusé de réception</span></div>
 
+    <h3>Dossier en indivision : l'annexe 2031 bis</h3>
+    <p>Si votre profil déclare le dossier comme une indivision, l'écran ajoute la section <strong>2031 bis-SD</strong> (cadre E), présentée avec les colonnes du formulaire papier : indivisaire, qualité, BIC (« M » pour des BIC non professionnels), quote-part, bénéfice et déficit. Une <strong>ligne de total</strong> en bas du tableau prouve que la somme des quotes-parts et des montants répartis égale exactement le résultat de la 2031-SD : l'écart d'arrondi, d'un centime au plus, va au dernier indivisaire. Le PDF reprend la même ligne de total.</p>
+    <p>La rubrique 2042-C-PRO devient alors <strong>une carte par indivisaire</strong> : SA case, SON montant, à reporter sur sa propre déclaration de revenus &mdash; jamais le résultat entier. Si les quotes-parts ne totalisent pas 100 %, aucun montant n'est affiché et un contrôle rouge le signale.</p>
+    <p>Un contrôle <strong>orange</strong>, distinct de celui des amortissements ci-dessous, nomme les indivisaires dont l'adresse ou la date et le lieu de naissance manquent encore &mdash; demandés par la notice de la 2031-SD. Il ne bloque rien et ne masque aucun montant : complétez-les dans votre profil, rubrique « Indivision », avant le dépôt.</p>
+
     <h3>Contrôles de cohérence</h3>
-    <p>En bas de l'écran, trois vérifications rapprochent des montants que les formulaires calculent séparément. Elles ne remplacent pas votre relecture, mais elles attrapent les incohérences les plus courantes avant que vous ne saisissiez la liasse.</p>
+    <p>En bas de l'écran, quatre vérifications (cinq pour une indivision, avec celle de la répartition) rapprochent des montants que les formulaires calculent séparément. Elles ne remplacent pas votre relecture, mais elles attrapent les incohérences les plus courantes avant que vous ne saisissiez la liasse.</p>
     <ul>
         <li data-icon="&#x1F9EE;"><strong>Ligne 572 = ligne 254</strong> &mdash; La dotation aux amortissements de l'exercice doit être la même dans le 2033-C et dans le compte de résultat.</li>
+        <li data-icon="&#x1F4D2;"><strong>Case 136 = ligne 310</strong> &mdash; Le bilan porte le résultat <em>comptable</em> du compte de résultat, amortissement compris en entier, et non le résultat fiscal. Les deux diffèrent quand une partie de l'amortissement est mise en report : un résultat fiscal à 0 € va alors avec un résultat comptable négatif. Le compte de l'exploitant (case 120) se déduit des autres cases du bilan.</li>
         <li data-icon="&#x1F3E0;"><strong>Case 044 = ligne 490</strong> &mdash; Le total des immobilisations brutes doit être le même au bilan et dans le tableau des immobilisations.</li>
         <li data-icon="&#x2696;&#xFE0F;"><strong>310 + 318 − 350 = résultat fiscal</strong> &mdash; Le compte de résultat, recalculé depuis vos saisies, doit retomber sur le résultat de l'exercice. Un écart veut dire qu'une recette ou une charge a changé depuis le dernier calcul : sur un exercice clôturé, c'est une saisie faite après la clôture.</li>
     </ul>
@@ -50,12 +62,13 @@
     <p>Rien à recopier : ce tableau n'est pas un formulaire Cerfa, il sert à retrouver la provenance d'un chiffre qui vous surprend. Une précision utile pour le lire : les <strong>composants du bien ventilent</strong> sa valeur, ils ne s'y ajoutent pas &mdash; la colonne « Valeur brute » ne se totalise donc pas, et c'est voulu.</p>
     <p>Si l'explication ne suffit pas, le bouton <strong>« Rapport de diagnostic »</strong> en haut de l'écran rassemble en un texte tout ce qui produit votre liasse : valeurs saisies, base amortissable, composants, travaux, mobilier, passage au résultat (totaux par bien, plafonnement, déficits), lignes obtenues et écarts. Le libellé de vos charges n'y figure pas. Il ne part nulle part tout seul, et ne contient ni votre nom, ni votre adresse, ni votre commune &mdash; joignez-le à votre message pour qu'on puisse vous répondre sans vous faire tout ressaisir.</p>
 
-    <h3>Tableau 2033-D : deux reports à ne pas confondre</h3>
-    <p>Le 2033-D suit <strong>deux stocks distincts</strong>, que l'administration fait d'ailleurs suivre par deux états séparés. Les mélanger, c'est déclarer des reports que vous n'avez pas.</p>
+    <h3>Tableau 2033-D : un cadre à laisser vide, deux reports à ne pas confondre</h3>
+    <p>Le cadre <strong>« Déficits reportables »</strong> du 2033-D (cases 982, 983, 984, 860 et 870, où 870 = 984 + 860) se laisse <strong>vide</strong> en location meublée non professionnelle : la notice officielle le réserve aux sociétés à l'impôt sur les sociétés. Vous suivez pourtant deux reports bien distincts, et les mélanger, c'est déclarer des reports que vous n'avez pas.</p>
     <ul>
-        <li data-icon="&#x1F4C9;"><strong>Cases 982 / 983 / 984 &mdash; vos déficits reportables</strong> : le stock à l'ouverture, la part imputée sur le bénéfice de l'exercice, puis ce qui reste à reporter à la clôture (case 860 : le déficit né de l'exercice lui-même). Un déficit de location meublée non professionnelle ne s'impute que sur vos <strong>bénéfices de même nature</strong>, et seulement pendant <strong>dix ans</strong> (CGI art. 156, I-1&deg; ter). Il ne s'impute jamais sur votre salaire.</li>
-        <li data-icon="&#x1F522;"><strong>Case 870 &mdash; vos amortissements différés</strong> : la part d'amortissement que vous n'avez pas pu déduire parce qu'elle aurait creusé un déficit. Elle se reporte <strong>sans limite de durée</strong> et n'est pas un déficit.</li>
+        <li data-icon="&#x1F4C9;"><strong>Vos déficits reportables</strong> : l'administration les reprend elle-même en cases 5GA à 5GJ de la 2042-C-PRO, une case par année d'origine. Un déficit de location meublée non professionnelle ne s'impute que sur vos <strong>bénéfices de même nature</strong>, et seulement pendant <strong>dix ans</strong> (CGI art. 156, I-1&deg; ter). Il ne s'impute jamais sur votre salaire. Le PDF détaille le stock dans l'annexe « Déficits antérieurs ».</li>
+        <li data-icon="&#x1F522;"><strong>Vos amortissements différés</strong> : la part d'amortissement que vous n'avez pas pu déduire parce qu'elle aurait creusé un déficit. Elle se reporte <strong>sans limite de durée</strong> et n'est pas un déficit. Elle n'a pas de case : l'écran et le PDF en donnent le suivi (ouverture, différés de l'exercice en ligne 318, repris en ligne 350, clôture), à conserver d'une année sur l'autre.</li>
     </ul>
+    <p>Jusqu'à la 2.0, OpenLMNP remplissait ce cadre : les déficits en 982 à 984, et les amortissements différés en 870. Beaucoup de cabinets y portent aussi ces derniers : c'est pourquoi la reprise d'un dossier les cherche encore en case 870 de votre ancienne liasse.</p>
 
     <div class="ctx-warning">
         <strong>Vos anciennes liasses portaient l'amortissement différé dans les cases de déficits.</strong> Jusqu'à la version 1.3.2, les cases 982, 983 et 984 recevaient le montant des amortissements réputés différés : une liasse déjà téléchargée ou déjà transmise affiche donc des déficits qui n'existaient pas. Les valeurs de cet écran sont les valeurs corrigées. Si une déclaration déjà déposée est concernée, régénérez la liasse depuis la page Exercices &mdash; un encart vous le rappelle en haut de cet écran tant que vous avez une liasse d'avant la correction.

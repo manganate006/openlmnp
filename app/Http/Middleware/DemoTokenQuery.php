@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Conséquences :
  * - l'URL de base `…/mcp` répond aux **health-checks / inspecteurs anonymes** (Glama, etc.)
- *   → 200 + serverInfo + 44 outils (démo), plus de 401 ;
+ *   → 200 + serverInfo + liste complète des outils (démo), plus de 401 ;
  * - la démo est **essayable sans configuration** (pas besoin de `?demo_token=`) ;
  * - un **vrai en-tête `Authorization`** (token perso) a la **priorité** → accès à ses
  *   propres données (aucune régression) ;

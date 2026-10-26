@@ -87,8 +87,8 @@ class GetDashboardSummary extends Tool
                 'total_depreciation_eur'    => bcdiv((string) $fiscalYear->total_depreciation, '100', 2),
                 'capped_depreciation_eur'   => bcdiv((string) $fiscalYear->capped_depreciation, '100', 2),
                 'deferred_depreciation_eur' => bcdiv((string) $fiscalYear->deferred_depreciation, '100', 2),
-                'has_pdf'                   => $fiscalYear->pdf_path !== null,
-                'has_fec'                   => $fiscalYear->fec_path !== null,
+                'has_pdf'                   => $fiscalYear->tax_return_generated_at !== null,
+                'has_fec'                   => $fiscalYear->fec_generated_at !== null,
             ];
         }
 

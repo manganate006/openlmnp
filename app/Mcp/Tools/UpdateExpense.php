@@ -45,6 +45,7 @@ class UpdateExpense extends Tool
             'category'       => "nullable|in:{$categoryList}",
             'description'    => 'nullable|string|max:500',
             'is_dedicated'   => 'nullable|boolean',
+            'business_use_percent' => 'nullable|numeric|min:0|max:100',
             'recurring_type' => "nullable|in:{$recurringList}",
             'tva_rate'       => 'nullable|numeric|min:0|max:100',
             'notes'          => 'nullable|string',
@@ -77,6 +78,11 @@ class UpdateExpense extends Tool
             $updates['is_dedicated'] = $validated['is_dedicated'];
         }
 
+        // 100 remet la charge entièrement à la location (NULL en base).
+        if (array_key_exists('business_use_percent', $validated) && $validated['business_use_percent'] !== null) {
+            $updates['business_use_bp'] = Expense::percentToBp($validated['business_use_percent']);
+        }
+
         if (array_key_exists('recurring_type', $validated) && $validated['recurring_type'] !== null) {
             $updates['recurring_type'] = $validated['recurring_type'];
         }
@@ -104,6 +110,7 @@ class UpdateExpense extends Tool
             'category'       => $expense->category,
             'description'    => $expense->description,
             'is_dedicated'   => $expense->is_dedicated,
+            'business_use_percent' => $expense->business_use_bp === null ? null : $expense->business_use_bp / 100,
             'recurring_type' => $expense->recurring_type,
             'notes'          => $expense->notes,
         ]);
@@ -118,6 +125,7 @@ class UpdateExpense extends Tool
             'category'       => $schema->string('Catégorie : property_tax, insurance, energy, maintenance, supplies, platform_fees, accounting, telecom, travel, cleaning, other')->nullable(),
             'description'    => $schema->string('Description de la charge')->nullable(),
             'is_dedicated'   => $schema->boolean('Charge 100% dédiée à la location ou au prorata')->nullable(),
+            'business_use_percent' => $schema->number("Part d'usage pour la location en pourcentage, pour une charge aussi personnelle (ex: 30 pour un forfait téléphone utilisé à 30 % pour la location). 100 = entièrement à la location. S'applique avant la quote-part surface.")->nullable(),
             'recurring_type' => $schema->string('Type de récurrence : once, monthly, quarterly, yearly')->nullable(),
             'tva_rate'       => $schema->number('Taux de TVA en pourcentage (ex: 20 pour 20%)')->nullable(),
             'notes'          => $schema->string('Notes libres')->nullable(),

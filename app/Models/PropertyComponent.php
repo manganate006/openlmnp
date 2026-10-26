@@ -81,6 +81,28 @@ class PropertyComponent extends Model
     public const CERFA_CATEGORY_INTANGIBLE = 'incorporelles';
 
     /**
+     * La ligne 420/510 du 2033-C — SENTINELLE, jamais une catégorie stockée.
+     *
+     * ⚠️ Un terrain ne s'amortit JAMAIS (aucune doctrine, aucune exception) : il ne peut
+     * matériellement pas devenir un `PropertyComponent`, qui porte toujours une durée et une
+     * dotation. Cette constante sert uniquement à ce que `RepriseDossier::applyLiasse()`
+     * REFUSE la ligne « Terrains » d'un 2033-C lu par l'IA — jamais à l'afficher : elle est
+     * volontairement absente de `cerfaCategoryLabels()`, exactement comme
+     * `CERFA_CATEGORY_INTANGIBLE`. Sans ce refus, la ligne tombait dans « autres
+     * immobilisations » (470/560) faute de durée imprimée par la liasse, l'assistant lui
+     * complétait une durée par défaut de 10 ans, et le terrain se mettait à « s'amortir » —
+     * constaté lors d'un test de reprise (ligne « Terrains », case 420 du 2033-C).
+     *
+     * La base amortissable EXCLUT déjà le terrain, séparément, via `land_percentage` sur le
+     * bien (`Property::getDepreciableBaseAttribute()`) — c'est la SEULE mécanique
+     * d'exclusion du terrain, et `TaxReturnService::compute2033A()` / `ReprisesCheckService`
+     * s'appuient dessus, pas sur les composants. Une ligne « Terrains » important malgré tout
+     * dans les composants s'ajouterait à cette exclusion déjà faite, sans jamais s'en
+     * soustraire nulle part.
+     */
+    public const CERFA_CATEGORY_LAND = 'terrain';
+
+    /**
      * Rattachement d'un composant du catalogue à sa ligne du 2033-C.
      *
      * ⚠️ Recopié à l'identique de la table qui vivait dans `TaxReturnService::compute2033C()`,
@@ -138,6 +160,31 @@ class PropertyComponent extends Model
     public static function cerfaCategoryForName(?string $name): string
     {
         return self::LEGACY_NAME_TO_CATEGORY[$name] ?? self::CERFA_CATEGORY_OTHER;
+    }
+
+    /**
+     * Rubrique d'une ligne du 2033-C lue sur une liasse, d'après son INTITULÉ Cerfa.
+     *
+     * ⚠️ `cerfaCategoryForName()` ne connaît que les noms de NOTRE catalogue (« Gros œuvre »,
+     * « Toiture »…). Une liasse porte les intitulés du formulaire : « Constructions »,
+     * « Installations techniques », « Installations générales, agencements »… Passés par le
+     * catalogue, ils tombaient tous dans « Autres immobilisations (470 / 560) » ; constaté le
+     * 2026-10-15 sur la ligne Constructions d'un dossier de test.
+     *
+     * L'ordre compte : « installations techniques » avant « installations générales », et
+     * le catalogue en dernier recours pour une liasse qui reprendrait nos propres noms.
+     */
+    public static function cerfaCategoryForLiasseLabel(?string $label): string
+    {
+        $label = trim((string) $label);
+        $lower = mb_strtolower($label);
+
+        return match (true) {
+            (bool) preg_match('/construction|gros\s*(œ|oe)uvre|b[âa]timent/u', $lower) => self::CERFA_CATEGORY_CONSTRUCTIONS,
+            (bool) preg_match('/installations?\s+techniques?|mat[ée]riel\s+et\s+outillage/u', $lower) => self::CERFA_CATEGORY_INSTALLATIONS,
+            (bool) preg_match('/installations?\s+g[ée]n[ée]rales?|agencements?|am[ée]nagements?/u', $lower) => self::CERFA_CATEGORY_FITTINGS,
+            default => self::cerfaCategoryForName($label),
+        };
     }
 
     /** Ligne Cerfa effective : la catégorie posée, à défaut celle que le nom impliquait. */

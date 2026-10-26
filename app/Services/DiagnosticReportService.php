@@ -79,9 +79,9 @@ class DiagnosticReportService
 
         $fiscalYear = $this->fiscalYearService->getOrCreate($user, $year);
 
-        $form2033A = $this->taxReturnService->compute2033A($fiscalYear, $properties, $year);
         $breakdown = $this->taxReturnService->resultBreakdown($fiscalYear, $properties, $year);
         $form2033B = $this->taxReturnService->compute2033B($fiscalYear, $properties, $year, $breakdown);
+        $form2033A = $this->taxReturnService->compute2033A($fiscalYear, $properties, $year, $form2033B['310']);
         $form2033C = $this->taxReturnService->compute2033C($properties, $year);
 
         $report['forms'] = [

@@ -51,6 +51,7 @@ class RecurringExpenseService
         'amount',
         'tva_rate',
         'is_dedicated',
+        'business_use_bp',
         'recurring_type',
         'notes',
     ];

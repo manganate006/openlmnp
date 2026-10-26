@@ -9,9 +9,15 @@
     </ul>
 
     <h3>Processus de mise à jour</h3>
-    <div class="ctx-step"><span class="ctx-step-num">1</span><span class="ctx-step-text"><strong>Vérifier</strong> &mdash; Compare votre version avec la dernière disponible sur GitHub</span></div>
+    <div class="ctx-step"><span class="ctx-step-num">1</span><span class="ctx-step-text"><strong>Vérifier</strong> &mdash; Le relevé est <strong>automatique</strong> : la version disponible et les notes de version s'affichent seules, et le résultat est conservé une heure. Les boutons « Vérifier » servent à interroger GitHub <em>tout de suite</em>, sans attendre l'expiration.</span></div>
     <div class="ctx-step"><span class="ctx-step-num">2</span><span class="ctx-step-text"><strong>Appliquer</strong> &mdash; Télécharge, sauvegarde l'existant, et déploie la nouvelle version</span></div>
     <div class="ctx-step"><span class="ctx-step-num">3</span><span class="ctx-step-text"><strong>Post-déploiement</strong> &mdash; composer install, npm build, migrations, cache clear</span></div>
+
+    <div class="ctx-tip">
+        Les notes des dernières versions sont affichées en haut de cette page, et aussi sur
+        l'écran <strong>Nouveautés</strong> &mdash; celui-là est accessible à tous vos
+        utilisateurs, pas seulement aux administrateurs.
+    </div>
 
     <h3>Avis de sécurité</h3>
     <p>Quand le projet publie un avis de sécurité qui concerne votre version, un bandeau rouge ou ambre s'affiche en haut de chaque page, pour les administrateurs seulement. Il indique la version qui corrige le problème et, le cas échéant, un lien « Lire l'avis ».</p>

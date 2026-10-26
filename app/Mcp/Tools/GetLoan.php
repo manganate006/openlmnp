@@ -49,6 +49,7 @@ class GetLoan extends Tool
             'insurance_monthly_eur'     => $loan->insurance_monthly_euros,
             'insurance_type'            => $loan->insurance_type ?? null,
             'insurance_rate'            => $loan->insurance_rate ?? null,
+            'is_dedicated'              => $loan->is_dedicated,
             'total_cost_eur'            => bcdiv((string) $loan->total_cost, '100', 2),
             'has_schedule'              => $loan->payments()->exists(),
             'payments_count'            => $loan->payments()->count(),

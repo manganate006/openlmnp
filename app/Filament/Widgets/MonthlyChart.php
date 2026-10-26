@@ -41,13 +41,13 @@ class MonthlyChart extends ChartWidget
                     ->whereYear('expense_date', $year)
                     ->whereMonth('expense_date', $m)
                     ->where('is_dedicated', true)
-                    ->sum('amount');
+                    ->sum(Expense::usageAdjustedSql('amount'));
 
                 $shared = $property->expenses()
                     ->whereYear('expense_date', $year)
                     ->whereMonth('expense_date', $m)
                     ->where('is_dedicated', false)
-                    ->sum('amount');
+                    ->sum(Expense::usageAdjustedSql('amount'));
 
                 $totalExpense += $dedicated + (int) bcmul((string) $shared, $property->quota_share, 0);
             }

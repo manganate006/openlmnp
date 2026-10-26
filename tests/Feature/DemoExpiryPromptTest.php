@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Notifications\DemoResumeLink;
 use App\Support\DemoExpiry;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 
@@ -313,4 +314,117 @@ it('counts what is at risk on the visitor own data, ignoring the sample', functi
     // qu'il a saisi lui-même compte, le jeu d'exemple n'a été « perdu » par personne.
     expect($component->get('atRisk')['properties'])->toBe(1)
         ->and($mine->exists)->toBeTrue();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Accord en nombre de la phrase du bandeau
+// ─────────────────────────────────────────────────────────────────────────────
+
+it('accorde la phrase du bandeau sur ce qui est réellement menacé', function () {
+    actingOnSandbox(23);
+    $composant = Livewire::test(DemoExpiryPrompt::class);
+    $instance = $composant->instance();
+
+    // Le cas le plus courant, et celui qui était fautif : un seul élément.
+    $instance->atRisk = ['properties' => 0, 'fiscal_years' => 1];
+    expect($instance->atRiskSentence())
+        ->toBe('Votre exercice sera supprimé. Vous pouvez le garder.');
+
+    $instance->atRisk = ['properties' => 3, 'fiscal_years' => 0];
+    expect($instance->atRiskSentence())
+        ->toBe('Vos 3 biens seront supprimés. Vous pouvez les garder.');
+
+    // Deux groupes au singulier font quand même un pluriel : c'est ce que la vue
+    // ne pouvait pas décider toute seule.
+    $instance->atRisk = ['properties' => 1, 'fiscal_years' => 1];
+    expect($instance->atRiskSentence())
+        ->toBe('Votre bien et votre exercice seront supprimés. Vous pouvez les garder.');
+
+    $instance->atRisk = ['properties' => 1, 'fiscal_years' => 2];
+    expect($instance->atRiskSentence())
+        ->toBe('Votre bien et vos 2 exercices seront supprimés. Vous pouvez les garder.');
+});
+
+it('sert au bandeau la phrase accordée, verbe compris', function () {
+    // ⚠️ L'assertion qui compte vraiment : le verbe vivait dans la VUE, au pluriel
+    // en dur, et aucune vérification de la méthode seule ne l'aurait vu.
+    $user = actingOnSandbox(23);
+    demoProperty($user, 'Le mien');
+
+    Livewire::test(DemoExpiryPrompt::class)
+        ->call('reach', 23)
+        ->assertSet('step', 'banner')
+        ->assertSee('Votre bien sera supprimé. Vous pouvez le garder.')
+        ->assertDontSee('seront supprimés');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Case facultative « rappels fiscaux », posée en prolongeant le bac à sable
+// ─────────────────────────────────────────────────────────────────────────────
+
+it('ne propose pas les rappels fiscaux quand aucun destinataire n\'est configuré', function () {
+    // Défaut du dépôt public : une instance auto-hébergée n'a personne à qui
+    // transmettre, et ne doit surtout pas transmettre à nous.
+    config()->set('demo.links.lead', '');
+    actingOnSandbox(3);
+
+    Livewire::test(DemoExpiryPrompt::class)
+        ->call('openExtend')
+        ->assertDontSee('Recevoir aussi les rappels fiscaux');
+});
+
+it('transmet l\'intention quand la case est cochée', function () {
+    Http::fake(['*' => Http::response('', 200)]);
+    config()->set('demo.links.lead', 'https://openlmnp.fr/api/leads');
+    $user = actingOnSandbox(3);
+
+    Livewire::test(DemoExpiryPrompt::class)
+        ->call('openExtend')
+        ->assertSee('Recevoir aussi les rappels fiscaux')
+        ->set('email', 'prospect@exemple.fr')
+        ->set('consent', true)
+        ->set('newsletter', true)
+        ->call('extend')
+        ->assertSet('step', 'extended');
+
+    expect($user->fresh()->demo_newsletter_at)->not->toBeNull();
+    Http::assertSent(fn ($r) => $r->url() === 'https://openlmnp.fr/api/leads'
+        && $r['email'] === 'prospect@exemple.fr');
+});
+
+it('ne transmet rien si la case reste décochée', function () {
+    Http::fake();
+    config()->set('demo.links.lead', 'https://openlmnp.fr/api/leads');
+    $user = actingOnSandbox(3);
+
+    Livewire::test(DemoExpiryPrompt::class)
+        ->call('openExtend')
+        ->set('email', 'prospect@exemple.fr')
+        ->set('consent', true)
+        ->call('extend')
+        ->assertSet('step', 'extended');
+
+    // Le consentement au lien de reprise promet « aucune autre utilisation » :
+    // s'en servir pour inscrire quelqu'un le viderait de son sens.
+    expect($user->fresh()->demo_newsletter_at)->toBeNull();
+    Http::assertNothingSent();
+});
+
+it('prolonge quand même si le destinataire est injoignable', function () {
+    // Une prolongation est ce que le visiteur a demandé. Elle ne doit jamais échouer
+    // à cause d'un service tiers qui, lui, n'est qu'un bonus.
+    Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException('injoignable'));
+    config()->set('demo.links.lead', 'https://openlmnp.fr/api/leads');
+    $user = actingOnSandbox(3);
+
+    Livewire::test(DemoExpiryPrompt::class)
+        ->call('openExtend')
+        ->set('email', 'prospect@exemple.fr')
+        ->set('consent', true)
+        ->set('newsletter', true)
+        ->call('extend')
+        ->assertSet('step', 'extended');
+
+    expect($user->fresh()->demo_extended_at)->not->toBeNull();
+    Notification::assertSentTo($user->fresh(), DemoResumeLink::class);
 });

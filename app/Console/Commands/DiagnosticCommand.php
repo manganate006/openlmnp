@@ -74,7 +74,9 @@ class DiagnosticCommand extends Command
 
         // Le cas de très loin le plus fréquent en auto-hébergé : un seul compte, et
         // demander son adresse à quelqu'un qui est seul sur son instance est du zèle.
-        $users = User::query()->limit(2)->get();
+        // Un dossier lié (voir App\Support\DossierContext) n'est pas un compte au sens
+        // de cette commande : jamais seul candidat, jamais proposé par adresse.
+        $users = User::query()->where('is_linked_dossier', false)->limit(2)->get();
 
         if ($users->count() === 1) {
             return $users->first();

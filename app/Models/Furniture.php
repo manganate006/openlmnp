@@ -152,38 +152,6 @@ class Furniture extends Model
             : 0;
     }
 
-    /**
-     * Retourne l'amortissement pour une année fiscale donnée.
-     * Prorata temporis sur la première année.
-     */
-    public function getDepreciationForYear(int $year): int
-    {
-        $startYear = (int) $this->purchase_date->format('Y');
-
-        if ($year < $startYear) {
-            return 0;
-        }
-
-        $endYear = $startYear + $this->duration_years - 1;
-
-        if ($year > $endYear) {
-            return 0;
-        }
-
-        // Première année : prorata temporis
-        if ($year === $startYear) {
-            $monthsInYear = 12 - (int) $this->purchase_date->format('n') + 1;
-
-            return (int) bcmul(
-                (string) $this->annual_depreciation,
-                bcdiv((string) $monthsInYear, '12', 10),
-                0
-            );
-        }
-
-        return $this->annual_depreciation;
-    }
-
     // -------------------------------------------------------------------------
     // Query scopes
     // -------------------------------------------------------------------------

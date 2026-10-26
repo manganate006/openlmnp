@@ -6,9 +6,12 @@ use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Property;
 use App\Models\PropertyWork;
+use App\Support\DocumentStorage;
+use App\Support\Vault;
+use App\Services\Ai\Analysis\DocumentFile;
+use App\Support\RemoteFile;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
@@ -16,6 +19,7 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use RuntimeException;
 
 #[Description('Attache un document justificatif (facture, reçu, devis) à une charge, un mobilier ou un poste de travaux. Trois modes d\'entrée mutuellement exclusifs : file_base64 (contenu encodé), file_path (chemin absolu sur le serveur, nécessite MCP_FILE_PATH_PREFIX), file_url (URL http/https téléchargée par le serveur). Le chemin de stockage est : documents/{user_id}/{type}/{filename}.')]
 #[IsDestructive]
@@ -48,6 +52,23 @@ class AttachDocument extends Tool
 
     public function handle(Request $request): Response
     {
+        // Un jeton d'API n'a pas de session interactive, et le transport stdio n'a
+        // même pas d'utilisateur qui pourrait saisir quoi que ce soit : il n'existe
+        // aucun moyen d'obtenir la phrase de passe du coffre-fort. On refuse
+        // explicitement plutôt que d'écrire un fichier en clair au milieu de
+        // fichiers chiffrés.
+        // Depuis la paire de clés, l'API PEUT déposer : chiffrer ne demande que la
+        // clé publique. L'agent écrit donc un justificatif qu'il ne pourra jamais
+        // relire — c'est exactement la propriété recherchée. Seul un coffre
+        // d'avant la paire, qui exige la DEK dans les deux sens, refuse encore.
+        if (Vault::isEnabledFor(Auth::user()) && ! Vault::canWriteFor(Auth::user())) {
+            return Response::error(
+                'Coffre-fort activé sur un schéma antérieur à la paire de clés : le dépôt par '
+                . 'l\'API n\'est pas possible sans votre phrase de passe. Déposez ce document '
+                . 'depuis l\'interface web, ou terminez la migration du coffre.'
+            );
+        }
+
         $typeList = implode(',', array_keys(self::SUPPORTED_TYPES));
 
         $validated = $request->validate([
@@ -86,18 +107,14 @@ class AttachDocument extends Tool
         // Verify ownership: the record's property must belong to the authenticated user
         Property::findOrFail($record->property_id);
 
-        // Resolve binary content and filename from the chosen source
-        $resolved = match (true) {
-            isset($sources['file_base64']) => $this->resolveBase64($sources['file_base64'], $validated['filename'] ?? null),
-            isset($sources['file_path'])   => $this->resolveFilePath($sources['file_path'], $validated['filename'] ?? null),
-            default                        => $this->resolveFileUrl($sources['file_url'], $validated['filename'] ?? null),
-        };
-
-        if ($resolved instanceof Response) {
-            return $resolved;
+        // Resolve binary content and filename from the chosen source.
+        // Les contrôles (préfixe local, anti-SSRF) vivent dans App\Support\RemoteFile,
+        // partagé avec analyze_document : une seule implémentation à auditer.
+        try {
+            [$decoded, $filename] = RemoteFile::resolve($sources, $validated['filename'] ?? null);
+        } catch (RuntimeException $e) {
+            return Response::error($e->getMessage());
         }
-
-        [$decoded, $filename] = $resolved;
 
         if (strlen($decoded) > self::MAX_FILE_SIZE_BYTES) {
             return Response::error('Le fichier dépasse la taille maximum autorisée (10 Mo).');
@@ -112,12 +129,15 @@ class AttachDocument extends Tool
             return Response::error("Extension de fichier non autorisée. Extensions acceptées : {$allowed}.");
         }
 
-        // L'extension se choisit, le contenu non : un HTML nommé facture.pdf était stocké
-        // tel quel (GHSA-j4gm-g8m8-93x2, point 16). On vérifie le type réel du contenu.
-        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($decoded) ?: '';
-
-        if (! in_array($mime, self::MIME_TYPES[$extension], strict: true)) {
-            return Response::error("Le contenu du fichier ({$mime}) ne correspond pas à son extension .{$extension}.");
+        // Une extension est DÉCLARATIVE : n'importe quel contenu peut s'appeler
+        // « facture.pdf ». On vérifie donc le type réel, sur les octets — sans
+        // quoi un document HTML piégé finirait servi depuis notre propre
+        // origine par DocumentController.
+        if (! $this->hasAllowedContent($decoded, $extension)) {
+            return Response::error(
+                'Le contenu du fichier ne correspond pas à son extension. '
+                . 'Formats acceptés : PDF, JPEG, PNG, WebP, HEIC.'
+            );
         }
 
         // Build a safe, unique filename to avoid collisions
@@ -129,7 +149,19 @@ class AttachDocument extends Tool
         $storagePath = "documents/{$userId}/{$validated['type']}/{$safeFilename}";
 
         // Persist file to the default filesystem disk (local / s3 / etc.)
-        Storage::put($storagePath, $decoded);
+        //
+        // ⚠️ Coffre activé : chiffrer AVANT d'écrire. Lever le refus de l'API sans
+        // cette ligne posait un fichier en clair au milieu de fichiers chiffrés —
+        // c'est-à-dire pire que le refus qu'on venait de retirer. Une clé neuve par
+        // fichier, scellée à la clé publique : aucune phrase de passe n'est requise,
+        // et l'API ne peut rien relire de ce qu'elle vient d'écrire.
+        //
+        // ⚠️ Cette logique était RECOPIÉE ici (encryptString + Storage::put), en
+        // double de la closure Filament. Deux copies d'une règle de chiffrement
+        // dérivent : celle qu'on oublie de suivre pose un fichier en clair, et
+        // rien ne le signale. `DocumentStorage::putProtected()` est désormais le
+        // point d'écriture unique — Filament, MCP et l'analyse IA y passent tous.
+        DocumentStorage::putProtected($decoded, $storagePath, Auth::user());
 
         // Determine the next sort_order for this documentable
         $maxSortOrder = $record->documents()->max('sort_order') ?? -1;
@@ -163,211 +195,32 @@ class AttachDocument extends Tool
         ]);
     }
 
-    /** Décoder le contenu base64 fourni directement. */
-    private function resolveBase64(string $base64, ?string $filename): array|Response
-    {
-        $decoded = base64_decode($base64, strict: true);
-
-        if ($decoded === false) {
-            return Response::error('Le contenu base64 fourni est invalide.');
-        }
-
-        return [$decoded, $filename ?? 'document'];
-    }
-
-    /** Lire un fichier depuis un chemin absolu autorisé sur le serveur. */
-    private function resolveFilePath(string $filePath, ?string $filename): array|Response
-    {
-        $prefix = config('mcp.file_path_prefix');
-
-        if (empty($prefix)) {
-            return Response::error('file_path non disponible : MCP_FILE_PATH_PREFIX n\'est pas configuré sur ce serveur.');
-        }
-
-        // Normaliser et vérifier le préfixe pour éviter les traversals
-        $realPrefix = realpath($prefix);
-        $realPath   = realpath($filePath);
-
-        if ($realPath === false || $realPrefix === false) {
-            return Response::error('Le chemin de fichier fourni est invalide ou inaccessible.');
-        }
-
-        if (! str_starts_with($realPath, $realPrefix . DIRECTORY_SEPARATOR) && $realPath !== $realPrefix) {
-            return Response::error("Accès refusé : le chemin doit être situé sous {$prefix}.");
-        }
-
-        if (! is_file($realPath) || ! is_readable($realPath)) {
-            return Response::error('Le fichier est introuvable ou non lisible.');
-        }
-
-        $decoded = file_get_contents($realPath);
-
-        if ($decoded === false) {
-            return Response::error('Impossible de lire le fichier.');
-        }
-
-        return [$decoded, $filename ?? basename($realPath)];
-    }
-
-    /** Télécharger un fichier depuis une URL http/https. */
-    private function resolveFileUrl(string $url, ?string $filename): array|Response
-    {
-        $scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
-
-        if (! in_array($scheme, ['http', 'https'], strict: true)) {
-            return Response::error('file_url doit utiliser le schéma http ou https.');
-        }
-
-        $host = parse_url($url, PHP_URL_HOST);
-
-        if (empty($host)) {
-            return Response::error('file_url doit contenir un nom d\'hôte valide.');
-        }
-
-        $pinnedIp = $this->resolveAllowedIp($host);
-
-        if ($pinnedIp === null) {
-            return Response::error('file_url refusée : l\'hôte cible pointe vers une adresse IP privée, locale ou réservée (protection anti-SSRF).');
-        }
-
-        // Ne PAS suivre les redirections : une URL dont l'hôte initial est public
-        // pourrait sinon renvoyer un 3xx vers une IP interne (169.254.169.254…) et
-        // contourner le contrôle anti-SSRF ci-dessus (l'hôte redirigé n'étant pas revalidé).
-        //
-        // Et se connecter à l'IP VÉRIFIÉE : sans CURLOPT_RESOLVE, le client résolvait le
-        // nom une seconde fois, et un DNS qui change de réponse entre les deux (rebinding)
-        // passait le contrôle (GHSA-j4gm-g8m8-93x2, point 15).
-        $port = parse_url($url, PHP_URL_PORT) ?: ($scheme === 'https' ? 443 : 80);
-        $options = filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) !== false
-            ? []
-            : ['curl' => [CURLOPT_RESOLVE => [$host . ':' . $port . ':' . (str_contains($pinnedIp, ':') ? '[' . $pinnedIp . ']' : $pinnedIp)]]];
-
-        $response = Http::withoutRedirecting()->withOptions($options)->timeout(30)->get($url);
-
-        if ($response->redirect()) {
-            return Response::error('file_url refusée : les redirections ne sont pas suivies (protection anti-SSRF). Fournissez l\'URL finale directe.');
-        }
-
-        if (! $response->successful()) {
-            return Response::error("Impossible de télécharger le fichier (HTTP {$response->status()}).");
-        }
-
-        $decoded          = $response->body();
-        $resolvedFilename = $filename ?? basename(parse_url($url, PHP_URL_PATH) ?? '') ?: 'document';
-
-        return [$decoded, $resolvedFilename];
-    }
-
     /**
-     * L'adresse IP à laquelle se connecter, si l'hôte ne résout vers AUCUNE adresse
-     * privée/loopback/link-local/réservée (protection anti-SSRF sur file_url) ; null sinon.
+     * Le contenu correspond-il vraiment à un format d'image ou de PDF accepté ?
      *
-     * Toutes les IP résolues (IPv4 et IPv6) doivent être publiques. La première est
-     * rendue pour être épinglée à la connexion.
+     * La liste de référence est celle de l'analyse IA
+     * (App\Services\Ai\Analysis\DocumentFile::ACCEPTED_MIME), augmentée du HEIC,
+     * historiquement accepté ici comme pièce jointe même si aucun modèle de
+     * vision ne sait le lire.
      */
-    private function resolveAllowedIp(string $host): ?string
+    private function hasAllowedContent(string $contents, string $extension): bool
     {
-        // Hôte fourni directement sous forme d'IP littérale (avec ou sans crochets IPv6)
-        $literalIp = trim($host, '[]');
+        $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents);
 
-        if (filter_var($literalIp, FILTER_VALIDATE_IP) !== false) {
-            return $this->isPublicIp($literalIp) ? $literalIp : null;
-        }
+        $accepted = array_keys(DocumentFile::ACCEPTED_MIME);
 
-        $ips = [];
+        // Les photos d'iPhone : refusées à l'analyse, tolérées en pièce jointe.
+        $accepted[] = 'image/heic';
+        $accepted[] = 'image/heif';
 
-        // Résolution IPv4
-        $ipv4 = @gethostbynamel($host);
-
-        if (is_array($ipv4)) {
-            $ips = array_merge($ips, $ipv4);
-        }
-
-        // Résolution IPv6 (best effort)
-        $aaaaRecords = @dns_get_record($host, DNS_AAAA);
-
-        if (is_array($aaaaRecords)) {
-            foreach ($aaaaRecords as $record) {
-                if (! empty($record['ipv6'])) {
-                    $ips[] = $record['ipv6'];
-                }
-            }
-        }
-
-        if ($ips === []) {
-            // Résolution impossible : on refuse par précaution.
-            return null;
-        }
-
-        foreach ($ips as $ip) {
-            if (! $this->isPublicIp($ip)) {
-                return null;
-            }
-        }
-
-        return $ips[0];
-    }
-
-    /** Déterminer si une IP (v4 ou v6) est publique, c'est-à-dire ni privée, ni loopback, ni réservée. */
-    private function isPublicIp(string $ip): bool
-    {
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+        if (! in_array($mime, $accepted, strict: true)) {
             return false;
         }
 
-        // Garde-fous explicites supplémentaires (au cas où les filtres ci-dessus
-        // ne couvriraient pas une plage particulière selon l'implémentation).
-        $blockedCidrs = [
-            '0.0.0.0/8',      // « ce réseau »
-            '100.64.0.0/10',  // CGNAT (adresses partagées, souvent internes chez les hébergeurs)
-            '169.254.0.0/16', // link-local IPv4 (metadata cloud AWS/GCP/Azure)
-            '192.0.0.0/24',   // affectations IETF
-            '198.18.0.0/15',  // bancs de test réseau
-            '224.0.0.0/4',    // multicast
-            'fc00::/7',       // unique local address IPv6
-            'fe80::/10',      // link-local IPv6
-            'ff00::/8',       // multicast IPv6
-            '::1/128',        // loopback IPv6
-            '64:ff9b::/96',   // traduction NAT64 : peut viser une IPv4 interne
-            '::ffff:0:0/96',  // IPv4 mappée en IPv6 : l'IPv4 sous-jacente n'est pas revérifiée
-        ];
+        // Cohérence extension / contenu : un PDF ne doit pas s'appeler « .png ».
+        $famille = str_starts_with($mime, 'image/') ? 'image' : 'pdf';
 
-        foreach ($blockedCidrs as $cidr) {
-            if ($this->ipInCidr($ip, $cidr)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /** Vérifier qu'une IP (v4 ou v6) appartient à un bloc CIDR donné. */
-    private function ipInCidr(string $ip, string $cidr): bool
-    {
-        [$subnet, $prefixLength] = explode('/', $cidr);
-
-        $ipBinary     = @inet_pton($ip);
-        $subnetBinary = @inet_pton($subnet);
-
-        if ($ipBinary === false || $subnetBinary === false || strlen($ipBinary) !== strlen($subnetBinary)) {
-            return false;
-        }
-
-        $prefixLength = (int) $prefixLength;
-        $bytes        = intdiv($prefixLength, 8);
-        $remainder    = $prefixLength % 8;
-
-        if ($bytes > 0 && substr($ipBinary, 0, $bytes) !== substr($subnetBinary, 0, $bytes)) {
-            return false;
-        }
-
-        if ($remainder === 0) {
-            return true;
-        }
-
-        $mask = ~(0xFF >> $remainder) & 0xFF;
-
-        return (ord($ipBinary[$bytes]) & $mask) === (ord($subnetBinary[$bytes]) & $mask);
+        return $famille === ($extension === 'pdf' ? 'pdf' : 'image');
     }
 
     public function schema(JsonSchema $schema): array

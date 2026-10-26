@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AccountKind;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\WelcomeSetPassword;
+use App\Support\DossierQuota;
 use Filament\Facades\Filament;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +38,8 @@ class ProvisioningController extends Controller
 
         $existing = User::query()->where('email', $data['email'])->first();
         if ($existing) {
+            $this->promoteMemberAccount($existing);
+
             return response()->json(['status' => 'exists', 'id' => $existing->id]);
         }
 
@@ -69,6 +73,59 @@ class ProvisioningController extends Controller
             'status' => $promoted ? 'promoted' : 'created',
             'id' => $user->id,
         ], 201);
+    }
+
+    /**
+     * Pose le quota de dossiers liés d'un compte (lot 4 du plan « dossiers liés »),
+     * appelée par la vitrine après la création ou la promotion du compte au paiement.
+     *
+     * Réponse UNIFORME (même modèle que `setSuspension` : F10, pas d'oracle
+     * d'énumération d'e-mails) : un e-mail inconnu, un dossier lié (jamais principal)
+     * ou un compte de démonstration reçoivent exactement la même réponse qu'un compte
+     * principal réel — seul un journal côté serveur distingue ces cas, pour repérer une
+     * désynchronisation avec la vitrine sans la révéler à l'appelant.
+     *
+     * ⚠️ Ne baisse JAMAIS le quota sous le nombre de dossiers déjà créés par ce
+     * compte (`DossierQuota::used()`, dossiers actifs non archivés) : la vitrine peut
+     * rejouer un ancien montant (reprise, rétro-compatibilité, erreur de séquence)
+     * sans jamais retirer à un abonné un dossier qu'il a déjà ouvert.
+     */
+    public function entitlements(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'linked_dossier_quota' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $user = User::query()
+            ->where('email', $data['email'])
+            ->where('is_linked_dossier', false)
+            ->first();
+
+        // Défense en profondeur : un compte membre n'a jamais de quota propre
+        // (App\Support\DossierQuota::for() force 0 de toute façon), mais s'abstenir
+        // d'ÉCRIRE la colonne évite d'y laisser une valeur qui n'a aucun sens tant
+        // que `promoteMemberAccount()` (appelée par `store()`, toujours en amont
+        // côté vitrine) ne l'a pas promu en compte standard.
+        if ($user && $user->isMemberAccount()) {
+            Log::warning('Provisioning: entitlements demandé pour un compte membre (ignoré)', [
+                'email' => $data['email'],
+            ]);
+
+            return response()->json(['status' => 'updated']);
+        }
+
+        if ($user && ! $user->isDemo()) {
+            $floor = DossierQuota::used($user);
+            $user->linked_dossier_quota = max((int) $data['linked_dossier_quota'], $floor);
+            $user->save();
+        } else {
+            Log::warning('Provisioning: entitlements demandé pour un compte introuvable ou inéligible', [
+                'email' => $data['email'],
+            ]);
+        }
+
+        return response()->json(['status' => 'updated']);
     }
 
     public function suspend(Request $request): JsonResponse
@@ -156,5 +213,34 @@ class ProvisioningController extends Controller
         ])->save();
 
         return $sandbox;
+    }
+
+    /**
+     * Un compte « membre » (App\Enums\AccountKind::Member — accès gratuit
+     * d'indivisaire, créé depuis une invitation de dossier) qui s'abonne devient un
+     * compte STANDARD ordinaire, SANS perdre son appartenance au dossier lié (lot
+     * « dossiers membre », décision de Jérémie du 2026-10-15 : « si la personne
+     * s'abonne un jour, son compte membre doit pouvoir devenir standard sans perdre
+     * son appartenance au dossier »).
+     *
+     * ⚠️ `linked_dossier_members` ne pend que de `user_id` (jamais réécrit ici) :
+     * promouvoir, c'est réécrire UNE SEULE colonne sur UNE SEULE ligne — même
+     * principe que `promoteSandbox()` pour un bac à sable de démonstration. Appelée
+     * depuis `store()`, le SEUL point d'entrée du webhook de paiement de la vitrine
+     * pour un compte qui existe déjà : c'est pourquoi une promotion de membre ne
+     * peut PAS passer inaperçue, même quand `store()` répond `exists` (réponse
+     * inchangée à dessein, pour ne rien casser côté appelant).
+     */
+    private function promoteMemberAccount(User $user): void
+    {
+        if (! $user->isMemberAccount()) {
+            return;
+        }
+
+        $user->forceFill(['account_kind' => AccountKind::Standard])->save();
+
+        Log::info('Provisioning: compte membre promu en compte standard au paiement', [
+            'user_id' => $user->id,
+        ]);
     }
 }

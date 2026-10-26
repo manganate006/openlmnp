@@ -9,6 +9,7 @@
             <li data-icon="&#x1F3E0;"><strong>Adresse et surfaces</strong> &mdash; Surface totale du logement et surface louée. La quote-part est calculée automatiquement.</li>
             <li data-icon="&#x1F4B5;"><strong>Valeur vénale</strong> &mdash; Valeur estimée du bien au début de l'activité. C'est cette valeur (pas le prix d'achat) qui sert de base à l'amortissement. Le bouton <strong>« Estimer (DVF) »</strong>, à côté du champ, la calcule à partir des ventes réellement enregistrées dans votre commune.</li>
             <li data-icon="&#x1F3D7;"><strong>Part du terrain</strong> &mdash; Le terrain n'est pas amortissable. En général 15-20 %. L'estimation DVF ne la donne pas : elle porte sur la valeur du bien entier. Pour le terrain seul, appuyez-vous sur MeilleursAgents, votre notaire ou l'acte d'acquisition.</li>
+            <li data-icon="&#x26A1;"><strong>DPE</strong> &mdash; Le bouton <strong>« Retrouver le DPE »</strong>, à côté du numéro de DPE, le cherche dans la base de l'ADEME à partir de l'adresse du bien. La fiche affiche ensuite ce que votre classe permet (bail meublé, meublé de tourisme) et vous alerte six mois avant son expiration.</li>
         </ul>
 
         <div class="ctx-tip">
@@ -22,23 +23,45 @@
         <p>Identifiez votre bien avec ses caractéristiques de base.</p>
 
         <ul>
-            <li data-icon="&#x1F4F7;"><strong>Photo</strong> &mdash; Ajoutez une photo pour identifier facilement votre bien. Elle est redimensionnée automatiquement.</li>
+            <li data-icon="&#x1F4F7;"><strong>Photo</strong> &mdash; Ajoutez une photo pour identifier facilement votre bien. Elle est redimensionnée automatiquement. Si vous avez activé le coffre-fort, elle est chiffrée comme un justificatif.</li>
             <li data-icon="&#x1F3E0;"><strong>Nom</strong> &mdash; Un nom court pour retrouver votre bien (ex : « La Bastide », « Studio Paris »).</li>
             <li data-icon="&#x1F3F7;"><strong>Type de bien</strong> &mdash; Appartement, maison, studio... Utilisé pour les statistiques.</li>
-            <li data-icon="&#x1F4C5;"><strong>Type de location</strong> &mdash; Saisonnier (Airbnb) ou longue durée (bail). Impacte le calcul fiscal.</li>
-            <li data-icon="&#x1F4CD;"><strong>Adresse</strong> &mdash; L'adresse complète du bien.</li>
+            <li data-icon="&#x1F4C5;"><strong>Type de location</strong> &mdash; Saisonnier (Airbnb) ou longue durée (bail). Pré-remplit le classement micro-BIC (onglet Location), sans effet sur le régime réel.</li>
+            <li data-icon="&#x1F4CD;"><strong>Adresse</strong> &mdash; Commencez &agrave; taper&nbsp;: les adresses de la <strong>Base Adresse Nationale</strong> vous sont propos&eacute;es, et en choisir une remplit d'un coup l'adresse, le <strong>code postal</strong> et la <strong>commune</strong>. La saisie &agrave; la main reste possible &mdash; si le service ne r&eacute;pond pas, vous n'avez simplement aucune proposition, et rien ne bloque l'enregistrement.</li>
             <li data-icon="&#x1F4DD;"><strong>Notes</strong> &mdash; Informations libres pour votre usage personnel.</li>
         </ul>
+
+        <div class="ctx-warning">
+            <strong>La photo ne s'affiche pas&nbsp;? Cliquez dessus.</strong> Coffre-fort activ&eacute; et verrouill&eacute;, l'aper&ccedil;u n'appara&icirc;t pas : le serveur n'a pas la cl&eacute; pour le produire, et c'est voulu. Une fen&ecirc;tre vous demande votre phrase de passe, une seule fois pour la visite, et la photo se d&eacute;chiffre <strong>dans votre navigateur</strong>. Le fichier est intact &mdash; ne le red&eacute;posez pas en croyant l'avoir perdu. Et vous pouvez toujours en d&eacute;poser un nouveau sans d&eacute;verrouiller&nbsp;: seule la lecture demande la phrase.
+        </div>
+
+        <h3>Diagnostic de performance énergétique (DPE)</h3>
+        <p>Sous l'adresse, quatre champs reprennent le DPE du bien : son numéro, sa classe (A à G), sa date d'établissement et sa date de fin de validité. Tous restent modifiables à la main, même après une recherche.</p>
+
+        <ul>
+            <li data-icon="&#x1F50D;"><strong>« Retrouver le DPE »</strong> &mdash; Géocode l'adresse du bien (Géoplateforme, IGN) puis interroge la base de l'ADEME. Si plusieurs DPE existent à cette adresse (cas fréquent en immeuble), ils sont tous listés : à vous de choisir celui de votre logement, rien n'est repris automatiquement. Vous pouvez aussi chercher directement par numéro de DPE si vous l'avez sous la main.</li>
+            <li data-icon="&#x2696;"><strong>Ce que votre classe permet</strong> &mdash; Dès qu'une classe est renseignée, la fiche affiche un verdict <strong>« Décent » / « Non décent »</strong> pour chaque façon de louer applicable à ce bien (bail meublé si location longue durée ou mixte, meublé de tourisme si saisonnier ou mixte — sauf s'il s'agit de votre résidence principale), avec la prochaine échéance du calendrier légal. Un logement non décent ne rend pas le bail nul : le locataire peut exiger les travaux, et le juge réduire ou suspendre le loyer.</li>
+            <li data-icon="&#x23F0;"><strong>Alerte d'expiration</strong> &mdash; Un DPE expiré, ou qui expire dans moins de six mois, est signalé sur la fiche et dans les alertes du tableau de bord.</li>
+        </ul>
+
+        <div class="ctx-tip">
+            <strong>À retenir :</strong> comme pour l'estimation DVF, la recherche ne part que sur votre clic : ouvrir la fiche n'envoie rien. Seule l'adresse du bien est transmise à l'IGN puis à l'ADEME.
+        </div>
     </div>
 
     {{-- Onglet Surfaces & Valeur --}}
     <div x-show="ctxTab === 'Surfaces & Valeur'" x-cloak>
-        <h3>Surfaces et quote-part</h3>
-        <p>Si vous louez une partie de votre résidence principale, la <strong>quote-part</strong> = surface louée &divide; surface totale. Elle s'applique automatiquement aux charges partagées et à l'amortissement.</p>
-
+        <h3>Situation du logement</h3>
         <ul>
-            <li data-icon="&#x1F4D0;"><strong>Surface totale</strong> &mdash; Surface déclarée aux impôts (loi Carrez ou habitable).</li>
-            <li data-icon="&#x1F6CF;"><strong>Surface louée</strong> &mdash; Surface de la partie mise en location.</li>
+            <li data-icon="&#x1F3E0;"><strong>Logement distinct</strong> &mdash; vous n'y habitez pas. Quote-part = 100 % si vous ne déclarez que la partie louée.</li>
+            <li data-icon="&#x1F6AA;"><strong>Pièce(s) de votre résidence principale</strong> &mdash; la <strong>quote-part</strong> (surface louée &divide; surface totale) s'applique automatiquement aux charges partagées et à l'amortissement.</li>
+            <li data-icon="&#x1F9F1;"><strong>Logement indépendant dans votre résidence principale</strong> (ou sur la même propriété) &mdash; studio avec entrée propre, rez-de-chaussée aménagé, dépendance. Pour la loi, c'est un meublé <strong>distinct</strong> de la résidence principale : pas de limite de 120 jours, pas d'art. 35 bis (ses exonérations ne couvrent qu'une partie de la résidence principale elle-même), <strong>CFE due en principe</strong>, et <strong>taxe d'habitation sur les résidences secondaires (THRS)</strong> si un membre du foyer l'utilise une partie de l'année. Surface totale = la propriété entière ; surface louée = le seul logement indépendant ; prix et valeur vénale = ceux de la propriété entière. Marquez « dédiées » les charges propres au logement (compteur séparé, travaux, CFE).</li>
+        </ul>
+
+        <h3>Surfaces et quote-part</h3>
+        <ul>
+            <li data-icon="&#x1F4D0;"><strong>Surface totale</strong> &mdash; Surface déclarée aux impôts (loi Carrez ou habitable). Obligatoire&nbsp;: sans elle, la quote-part ne peut pas être calculée. Pour un logement indépendant, celle de la propriété entière.</li>
+            <li data-icon="&#x1F6CF;"><strong>Surface louée</strong> &mdash; Surface de la partie mise en location. Vous pouvez saisir <strong>soit cette surface, soit directement la quote-part</strong> juste en dessous&nbsp;: l'autre valeur se calcule automatiquement, en direct.</li>
         </ul>
 
         <h3>Acquisition et amortissement</h3>
@@ -93,6 +116,7 @@
         <p>Le bouton <strong>« Estimer (DVF) »</strong> interroge les <em>demandes de valeurs foncières</em> publiées par la DGFiP : les ventes réellement enregistrées dans votre commune, filtrées par type de bien, ramenées à un prix au mètre carré dont l'application prend la médiane.</p>
         <ul>
             <li data-icon="&#x1F50D;"><strong>Ce qui est envoyé</strong> &mdash; uniquement la commune et le type de bien. Ni l'adresse, ni le prix, ni aucune donnée de votre dossier.</li>
+            <li data-icon="&#x1F4CD;"><strong>L'autocompl&eacute;tion d'adresse, elle, envoie l'adresse</strong> &mdash; c'est tout son objet. Le d&eacute;but de ce que vous tapez part &agrave; la Base Adresse Nationale (servie par la G&eacute;oplateforme de l'IGN), &agrave; partir de trois caract&egrave;res. Un administrateur peut la couper&nbsp;: <code>ADDRESS_LOOKUP_ENABLED=false</code>.</li>
             <li data-icon="&#x1F4CA;"><strong>Ce qui vous est montré</strong> &mdash; le prix au m², le nombre de ventes retenues et les millésimes utilisés. Lisez ce nombre : une médiane sur trois ventes ne vaut pas une médiane sur trois mille.</li>
             <li data-icon="&#x26A0;"><strong>Quand rien ne s'affiche</strong> &mdash; si la commune ne fournit pas assez de ventes comparables, l'application élargit aux années voisines, puis renonce plutôt que d'afficher un chiffre trompeur. L'Alsace-Moselle et Mayotte ne sont pas couvertes par cette source : elles relèvent du livre foncier et d'un cadastre distinct.</li>
         </ul>
@@ -106,8 +130,16 @@
     <div x-show="ctxTab === 'Location'" x-cloak>
         <h3>Informations de location</h3>
         <ul>
-            <li data-icon="&#x1F4C5;"><strong>Date de début</strong> &mdash; Date à laquelle le bien a été mis en location pour la première fois. Les amortissements démarrent à cette date (prorata temporis la première année).</li>
+            <li data-icon="&#x1F4C5;"><strong>Date de début</strong> &mdash; Date à laquelle le bien a été mis en location pour la première fois. Les amortissements démarrent à cette date (prorata temporis la première année). La part non déduite la première année se déduit à la fin du plan, qui dure alors une année de plus.</li>
             <li data-icon="&#x1F517;"><strong>Liens d'annonces</strong> &mdash; Ajoutez les URLs de vos annonces Airbnb, Booking, etc. pour les retrouver facilement.</li>
+        </ul>
+
+        <h3>Classement micro-BIC</h3>
+        <p>Détermine l'abattement et le plafond du <strong>simulateur micro-BIC</strong> &mdash; sans effet sur le régime réel, qui ne s'en sert pas.</p>
+        <ul>
+            <li data-icon="&#x1F3D5;"><strong>Meublé de tourisme non classé</strong> &mdash; cas le plus courant d'un Airbnb sans classement officiel.</li>
+            <li data-icon="&#x2B50;"><strong>Meublé de tourisme classé</strong> &mdash; classement délivré par la préfecture ou un organisme agréé (Atout France...).</li>
+            <li data-icon="&#x1F4DD;"><strong>Location meublée (bail)</strong> &mdash; location longue durée classique.</li>
         </ul>
 
         <div class="ctx-tip">

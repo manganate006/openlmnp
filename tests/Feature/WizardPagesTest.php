@@ -199,3 +199,15 @@ it('onboarding wizard generates components consistent with the property price', 
     // Base amortissable = 200 000 € - 15 % de terrain = 170 000 €
     expect((int) $totalBase)->toBe(17_000_000);
 });
+
+// === Défaut gênant n°12 (2026-10-15) : erreur JS Livewire Entangle sur data.is_closed ===
+
+it('initialise is_closed dès le montage, pour que le Toggle de confirmation ait quelque chose à lier', function () {
+    // Le Wizard rend toutes ses étapes dès le montage (masquées par Alpine, pas
+    // absentes du DOM) : sans cette clé dans l'état initial, le JS tentait
+    // d'entangle() `data.is_closed` avant que la propriété existe côté serveur
+    // (« Livewire Entangle Error: … cannot be found on component »).
+    Livewire::actingAs($this->user)
+        ->test(\App\Filament\Pages\FiscalYearWizard::class)
+        ->assertSet('data.is_closed', false);
+});

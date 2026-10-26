@@ -5,6 +5,7 @@ namespace App\Filament\Pages\Concerns;
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Services\DepreciationService;
+use App\Support\Fr;
 use Filament\Notifications\Notification;
 use Livewire\Attributes\Computed;
 
@@ -112,6 +113,14 @@ trait EditsDepreciationComponents
             'percentage'          => (float) $component->percentage,
             'baseAmount'          => (int) $component->base_amount,
             'baseSource'          => $component->base_source,
+            // ⚠️ La dotation d'une ligne saisie en montants voyage avec elle. Absente jusqu'au
+            // 2026-10-15, l'éditeur la recalculait (base ÷ durée) à l'affichage, puis
+            // l'enregistrait ainsi au premier clic sur « Enregistrer » : la dotation lue sur la
+            // liasse du cabinet était remplacée par un calcul sur une durée elle-même arrondie.
+            // `null` en ventilation : la dotation y suit toujours la base.
+            'annualDepreciation'  => $component->base_source === PropertyComponent::BASE_SOURCE_MANUAL
+                ? (int) $component->annual_depreciation
+                : null,
             'duration'            => $component->duration_years,
             'suggestedPercentage' => $suggested,
             'optional'            => $optional,
@@ -199,6 +208,23 @@ trait EditsDepreciationComponents
             ];
         }
 
+        // ⚠️ `syncComponents()` est une RÉCONCILIATION : tout composant absent du lot
+        // soumis est SUPPRIMÉ. Le remplacement est voulu (c'est ce qui permet de
+        // recopier un plan de cabinet par-dessus la ventilation par défaut), mais il se
+        // faisait en silence — le service rend un compteur `deleted` que personne ne
+        // lisait. Constaté en vrai le 2026-09-24 : 6 composants ramenés à 1, sans un mot.
+        // Les noms se relèvent AVANT l'écriture : après, les lignes n'existent plus.
+        $submittedIds = array_values(array_filter(array_map(
+            fn (array $line) => $line['id'] ?? null,
+            $lines,
+        )));
+
+        $removed = $property->components()
+            ->whereNotIn('id', $submittedIds ?: [0])
+            ->orderBy('sort_order')
+            ->pluck('name')
+            ->all();
+
         try {
             $result = app(DepreciationService::class)->syncComponents($property, $lines);
         } catch (\RuntimeException $e) {
@@ -218,14 +244,31 @@ trait EditsDepreciationComponents
         $remainder = (int) $result['remainder'];
 
         $notification = Notification::make()->title('Composants enregistrés');
+        $messages = [];
+
+        if ($removed !== []) {
+            // Nommés ET comptés : « 5 composants supprimés » sans les noms laisserait
+            // l'utilisateur deviner lesquels, et le bandeau de ventilation ne parle que
+            // de ventilation, jamais de suppression.
+            $messages[] = sprintf(
+                '%s %s : %s.',
+                Fr::accorde(count($removed), 'composant'),
+                Fr::nom(count($removed), 'supprimé'),
+                implode(', ', $removed),
+            );
+        }
 
         if ($remainder > 0) {
             // Sous-ventiler est légitime — un comptable peut n'avoir réparti qu'une part
             // de la base. On l'accepte, mais jamais en silence.
-            $notification->warning()->body(sprintf(
+            $messages[] = sprintf(
                 '%s € de base amortissable ne sont rattachés à aucun composant.',
                 number_format($remainder / 100, 0, ',', ' '),
-            ));
+            );
+        }
+
+        if ($removed !== [] || $remainder > 0) {
+            $notification->warning()->body(implode(' ', $messages));
         } else {
             $notification->success();
         }
@@ -254,11 +297,24 @@ trait EditsDepreciationComponents
             return '';
         }
 
-        try {
-            return \Illuminate\Support\Carbon::parse($value)->format('Y-m-d');
-        } catch (\Throwable) {
-            return null;
+        // Format français EN PREMIER, et explicitement : `Carbon::parse('01/06/2019')`
+        // rend le 6 janvier, strtotime lisant les barres obliques à l'américaine. Même
+        // règle que `RepriseDossier::parseDate()`.
+        foreach (['d/m/Y', 'd-m-Y', 'Y-m-d'] as $format) {
+            try {
+                $date = \Illuminate\Support\Carbon::createFromFormat($format, $value);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            // Aller-retour : `createFromFormat` accepte « 31/02/2019 » en débordant sur
+            // mars. On refuse ce que l'utilisateur n'a pas écrit.
+            if ($date !== false && $date->format($format) === $value) {
+                return $date->format('Y-m-d');
+            }
         }
+
+        return null;
     }
 
     public function resetToDefaults(): void

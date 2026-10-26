@@ -37,4 +37,38 @@ return [
     | une instruction qui ne s'applique pas à lui.
     */
     'blocked_hint' => env('UPDATE_SELF_APPLY_HINT'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relevé des versions publiées
+    |--------------------------------------------------------------------------
+    |
+    | La page « Nouveautés » affiche à tout utilisateur sa version installée, la
+    | dernière publiée et les notes des dernières releases. Les deux dernières
+    | viennent de l'API GitHub : c'est le SEUL appel sortant de cette page.
+    |
+    | UPDATE_CHECK_ENABLED=false le coupe entièrement — pour une instance sans
+    | accès sortant, ou qui refuse de contacter GitHub. La version installée,
+    | elle, est lue dans `version.json` et reste affichée dans tous les cas.
+    |
+    */
+
+    'check_enabled' => env('UPDATE_CHECK_ENABLED', true),
+
+    /*
+    | Durée de conservation d'un relevé RÉUSSI. L'API GitHub non authentifiée est
+    | plafonnée à 60 requêtes/h et par IP : sans cache, chaque affichage de page en
+    | consommait trois. Les boutons « Vérifier » forcent le rafraîchissement.
+    */
+
+    'check_ttl' => 3600,
+
+    /*
+    | Durée de conservation d'un relevé EN ÉCHEC — bien plus courte, mais non nulle :
+    | sans elle, une instance hors ligne repaie le délai d'attente HTTP (10 s) à
+    | chaque affichage. Valeurs en dur : une durée n'a pas à encombrer l'allowlist
+    | de `docker-entrypoint.sh`, contrairement à l'interrupteur ci-dessus.
+    */
+
+    'failure_ttl' => 300,
 ];

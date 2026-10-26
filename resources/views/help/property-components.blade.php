@@ -45,7 +45,7 @@
         <li data-icon="&#x1F5C3;"><strong>Cumul repris</strong> &mdash; les amortissements déjà pratiqués par votre cabinet sur des exercices que vous ne saisirez pas ici. Ils s'ajoutent au cumul du bilan (2033-A case 030) et à la colonne « amortissements » du 2033-C, <strong>jamais</strong> à la charge de l'exercice.</li>
         <li data-icon="&#x1F6D1;"><strong>Couvert jusqu'à</strong> &mdash; le dernier exercice compris dans ce cumul repris, en général le dernier que votre cabinet a tenu. <strong>À renseigner dès que vous saisissez un cumul.</strong> Sans lui, le logiciel reconstitue ces mêmes exercices et les compte une seconde fois : votre case 030 vaut alors le double. Le champ passe en rouge quand un cumul est saisi sans sa borne.</li>
     </ul>
-    <p>Une base saisie à la main porte l'étiquette <strong>saisi</strong> : elle est <strong>verrouillée</strong>, ne suit plus le prix du bien et n'est jamais recalculée automatiquement.</p>
+    <p>Une base saisie &agrave; la main se rep&egrave;re &agrave; sa <strong>ligne color&eacute;e</strong>, pr&eacute;c&eacute;d&eacute;e du signe <strong>&#x270E;</strong> devant le nom du composant. Elle est <strong>verrouill&eacute;e</strong>&nbsp;: elle ne suit plus le prix du bien et n'est jamais recalcul&eacute;e automatiquement.</p>
 
     <h3>Un bandeau rouge en haut de l'écran</h3>
     <p>Il apparaît quand vos composants <strong>dépassent</strong> la base amortissable, et il chiffre
@@ -64,6 +64,20 @@
     nouvelle base devient plus petite que la somme de vos montants saisis, rien n'est rogné dans votre dos :
     l'écart vous est signalé au moment de générer votre liasse, dans les contrôles de cohérence. À vous de
     décider ce qui doit changer.</p>
+
+    <h3>Enregistrer <strong>remplace</strong> votre plan</h3>
+    <p>Le bouton d'enregistrement, en bas du bloc, n'ajoute pas&nbsp;: il <strong>remplace</strong>.
+    Tout composant qui ne figure pas dans ce que vous enregistrez &mdash; parce qu'il est
+    d&eacute;coch&eacute;, ou &agrave; z&eacute;ro &mdash; est <strong>supprim&eacute;</strong>, avec
+    sa base, sa dur&eacute;e et son cumul repris. C'est voulu&nbsp;: c'est ce qui permet de recopier
+    le plan d'un cabinet par-dessus la ventilation par d&eacute;faut.</p>
+    <p>Un encart rouge vous dit, <strong>avant</strong> le clic, <strong>lesquels</strong> dispara&icirc;tront
+    et <strong>combien</strong> ils sont, et une confirmation les nomme une seconde fois. Pour conserver un
+    composant, cochez-le et donnez-lui un montant.</p>
+    <p>Les lignes marqu&eacute;es d'un <strong>&#x25CB;</strong> sont des <strong>lignes de gabarit</strong>&nbsp;:
+    propos&eacute;es par le catalogue, elles n'existent pas encore dans votre dossier. Elles s'affichent
+    &agrave; 0,00&nbsp;&euro; comme un composant r&eacute;el, d'o&ugrave; ce rep&egrave;re&nbsp;: rien ne sera
+    supprim&eacute; de leur c&ocirc;t&eacute;, puisqu'il n'y a rien.</p>
 
     <h3>Une ligne qui n'existe pas au catalogue</h3>
     <p>Le bouton <strong>« + Ajouter un composant »</strong> crée une ligne à nom libre &mdash; « Ascenseur », « Menuiseries extérieures », tout ce que votre liasse comporte et que la liste standard ignore. Elle naît en mode Montants, sur 10 ans et en « Autres immobilisations » : donnez-lui son nom, sa durée, sa base et sa vraie ligne 2033-C.</p>

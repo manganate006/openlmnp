@@ -47,6 +47,7 @@ class CreateExpense extends Tool
             'category'       => "required|in:{$categoryList}",
             'description'    => 'required|string|max:500',
             'is_dedicated'   => 'nullable|boolean',
+            'business_use_percent' => 'nullable|numeric|min:0|max:100',
             'recurring_type' => "nullable|in:{$recurringList}",
             'tva_rate'       => 'nullable|numeric|min:0|max:100',
             'notes'          => 'nullable|string',
@@ -70,6 +71,7 @@ class CreateExpense extends Tool
             'category'       => $validated['category'],
             'description'    => $validated['description'],
             'is_dedicated'   => $validated['is_dedicated'] ?? false,
+            'business_use_bp' => Expense::percentToBp($validated['business_use_percent'] ?? null),
             'recurring_type' => $validated['recurring_type'] ?? 'once',
             'notes'          => $validated['notes'] ?? null,
         ]);
@@ -85,6 +87,7 @@ class CreateExpense extends Tool
             'category'         => $expense->category,
             'description'      => $expense->description,
             'is_dedicated'     => $expense->is_dedicated,
+            'business_use_percent' => $expense->business_use_bp === null ? null : $expense->business_use_bp / 100,
             'recurring_type'   => $expense->recurring_type,
         ]);
     }
@@ -98,6 +101,7 @@ class CreateExpense extends Tool
             'category'       => $schema->string('Catégorie : property_tax, insurance, energy, maintenance, supplies, platform_fees, accounting, telecom, travel, cleaning, other')->required(),
             'description'    => $schema->string('Description de la charge')->required(),
             'is_dedicated'   => $schema->boolean('Charge 100% dédiée à la location (true) ou au prorata de la quote-part (false, défaut)')->nullable(),
+            'business_use_percent' => $schema->number("Part d'usage pour la location en pourcentage, pour une charge aussi personnelle (ex: 30 pour un forfait téléphone utilisé à 30 % pour la location). Absent = 100 %. S'applique avant la quote-part surface.")->nullable(),
             'recurring_type' => $schema->string('Type de récurrence : once (défaut), monthly, quarterly, yearly')->nullable(),
             'tva_rate'       => $schema->number('Taux de TVA en pourcentage (ex: 20 pour 20%, 0 pour exonéré)')->nullable(),
             'notes'          => $schema->string('Notes libres')->nullable(),

@@ -10,7 +10,7 @@
         table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9px; }
         th, td { border: 1px solid #d1d5db; padding: 3px 6px; }
         th { background: #f3f4f6; font-weight: bold; text-align: center; }
-        .r { text-align: right; font-family: monospace; }
+        .r { text-align: right; font-family: DejaVu Sans Mono, monospace; }
         .c { text-align: center; }
         .total { background: #ecfdf5; font-weight: bold; }
         .header { background: #f0fdf4; border: 1px solid #86efac; padding: 8px; margin-bottom: 12px; }
@@ -45,7 +45,9 @@
         <p>Résultat fiscal {{ $year }}</p>
         <p class="amount">{{ $fmt($fiscalYear->fiscal_result) }} €</p>
         <p class="small">
-            @if($form2042['is_benefice'])
+            @if($form2031bis)
+                Indivision : résultat réparti entre indivisaires (2031 bis-SD), chacun reporte sa quote-part sur sa 2042-C-PRO.
+            @elseif($form2042['is_benefice'])
                 Bénéfice → Case <strong>{{ $form2042['case_benefice'] }}</strong> de la 2042-C-PRO : {{ $fmtInt($form2042['montant']) }} €
             @else
                 Déficit → Case <strong>{{ $form2042['case_deficit'] }}</strong> de la 2042-C-PRO : {{ $fmtInt($form2042['montant']) }} €
@@ -59,10 +61,55 @@
          contenait pas. `TaxReturnFormsTest` ancre désormais l'annonce au document. --}}
     <h2>Formulaire 2031-SD — Déclaration de résultat</h2>
     <table>
-        <tr><td class="c">AB</td><td>Production vendue — Services (loyers)</td><td class="r">{{ $fmt($form2031['AB']) }} €</td></tr>
-        <tr><td class="c">CB</td><td>Bénéfice fiscal</td><td class="r">{{ $fmt($form2031['CB']) }} €</td></tr>
-        <tr><td class="c">CC</td><td>Déficit fiscal</td><td class="r">{{ $fmt($form2031['CC']) }} €</td></tr>
+        <tr><td class="c">AB</td><td>Production vendue — Services (loyers)</td><td class="r">{{ $fmtInt($form2031['AB']) }} €</td></tr>
+        <tr><td class="c">CB</td><td>Bénéfice fiscal</td><td class="r">{{ $fmtInt($form2031['CB']) }} €</td></tr>
+        <tr><td class="c">CC</td><td>Déficit fiscal</td><td class="r">{{ $fmtInt($form2031['CC']) }} €</td></tr>
     </table>
+
+    {{-- 2031 bis-SD, cadre E : seulement pour un dossier d'indivision (`Indivision`).
+         Le titre ne s'affiche qu'avec la section : `TaxReturnFormsTest` le rapproche de
+         `TaxReturnService::FORMS_INDIVISION`, et `formsFor()` ne l'annonce que pour ce dossier. --}}
+    @if($form2031bis)
+    <h2>Formulaire 2031-bis-SD — Répartition des bénéfices et des déficits (cadre E)</h2>
+    <table>
+        <tr>
+            <th>Indivisaire (nom, adresse, naissance, n° fiscal)</th>
+            <th class="c">Qualité</th>
+            <th class="c">BIC</th>
+            <th class="r">Quote-part</th>
+            <th class="r">Bénéfice</th>
+            <th class="r">Déficit</th>
+        </tr>
+        @foreach($form2031bis['rows'] as $row)
+        <tr>
+            <td>
+                <strong>{{ $row['name'] }}</strong>
+                @if($row['address'])<br>{{ $row['address'] }}@endif
+                @if($row['birth'])<br>Né(e) {{ $row['birth'] }}@endif
+                @if($row['tax_id'])<br>N° fiscal : {{ $row['tax_id'] }}@endif
+            </td>
+            <td class="c">{{ $row['quality'] }}</td>
+            <td class="c">{{ $row['bic_type'] }}</td>
+            <td class="r">{{ \App\Support\Indivision::basisPointsToPercent($row['share_bp']) }} %</td>
+            <td class="r">{{ $form2031bis['complete'] ? $fmtInt($row['benefice']) . ' €' : '—' }}</td>
+            <td class="r">{{ $form2031bis['complete'] ? $fmtInt($row['deficit']) . ' €' : '—' }}</td>
+        </tr>
+        @endforeach
+        {{-- Ligne de total du cadre E (maquette écran 3, variante P2) : prouve que la somme des
+             quotes-parts et des montants répartis égale le résultat de la 2031-SD (case CB/CC). --}}
+        <tr class="total">
+            <td colspan="3"><strong>Total (= 2031-SD, case CB/CC)</strong></td>
+            <td class="r"><strong>{{ \App\Support\Indivision::basisPointsToPercent($form2031bis['total_share_bp']) }} %</strong></td>
+            <td class="r"><strong>{{ $fmtInt($form2031bis['result'] > 0 ? $form2031bis['result'] : 0) }} €</strong></td>
+            <td class="r"><strong>{{ $fmtInt($form2031bis['result'] < 0 ? -$form2031bis['result'] : 0) }} €</strong></td>
+        </tr>
+    </table>
+    @if(! $form2031bis['complete'])
+        <p class="small" style="color:#b91c1c;">Répartition incomplète (quotes-parts totalisant {{ \App\Support\Indivision::basisPointsToPercent($form2031bis['total_share_bp']) }} %) : complétez-la dans le profil, rubrique « Indivision ».</p>
+    @else
+        <p class="small">Colonne BIC : « M » = BIC non professionnels (location meublée non professionnelle). La somme des quotes-parts égale le résultat de la 2031-SD.</p>
+    @endif
+    @endif
 
     {{-- 2033-A : BILAN SIMPLIFIÉ --}}
     <h2>Formulaire 2033-A — Bilan simplifié</h2>
@@ -74,7 +121,7 @@
         </tr>
         <tr>
             <td>Amortissements (030)</td><td class="r">- {{ $fmtInt($form2033A['030']) }} €</td>
-            <td>Résultat exercice (136)</td><td class="r">{{ $fmt($form2033A['136']) }} €</td>
+            <td>Résultat exercice (136)</td><td class="r">{{ $fmtInt($form2033A['136']) }} €</td>
         </tr>
         <tr>
             <td>Immob. incorporelles brut (014)</td><td class="r">{{ $fmtInt($form2033A['014']) }} €</td>
@@ -104,25 +151,25 @@
     <h2>Formulaire 2033-B — Compte de résultat simplifié</h2>
     <table>
         <tr><th class="line-num">Ligne</th><th>Désignation</th><th class="r" style="width:120px;">Montant</th></tr>
-        <tr><td class="c">218</td><td>Production vendue — Services (loyers nets)</td><td class="r">{{ $fmt($form2033B['218']) }} €</td></tr>
-        <tr class="total"><td class="c">232</td><td><strong>Total produits d'exploitation (I)</strong></td><td class="r"><strong>{{ $fmt($form2033B['232']) }} €</strong></td></tr>
-        <tr><td class="c">242</td><td>Autres charges externes (assurance, entretien, commissions, compta, télécom...)</td><td class="r">{{ $fmt($form2033B['242']) }} €</td></tr>
-        <tr><td class="c">244</td><td>Impôts, taxes (taxe foncière, CFE)</td><td class="r">{{ $fmt($form2033B['244']) }} €</td></tr>
-        <tr><td class="c">254</td><td>Dotations aux amortissements</td><td class="r">{{ $fmt($form2033B['254']) }} €</td></tr>
-        <tr class="total"><td class="c">264</td><td><strong>Total charges d'exploitation (II)</strong></td><td class="r"><strong>{{ $fmt($form2033B['264']) }} €</strong></td></tr>
-        <tr><td class="c">270</td><td>Résultat d'exploitation (I — II)</td><td class="r">{{ $fmt($form2033B['270']) }} €</td></tr>
-        <tr><td class="c">294</td><td>Charges financières (intérêts emprunt)</td><td class="r">{{ $fmt($form2033B['294']) }} €</td></tr>
-        <tr class="total"><td class="c">310</td><td><strong>Résultat comptable</strong></td><td class="r"><strong>{{ $fmt($form2033B['310']) }} €</strong></td></tr>
+        <tr><td class="c">218</td><td>Production vendue — Services (loyers nets)</td><td class="r">{{ $fmtInt($form2033B['218']) }} €</td></tr>
+        <tr class="total"><td class="c">232</td><td><strong>Total produits d'exploitation (I)</strong></td><td class="r"><strong>{{ $fmtInt($form2033B['232']) }} €</strong></td></tr>
+        <tr><td class="c">242</td><td>Autres charges externes (assurance, entretien, commissions, compta, télécom...)</td><td class="r">{{ $fmtInt($form2033B['242']) }} €</td></tr>
+        <tr><td class="c">244</td><td>Impôts, taxes (taxe foncière, CFE)</td><td class="r">{{ $fmtInt($form2033B['244']) }} €</td></tr>
+        <tr><td class="c">254</td><td>Dotations aux amortissements</td><td class="r">{{ $fmtInt($form2033B['254']) }} €</td></tr>
+        <tr class="total"><td class="c">264</td><td><strong>Total charges d'exploitation (II)</strong></td><td class="r"><strong>{{ $fmtInt($form2033B['264']) }} €</strong></td></tr>
+        <tr><td class="c">270</td><td>Résultat d'exploitation (I — II)</td><td class="r">{{ $fmtInt($form2033B['270']) }} €</td></tr>
+        <tr><td class="c">294</td><td>Charges financières (intérêts emprunt)</td><td class="r">{{ $fmtInt($form2033B['294']) }} €</td></tr>
+        <tr class="total"><td class="c">310</td><td><strong>Résultat comptable</strong></td><td class="r"><strong>{{ $fmtInt($form2033B['310']) }} €</strong></td></tr>
     </table>
 
     <h2 style="font-size:11px;">Détermination du résultat fiscal (2033-B partie B)</h2>
     <table>
-        <tr><td class="c">312/314</td><td>Résultat comptable (bénéfice / déficit)</td><td class="r">{{ $fmt($form2033B['312']) }} € / {{ $fmt($form2033B['314']) }} €</td></tr>
-        <tr><td class="c">318</td><td>Réintégration : amortissements de l'exercice non déductibles (art. 39 C), mis en report</td><td class="r">{{ $fmt($form2033B['318']) }} €</td></tr>
-        <tr><td class="c">350</td><td>Déduction : amortissements différés des exercices antérieurs repris (art. 39 C)</td><td class="r">{{ $fmt($form2033B['350']) }} €</td></tr>
-        <tr><td class="c">352/354</td><td>Résultat fiscal avant imputation des déficits antérieurs</td><td class="r">{{ $fmt($form2033B['352']) }} € / {{ $fmt($form2033B['354']) }} €</td></tr>
-        <tr><td class="c">360</td><td>Déficits antérieurs imputés — laissée à zéro : en LMNP, ils s'imputent sur la 2042-C-PRO (cases 5GA à 5GJ)</td><td class="r">{{ $fmt($form2033B['360']) }} €</td></tr>
-        <tr class="total"><td class="c">370/372</td><td><strong>Résultat fiscal après imputation</strong></td><td class="r"><strong>{{ $fmt($form2033B['370']) }} € / {{ $fmt($form2033B['372']) }} €</strong></td></tr>
+        <tr><td class="c">312/314</td><td>Résultat comptable (bénéfice / déficit)</td><td class="r">{{ $fmtInt($form2033B['312']) }} € / {{ $fmtInt($form2033B['314']) }} €</td></tr>
+        <tr><td class="c">318</td><td>Réintégration : amortissements de l'exercice non déductibles (art. 39 C), mis en report</td><td class="r">{{ $fmtInt($form2033B['318']) }} €</td></tr>
+        <tr><td class="c">350</td><td>Déduction : amortissements différés des exercices antérieurs repris (art. 39 C)</td><td class="r">{{ $fmtInt($form2033B['350']) }} €</td></tr>
+        <tr><td class="c">352/354</td><td>Résultat fiscal avant imputation des déficits antérieurs</td><td class="r">{{ $fmtInt($form2033B['352']) }} € / {{ $fmtInt($form2033B['354']) }} €</td></tr>
+        <tr><td class="c">360</td><td>Déficits antérieurs imputés — laissée à zéro : en LMNP, ils s'imputent sur la 2042-C-PRO (cases 5GA à 5GJ)</td><td class="r">{{ $fmtInt($form2033B['360']) }} €</td></tr>
+        <tr class="total"><td class="c">370/372</td><td><strong>Résultat fiscal après imputation</strong></td><td class="r"><strong>{{ $fmtInt($form2033B['370']) }} € / {{ $fmtInt($form2033B['372']) }} €</strong></td></tr>
     </table>
 
     {{-- ANNEXE : d'où vient chaque ligne du 2033-B (issue #13).
@@ -170,7 +217,7 @@
                         <td>{{ $exp['description'] }}</td>
                         <td>{{ $exp['category'] }}</td>
                         <td class="c">{{ $exp['line'] }}</td>
-                        <td class="c">{{ $exp['dedicated'] ? 'Dédiée (100 %)' : 'Partagée' }}</td>
+                        <td class="c">{{ $exp['dedicated'] ? 'Dédiée (100 %)' : 'Partagée' }}@if(($exp['usage_bp'] ?? null) !== null)<br>usage {{ \App\Models\Expense::formatUsagePercent($exp['usage_bp']) }} %@endif</td>
                         <td class="r">{{ $fmt($exp['amount']) }} €</td>
                     </tr>
                 @endforeach
@@ -220,7 +267,7 @@
         <tr><td>&nbsp;&nbsp;dont dotation de l'exercice</td><td class="r">{{ $fmt($cap['deducted_current']) }} €</td></tr>
         <tr><td>&nbsp;&nbsp;dont reports antérieurs repris (ligne 350)</td><td class="r">{{ $fmt($cap['deducted_carried']) }} €</td></tr>
         <tr><td>Dotation de l'exercice non déduite, réintégrée (ligne 318)</td><td class="r">{{ $fmt($cap['reintegrated']) }} €</td></tr>
-        <tr><td>Amortissements différés à reporter à la clôture (2033-D, case 870)</td><td class="r">{{ $fmt($cap['deferred']) }} €</td></tr>
+        <tr><td>Amortissements différés à reporter à la clôture (suivi 2033-D, hors case)</td><td class="r">{{ $fmt($cap['deferred']) }} €</td></tr>
         <tr class="total"><td>Résultat fiscal avant imputation des déficits (352/354)</td><td class="r">{{ $fmt($cap['fiscal_result']) }} €</td></tr>
     </table>
 
@@ -338,19 +385,45 @@
         @endforeach
     </table>
 
-    {{-- 2033-D : DÉFICITS --}}
-    <h2>Formulaire 2033-D — Déficits reportables</h2>
+    {{-- 2033-D : cadre « Déficits reportables » laissé vide en LMNP (notice 2033-NOT-SD,
+         issue #19) ; seul le suivi des amortissements différés, qui n'a pas de case, est imprimé. --}}
+    @php $s39 = $form2033D['suivi_39c']; @endphp
+    <h2>Formulaire 2033-D — Déficits reportables et amortissements différés</h2>
+    <p class="small">
+        Cadre « Déficits reportables » (cases 982 à 870) : à laisser vide. La notice le réserve aux
+        sociétés à l'impôt sur les sociétés ; vos déficits LMNP sont repris par l'administration en
+        cases 5GA à 5GJ de la 2042-C-PRO (voir l'annexe « Déficits antérieurs »). Les amortissements
+        différés (art. 39 C) n'ont pas de case : leur suivi, ci-dessous, est à conserver d'une année
+        sur l'autre.
+    </p>
     <table>
-        <tr><td class="c">982</td><td>Déficits restant à reporter N-1</td><td class="r">{{ $fmt($form2033D['982']) }} €</td></tr>
-        <tr><td class="c">983</td><td>Déficits imputés</td><td class="r">{{ $fmt($form2033D['983']) }} €</td></tr>
-        <tr><td class="c">984</td><td>Déficits reportables (non imputés)</td><td class="r">{{ $fmt($form2033D['984']) }} €</td></tr>
-        <tr><td class="c">860</td><td>Déficit de l'exercice</td><td class="r">{{ $fmt($form2033D['860']) }} €</td></tr>
-        <tr class="total"><td class="c">870</td><td><strong>Total déficits restant à reporter</strong></td><td class="r"><strong>{{ $fmt($form2033D['870']) }} €</strong></td></tr>
+        <tr><td>Amortissements différés à l'ouverture</td><td class="r" style="width:120px;">{{ $fmtInt($s39['ouverture']) }} €</td></tr>
+        <tr><td>+ Différés de l'exercice (ligne 318)</td><td class="r">{{ $fmtInt($s39['differes']) }} €</td></tr>
+        <tr><td>− Repris cette année (ligne 350)</td><td class="r">{{ $fmtInt($s39['repris']) }} €</td></tr>
+        <tr class="total"><td><strong>= Amortissements différés à reporter à la clôture</strong></td><td class="r"><strong>{{ $fmtInt($s39['cloture']) }} €</strong></td></tr>
     </table>
 
     {{-- 2042-C-PRO --}}
     <h2>Report sur la déclaration de revenus 2042-C-PRO</h2>
     <table>
+        @if($form2031bis && $form2031bis['complete'])
+            {{-- Indivision : une ligne par indivisaire, chacun sur SA déclaration. --}}
+            @foreach($form2031bis['rows'] as $row)
+            <tr>
+                <td>
+                    {{ $row['name'] }} —
+                    @if($row['deficit'] > 0)
+                        <strong>Case {{ $form2042['case_deficit'] }}</strong> (déficit LMNP)
+                    @else
+                        <strong>Case {{ $form2042['case_benefice'] }}</strong> (bénéfice LMNP)
+                    @endif
+                </td>
+                <td class="r"><strong>{{ $fmtInt($row['deficit'] > 0 ? $row['deficit'] : $row['benefice']) }} €</strong></td>
+            </tr>
+            @endforeach
+        @elseif($form2031bis)
+        <tr><td colspan="2">Répartition entre indivisaires incomplète : aucun montant à reporter tant qu'elle n'est pas complétée.</td></tr>
+        @else
         <tr>
             <td>
                 @if($form2042['is_benefice'])
@@ -361,6 +434,7 @@
             </td>
             <td class="r"><strong>{{ $fmtInt($form2042['montant']) }} €</strong></td>
         </tr>
+        @endif
     </table>
     <p class="small">
         5NA = bénéfice avec adhésion OGA | 5NK = bénéfice sans OGA (même effet fiscal depuis 2023)<br>
@@ -377,7 +451,7 @@
             <tr><td>Surface totale / louée</td><td>{{ $property->total_area }} m² / {{ $property->rented_area }} m² (quote-part : {{ number_format((float) $property->quota_share * 100, 1) }}%)</td></tr>
             <tr><td>Valeur de référence</td><td>{{ $fmtInt($property->market_value ?? $property->acquisition_price) }} €</td></tr>
             <tr><td>Base amortissable</td><td>{{ $fmtInt((int) $property->depreciable_base) }} €</td></tr>
-            <tr><td>Résidence principale</td><td>{{ $property->is_primary_residence ? 'Oui' : 'Non' }}</td></tr>
+            <tr><td>Situation</td><td>{{ \App\Models\Property::residenceSituationLabels()[$property->residence_situation] ?? $property->residence_situation }}</td></tr>
         </table>
     @endforeach
 
@@ -385,7 +459,7 @@
         <p class="small">
             Ce document est un récapitulatif structuré selon les lignes des formulaires Cerfa 2031-SD, 2033-A/B/C/D.
             Il ne constitue pas une liasse fiscale officielle. Pour la déclaration, utilisez les formulaires Cerfa sur impots.gouv.fr
-            ou transmettez via un logiciel agréé EDI-TDFC. OpenLMNP v0.1 — Logiciel libre AGPLv3.
+            ou transmettez via un logiciel agréé EDI-TDFC. OpenLMNP v{{ $appVersion }} — Logiciel libre AGPLv3.
         </p>
     </div>
 </body>

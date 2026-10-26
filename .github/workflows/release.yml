@@ -48,6 +48,16 @@ jobs:
             f && /^## \[/ { exit }
             f { print }
           ' CHANGELOG.md > NOTES.md
+          # Pré-version (v2.0.0-beta.1) : sa section ne porte que l'avertissement, le détail
+          # des changements est celui de la version visée (2.0.0), ajouté à la suite.
+          base="${v%%-*}"
+          if [ "$base" != "$v" ]; then
+            awk -v ver="$base" '
+              $0 ~ ("^## \\[" ver "\\]") { f = 1; next }
+              f && /^## \[/ { exit }
+              f { print }
+            ' CHANGELOG.md >> NOTES.md
+          fi
           if [ ! -s NOTES.md ]; then
             echo "Voir CHANGELOG.md pour le détail des changements." > NOTES.md
           fi
@@ -59,12 +69,17 @@ jobs:
         run: |
           tag="${{ steps.t.outputs.tag }}"
           asset="${{ steps.asset.outputs.file }}"
+          # ⚠️ Un tag à tiret (v2.0.0-beta.1) est une PRÉ-VERSION. Sans `--prerelease`, elle
+          # devenait la « latest » de GitHub : `UpdateService` (qui lit /releases/latest) et
+          # le script d'installation l'auraient proposée à toutes les instances.
+          pre=""
+          case "$tag" in *-*) pre="--prerelease --latest=false" ;; esac
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$tag" --repo "$GITHUB_REPOSITORY" \
-              --title "OpenLMNP $tag" --notes-file NOTES.md
+              --title "OpenLMNP $tag" --notes-file NOTES.md $pre
           else
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
-              --title "OpenLMNP $tag" --notes-file NOTES.md --verify-tag
+              --title "OpenLMNP $tag" --notes-file NOTES.md --verify-tag $pre
           fi
           # Asset téléchargeable : son download_count sert de proxy d'installations
           # self-hosted (voir community-scripts/install/openlmnp-install.sh).

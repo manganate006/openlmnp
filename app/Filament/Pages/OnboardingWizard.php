@@ -6,6 +6,8 @@ use App\Models\Property;
 use App\Services\DepreciationService;
 use App\Services\LoanService;
 use App\Support\DocumentStorage;
+use App\Support\DossierContext;
+use App\Support\MicroBicRules;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -39,6 +41,15 @@ class OnboardingWizard extends Page implements HasForms
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.pages.onboarding-wizard';
 
+    /**
+     * Un compte « membre » n'a jamais de biens à lui : cet assistant n'en crée que
+     * dans le principal (lot « dossiers membre », décision du 2026-10-15).
+     */
+    public static function canAccess(): bool
+    {
+        return parent::canAccess() && ! DossierContext::isMemberActingAsPrincipal();
+    }
+
     public ?array $data = [];
 
     public static function shouldRegisterNavigation(): bool
@@ -59,7 +70,8 @@ class OnboardingWizard extends Page implements HasForms
         $this->form->fill([
             'type' => 'apartment',
             'rental_type' => 'seasonal',
-            'is_primary_residence' => false,
+            'residence_situation' => Property::RESIDENCE_SEPARATE,
+            'tourism_classification' => Property::CLASSIFICATION_UNCLASSIFIED,
             'land_percentage' => 15,
             'insurance_type' => 'fixed',
             // fill() avec un argument n'applique PAS les ->default() des champs :
@@ -178,7 +190,7 @@ class OnboardingWizard extends Page implements HasForms
             ->icon('heroicon-o-home-modern')
             ->description('Informations générales')
             ->schema([
-                FileUpload::make('photo_path')
+                DocumentStorage::protect(FileUpload::make('photo_path')
                     ->label('Photo du bien')
                     ->image()
                     ->directory(DocumentStorage::directory('photos-biens'))
@@ -193,7 +205,7 @@ class OnboardingWizard extends Page implements HasForms
                     ->panelLayout('integrated')
                     ->openable()
                     ->preventFilePathTampering(allowFilePathUsing: DocumentStorage::belongsToCurrentUser())
-                    ->columnSpanFull(),
+                    ->columnSpanFull()),
                 TextInput::make('name')
                     ->label('Nom du bien')
                     ->placeholder('Ex : La Bastide, Studio Paris 11...')
@@ -209,19 +221,29 @@ class OnboardingWizard extends Page implements HasForms
                         ->label('Type de location')
                         ->options(Property::rentalTypeLabels())
                         ->required()
-                        ->default('seasonal'),
+                        ->default('seasonal')
+                        ->live()
+                        ->afterStateUpdated(fn (callable $set, $state) => $set(
+                            'tourism_classification',
+                            MicroBicRules::defaultClassificationForRentalType($state)
+                        )),
                 ]),
+                // Mêmes attributs que la fiche d'un bien : un seul composant sert les deux.
                 Grid::make(3)->schema([
                     TextInput::make('address')
                         ->label('Adresse')
-                        ->required(),
+                        ->required()
+                        ->extraInputAttributes(['data-address-group' => 'property', 'data-address-role' => 'address'])
+                        ->helperText('Commencez à taper : les adresses de la Base Adresse Nationale vous sont proposées.'),
                     TextInput::make('city')
                         ->label('Ville')
-                        ->required(),
+                        ->required()
+                        ->extraInputAttributes(['data-address-group' => 'property', 'data-address-role' => 'city']),
                     TextInput::make('postal_code')
                         ->label('Code postal')
                         ->required()
-                        ->maxLength(10),
+                        ->maxLength(10)
+                        ->extraInputAttributes(['data-address-group' => 'property', 'data-address-role' => 'postal_code']),
                 ]),
             ]);
     }
@@ -237,10 +259,19 @@ class OnboardingWizard extends Page implements HasForms
             ->icon('heroicon-o-square-3-stack-3d')
             ->description('Quote-part du bien loué')
             ->schema([
-                Toggle::make('is_primary_residence')
-                    ->label('Ce bien fait partie de ma résidence principale')
-                    ->helperText('Si oui, seule la quote-part sera appliquée aux charges et amortissements.')
-                    ->live(),
+                Select::make('residence_situation')
+                    ->label('Situation du logement')
+                    ->options(Property::residenceSituationLabels())
+                    ->required()
+                    ->default(Property::RESIDENCE_SEPARATE)
+                    ->live()
+                    ->helperText(function (callable $get) {
+                        return match ($get('residence_situation')) {
+                            Property::RESIDENCE_INDEPENDENT_UNIT => 'Meublé distinct de votre résidence principale pour la loi : pas de limite de 120 jours, pas d\'art. 35 bis, CFE due en principe, THRS si usage familial. Surface totale = toute la propriété ; prix/valeur = ceux de la propriété entière.',
+                            Property::RESIDENCE_PART_OF_RESIDENCE => 'La quote-part (surface louée ÷ totale) s\'applique aux charges communes et à l\'amortissement.',
+                            default => 'Quote-part = 100 % si vous ne déclarez que la partie louée.',
+                        };
+                    }),
                 Grid::make(2)->schema([
                     TextInput::make('total_area')
                         ->label('Surface totale')
@@ -248,15 +279,38 @@ class OnboardingWizard extends Page implements HasForms
                         ->required()
                         ->numeric()
                         ->minValue(1)
-                        ->live(),
+                        ->live(onBlur: true),
                     TextInput::make('rented_area')
                         ->label('Surface louée')
                         ->suffix('m²')
                         ->required()
                         ->numeric()
                         ->minValue(1)
-                        ->live(),
+                        ->live(onBlur: true),
                 ]),
+                // ⚠️ PAS un champ du bien : une alternative à `rented_area` pour qui connaît
+                // sa quote-part sans connaître le nombre exact de m² loués — mêmes règles
+                // que `PropertyForm::surfaceFields()`, à ne pas faire diverger.
+                TextInput::make('quota_share_percent')
+                    ->label('Quote-part louée (alternative à la surface louée)')
+                    ->suffix('%')
+                    ->numeric()
+                    ->step(0.1)
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->dehydrated(false)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (callable $get, callable $set) {
+                        $total = (float) ($get('total_area') ?? 0);
+                        $percent = (float) ($get('quota_share_percent') ?? 0);
+
+                        if ($total <= 0) {
+                            return;
+                        }
+
+                        $set('rented_area', (string) max(1, (int) round($total * $percent / 100)));
+                    })
+                    ->helperText('Saisissez SOIT la surface louée ci-dessus, SOIT cette quote-part.'),
                 Placeholder::make('quota_preview')
                     ->label('Quote-part calculée')
                     ->content(function (callable $get) {
@@ -300,7 +354,7 @@ class OnboardingWizard extends Page implements HasForms
                         ->default(0)
                         ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : '0')
                         ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                        ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Amortis sur 25 ans, avec quote-part si résidence principale'),
+                        ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Amortis sur 25 ans, avec quote-part surface'),
                     TextInput::make('agency_fees')
                         ->label('Honoraires agence')
                         ->suffix('€')
@@ -309,7 +363,7 @@ class OnboardingWizard extends Page implements HasForms
                         ->default(0)
                         ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, '.', '') : '0')
                         ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                        ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Amortis sur 25 ans, avec quote-part si résidence principale'),
+                        ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Amortis sur 25 ans, avec quote-part surface'),
                     DatePicker::make('acquisition_date')
                         ->label('Date d\'achat')
                         ->required()
@@ -356,6 +410,12 @@ class OnboardingWizard extends Page implements HasForms
                     ->displayFormat('d/m/Y')
                     ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Date de démarrage du LMNP au régime réel. Sert de point de départ pour le calcul des amortissements.')
                     ->hint('Les amortissements démarrent à cette date.'),
+                Select::make('tourism_classification')
+                    ->label('Classement micro-BIC')
+                    ->options(Property::tourismClassificationLabels())
+                    ->required()
+                    ->default(Property::CLASSIFICATION_UNCLASSIFIED)
+                    ->helperText('Pré-rempli d\'après le type de location, modifiable. Détermine l\'abattement et le plafond du micro-BIC — sans effet sur le régime réel.'),
                 Repeater::make('listing_urls')
                     ->label('Liens d\'annonces')
                     ->schema([
@@ -428,6 +488,10 @@ class OnboardingWizard extends Page implements HasForms
                             ->step(0.01)
                             ->default(0)
                             ->hint('0 = calcul automatique'),
+                        Toggle::make('loan_is_dedicated')
+                            ->label('Emprunt dédié à ce logement')
+                            ->helperText('Cochez s\'il finance exclusivement le logement loué (déduit à 100 %, sans quote-part).')
+                            ->default(false),
                     ]),
 
                 Section::make('Assurance emprunteur')
@@ -506,6 +570,7 @@ class OnboardingWizard extends Page implements HasForms
                             ['Bien', $get('name') ?: '—'],
                             ['Type', Property::typeLabels()[$get('type')] ?? '—'],
                             ['Adresse', implode(', ', array_filter([$get('address'), $get('postal_code'), $get('city')]))],
+                            ['Situation', Property::residenceSituationLabels()[$get('residence_situation')] ?? '—'],
                             ['Surfaces', ($get('rented_area') ?? '?') . ' m² / ' . ($get('total_area') ?? '?') . ' m²'],
                         ];
 
@@ -557,7 +622,8 @@ class OnboardingWizard extends Page implements HasForms
             'postal_code' => $data['postal_code'],
             'total_area' => (int) $data['total_area'],
             'rented_area' => (int) $data['rented_area'],
-            'is_primary_residence' => (bool) ($data['is_primary_residence'] ?? false),
+            'residence_situation' => $data['residence_situation'] ?? Property::RESIDENCE_SEPARATE,
+            'tourism_classification' => $data['tourism_classification'] ?? Property::CLASSIFICATION_UNCLASSIFIED,
             // Déjà en centimes : dehydrateStateUsing() a converti les euros saisis
             // lors du getState() ci-dessus. Ne pas multiplier une seconde fois.
             'acquisition_price' => (int) ($data['acquisition_price'] ?? 0),
@@ -590,6 +656,7 @@ class OnboardingWizard extends Page implements HasForms
                 'insurance_type' => $data['insurance_type'] ?? 'fixed',
                 'insurance_monthly' => (int) round(((float) ($data['loan_insurance_monthly'] ?? 0)) * 100),
                 'insurance_rate' => (float) ($data['loan_insurance_rate'] ?? 0),
+                'is_dedicated' => (bool) ($data['loan_is_dedicated'] ?? false),
             ]);
 
             app(LoanService::class)->generateSchedule($loan);

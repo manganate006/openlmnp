@@ -16,6 +16,9 @@ class McpAuditRedactor
     /** Arguments qui transportent un fichier ou un contenu : seule leur taille est gardée. */
     public const CONTENT_KEYS = ['file_base64', 'csv_base64', 'csv_content', 'content'];
 
+    /** Secrets (phrase de passe du coffre, mot de passe) : jamais enregistrés, même courts. */
+    public const SECRET_KEYS = ['passphrase', 'current_passphrase', 'new_passphrase', 'password'];
+
     /** Au-delà, une chaîne est remplacée par sa seule longueur. */
     public const MAX_STRING = 500;
 
@@ -41,7 +44,9 @@ class McpAuditRedactor
     private static function walk(array $params): array
     {
         foreach ($params as $key => $value) {
-            if (is_string($key) && in_array($key, self::CONTENT_KEYS, true) && is_string($value)) {
+            if (is_string($key) && in_array($key, self::SECRET_KEYS, true)) {
+                $params[$key] = '[REDACTED]';
+            } elseif (is_string($key) && in_array($key, self::CONTENT_KEYS, true) && is_string($value)) {
                 $params[$key] = '[masqué — ' . strlen($value) . ' caractères]';
             } elseif (is_string($key) && str_ends_with($key, 'url') && is_string($value)) {
                 // Une URL signée porte son jeton dans la requête : on n'en garde que l'adresse.

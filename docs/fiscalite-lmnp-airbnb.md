@@ -22,10 +22,15 @@
 
 ### Changement des abattements et plafonds micro-BIC
 
-| Type de meublé | Abattement avant | Abattement 2026 | Plafond CA avant | Plafond CA 2026 |
-|---|---|---|---|---|
-| **Non classé** | 50 % | **30 %** | 77 700 € | **15 000 €** |
-| **Classé** | 71 % | **50 %** | 188 700 € | **77 700 €** |
+| Type de meublé | Abattement avant | Abattement depuis 2025 | Plafond CA avant | Plafond CA 2025 | Plafond CA 2026-2028 |
+|---|---|---|---|---|---|
+| **Non classé** | 50 % | **30 %** | 77 700 € | **15 000 €** | **15 000 €** |
+| **Classé** | 71 % | **50 %** | 188 700 € | **77 700 €** | **83 600 €** |
+
+Le plafond du classé (comme de la location meublée classique, même barème depuis la loi Le Meur)
+suit la révision triennale des seuils micro-BIC : 77 700 € pour les revenus 2025, **83 600 €** pour
+les revenus 2026 à 2028 (BOI-BAREME-000044, actualité BOFiP ACTU-2025-00127). Celui du non classé
+reste fixé à 15 000 € par la loi elle-même, hors révision triennale.
 
 **Conséquence** : avec un CA Airbnb de ~20 000 €, le micro-BIC meublé non classé **n'est plus possible** (plafond 15 000 € dépassé).
 
@@ -101,11 +106,11 @@ La piscine de 46 m² ajoute typiquement **+15 à 30 %** dans les Alpes-Maritimes
 
 ### Scénarios de valorisation
 
-| Scénario | Hypothèse | Valeur totale | Quote-part 28 % | Terrain (-15 %) | Base amortissable |
+| Scénario | Hypothèse | Valeur totale | Quote-part 26 % | Terrain (-15 %) | Base amortissable |
 |---|---|---|---|---|---|
-| Conservateur | Achat + 5 % + piscine | ~680 000 € | 190 400 € | -28 560 € | **161 840 €** |
-| **Moyen** | **Achat + 15 % + piscine** | **~730 000 €** | **204 400 €** | **-30 660 €** | **173 740 €** |
-| Favorable | Estimation haute marché 06 | ~800 000 € | 224 000 € | -33 600 € | **190 400 €** |
+| Conservateur | Achat + 5 % + piscine | ~680 000 € | 176 800 € | -26 520 € | **150 280 €** |
+| **Moyen** | **Achat + 15 % + piscine** | **~730 000 €** | **189 800 €** | **-28 470 €** | **161 330 €** |
+| Favorable | Estimation haute marché 06 | ~800 000 € | 208 000 € | -31 200 € | **176 800 €** |
 
 Sources : [lmnp.ai](https://lmnp.ai/estimation-valeur-bien-lmnp) — [jedeclaremonmeuble.com](https://www.jedeclaremonmeuble.com/faq/comment-estimer-la-valeur-de-mon-bien-immobilier-pour-ma-declaration-au-regime-reel-simplifie/)
 
@@ -127,23 +132,23 @@ Sources : [lmnp.ai — Passer au régime réel](https://lmnp.ai/passer-au-regime
 
 ## Calcul détaillé de l'amortissement — Régime réel
 
-### 1. Amortissement immeuble (scénario moyen, base 173 740 €)
+### 1. Amortissement immeuble (scénario moyen, base 161 330 €)
 
 | Composant | % de la base | Durée | Amort./an |
 |---|---|---|---|
-| Gros œuvre | 50 % | 50 ans | 1 737 € |
-| Toiture | 10 % | 25 ans | 695 € |
-| Installations électriques | 10 % | 25 ans | 695 € |
-| Étanchéité | 5 % | 15 ans | 579 € |
-| Agencements intérieurs | 15 % | 15 ans | 1 737 € |
-| Plomberie / sanitaire | 10 % | 15 ans | 1 158 € |
-| **Total amortissement immeuble** | | | **6 601 €/an** |
+| Gros œuvre | 50 % | 50 ans | 1 613 € |
+| Toiture | 10 % | 25 ans | 645 € |
+| Installations électriques | 10 % | 25 ans | 645 € |
+| Étanchéité | 5 % | 15 ans | 538 € |
+| Agencements intérieurs | 15 % | 15 ans | 1 613 € |
+| Plomberie / sanitaire | 10 % | 15 ans | 1 076 € |
+| **Total amortissement immeuble** | | | **6 130 €/an** |
 
-### 2. Amortissement piscine (quote-part 28 %)
+### 2. Amortissement piscine (quote-part 26 %)
 
-| Élément | Coût total | Quote-part 28 % | Durée restante (2026) | Amort./an |
+| Élément | Coût total | Quote-part 26 % | Durée restante (2026) | Amort./an |
 |---|---|---|---|---|
-| Piscine 46 m² | 40 000 € | 11 200 € | ~12 ans | **933 €/an** |
+| Piscine 46 m² | 40 000 € | 10 400 € | ~12 ans | **867 €/an** |
 
 ### 3. Amortissement travaux dédiés (100 %)
 
@@ -161,24 +166,24 @@ Sources : [lmnp.ai — Passer au régime réel](https://lmnp.ai/passer-au-regime
 
 #### Charges au prorata (26,3 %)
 
-| Charge | Total annuel | Part Airbnb (28 %) |
+| Charge | Total annuel | Part Airbnb (26 %) |
 |---|---|---|
-| Taxe foncière | 2 400 € | 672 € |
-| Électricité | 2 000 € | 560 € |
-| Eau | 1 200 € | 336 € |
-| Internet | 400 € | 112 € |
-| **Sous-total** | | **1 680 €** |
+| Taxe foncière | 2 400 € | 624 € |
+| Électricité | 2 000 € | 520 € |
+| Eau | 1 200 € | 312 € |
+| Internet | 400 € | 104 € |
+| **Sous-total** | | **1 560 €** |
 
 #### Charges déductibles directement
 
 | Charge | Estimation |
 |---|---|
-| Intérêts d'emprunt (28 % du crédit RP) | ~1 540 € |
+| Intérêts d'emprunt (26 % du crédit RP) | ~1 430 € |
 | Commission Airbnb (~3 % du CA) | ~600 € |
-| Assurance habitation (28 %) | ~150 € |
+| Assurance habitation (26 %) | ~140 € |
 | Expert-comptable LMNP | ~600 € |
 | Linge, consommables, ménage | ~300 € |
-| **Sous-total** | **~3 190 €** |
+| **Sous-total** | **~3 070 €** |
 
 ---
 
@@ -189,24 +194,24 @@ Sources : [lmnp.ai — Passer au régime réel](https://lmnp.ai/passer-au-regime
 | Poste | Montant/an |
 |---|---|
 | **CA Airbnb** | **20 000 €** |
-| Amortissement immeuble | -6 601 € |
-| Amortissement piscine | -933 € |
+| Amortissement immeuble | -6 130 € |
+| Amortissement piscine | -867 € |
 | Amortissement travaux | -4 571 € |
 | Amortissement meubles | -400 € |
-| Charges prorata 28 % | -1 680 € |
-| Charges directes | -3 190 € |
-| **Total déductions** | **-17 375 €** |
-| **Résultat fiscal** | **≈ 2 625 €** |
-| PS (18,6 %) | 488 € |
+| Charges prorata 26 % | -1 560 € |
+| Charges directes | -3 070 € |
+| **Total déductions** | **-16 598 €** |
+| **Résultat fiscal** | **≈ 3 402 €** |
+| PS (18,6 %) | 633 € |
 
 ### Évolution dans le temps
 
 | Période | Amortissements actifs | Total déductions | Résultat fiscal | PS |
 |---|---|---|---|---|
-| **2026-2028** | Immeuble + piscine + travaux + meubles | ~17 375 € | **~2 625 €** | 488 € |
-| **2029-2032** | Immeuble + piscine + travaux (plus de meubles) | ~16 975 € | **~3 025 €** | 563 € |
-| **2033-2037** | Immeuble + piscine (plus de travaux) | ~12 404 € | **~7 596 €** | 1 413 € |
-| **2038+** | Immeuble seul | ~11 471 € | **~8 529 €** | 1 586 € |
+| **2026-2028** | Immeuble + piscine + travaux + meubles | ~16 598 € | **~3 402 €** | 633 € |
+| **2029-2032** | Immeuble + piscine + travaux (plus de meubles) | ~16 198 € | **~3 802 €** | 707 € |
+| **2033-2037** | Immeuble + piscine (plus de travaux) | ~11 627 € | **~8 373 €** | 1 557 € |
+| **2038+** | Immeuble seul | ~10 760 € | **~9 240 €** | 1 719 € |
 
 ### Seuil de basculement micro-BIC
 
@@ -246,8 +251,8 @@ Le résultat fiscal Airbnb impacte le RFR du foyer, donc l'éligibilité au VFL.
 
 Depuis 2025, en cas de vente, les amortissements déduits sont **réintégrés dans la plus-value imposable**. Impact pour ce bien :
 
-- La **résidence principale** est exonérée de plus-value → la quote-part RP (72 %) n'est pas concernée
-- La **quote-part Airbnb (28 %)** pourrait être concernée si le bien est vendu
+- La **résidence principale** est exonérée de plus-value → la quote-part RP (74 %) n'est pas concernée
+- La **quote-part Airbnb (26 %)** pourrait être concernée si le bien est vendu
 - Les amortissements cumulés (ex : ~100 000 € sur 15 ans) augmenteraient la plus-value taxable sur cette quote-part
 - **Point à valider avec un expert-comptable** avant de s'engager
 

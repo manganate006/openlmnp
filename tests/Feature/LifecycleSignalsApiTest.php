@@ -150,6 +150,20 @@ it('never reports the fixed demo account', function () {
         ->assertJsonCount(0, 'signals');
 });
 
+it('never reports a member account (lot « dossiers membre »)', function () {
+    // Un compte membre n'est ni un prospect ni un abonné : les scénarios de cycle
+    // de vie lui parleraient d'une activité (biens, exercices...) qu'il ne peut
+    // PAS avoir — voir App\Enums\AccountKind::Member.
+    User::factory()->create([
+        'email' => 'membre-signal@example.com',
+        'account_kind' => \App\Enums\AccountKind::Member,
+    ]);
+
+    $this->getJson('/api/admin/lifecycle-signals?emails[]=membre-signal@example.com', signalsHeaders())
+        ->assertOk()
+        ->assertJsonCount(0, 'signals');
+});
+
 it('does not leak users that were not asked for', function () {
     User::factory()->create(['email' => 'demande@example.com']);
     User::factory()->create(['email' => 'pas-demande@example.com']);
@@ -205,6 +219,31 @@ it('expose les trois signaux ajoutes pour le sequenceur', function () {
         ->and($signal['first_rental_start'])->toContain('2024-07-01')
         // Aucune charge saisie : toutes les categories manquent.
         ->and($signal['expense_categories_missing'])->not->toBeEmpty();
+});
+
+it('compte les dossiers lies actifs du compte, lot 4', function () {
+    $user = User::factory()->create(['email' => 'indivisaire@example.com']);
+
+    $dossier = \App\Models\LinkedDossier::create([
+        'public_id' => (string) \Illuminate\Support\Str::ulid(),
+        'user_id' => User::factory()->create(['is_linked_dossier' => true])->id,
+        'owner_id' => $user->id,
+        'kind' => 'indivision',
+        'siren' => '100000009',
+    ]);
+
+    $signal = $this->getJson('/api/admin/lifecycle-signals?emails[]=indivisaire@example.com', signalsHeaders())
+        ->assertOk()->json('signals.0');
+
+    expect($signal['linked_dossiers'])->toBe(1);
+
+    // Un dossier archivé ne compte plus — même règle que `DossierQuota::used()`.
+    $dossier->update(['archived_at' => now()]);
+
+    $signal = $this->getJson('/api/admin/lifecycle-signals?emails[]=indivisaire@example.com', signalsHeaders())
+        ->assertOk()->json('signals.0');
+
+    expect($signal['linked_dossiers'])->toBe(0);
 });
 
 it('exclut les categories REELLEMENT saisies, sur la bonne colonne de date', function () {

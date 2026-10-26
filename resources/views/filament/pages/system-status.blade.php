@@ -109,7 +109,7 @@
         </div>
 
         <div style="text-align:center;font-size:11px;color:var(--olmnp-fg-subtle);padding:16px;">
-            OpenLMNP v0.1 — Laravel {{ $info['laravel_version'] }} — Filament {{ $info['filament_version'] }}
+            OpenLMNP v{{ $info['openlmnp_version'] }} — Laravel {{ $info['laravel_version'] }} — Filament {{ $info['filament_version'] }}
         </div>
     </div>
 </x-filament-panels::page>

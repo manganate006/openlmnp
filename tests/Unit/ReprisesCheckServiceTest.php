@@ -129,12 +129,13 @@ it('turns red beyond one percent and says where to look', function () {
 
     expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MISMATCH)
         ->and($report['verdict'])->toBe(ReprisesCheckService::VERDICT_MISMATCH)
-        // Les causes probables sont ordonnées par fréquence : l'ordre est le message.
+        // D'abord la cause que les chiffres appuient (le cabinet déclare PLUS : il nous
+        // manque quelque chose), puis les autres par ordre de fréquence.
         ->and(array_column($line['diagnostics'], 'code'))->toBe([
+            'missing_component',
             'rental_start_date',
             'land_share',
             'acquisition_fees',
-            'missing_component',
             'market_value',
         ]);
 });
@@ -168,7 +169,9 @@ it('corroborates the acquisition fees when the gap matches their amount', functi
 
     $diagnostics = collect(lineOf($report, ReprisesCheckService::LINE_GROSS_ASSETS)['diagnostics'])->keyBy('code');
 
-    expect($diagnostics['acquisition_fees']['corroborated'])->toBeTrue()
+    // Sur la valeur brute, la cause se nomme « passés en charges » : c'est la seule lecture
+    // possible d'un total 044 auquel manquent les frais entiers.
+    expect($diagnostics['acquisition_fees_expensed']['corroborated'])->toBeTrue()
         ->and($diagnostics['missing_component']['corroborated'])->toBeFalse();
 });
 
@@ -430,6 +433,79 @@ it('explains a close gap instead of leaving the user with a silent badge', funct
         ->and($line['diagnostics'][0]['hint'])->toContain('JOUR');
 });
 
+it('explains a close gap caused by acquisition fees, instead of blaming a convention', function () {
+    // ⚠️ Le cas réel du 2026-10-15 : −859 € sur la 030, entièrement expliqués par le
+    // rangement des frais d'acquisition (030 chez nous, 016 chez le cabinet) — mais
+    // AVANT correctif, l'écran l'attribuait à une convention de prorata. Un montant
+    // synthétique rejoue la même mécanique, sans recopier le chiffre réel.
+    $property = makeCheckProperty($this->user, ['notary_fees' => 60_000, 'agency_fees' => 0]);
+    $repriseYear = makeRepriseYear($this->user, 2025);
+
+    $depreciated = collect(app(DepreciationService::class)->depreciationDetailForYear($property, 2024))
+        ->where('type', 'notary')
+        ->sum(fn ($line) => (int) $line['cumul']);
+
+    $computed = computedFor($this->service, $repriseYear)[ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION];
+
+    // Le test ne mesure rien hors de la fourchette « proche » : on le vérifie plutôt
+    // que de le supposer (même précaution que le test « bien neuf » de TaxReturnService).
+    expect($depreciated)->toBeGreaterThan(100)
+        ->and(bcdiv((string) $depreciated, (string) $computed, 6))->toBeLessThanOrEqual('0.01');
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION => $computed - $depreciated,
+    ]);
+
+    $line = lineOf($report, ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+    $diagnostics = collect($line['diagnostics'])->keyBy('code');
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_CLOSE)
+        ->and($diagnostics->has('acquisition_fees'))->toBeTrue()
+        ->and($diagnostics['acquisition_fees']['corroborated'])->toBeTrue()
+        ->and($diagnostics->has('prorata_convention'))->toBeFalse()
+        ->and($diagnostics['acquisition_fees']['hint'])
+            ->toContain('amortis en 030')
+            ->toContain('016');
+});
+
+it('still blames a prorata convention when nothing corroborates the acquisition fees', function () {
+    // Contre-épreuve du test précédent : sans frais de notaire, rien ne corrobore la
+    // piste « frais d'acquisition » — l'écran doit continuer à dire « convention »,
+    // pas se taire ni inventer une corroboration.
+    makeCheckProperty($this->user, ['notary_fees' => 0, 'agency_fees' => 0]);
+    $repriseYear = makeRepriseYear($this->user, 2025);
+
+    $computed = (int) $this->service->check($repriseYear, [])['lines'][1]['computed'];
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION => (int) round($computed * 0.995),
+    ]);
+
+    $line = lineOf($report, ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_CLOSE)
+        ->and($line['diagnostics'])->toHaveCount(1)
+        ->and($line['diagnostics'][0]['code'])->toBe('prorata_convention');
+});
+
+it('cites travaux and mobilier among the causes of a missing component', function () {
+    makeCheckProperty($this->user);
+    $repriseYear = makeRepriseYear($this->user, 2026);
+    $computed = computedFor($this->service, $repriseYear);
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION =>
+            $computed[ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION] * 2,
+    ]);
+
+    $diagnostics = collect(lineOf($report, ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION)['diagnostics'])
+        ->keyBy('code');
+
+    expect($diagnostics['missing_component']['hint'])
+        ->toContain('travaux')
+        ->toContain('mobilier');
+});
+
 it('keeps the full list of causes for a real mismatch', function () {
     // La contrepartie : au-delà de la tolérance, il faut bien dérouler toutes les pistes.
     makeCheckProperty($this->user);
@@ -445,4 +521,103 @@ it('keeps the full list of causes for a real mismatch', function () {
 
     expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MISMATCH)
         ->and(count($line['diagnostics']))->toBeGreaterThan(1);
+});
+
+// === Recette bêta du 2026-10-15 : diagnostic 030/016 et causes par ligne (D11) ===
+
+/** Cumul des frais d'acquisition déjà amortis à la clôture 2025. */
+function feesCumulAt2025(Property $property): int
+{
+    return (int) collect(app(DepreciationService::class)->depreciationDetailForYear($property->fresh(), 2025))
+        ->where('type', 'notary')
+        ->sum(fn ($line) => (int) $line['cumul']);
+}
+
+it('explains a 030 gap equal to the depreciated fees when the gross total 044 agrees', function () {
+    // Premier exercice tenu par le cabinet : bien loué depuis le 1er janvier 2025, frais
+    // amortis en 016 chez lui, en 030 chez nous. Le total brut est le même des deux côtés.
+    $property = makeCheckProperty($this->user, [
+        'notary_fees' => 1_500_000,
+        'rental_start_date' => '2025-01-01',
+        'acquisition_date' => '2025-01-01',
+    ]);
+    $repriseYear = makeRepriseYear($this->user, 2026, ['opening_deferred_depreciation' => 0]);
+    $computed = computedFor($this->service, $repriseYear);
+    $fees = feesCumulAt2025($property);
+
+    expect($fees)->toBeGreaterThan(0);
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_GROSS_ASSETS => $computed[ReprisesCheckService::LINE_GROSS_ASSETS],
+        ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION => $computed[ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION] - $fees,
+    ]);
+
+    $line = lineOf($report, ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_EXPLAINED)
+        ->and(array_column($line['diagnostics'], 'code'))->toBe(['acquisition_fees_presentation'])
+        // Rien « à vérifier » : l'écart n'en est pas un.
+        ->and($report['verdict'])->toBe(ReprisesCheckService::VERDICT_EXPLAINED);
+});
+
+it('puts the acquisition fees first when their amount explains the gap, before mere conditions', function () {
+    // Même dossier, sans la case 044 : rien ne départage 016 et charges, l'écart reste à
+    // vérifier, mais la cause chiffrée passe devant la date de mise en location, que tout
+    // premier exercice « corrobore ».
+    $property = makeCheckProperty($this->user, [
+        'notary_fees' => 1_500_000,
+        'rental_start_date' => '2025-01-01',
+        'acquisition_date' => '2025-01-01',
+    ]);
+    $repriseYear = makeRepriseYear($this->user, 2026, ['opening_deferred_depreciation' => 0]);
+    $computed = computedFor($this->service, $repriseYear);
+    $fees = feesCumulAt2025($property);
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION => $computed[ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION] - $fees,
+    ]);
+
+    $line = lineOf($report, ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+
+    expect($line['verdict'])->not->toBe(ReprisesCheckService::VERDICT_EXPLAINED)
+        ->and($line['diagnostics'][0]['code'])->toBe('acquisition_fees')
+        ->and($line['diagnostics'][0]['evidence'])->toBe('amount');
+});
+
+it('never blames a prorata or the land share for a gap on the gross total 044', function () {
+    // Un prorata ne change pas une valeur brute, et la 044 porte le terrain : ces deux
+    // causes n'ont rien à faire sur cette ligne, même « corroborées » par une condition.
+    makeCheckProperty($this->user, [
+        'land_percentage' => 0,
+        'rental_start_date' => '2025-01-01',
+        'acquisition_date' => '2025-01-01',
+    ]);
+    $repriseYear = makeRepriseYear($this->user, 2026);
+    $computed = computedFor($this->service, $repriseYear);
+
+    $report = $this->service->check($repriseYear, [
+        // Le cabinet porte 9 000 € de plus : des travaux et du mobilier absents ici.
+        ReprisesCheckService::LINE_GROSS_ASSETS => $computed[ReprisesCheckService::LINE_GROSS_ASSETS] + 900_000,
+    ]);
+
+    $codes = array_column(lineOf($report, ReprisesCheckService::LINE_GROSS_ASSETS)['diagnostics'], 'code');
+
+    expect($codes)->not->toContain('rental_start_date')
+        ->and($codes)->not->toContain('land_share')
+        ->and($codes[0])->toBe('missing_component');
+});
+
+it('names expensed fees on the gross total when the gap is their full amount', function () {
+    makeCheckProperty($this->user, ['notary_fees' => 1_500_000]);
+    $repriseYear = makeRepriseYear($this->user, 2026);
+    $computed = computedFor($this->service, $repriseYear);
+
+    $report = $this->service->check($repriseYear, [
+        ReprisesCheckService::LINE_GROSS_ASSETS => $computed[ReprisesCheckService::LINE_GROSS_ASSETS] - 1_500_000,
+    ]);
+
+    $line = lineOf($report, ReprisesCheckService::LINE_GROSS_ASSETS);
+
+    expect($line['diagnostics'][0]['code'])->toBe('acquisition_fees_expensed')
+        ->and($line['diagnostics'][0]['corroborated'])->toBeTrue();
 });

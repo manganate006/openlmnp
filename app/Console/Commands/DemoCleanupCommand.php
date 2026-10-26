@@ -2,9 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\FiscalYear;
-use App\Models\Property;
 use App\Models\User;
+use App\Services\AccountDeletionService;
 use Illuminate\Console\Command;
 
 /**
@@ -14,6 +13,11 @@ use Illuminate\Console\Command;
  * est dans le passé, AINSI QUE toutes leurs données (biens, revenus, charges,
  * amortissements, travaux, mobilier, emprunts). Les comptes réels
  * (is_demo=false) ne sont JAMAIS touchés.
+ *
+ * La purge des données d'un compte (biens, exercices fiscaux, justificatifs sur
+ * disque — racine courante ET ancienne racine Laravel 10 —, jetons MCP) est
+ * partagée avec `openlmnp:account-delete` via `AccountDeletionService::purgeUserData()` :
+ * un seul endroit à tenir à jour, pas deux versions qui pourraient diverger.
  */
 class DemoCleanupCommand extends Command
 {
@@ -21,7 +25,7 @@ class DemoCleanupCommand extends Command
 
     protected $description = 'Supprime les comptes de démonstration expirés (ou tous avec --all) et leurs données';
 
-    public function handle(): int
+    public function handle(AccountDeletionService $accountDeletion): int
     {
         $expired = User::query()
             ->where('is_demo', true)
@@ -36,14 +40,7 @@ class DemoCleanupCommand extends Command
                 continue;
             }
 
-            // Suppression explicite des biens et exercices fiscaux du user.
-            // Les données rattachées (incomes, expenses, components, works,
-            // furniture, loans, payments) partent via le cascade FK property_id.
-            Property::withoutGlobalScopes()->where('user_id', $user->id)->get()
-                ->each(fn (Property $property) => $property->delete());
-
-            FiscalYear::withoutGlobalScopes()->where('user_id', $user->id)->delete();
-
+            $accountDeletion->purgeUserData($user);
             $user->delete();
             $count++;
         }

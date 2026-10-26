@@ -68,10 +68,15 @@ class CompareMicroBic extends Tool
 
             // Avantage positif = le micro-BIC est plus imposant → le réel est préférable
             'advantage_real_vs_micro_eur' => $advantageEur,
-            'recommended'                 => $comparison['recommended'],
-            'recommendation_label'        => $comparison['recommended'] === 'real'
-                ? 'Régime réel recommandé (résultat fiscal plus faible)'
-                : 'Micro-BIC recommandé (abattement forfaitaire plus avantageux)',
+            'recommended'                 => $comparison['available'] ? $comparison['recommended'] : 'real',
+            'recommendation_label'        => ! $comparison['available']
+                ? 'Régime réel obligatoire : ' . $comparison['unavailable_reason']
+                : ($comparison['recommended'] === 'real'
+                    ? 'Régime réel recommandé (résultat fiscal plus faible)'
+                    : 'Micro-BIC recommandé (abattement forfaitaire plus avantageux)'),
+            'micro_bic_available'   => $comparison['available'],
+            'micro_bic_unavailable_reason' => $comparison['unavailable_reason'],
+            'micro_bic_warning' => $comparison['warning'] ?? null,
         ]);
     }
 
@@ -79,7 +84,7 @@ class CompareMicroBic extends Tool
     {
         return [
             'year'           => $schema->integer('Année fiscale (ex : 2025)')->required(),
-            'abatement_rate' => $schema->number('Taux d\'abattement micro-BIC en % (50 pour classé, 30 pour non classé). Défaut : 50'),
+            'abatement_rate' => $schema->number('Taux d\'abattement micro-BIC en % (50 pour une location de longue durée ou un meublé de tourisme classé, 30 pour un meublé de tourisme non classé). Défaut : 50'),
         ];
     }
 }

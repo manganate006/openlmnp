@@ -124,6 +124,11 @@
                                     <div class="de-comp-name">
                                         <span class="de-comp-emoji" x-text="getEmoji(comp.name)"></span>
                                         <span x-text="comp.name"></span>
+                                        {{-- Ligne de gabarit : le catalogue la propose, le dossier
+                                             ne la porte pas encore. --}}
+                                        <span class="de-template-mark" x-show="isTemplateRow(comp)" x-cloak
+                                              title="Ligne de gabarit : ce composant n'existe pas encore dans votre dossier."
+                                              aria-label="Ligne de gabarit, pas encore enregistrée">&#x25CB;</span>
                                     </div>
                                     <div class="de-comp-row">
                                         <div class="de-slider-container">
@@ -169,6 +174,11 @@
                                     <div class="de-comp-name">
                                         <span class="de-comp-emoji" x-text="getEmoji(comp.name)"></span>
                                         <span x-text="comp.name"></span>
+                                        {{-- Ligne de gabarit : le catalogue la propose, le dossier
+                                             ne la porte pas encore. --}}
+                                        <span class="de-template-mark" x-show="isTemplateRow(comp)" x-cloak
+                                              title="Ligne de gabarit : ce composant n'existe pas encore dans votre dossier."
+                                              aria-label="Ligne de gabarit, pas encore enregistrée">&#x25CB;</span>
                                     </div>
                                     <div class="de-comp-row">
                                         <div class="de-slider-container">
@@ -253,14 +263,20 @@
                         </template>
                     </div>
 
-                    <div class="de-card de-add-row">
-                        <button class="de-btn-add" @click="addComponent()">+ Ajouter un composant</button>
-                        <span class="de-hint" style="margin-bottom:0;">
-                            Pour une ligne de votre liasse qui ne figure pas au catalogue
-                            (« Ascenseur », « Menuiseries extérieures »&hellip;). Vous choisissez son nom,
-                            sa durée et la ligne du 2033-C à laquelle elle se rattache, dans l'onglet
-                            <strong>Montants</strong>.
-                        </span>
+                    <div class="de-card">
+                        <div class="de-add-row" style="margin-top:0;">
+                            <button class="de-btn-add" @click="addComponent()">+ Ajouter un composant</button>
+                            <span class="de-hint" style="margin-bottom:0;">
+                                Pour une ligne de votre liasse qui ne figure pas au catalogue
+                                (« Ascenseur », « Menuiseries extérieures »&hellip;). Vous choisissez son nom,
+                                sa durée et la ligne du 2033-C à laquelle elle se rattache, dans l'onglet
+                                <strong>Montants</strong>.
+                            </span>
+                        </div>
+
+                        {{-- Le bouton d'enregistrement ferme cette carte au lieu d'en occuper
+                             une à lui seul — et il y côtoie ce qu'il va supprimer. --}}
+                        @include('filament.partials.depreciation-editor-footer')
                     </div>
 
                 </div>
@@ -324,8 +340,24 @@
                     </thead>
                     <tbody>
                         <template x-for="(comp, idx) in components" :key="idx">
-                            <tr x-show="comp.enabled || comp.baseAmount > 0">
-                                <td>
+                            {{-- Base saisie à la main : la LIGNE le dit, pas une pastille.
+                                 Trois signaux, dont deux non chromatiques (WCAG 1.4.1) :
+                                 la couleur de fond, le repère « ✎ » devant le nom, et
+                                 l'intitulé accessible de la ligne. Aucun ne prend de
+                                 hauteur : le tableau garde son rythme vertical. --}}
+                            <tr x-show="comp.enabled || comp.baseAmount > 0"
+                                :class="[comp.baseSource === 'manual' ? 'de-row-manual' : '', isTemplateRow(comp) ? 'de-row-template' : ''].join(' ')"
+                                :aria-label="rowLabel(comp)"
+                                :title="comp.baseSource === 'manual' ? 'Base saisie à la main : elle ne sera pas recalculée depuis le pourcentage.' : null">
+                                <td class="de-name-cell">
+                                    <span class="de-manual-mark" x-show="comp.baseSource === 'manual'" x-cloak
+                                          aria-hidden="true">&#x270E;</span>
+                                    {{-- ⚠️ Ligne de GABARIT : proposée par le catalogue, elle n'existe
+                                         pas dans le dossier. Rien ne la distinguait d'un composant
+                                         réel — même « 0,00 », même tableau — et c'est ce qui rendait
+                                         invisible le remplacement opéré par l'enregistrement. --}}
+                                    <span class="de-template-mark" x-show="isTemplateRow(comp)" x-cloak
+                                          aria-hidden="true">&#x25CB;</span>
                                     <template x-if="!comp.custom">
                                         <span>
                                             <span x-text="getEmoji(comp.name)"></span>
@@ -340,7 +372,6 @@
                                             @change="renameComponent(idx, $event.target.value)"
                                         >
                                     </template>
-                                    <span class="de-manual-badge" x-show="comp.baseSource === 'manual'" x-cloak>saisi</span>
                                 </td>
                                 <td>
                                     <select class="de-cerfa-select" @change="setCerfaCategory(idx, $event.target.value)">
@@ -403,31 +434,27 @@
                 </table>
                 </div>
 
+                <p class="de-legend">
+                    <span class="de-manual-mark" aria-hidden="true">&#x270E;</span>
+                    Les lignes ainsi marquées portent une <strong>base saisie à la main</strong> :
+                    elles ne seront pas recalculées depuis leur pourcentage.
+                </p>
+                <p class="de-legend">
+                    <span class="de-template-mark" aria-hidden="true">&#x25CB;</span>
+                    Celles-ci sont des <strong>lignes de gabarit</strong> : proposées par le catalogue,
+                    elles n'existent pas encore dans votre dossier. Elles n'y entreront qu'une fois
+                    cochées, avec un montant, et enregistrées.
+                </p>
+
                 <div class="de-add-row">
                     <button class="de-btn-add" @click="addComponent()">+ Ajouter un composant</button>
                 </div>
 
                 <div class="de-remainder" :class="remainderClass()" x-text="remainderLabel()"></div>
+
+                @include('filament.partials.depreciation-editor-footer')
             </div>
 
-            {{-- Actions --}}
-                    <div class="de-card de-actions">
-                        @if($showReset)
-                            <button class="de-btn de-btn-secondary" @click="confirmReset()">
-                                Réinitialiser par défaut
-                            </button>
-                        @else
-                            <span></span>
-                        @endif
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <span class="de-dirty-badge" x-show="isDirty" x-cloak>Modifications non enregistrées</span>
-                            {{-- Plus jamais désactivé : sous-ventiler est légitime, et le
-                                 serveur refuse la sur-ventilation avec un message explicite. --}}
-                            <button class="de-btn de-btn-primary" @click="save()">
-                                {{ $saveLabel }}
-                            </button>
-                        </div>
-                    </div>
         </div>
 
     @endif

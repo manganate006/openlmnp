@@ -6,8 +6,9 @@ use App\Models\Expense;
 use App\Models\FiscalYear;
 use App\Models\Property;
 use App\Models\PropertyComponent;
+use App\Models\User;
+use App\Support\Indivision;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Génération de la liasse fiscale LMNP structurée selon les lignes Cerfa.
@@ -31,6 +32,24 @@ class TaxReturnService
      */
     public const FORMS = ['2031-SD', '2033-A', '2033-B', '2033-C', '2033-D'];
 
+    /**
+     * Formulaires ajoutés quand le dossier est celui d'une indivision (`Indivision`).
+     * Même ancrage que `FORMS` : `TaxReturnFormsTest` compare la vue à leur réunion.
+     */
+    public const FORMS_INDIVISION = ['2031-bis-SD'];
+
+    /**
+     * Ce que contient la liasse DE CE DOSSIER — c'est cette liste qu'on annonce au dehors.
+     *
+     * @return list<string>
+     */
+    public static function formsFor(?User $user): array
+    {
+        return Indivision::isIndivision($user)
+            ? [...self::FORMS, ...self::FORMS_INDIVISION]
+            : self::FORMS;
+    }
+
     public const CHECK_OK = 'ok';
 
     /** Situation permise par le produit, mais que l'utilisateur doit savoir. */
@@ -41,29 +60,44 @@ class TaxReturnService
     public function __construct(
         private FiscalYearService $fiscalYearService,
         private DepreciationService $depreciationService,
+        private UpdateService $updateService = new UpdateService(),
     ) {}
 
-    public function generatePdf(FiscalYear $fiscalYear): string
+    /** Nom de fichier proposé au téléchargement. */
+    public function filename(FiscalYear $fiscalYear): string
+    {
+        return "liasse_fiscale_{$fiscalYear->year}.pdf";
+    }
+
+    /**
+     * Produit la liasse et rend ses octets. **Rien n'est écrit sur le disque.**
+     *
+     * La liasse était auparavant déposée en clair dans `storage/app/private/tax-returns/`, sur
+     * le volume même que le coffre-fort des justificatifs est censé mettre à l'abri — alors
+     * qu'elle contient davantage qu'un justificatif : adresses, SIREN, résultats, reports.
+     *
+     * Elle est intégralement recalculable depuis les données comptables, et l'était déjà à
+     * chaque téléchargement (le fichier posé sur le disque était réécrit puis relu dans la
+     * même requête, jamais servi plus tard). La supprimer ne perd donc rien.
+     *
+     * ⚠️ Ne conserve QUE la date de génération, pas le document : garder une trace de ce qui a
+     * réellement été déposé à l'administration demanderait un archivage daté et immuable, ce
+     * que l'ancien fichier — écrasé à chaque clic et absent des sauvegardes — n'était pas.
+     */
+    public function renderPdf(FiscalYear $fiscalYear): string
     {
         $data = $this->pdfData($fiscalYear);
-        $year = $data['year'];
 
         $pdf = Pdf::loadView('pdf.tax-return', $data);
         $pdf->setPaper('A4', 'portrait');
 
-        $filename = "liasse_fiscale_{$year}.pdf";
-        // Un dossier par utilisateur : deux comptes qui génèrent la même année
-        // écrivaient le même fichier, et chacun pouvait télécharger celui de l'autre.
-        $path = "tax-returns/{$fiscalYear->user_id}/{$year}/{$filename}";
+        $fiscalYear->update(['tax_return_generated_at' => now()]);
 
-        Storage::put($path, $pdf->output());
-        $fiscalYear->update(['pdf_path' => $path]);
-
-        return $path;
+        return (string) $pdf->output();
     }
 
     /**
-     * Tout ce que la vue `pdf.tax-return` reçoit — séparé de `generatePdf()` pour que le rendu
+     * Tout ce que la vue `pdf.tax-return` reçoit — séparé de `renderPdf()` pour que le rendu
      * HTML se teste sans passer par DomPDF.
      *
      * @return array<string, mixed>
@@ -90,16 +124,24 @@ class TaxReturnService
             'form2031' => $this->compute2031($fiscalYear),
             'form2033B' => $this->compute2033B($fiscalYear, $properties, $year, $resultBreakdown),
             'resultBreakdown' => $resultBreakdown,
-            'form2033A' => $this->compute2033A($fiscalYear, $properties, $year),
+            'form2033A' => null, // ci-dessous : la case 136 reprend la ligne 310 du 2033-B
             'form2033C' => $this->compute2033C($properties, $year),
             'form2033D' => $this->compute2033D($fiscalYear),
             'form2042' => $this->compute2042($fiscalYear),
+            'form2031bis' => $this->compute2031bis($fiscalYear, $user),
             'assetBreakdown' => $this->assetBreakdown($properties, $year),
+            // La mention de bas de page annonçait « OpenLMNP v0.1 » en dur : un document
+            // remis à un tiers doit dire quelle version l'a produit.
+            'appVersion' => $this->updateService->getCurrentVersion(),
         ];
 
-        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties);
+        $data['form2033A'] = $this->compute2033A($fiscalYear, $properties, $year, $data['form2033B']['310']);
 
-        return $data;
+        // Contrôles sur les CENTIMES (un écart d'un centime y reste visible), formulaires
+        // imprimés à l'EURO : voir `wholeEuros()`.
+        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties, $data['form2031bis']);
+
+        return array_merge($data, $this->wholeEuros($data));
     }
 
     /**
@@ -231,7 +273,8 @@ class TaxReturnService
             $sums = ['dedicated_242' => 0, 'dedicated_244' => 0, 'shared_242' => 0, 'shared_244' => 0];
             foreach ($expenses as $exp) {
                 $line = $exp->category === Expense::CATEGORY_PROPERTY_TAX ? '244' : '242';
-                $amount = (int) $exp->{$amountField};
+                // Montant retenu à la part d'usage (#17) ; la quote-part s'applique au total.
+                $amount = $exp->usageAdjusted($amountField);
                 $sums[($exp->is_dedicated ? 'dedicated_' : 'shared_') . $line] += $amount;
 
                 $expenseRows[] = [
@@ -241,6 +284,7 @@ class TaxReturnService
                     'line'        => $line,
                     'amount'      => $amount,
                     'dedicated'   => (bool) $exp->is_dedicated,
+                    'usage_bp'    => $exp->business_use_bp,
                 ];
             }
 
@@ -252,14 +296,17 @@ class TaxReturnService
             $retained242 = $sums['dedicated_242'] + $sharedRetained242;
             $retained244 = $sums['dedicated_244'] + $sharedRetained244;
 
-            // Emprunts (ligne 294) — intérêts et assurance tronqués séparément, comme computeTotals()
+            // Emprunts (ligne 294) — intérêts et assurance tronqués séparément, comme computeTotals().
+            // Quote-part sauf emprunt dédié (Loan::prorate()) : un prêt qui finance
+            // EXCLUSIVEMENT le logement loué (ex : prêt travaux du studio indépendant) est
+            // déduit à 100 %, jamais proratisé une seconde fois.
             $loanRows = [];
             $retained294 = 0;
             foreach ($prop->loans as $loan) {
                 $interest = $loan->getInterestsForYear($year);
                 $insurance = $loan->getInsuranceForYear($year);
-                $interestRetained = (int) bcmul((string) $interest, $quota, 0);
-                $insuranceRetained = (int) bcmul((string) $insurance, $quota, 0);
+                $interestRetained = (int) $loan->prorate((string) $interest, $quota);
+                $insuranceRetained = (int) $loan->prorate((string) $insurance, $quota);
                 $retained294 += $interestRetained + $insuranceRetained;
 
                 $loanRows[] = [
@@ -349,13 +396,20 @@ class TaxReturnService
      * @param  \Illuminate\Support\Collection<int, Property>|array<int, Property>  $properties
      * @return list<array{id: string, status: string, message: string, delta: int}>
      */
-    public function checks(array $form2033A, array $form2033B, array $form2033C, $properties): array
+    public function checks(array $form2033A, array $form2033B, array $form2033C, $properties, ?array $form2031bis = null): array
     {
-        return [
+        $checks = [
             $this->checkDotation($form2033B, $form2033C),
             $this->checkImmobilisations($form2033A, $form2033C, $properties),
             $this->checkResultat($form2033B),
+            $this->checkBilan($form2033A, $form2033B),
         ];
+
+        if ($form2031bis !== null) {
+            $checks[] = $this->checkIndivision($form2031bis);
+        }
+
+        return $checks;
     }
 
     /**
@@ -392,6 +446,29 @@ class TaxReturnService
                 . ' (' . self::euros($delta) . '). Les données de l\'année ont changé depuis le '
                 . 'dernier calcul de l\'exercice : recalculez-le, ou, s\'il est clôturé, '
                 . 'vérifiez ce qui a été modifié après la clôture.',
+            'delta' => $delta,
+        ];
+    }
+
+    /**
+     * Le bilan porte le résultat COMPTABLE : case 136 du 2033-A = ligne 310 du 2033-B
+     * (issue #20). Jusqu'en v1.6.11 la 136 reprenait le résultat fiscal, si bien que les deux
+     * divergeaient dès qu'une part de l'amortissement était différée (art. 39 C).
+     *
+     * @return array{id: string, status: string, message: string, delta: int}
+     */
+    private function checkBilan(array $form2033A, array $form2033B): array
+    {
+        $bilan = (int) $form2033A['136'];
+        $resultat = (int) $form2033B['310'];
+        $delta = $bilan - $resultat;
+
+        return [
+            'id' => 'bilan',
+            'status' => $delta === 0 ? self::CHECK_OK : self::CHECK_ERROR,
+            'message' => $delta === 0
+                ? 'Cohérence vérifiée : case 136 du 2033-A = ligne 310 du 2033-B (' . self::euros($resultat) . ').'
+                : 'Écart : case 136 du 2033-A (' . self::euros($bilan) . ') ≠ ligne 310 du 2033-B (' . self::euros($resultat) . ').',
             'delta' => $delta,
         ];
     }
@@ -493,10 +570,134 @@ class TaxReturnService
     }
 
     /**
+     * Les formulaires à l'EURO, comme ils se déclarent (issue #21).
+     *
+     * Chaque ligne de détail est arrondie, puis chaque total est RECALCULÉ sur les lignes
+     * arrondies : un total arrondi pour lui-même pouvait ne plus être la somme de ce qui est
+     * imprimé au-dessus. Les montants restent en centimes (multiples de 100), pour que les
+     * vues gardent un seul formateur.
+     *
+     * Ordre imposé par les égalités entre formulaires :
+     *  - 2033-C d'abord : la 254 du 2033-B reprend SON total 572, d'où 572 = 254 à l'euro ;
+     *  - 2033-B : quand l'art. 39 C joue (318 ou 350 non nulle), le résultat fiscal reste
+     *    celui de l'exercice arrondi et l'écart d'arrondi des lignes est porté par la 318 (à
+     *    défaut la 350) : un résultat plafonné à 0 € reste à 0 €. Sinon 352/354 = 310, somme
+     *    des lignes arrondies. Si la partie B ne bouclait déjà pas au centime (exercice
+     *    clôturé modifié après coup, contrôle `resultat` en erreur), 352/354 gardent le
+     *    résultat de l'exercice, comme avant l'arrondi ;
+     *  - 2033-A : 136 = 310, puis 120 par différence ;
+     *  - 2031, 2042-C-PRO et répartition 2031 bis reprennent 352/354 ; le suivi des
+     *    amortissements différés (2033-D) reprend 318 et 350.
+     *
+     * Les contrôles de `checks()` tournent AVANT, sur les centimes.
+     *
+     * @param  array<string, mixed>  $forms  form2031, form2033A, form2033B, form2033C, form2033D, form2042, form2031bis
+     * @return array<string, mixed>
+     */
+    public function wholeEuros(array $forms): array
+    {
+        $r = static fn ($cents): int => (int) round(((int) $cents) / 100, 0, PHP_ROUND_HALF_UP) * 100;
+
+        $c = $forms['form2033C'];
+        foreach ($c['categories'] as $key => $cat) {
+            foreach (['brut', 'dotation', 'cumul'] as $col) {
+                $c['categories'][$key][$col] = $r($cat[$col]);
+            }
+        }
+        foreach (['brut', 'dotation', 'cumul'] as $col) {
+            $c['total_' . $col] = array_sum(array_column($c['categories'], $col));
+        }
+
+        $b = $forms['form2033B'];
+        foreach (['218', '218_brut', '242', '244', '294'] as $line) {
+            $b[$line] = $r($b[$line]);
+        }
+        $b['254'] = $c['total_dotation'];
+        $b['232'] = $b['218'];
+        $b['264'] = $b['242'] + $b['244'] + $b['254'];
+        $b['270'] = $b['232'] - $b['264'];
+        $b['310'] = $b['270'] - $b['294'];
+        $b['312'] = max($b['310'], 0);
+        $b['314'] = max(-$b['310'], 0);
+
+        $fiscal = $r($forms['form2033B']['352'] - $forms['form2033B']['354']);
+        $b['318'] = $r($b['318']);
+        $b['350'] = $r($b['350']);
+        if ((int) $forms['form2033B']['318'] !== 0) {
+            $b['318'] = max(0, $fiscal - $b['310'] + $b['350']);
+        } elseif ((int) $forms['form2033B']['350'] !== 0) {
+            $b['350'] = max(0, $b['310'] + $b['318'] - $fiscal);
+        }
+        $cents = $forms['form2033B'];
+        $boucle = $cents['310'] + $cents['318'] - $cents['350'] === $cents['352'] - $cents['354'];
+        $fiscal = $boucle ? $b['310'] + $b['318'] - $b['350'] : $fiscal;
+        $b['352'] = $b['370'] = max($fiscal, 0);
+        $b['354'] = $b['372'] = max(-$fiscal, 0);
+
+        $a = $forms['form2033A'];
+        foreach (['014', '016', '028', '030', '156'] as $line) {
+            $a[$line] = $r($a[$line]);
+        }
+        $a['044'] = $a['028'] + $a['014'];
+        $a['048'] = $a['030'] + $a['016'];
+        $a['112'] = $a['180'] = $a['044'] - $a['048'];
+        $a['136'] = $b['310'];
+        $a['120'] = $a['112'] - $a['136'] - $a['156'];
+
+        // Cadre « Déficits reportables » : vide en LMNP (cf. `compute2033D()`). Le suivi des
+        // amortissements différés reprend la 318 et la 350 imprimées, pour boucler à l'euro.
+        $d = $forms['form2033D'];
+        $suivi = $d['suivi_39c'];
+        $suivi['ouverture'] = $r($suivi['ouverture']);
+        $suivi['differes'] = $b['318'];
+        $suivi['repris'] = $b['350'];
+        $suivi['cloture'] = $suivi['ouverture'] + $suivi['differes'] - $suivi['repris'];
+        $d['suivi_39c'] = $suivi;
+
+        $f2031 = $forms['form2031'];
+        $f2031['AB'] = $r($f2031['AB']);
+        $f2031['CB'] = $b['352'];
+        $f2031['CC'] = $b['354'];
+
+        $f2042 = $forms['form2042'];
+        $f2042['montant'] = abs($fiscal);
+        $f2042['is_benefice'] = $fiscal >= 0;
+
+        $bis = $forms['form2031bis'] ?? null;
+        if ($bis !== null) {
+            $bis['result'] = $fiscal;
+            if ($bis['complete']) {
+                // Réparti en euros entiers : la somme des quotes-parts reste le résultat imprimé.
+                $parts = Indivision::split(intdiv($fiscal, 100), $bis['rows']);
+                foreach ($bis['rows'] as $i => $row) {
+                    $part = $parts[$i] * 100;
+                    $bis['rows'][$i]['benefice'] = max($part, 0);
+                    $bis['rows'][$i]['deficit'] = max(-$part, 0);
+                }
+            }
+        }
+
+        return [
+            'form2031' => $f2031,
+            'form2033A' => $a,
+            'form2033B' => $b,
+            'form2033C' => $c,
+            'form2033D' => $d,
+            'form2042' => $f2042,
+            'form2031bis' => $bis,
+        ];
+    }
+
+    /**
      * 2033-A — Bilan simplifié
      */
-    public function compute2033A(FiscalYear $fy, $properties, int $year): array
+    public function compute2033A(FiscalYear $fy, $properties, int $year, ?int $line310 = null): array
     {
+        // ⚠️ Case 136 = résultat COMPTABLE (ligne 310 du 2033-B), pas le résultat fiscal
+        // (issue #20). Le bilan enregistre l'amortissement en entier (030), le résultat qu'il
+        // porte doit donc le déduire en entier, part différée comprise.
+        $line310 ??= $this->compute2033B($fy, $properties, $year)['310'];
+
         $corpBrut = 0;
         $corpAmort = 0;
         $incorpBrut = 0;
@@ -507,7 +708,7 @@ class TaxReturnService
             // ⚠️ Immobilisations CORPORELLES brutes = le bien (terrain compris, il reste
             // corporel même s'il ne s'amortit pas) PLUS les travaux et le mobilier. Jusqu'au
             // 2026-09-05 la case 028 ne portait que la valeur de référence du bien : rejouer
-            // une liasse réelle a montré qu'il y manquait exactement les travaux et le
+            // un dossier de test a montré qu'il y manquait exactement les travaux et le
             // mobilier — 7 610 € sur 188 400 € dans cet exemple —, alors que notre propre 2033-C les liste.
             // Sans effet sur le résultat, mais l'écran de contrôle de reprise compare cette
             // ligne : l'utilisateur voyait un écart rouge qui ne venait pas de lui.
@@ -541,10 +742,10 @@ class TaxReturnService
                 $corpAmort += (int) $line['cumul'];
             }
 
-            // Emprunts : capital restant dû
+            // Emprunts : capital restant dû (quote-part, sauf emprunt dédié)
             foreach ($prop->loans as $loan) {
                 $remaining = $loan->getRemainingCapitalAtEndOfYear($year);
-                $emprunts += (int) bcmul((string) $remaining, $prop->quota_share, 0);
+                $emprunts += (int) $loan->prorate((string) $remaining, $prop->quota_share);
             }
         }
 
@@ -558,8 +759,12 @@ class TaxReturnService
             '044' => $corpBrut + $incorpBrut,
             '048' => $corpAmort + $incorpAmort,
             '112' => $totalActif,
-            '120' => $totalActif - $fy->fiscal_result - $emprunts, // Compte exploitant (bouclage)
-            '136' => $fy->fiscal_result,
+            // Compte de l'exploitant par différence : l'application ne porte ni trésorerie ni
+            // créances, tous les flux (apport, charges payées, loyers encaissés, capital
+            // remboursé) passent par ce compte. Faux tant que la 136 l'était : il absorbait
+            // l'amortissement différé.
+            '120' => $totalActif - $line310 - $emprunts,
+            '136' => $line310,
             '156' => $emprunts,
             '180' => $totalActif, // Total passif = total actif
         ];
@@ -707,33 +912,45 @@ class TaxReturnService
     }
 
     /**
-     * 2033-D — Déficits reportables et amortissements différés
+     * 2033-D — cadre « Déficits reportables », et suivi des amortissements différés.
      *
-     * ⚠️ Correction de conformité (v1.4.0). Les cases 982/983/984 suivent les DÉFICITS
-     * reportables ; elles étaient alimentées par `previous_deferred`, c'est-à-dire par
-     * l'AMORTISSEMENT RÉPUTÉ DIFFÉRÉ. Toute liasse d'un bailleur ayant de l'amortissement
-     * différé déclarait donc des déficits qu'il n'avait pas — un défaut de conformité, pas
-     * une gêne d'affichage. Les liasses générées avant la correction portent l'ancienne
-     * valeur : le changement est annoncé au CHANGELOG et dans la page Liasse fiscale.
+     * ⚠️ Le cadre (982, 983, 984, 860, 870) est LAISSÉ VIDE pour un LMNP (issue #19). La notice
+     * 2033-NOT-SD le réserve aux entreprises à l'impôt sur les sociétés : à l'impôt sur le
+     * revenu, le déficit se reporte sur la déclaration de revenus (cases 5GA à 5GJ de la
+     * 2042-C-PRO pour un LMNP), pas sur les BIC suivants. Seule exception prévue : le stock
+     * d'ARD de l'ancien régime existant au 1er janvier 2004, sans rapport avec l'art. 39 C
+     * d'aujourd'hui.
      *
-     * Ce sont bien deux stocks distincts, que l'administration fait d'ailleurs suivre par
-     * deux états séparés (BOI-FORM-000038 pour les amortissements dont la déduction a été
-     * écartée, BOI-FORM-000039 pour les déficits) :
-     *   - 982/983/984 : déficits antérieurs, imputés, restants — reportables DIX ans
-     *     (CGI art. 156, I-1° ter ; BOI-BIC-CHAMP-40-20 § 250) ;
-     *   - 870 : amortissements différés, reportables SANS limite de durée
-     *     (CGI art. 39 C, II-3 ; BOI-BIC-AMT-20-40-10-30 § 10).
+     * Historique : jusqu'en v1.3.2, 982 à 984 recevaient l'amortissement différé ; de v1.4.0 à
+     * la 2.0, elles recevaient les déficits LMNP (984 déficit de l'exercice compris) et la 870
+     * l'amortissement différé, sous l'intitulé « Total des déficits restant à reporter ». La
+     * notice veut 870 = 984 + 860, et le cadre vide.
      *
-     * La case 984 porte le stock à la clôture, déficit de l'exercice (860) compris.
+     * Les amortissements différés (art. 39 C, II) se reportent sans limite de durée et n'ont
+     * pas de case : leur stock est suivi à part (`suivi_39c`), comme l'état de suivi libre que
+     * tiennent les cabinets. Clôture = ouverture + différés de l'exercice (318) − repris (350).
+     * Beaucoup de cabinets le portent néanmoins en 870 : l'assistant de reprise continue de le
+     * lire là, à titre d'indication.
+     *
+     * @return array{982: int, 983: int, 984: int, 860: int, 870: int, suivi_39c: array{ouverture: int, differes: int, repris: int, cloture: int}}
      */
     public function compute2033D(FiscalYear $fy): array
     {
+        $total = (int) $fy->total_depreciation;
+        $deductedCurrent = min($total, (int) $fy->capped_depreciation);
+
         return [
-            '982' => (int) $fy->previous_deficit,      // Déficits antérieurs à l'ouverture
-            '983' => (int) $fy->deficit_imputed,       // Imputés sur le bénéfice de l'exercice
-            '984' => (int) $fy->deficit_carryforward,  // Restant à reporter à la clôture
-            '860' => $fy->fiscal_result < 0 ? abs($fy->fiscal_result) : 0, // Déficit de l'exercice
-            '870' => (int) $fy->deferred_depreciation, // Amortissements différés reportables
+            '982' => 0,
+            '983' => 0,
+            '984' => 0,
+            '860' => 0,
+            '870' => 0,
+            'suivi_39c' => [
+                'ouverture' => (int) $fy->previous_deferred,
+                'differes' => $total - $deductedCurrent,
+                'repris' => (int) $fy->capped_depreciation - $deductedCurrent,
+                'cloture' => (int) $fy->deferred_depreciation,
+            ],
         ];
     }
 
@@ -747,6 +964,114 @@ class TaxReturnService
             'case_deficit' => '5NY',  // Déficit avec OGA (ou 5NZ sans)
             'montant' => abs($fy->fiscal_result),
             'is_benefice' => $fy->fiscal_result >= 0,
+        ];
+    }
+
+    /**
+     * 2031 bis-SD, cadre E — répartition du résultat entre indivisaires.
+     *
+     * `null` si le dossier n'est pas une indivision. Le montant réparti est le résultat de la
+     * 2031-SD (CB ou CC), signe compris : un déficit se répartit comme un bénéfice, et chaque
+     * indivisaire le reporte sur sa 2042-C-PRO, où l'administration l'impute sur ses propres
+     * revenus de location meublée (cf. `compute2033B`, case 360).
+     *
+     * Colonne 2 du cadre : « M » pour des BIC non professionnels (notice de la 2031-SD).
+     *
+     * @return array{complete: bool, total_share_bp: int, result: int, rows: list<array<string, mixed>>}|null
+     */
+    public function compute2031bis(FiscalYear $fy, ?User $user = null): ?array
+    {
+        $user ??= $fy->user;
+        if (! Indivision::isIndivision($user)) {
+            return null;
+        }
+
+        $coOwners = Indivision::coOwners($user);
+        $complete = Indivision::isComplete($coOwners);
+        $result = (int) $fy->fiscal_result;
+        $parts = $complete ? Indivision::split($result, $coOwners) : array_fill(0, count($coOwners), 0);
+
+        $rows = [];
+        foreach ($coOwners as $i => $coOwner) {
+            $part = $parts[$i];
+            $rows[] = $coOwner + [
+                'quality' => 'Indivisaire',
+                'bic_type' => 'M',
+                'benefice' => $part > 0 ? $part : 0,
+                'deficit' => $part < 0 ? -$part : 0,
+            ];
+        }
+
+        return [
+            'complete' => $complete,
+            'total_share_bp' => Indivision::totalShare($coOwners),
+            'result' => $result,
+            'rows' => $rows,
+        ];
+    }
+
+    /**
+     * ⚠️ Pas binaire, même logique que `checkImmobilisations()` : un reliquat délibérément
+     * accepté (ici, des indivisaires sans adresse ni date de naissance) ne doit pas se
+     * confondre avec une répartition fausse. La quote-part incomplète reste une ERREUR — elle
+     * fait mentir le montant que chacun reporte sur sa 2042-C-PRO — alors que l'adresse et la
+     * naissance manquantes sont permises : elles ne sont demandées QUE pour remplir la case
+     * « identité » de la 2031 bis-SD à la main, jamais utilisées dans un calcul.
+     */
+    private function checkIndivision(array $form2031bis): array
+    {
+        if (! $form2031bis['complete']) {
+            return [
+                'id' => 'indivision',
+                'status' => self::CHECK_ERROR,
+                'delta' => 0,
+                'message' => sprintf(
+                    'Répartition entre indivisaires incomplète : %d indivisaire(s), quotes-parts totalisant %s %% au lieu de 100 %%. '
+                    . 'Complétez-la dans votre profil, rubrique « Indivision ».',
+                    count($form2031bis['rows']),
+                    Indivision::basisPointsToPercent($form2031bis['total_share_bp']),
+                ),
+            ];
+        }
+
+        $incomplets = array_filter(
+            $form2031bis['rows'],
+            fn (array $row) => blank($row['address']) || blank($row['birth']),
+        );
+
+        if ($incomplets !== []) {
+            // Libellé de la maquette écran 3, variante B : nommer chaque indivisaire et ce qui
+            // lui manque, plutôt qu'un simple compte — c'est ce qu'il faut aller corriger, et où.
+            $details = array_map(static function (array $row): string {
+                $manque = [];
+                if (blank($row['address'])) {
+                    $manque[] = 'adresse';
+                }
+                if (blank($row['birth'])) {
+                    $manque[] = 'date et lieu de naissance';
+                }
+
+                return $row['name'] . ' (' . implode(', ', $manque) . ')';
+            }, array_values($incomplets));
+
+            return [
+                'id' => 'indivision',
+                'status' => self::CHECK_WARNING,
+                'delta' => 0,
+                'message' => sprintf(
+                    'Indivisaires à compléter pour la 2031 bis : %s. La notice les demande pour chaque '
+                    . 'indivisaire ; les montants restent valables.',
+                    implode(', ', $details),
+                ),
+            ];
+        }
+
+        return [
+            'id' => 'indivision',
+            'status' => self::CHECK_OK,
+            'message' => 'Répartition entre indivisaires : les quotes-parts totalisent 100 %, '
+                . 'et leur somme égale le résultat de la 2031-SD (' . self::euros($form2031bis['result']) . ').',
+            'delta' => 0,
         ];
     }
 }

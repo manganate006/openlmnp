@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasDocuments;
 use App\Models\Scopes\BelongsToUserThroughPropertyScope;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
@@ -23,12 +24,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon $start_date
  * @property int         $monthly_payment    centimes
  * @property int         $insurance_monthly  centimes
+ * @property bool        $is_dedicated       finance exclusivement le logement loué (pas de quote-part)
  */
 #[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Loan extends Model
 {
+    use HasDocuments;
+
     public const INSURANCE_FIXED = 'fixed';
     public const INSURANCE_VARIABLE = 'variable';
+
+    /** Tableau d'amortissement recalculable à volonté par LoanService. */
+    public const SCHEDULE_COMPUTED = 'computed';
+
+    /** Échéances réelles de la banque : à ne jamais écraser sans confirmation. */
+    public const SCHEDULE_IMPORTED = 'imported';
 
     protected $fillable = [
         'property_id',
@@ -41,6 +51,8 @@ class Loan extends Model
         'insurance_monthly',
         'insurance_type',
         'insurance_rate',
+        'schedule_source',
+        'is_dedicated',
     ];
 
     public static function insuranceTypeLabels(): array
@@ -54,9 +66,21 @@ class Loan extends Model
     protected function casts(): array
     {
         return [
-            'start_date'  => 'date',
-            'annual_rate' => 'decimal:3',
+            'start_date'    => 'date',
+            'annual_rate'   => 'decimal:3',
+            'is_dedicated'  => 'boolean',
         ];
+    }
+
+    /**
+     * Applique la quote-part à un montant, sauf si l'emprunt est dédié (il finance
+     * alors exclusivement le logement loué). Même logique que `is_dedicated` sur
+     * Expense/Furniture/PropertyWork — centralisée ici pour n'être écrite qu'une
+     * fois, et ne jamais être appliquée deux fois par ses appelants.
+     */
+    public function prorate(string $amountCents, string $quotaShare): string
+    {
+        return $this->is_dedicated ? $amountCents : bcmul($amountCents, $quotaShare, 0);
     }
 
     // -------------------------------------------------------------------------
@@ -76,6 +100,18 @@ class Loan extends Model
     public function getInsuranceMonthlyEurosAttribute(): string
     {
         return bcdiv((string) $this->insurance_monthly, '100', 2);
+    }
+
+    /**
+     * Le tableau vient-il de la banque plutôt que de notre calcul ?
+     *
+     * Les échéances importées portent le réel (différé, assurance dégressive,
+     * modulation) : les recalculer ferait varier les intérêts déductibles déjà
+     * déclarés, d'où la garde dans LoanService::generateSchedule().
+     */
+    public function hasImportedSchedule(): bool
+    {
+        return $this->schedule_source === self::SCHEDULE_IMPORTED;
     }
 
     // -------------------------------------------------------------------------

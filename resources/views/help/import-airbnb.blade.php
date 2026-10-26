@@ -18,6 +18,9 @@
     <h3>Gestion des doublons</h3>
     <p>Les réservations déjà importées sont détectées automatiquement et ne seront pas dupliquées.</p>
 
+    <h3>Ce que devient le fichier déposé</h3>
+    <p>Votre export Airbnb contient les noms de vos voyageurs et les montants versés. Il est <strong>supprimé du serveur dès l'import confirmé</strong> ; un aperçu que vous abandonnez en cours de route est effacé sous 24 heures. Rien à nettoyer de votre côté.</p>
+
     <div class="ctx-warning">
         <strong>Attention :</strong> Vérifiez que le bien sélectionné correspond bien aux réservations du fichier CSV.
     </div>

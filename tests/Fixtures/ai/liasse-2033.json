@@ -1,0 +1,28 @@
+{
+  "document_type": "liasse_2033",
+  "confidence": 0.91,
+  "fields": [
+    { "name": "fiscal_year", "value": "2025", "confidence": 0.97, "evidence": "Exercice clos le 31/12/2025" },
+    { "name": "case_028", "value": "200000.00", "confidence": 0.95, "evidence": "2033-A case 028 : 200 000" },
+    { "name": "case_030", "value": "47394.00", "confidence": 0.94, "evidence": "2033-A case 030 : 47 394" },
+    { "name": "case_354", "value": "850.00", "confidence": 0.9, "evidence": "2033-B case 354 (déficit) : 850" },
+    { "name": "case_572", "value": "7199.00", "confidence": 0.93, "evidence": "2033-C ligne 572 : 7 199" },
+    { "name": "case_870", "value": "12480.00", "confidence": 0.92, "evidence": "2033-D case 870 : 12 480" }
+  ],
+  "items": [],
+  "schedule": [],
+  "lines": [],
+  "depreciation": [
+    { "label": "Gros œuvre", "base": "80000.00", "duration_years": 50, "annual": "1600.00", "cumul": "10400.00", "confidence": 0.95 },
+    { "label": "Toiture", "base": "17000.00", "duration_years": 25, "annual": "680.00", "cumul": "4420.00", "confidence": 0.93 },
+    { "label": "Installations électriques", "base": "17000.00", "duration_years": 25, "annual": "680.00", "cumul": "4420.00", "confidence": 0.92 },
+    { "label": "Étanchéité", "base": "8500.00", "duration_years": 15, "annual": "566.67", "cumul": "3683.33", "confidence": 0.88 },
+    { "label": "Agencements intérieurs", "base": "25500.00", "duration_years": 15, "annual": "1700.00", "cumul": "11050.00", "confidence": 0.9 },
+    { "label": "Plomberie et sanitaires", "base": "17000.00", "duration_years": 15, "annual": "1133.33", "cumul": "7366.67", "confidence": 0.62 },
+    { "label": "Menuiseries extérieures", "base": "4000.00", "annual": "200.00", "cumul": "1300.00", "confidence": 0.89 },
+    { "label": "Frais d'acquisition", "base": "16000.00", "duration_years": 25, "annual": "640.00", "cumul": "4160.00", "confidence": 0.91 }
+  ],
+  "carryforwards": [
+    { "origin_year": "2023", "amount": "1250.00", "confidence": 0.93 }
+  ]
+}

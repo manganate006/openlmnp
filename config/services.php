@@ -62,6 +62,24 @@ return [
     // sur une instance auto-hébergée.
     'website' => [
         'url' => env('OPENLMNP_WEBSITE_URL', 'https://openlmnp.fr'),
+
+        /*
+        | Page où l'on obtient un compte sur CETTE instance, quand l'inscription publique
+        | est fermée (ALLOW_REGISTRATION=false, ou « auto » une fois le premier compte
+        | créé). Renseignée : /register cesse d'être un cul-de-sac et y emmène le
+        | visiteur, et /login gagne un lien « Créer un compte » à côté du lien neutre.
+        |
+        | ⚠️ VIDE PAR DÉFAUT, et ce défaut est le cœur du partage public/privé : ce dépôt
+        | ne porte ni tarif ni argumentaire — ils vivent sur le site, qui en est la source
+        | de vérité et peut les changer sans release. Vide, /register renvoie vers /login
+        | avec une explication et /login garde son seul lien neutre vers `url` ci-dessus :
+        | une instance auto-hébergée n'affiche aucune sollicitation commerciale. Même
+        | patron que `demo.links.pro` et `feedback.links.pro`.
+        |
+        | L'URL est reprise telle quelle : c'est à l'exploitant d'y mettre ses éventuels
+        | paramètres de campagne — le dépôt public n'en écrit aucun.
+        */
+        'signup_url' => env('OPENLMNP_SIGNUP_URL', ''),
     ],
 
     // Télémétrie anonyme (opt-out). Un check-in quotidien envoie UNIQUEMENT un

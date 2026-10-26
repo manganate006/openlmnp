@@ -31,4 +31,8 @@
     <div class="ctx-tip">
         <strong>Astuce :</strong> Pour un meuble proche de 600 EUR, il est parfois plus avantageux de le passer en charge directe plutôt qu'en amortissement.
     </div>
+
+    <div class="ctx-tip">
+        <strong>Coffre-fort verrouill&eacute;&nbsp;?</strong> Vous pouvez quand m&ecirc;me joindre une pi&egrave;ce&nbsp;: le chiffrement n'a besoin que de la moiti&eacute; publique de votre cl&eacute;. Seule l'<em>ouverture</em> d'un justificatif d&eacute;j&agrave; d&eacute;pos&eacute; vous demandera votre phrase de passe, une fois pour la visite.
+    </div>
 </div>

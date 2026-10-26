@@ -8,6 +8,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -43,6 +44,9 @@ class LoansTable
                     ->label('Mensualité')
                     ->formatStateUsing(fn ($state) => $state > 0 ? number_format($state / 100, 2, ',', ' ') . ' €' : '—')
                     ->sortable(),
+                IconColumn::make('is_dedicated')
+                    ->label('Dédié')
+                    ->boolean(),
             ])
             ->reorderableColumns()
             ->filters([])

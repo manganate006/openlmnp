@@ -59,7 +59,10 @@ jobs:
           tags: |
             type=semver,pattern={{version}},value=${{ steps.t.outputs.tag }}
             type=semver,pattern={{major}}.{{minor}},value=${{ steps.t.outputs.tag }}
-            type=raw,value=latest
+            # ⚠️ Jamais `latest` pour une pré-version (tag à tiret) : les instances qui
+            # suivent `latest` (Watchtower, script d'installation) la recevraient sans l'avoir
+            # choisie. metadata-action ne pose déjà que {{version}} pour une pré-version.
+            type=raw,value=latest,enable=${{ !contains(steps.t.outputs.tag, '-') }}
 
       - name: Build + push (amd64 + arm64)
         uses: docker/build-push-action@v6
@@ -69,5 +72,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: GIT_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

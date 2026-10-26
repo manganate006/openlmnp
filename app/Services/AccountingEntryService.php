@@ -215,12 +215,13 @@ class AccountingEntryService
             $ref = "CHG-{$pieceNum}";
 
             if ($isTvaLiable && $expense->amount_tva > 0) {
+                // Part d'usage (#17) puis quote-part surface, comme FiscalYearService.
                 $effectiveHt = $expense->is_dedicated
-                    ? $expense->amount_ht
-                    : (int) bcmul((string) $expense->amount_ht, $property->quota_share, 0);
+                    ? $expense->usageAdjusted('amount_ht')
+                    : (int) bcmul((string) $expense->usageAdjusted('amount_ht'), $property->quota_share, 0);
                 $effectiveTva = $expense->is_dedicated
-                    ? $expense->amount_tva
-                    : (int) bcmul((string) $expense->amount_tva, $property->quota_share, 0);
+                    ? $expense->usageAdjusted('amount_tva')
+                    : (int) bcmul((string) $expense->usageAdjusted('amount_tva'), $property->quota_share, 0);
                 $effectiveTtc = $effectiveHt + $effectiveTva;
 
                 // Débit charge (HT)
@@ -263,8 +264,8 @@ class AccountingEntryService
                 ]);
             } else {
                 $effectiveAmount = $expense->is_dedicated
-                    ? $expense->amount
-                    : (int) bcmul((string) $expense->amount, $property->quota_share, 0);
+                    ? $expense->usageAdjusted('amount')
+                    : (int) bcmul((string) $expense->usageAdjusted('amount'), $property->quota_share, 0);
 
                 // Débit charge
                 AccountingEntry::create([
@@ -357,7 +358,7 @@ class AccountingEntryService
             $payments = $loan->payments()->whereYear('payment_date', $year)->get();
 
             foreach ($payments as $payment) {
-                $interestProrata = (int) bcmul((string) $payment->interest_amount, $property->quota_share, 0);
+                $interestProrata = (int) $loan->prorate((string) $payment->interest_amount, $property->quota_share);
 
                 if ($interestProrata <= 0) {
                     continue;
