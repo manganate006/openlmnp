@@ -72,7 +72,7 @@ class IncomeForm
                                 ->default(0)
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
-                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Commission Airbnb/Booking (~3%). Déduite automatiquement du calcul fiscal.'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Commission prélevée par la plateforme, telle qu\'elle figure sur votre relevé (son taux varie d\'une plateforme à l\'autre). Déduite automatiquement du calcul fiscal.'),
                             TextInput::make('tourist_tax')
                                 ->label('Taxe de séjour')
                                 ->suffix('€')

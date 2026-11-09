@@ -12,6 +12,11 @@ use App\Models\Property;
  *
  * Chaque écriture est équilibrée (débit = crédit).
  * Les écritures partagent le même piece_ref pour un même fait comptable.
+ *
+ * Les écritures sont des données DÉRIVÉES, stockées dans `accounting_entries` : elles ne sont
+ * régénérées que par `FiscalYearService::calculate()` (donc jamais pour un exercice clôturé,
+ * sauf recalcul forcé). `build()` les produit sans rien écrire, pour que
+ * `openlmnp:repair-accounting-entries` compare ce qui est stocké à ce qui serait produit.
  */
 class AccountingEntryService
 {
@@ -44,6 +49,9 @@ class AccountingEntryService
         'Plomberie / sanitaire'     => '2815',
     ];
 
+    /** Écritures en cours de construction (voir `build()`). */
+    private array $buffer = [];
+
     public function __construct(
         private DepreciationService $depreciationService,
     ) {}
@@ -54,8 +62,32 @@ class AccountingEntryService
      */
     public function generateForFiscalYear(FiscalYear $fiscalYear): int
     {
+        [$entries, $count] = $this->buildWithCount($fiscalYear);
+
         // Supprimer les écritures existantes
         AccountingEntry::where('fiscal_year_id', $fiscalYear->id)->delete();
+
+        foreach ($entries as $entry) {
+            AccountingEntry::create($entry);
+        }
+
+        return $count;
+    }
+
+    /**
+     * Les écritures de l'exercice, SANS rien écrire en base.
+     *
+     * @return list<array<string, mixed>> attributs d'`AccountingEntry`, dans l'ordre de création
+     */
+    public function build(FiscalYear $fiscalYear): array
+    {
+        return $this->buildWithCount($fiscalYear)[0];
+    }
+
+    /** @return array{0: list<array<string, mixed>>, 1: int} écritures et nombre de pièces */
+    private function buildWithCount(FiscalYear $fiscalYear): array
+    {
+        $this->buffer = [];
 
         $user = $fiscalYear->user;
         $year = $fiscalYear->year;
@@ -76,13 +108,28 @@ class AccountingEntryService
             $pieceNum = $this->generateInterestEntries($fiscalYear, $property, $year, $pieceNum);
         }
 
-        return $pieceNum - 1; // nombre d'écritures générées
+        $entries = $this->buffer;
+        $this->buffer = [];
+
+        return [$entries, $pieceNum - 1]; // nombre d'écritures générées
+    }
+
+    /** Ajoute une ligne à l'écriture en cours de construction. */
+    private function push(array $attributes): void
+    {
+        $this->buffer[] = $attributes;
     }
 
     /**
-     * Écritures de recettes.
-     * TVA-exempt : 512 débit / 706 crédit (montant net)
-     * TVA-liable : 512 débit TTC / 706 crédit HT / 44571 crédit TVA
+     * Écritures de recettes : UNE écriture par recette.
+     * TVA-exempt : 512 débit net encaissé + 622 débit commission / 706 crédit brut
+     * TVA-liable : 512 débit net encaissé (TTC − commission) + 622 débit commission
+     *              / 706 crédit brut HT / 44571 crédit TVA
+     *
+     * Jusqu'au 30/10/2026, 706 était crédité du loyer NET puis une écriture séparée débitait
+     * encore 622 par 512 : la commission sortait deux fois, et le résultat comptable comme le
+     * solde de banque étaient minorés d'autant. La commission n'a pas de TVA déductible : elle
+     * est retenue pour son montant, comme dans le résultat fiscal (2033-B, ligne 242).
      */
     private function generateIncomeEntries(FiscalYear $fiscalYear, Property $property, int $pieceNum): int
     {
@@ -93,104 +140,34 @@ class AccountingEntryService
         foreach ($incomes as $income) {
             $ref = "REC-{$pieceNum}";
             $label = 'Loyer ' . ($income->guest_name ?? 'Airbnb') . ' - ' . $income->income_date->format('d/m/Y');
+            $fee = (int) $income->platform_fee;
+            $withTva = $isTvaLiable && $income->tva_collected > 0;
+            $line = fn (string $account, int $debit, int $credit, string $text) => $this->push([
+                'fiscal_year_id' => $fiscalYear->id,
+                'property_id'    => $property->id,
+                'entry_date'     => $income->income_date,
+                'account_code'   => $account,
+                'label'          => $text,
+                'debit'          => $debit,
+                'credit'         => $credit,
+                'piece_ref'      => $ref,
+                'journal'        => 'VE',
+            ]);
 
-            if ($isTvaLiable && $income->tva_collected > 0) {
-                $netTtc = $income->amount - $income->platform_fee;
-                $netHt = $income->amount_ht - $income->platform_fee;
+            // Débit banque : ce qui a réellement été encaissé (brut TTC − commission)
+            $line('512', (int) $income->amount - $fee, 0, $label);
 
-                // Débit banque (TTC net reçu)
-                AccountingEntry::create([
-                    'fiscal_year_id' => $fiscalYear->id,
-                    'property_id'    => $property->id,
-                    'entry_date'     => $income->income_date,
-                    'account_code'   => '512',
-                    'label'          => $label,
-                    'debit'          => $netTtc,
-                    'credit'         => 0,
-                    'piece_ref'      => $ref,
-                    'journal'        => 'VE',
-                ]);
-
-                // Crédit loyers (HT net)
-                AccountingEntry::create([
-                    'fiscal_year_id' => $fiscalYear->id,
-                    'property_id'    => $property->id,
-                    'entry_date'     => $income->income_date,
-                    'account_code'   => '706',
-                    'label'          => $label,
-                    'debit'          => 0,
-                    'credit'         => $netHt,
-                    'piece_ref'      => $ref,
-                    'journal'        => 'VE',
-                ]);
-
-                // Crédit TVA collectée
-                AccountingEntry::create([
-                    'fiscal_year_id' => $fiscalYear->id,
-                    'property_id'    => $property->id,
-                    'entry_date'     => $income->income_date,
-                    'account_code'   => '44571',
-                    'label'          => 'TVA collectée - ' . $label,
-                    'debit'          => 0,
-                    'credit'         => $income->tva_collected,
-                    'piece_ref'      => $ref,
-                    'journal'        => 'VE',
-                ]);
-            } else {
-                $netAmount = $income->amount - $income->platform_fee;
-
-                // Débit banque
-                AccountingEntry::create([
-                    'fiscal_year_id' => $fiscalYear->id,
-                    'property_id'    => $property->id,
-                    'entry_date'     => $income->income_date,
-                    'account_code'   => '512',
-                    'label'          => $label,
-                    'debit'          => $netAmount,
-                    'credit'         => 0,
-                    'piece_ref'      => $ref,
-                    'journal'        => 'VE',
-                ]);
-
-                // Crédit loyers
-                AccountingEntry::create([
-                    'fiscal_year_id' => $fiscalYear->id,
-                    'property_id'    => $property->id,
-                    'entry_date'     => $income->income_date,
-                    'account_code'   => '706',
-                    'label'          => $label,
-                    'debit'          => 0,
-                    'credit'         => $netAmount,
-                    'piece_ref'      => $ref,
-                    'journal'        => 'VE',
-                ]);
+            // Débit commission de la plateforme
+            if ($fee !== 0) {
+                $line('622', $fee, 0, 'Commission plateforme - ' . $income->income_date->format('d/m/Y'));
             }
 
-            // Si commission plateforme > 0, écriture séparée
-            if ($income->platform_fee > 0) {
-                $refFee = "COM-{$pieceNum}";
-                AccountingEntry::create([
-                    'fiscal_year_id' => $fiscalYear->id,
-                    'property_id'    => $property->id,
-                    'entry_date'     => $income->income_date,
-                    'account_code'   => '622',
-                    'label'          => 'Commission plateforme - ' . $income->income_date->format('d/m/Y'),
-                    'debit'          => $income->platform_fee,
-                    'credit'         => 0,
-                    'piece_ref'      => $refFee,
-                    'journal'        => 'HA',
-                ]);
-                AccountingEntry::create([
-                    'fiscal_year_id' => $fiscalYear->id,
-                    'property_id'    => $property->id,
-                    'entry_date'     => $income->income_date,
-                    'account_code'   => '512',
-                    'label'          => 'Commission plateforme - ' . $income->income_date->format('d/m/Y'),
-                    'debit'          => 0,
-                    'credit'         => $income->platform_fee,
-                    'piece_ref'      => $refFee,
-                    'journal'        => 'HA',
-                ]);
+            // Crédit loyers : le BRUT (HT pour un bien assujetti)
+            $line('706', 0, $withTva ? (int) $income->amount_ht : (int) $income->amount, $label);
+
+            // Crédit TVA collectée
+            if ($withTva) {
+                $line('44571', 0, (int) $income->tva_collected, 'TVA collectée - ' . $label);
             }
 
             $pieceNum++;
@@ -215,16 +192,17 @@ class AccountingEntryService
             $ref = "CHG-{$pieceNum}";
 
             if ($isTvaLiable && $expense->amount_tva > 0) {
+                // Part d'usage (#17) puis quote-part surface, comme FiscalYearService.
                 $effectiveHt = $expense->is_dedicated
-                    ? $expense->amount_ht
-                    : (int) bcmul((string) $expense->amount_ht, $property->quota_share, 0);
+                    ? $expense->usageAdjusted('amount_ht')
+                    : (int) bcmul((string) $expense->usageAdjusted('amount_ht'), $property->quota_share, 0);
                 $effectiveTva = $expense->is_dedicated
-                    ? $expense->amount_tva
-                    : (int) bcmul((string) $expense->amount_tva, $property->quota_share, 0);
+                    ? $expense->usageAdjusted('amount_tva')
+                    : (int) bcmul((string) $expense->usageAdjusted('amount_tva'), $property->quota_share, 0);
                 $effectiveTtc = $effectiveHt + $effectiveTva;
 
                 // Débit charge (HT)
-                AccountingEntry::create([
+                $this->push([
                     'fiscal_year_id' => $fiscalYear->id,
                     'property_id'    => $property->id,
                     'entry_date'     => $expense->expense_date,
@@ -237,7 +215,7 @@ class AccountingEntryService
                 ]);
 
                 // Débit TVA déductible
-                AccountingEntry::create([
+                $this->push([
                     'fiscal_year_id' => $fiscalYear->id,
                     'property_id'    => $property->id,
                     'entry_date'     => $expense->expense_date,
@@ -250,7 +228,7 @@ class AccountingEntryService
                 ]);
 
                 // Crédit banque (TTC)
-                AccountingEntry::create([
+                $this->push([
                     'fiscal_year_id' => $fiscalYear->id,
                     'property_id'    => $property->id,
                     'entry_date'     => $expense->expense_date,
@@ -263,11 +241,11 @@ class AccountingEntryService
                 ]);
             } else {
                 $effectiveAmount = $expense->is_dedicated
-                    ? $expense->amount
-                    : (int) bcmul((string) $expense->amount, $property->quota_share, 0);
+                    ? $expense->usageAdjusted('amount')
+                    : (int) bcmul((string) $expense->usageAdjusted('amount'), $property->quota_share, 0);
 
                 // Débit charge
-                AccountingEntry::create([
+                $this->push([
                     'fiscal_year_id' => $fiscalYear->id,
                     'property_id'    => $property->id,
                     'entry_date'     => $expense->expense_date,
@@ -280,7 +258,7 @@ class AccountingEntryService
                 ]);
 
                 // Crédit banque
-                AccountingEntry::create([
+                $this->push([
                     'fiscal_year_id' => $fiscalYear->id,
                     'property_id'    => $property->id,
                     'entry_date'     => $expense->expense_date,
@@ -317,7 +295,7 @@ class AccountingEntryService
             $ref = "AMO-{$pieceNum}";
 
             // Débit dotations
-            AccountingEntry::create([
+            $this->push([
                 'fiscal_year_id' => $fiscalYear->id,
                 'property_id'    => $property->id,
                 'entry_date'     => $yearEnd,
@@ -330,7 +308,7 @@ class AccountingEntryService
             ]);
 
             // Crédit amortissements cumulés
-            AccountingEntry::create([
+            $this->push([
                 'fiscal_year_id' => $fiscalYear->id,
                 'property_id'    => $property->id,
                 'entry_date'     => $yearEnd,
@@ -349,7 +327,8 @@ class AccountingEntryService
     }
 
     /**
-     * Écritures d'intérêts d'emprunt : 661 débit / 512 crédit
+     * Écritures d'emprunt : intérêts 6611 débit / 512 crédit, assurance emprunteur 616 débit /
+     * 512 crédit.
      */
     private function generateInterestEntries(FiscalYear $fiscalYear, Property $property, int $year, int $pieceNum): int
     {
@@ -357,7 +336,7 @@ class AccountingEntryService
             $payments = $loan->payments()->whereYear('payment_date', $year)->get();
 
             foreach ($payments as $payment) {
-                $interestProrata = (int) bcmul((string) $payment->interest_amount, $property->quota_share, 0);
+                $interestProrata = (int) $loan->prorate((string) $payment->interest_amount, $property->quota_share);
 
                 if ($interestProrata <= 0) {
                     continue;
@@ -366,7 +345,7 @@ class AccountingEntryService
                 $ref = "INT-{$pieceNum}";
 
                 // Débit intérêts
-                AccountingEntry::create([
+                $this->push([
                     'fiscal_year_id' => $fiscalYear->id,
                     'property_id'    => $property->id,
                     'entry_date'     => $payment->payment_date,
@@ -379,7 +358,7 @@ class AccountingEntryService
                 ]);
 
                 // Crédit banque
-                AccountingEntry::create([
+                $this->push([
                     'fiscal_year_id' => $fiscalYear->id,
                     'property_id'    => $property->id,
                     'entry_date'     => $payment->payment_date,
@@ -387,6 +366,46 @@ class AccountingEntryService
                     'label'          => 'Intérêts emprunt ' . ($loan->bank_name ?? '') . ' - ' . $payment->payment_date->format('m/Y'),
                     'debit'          => 0,
                     'credit'         => $interestProrata,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'OD',
+                ]);
+
+                $pieceNum++;
+            }
+
+            // Assurance emprunteur : une prime d'assurance, 616 débit / 512 crédit (repère 242
+            // du 2033-B), et non une charge financière. Sans ces écritures, le FEC omettait une
+            // charge que le résultat fiscal déduit.
+            foreach ($payments as $payment) {
+                $insuranceProrata = (int) $loan->prorate((string) $payment->insurance_amount, $property->quota_share);
+
+                if ($insuranceProrata <= 0) {
+                    continue;
+                }
+
+                $ref = "ASS-{$pieceNum}";
+                $label = 'Assurance emprunteur ' . ($loan->bank_name ?? '') . ' - ' . $payment->payment_date->format('m/Y');
+
+                $this->push([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $payment->payment_date,
+                    'account_code'   => '616',
+                    'label'          => $label,
+                    'debit'          => $insuranceProrata,
+                    'credit'         => 0,
+                    'piece_ref'      => $ref,
+                    'journal'        => 'OD',
+                ]);
+
+                $this->push([
+                    'fiscal_year_id' => $fiscalYear->id,
+                    'property_id'    => $property->id,
+                    'entry_date'     => $payment->payment_date,
+                    'account_code'   => '512',
+                    'label'          => $label,
+                    'debit'          => 0,
+                    'credit'         => $insuranceProrata,
                     'piece_ref'      => $ref,
                     'journal'        => 'OD',
                 ]);

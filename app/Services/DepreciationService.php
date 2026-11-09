@@ -357,10 +357,14 @@ class DepreciationService
         $allocated = array_reduce($resolved, fn ($carry, $l) => bcadd($carry, $l['base_amount'], 0), '0');
 
         if ($refuseOverAllocation && bccomp($allocated, $depreciableBase, 0) > 0) {
+            // Centimes affichés dès que l'un des deux montants en porte : arrondis à l'euro,
+            // deux montants distants de quelques centimes s'affichaient identiques.
+            $decimals = ((int) $allocated % 100 === 0 && (int) $depreciableBase % 100 === 0) ? 0 : 2;
+
             throw new \RuntimeException(sprintf(
                 'La ventilation dépasse la base amortissable : %s € répartis pour %s € disponibles.',
-                number_format((int) $allocated / 100, 0, ',', ' '),
-                number_format((int) $depreciableBase / 100, 0, ',', ' '),
+                number_format((int) $allocated / 100, $decimals, ',', ' '),
+                number_format((int) $depreciableBase / 100, $decimals, ',', ' '),
             ));
         }
 
@@ -529,12 +533,17 @@ class DepreciationService
      */
     public function calculateAnnualDepreciation(Property $property, int $year): array
     {
+        // ⚠️ Une année antérieure au réel ne déduit RIEN : ses annuités sont réputées
+        // pratiquées (voir `isDeductibleYear()`). Elles comptent dans le cumul, que
+        // `depreciationDetailForYear()` rejoue sur le plan, jamais ici.
+        $deductible = $this->isDeductibleYear($property, $year);
+
         // Amortissement immeuble (composants)
         $buildingTotal = '0';
         $details = [];
 
         foreach ($property->components as $component) {
-            $annual = $this->calculateComponentForYear($component, $property, $year);
+            $annual = $deductible ? $this->calculateComponentForYear($component, $property, $year) : '0';
             $buildingTotal = bcadd($buildingTotal, $annual, 0);
             $details[] = [
                 'type'   => 'building',
@@ -546,7 +555,7 @@ class DepreciationService
         // Amortissement travaux
         $worksTotal = '0';
         foreach ($property->works as $work) {
-            $annual = $this->calculateWorkForYear($work, $property, $year);
+            $annual = $deductible ? $this->calculateWorkForYear($work, $property, $year) : '0';
             $worksTotal = bcadd($worksTotal, $annual, 0);
             $details[] = [
                 'type'   => 'work',
@@ -558,7 +567,7 @@ class DepreciationService
         // Amortissement mobilier
         $furnitureTotal = '0';
         foreach ($property->furniture as $item) {
-            $annual = $this->calculateFurnitureForYear($item, $property, $year);
+            $annual = $deductible ? $this->calculateFurnitureForYear($item, $property, $year) : '0';
             $furnitureTotal = bcadd($furnitureTotal, $annual, 0);
             $details[] = [
                 'type'   => 'furniture',
@@ -567,10 +576,10 @@ class DepreciationService
             ];
         }
 
-        // Amortissement frais de notaire et honoraires agence (25 ans, avec quote-part si RP)
+        // Amortissement frais de notaire et honoraires agence (25 ans, quote-part toujours appliquée)
         $notaryTotal = '0';
         foreach (['notary_fees' => 'Frais de notaire', 'agency_fees' => 'Honoraires agence'] as $field => $label) {
-            if ($property->$field > 0) {
+            if ($deductible && $property->$field > 0) {
                 $annual = $this->calculateAcquisitionFeesForYear($property, $field, $year);
                 if (bccomp($annual, '0', 0) > 0) {
                     $notaryTotal = bcadd($notaryTotal, $annual, 0);
@@ -609,6 +618,10 @@ class DepreciationService
      * Le cumul est un vrai rejeu année par année, et non l'ancien `dotation × années`, qui
      * ignorait le prorata de première année comme les plans arrivés à terme.
      *
+     * ⚠️ Avant le début du réel, `annual` vaut 0 mais `cumul` court : ce sont les
+     * amortissements réputés pratiqués des années au micro-BIC (`isDeductibleYear()`). Au
+     * premier exercice au réel, ils forment le cumul de début du 2033-C.
+     *
      * ⚠️ `opening_accumulated_depreciation` s'ajoute au CUMUL, et à lui seul. C'est le
      * stock d'amortissements déjà pratiqué par le cabinet précédent sur des exercices que
      * l'application ne tient pas : le compter aussi dans `annual` doublerait la charge de
@@ -617,57 +630,103 @@ class DepreciationService
      * ⚠️ `cerfa_category` accompagne chaque ligne pour que `TaxReturnService::compute2033C()`
      * n'ait plus à deviner la ligne Cerfa depuis le NOM du composant.
      *
-     * @return list<array{type: string, name: string, base: string, annual: string, cumul: string, cerfa_category: string}>
+     * ⚠️ `in_service` (Y-m-d) est la date de mise en service de l'actif, c'est-à-dire
+     * l'année où commence le rejeu du cumul ci-dessous : `planStart()`, jamais antérieure
+     * à la première mise en location du bien. Le 2033-C s'en sert pour séparer la valeur
+     * brute au DÉBUT de l'exercice des AUGMENTATIONS de l'exercice. Une date prise
+     * ailleurs que là où démarre le cumul ferait diverger les deux colonnes du tableau.
+     *
+     * ⚠️ Seuls les actifs EN SERVICE à la clôture de l'exercice (31 décembre) sont rendus.
+     * Jusqu'au 2026-10-29 (OpenProject n° 2362), tout ce qui était saisi sur le bien
+     * remontait, quelle que soit sa date : un meuble acheté en N+1 entrait dans la valeur
+     * brute de la liasse N si on la régénérait après l'avoir saisi (dotation nulle, mais
+     * cases 028/044 du 2033-A, colonnes du 2033-C et annexe gonflées). Le filtre vit ICI
+     * parce que tous les consommateurs (2033-A, 2033-C, annexe, contrôle de reprise, rapport
+     * de diagnostic, récapitulatif de l'assistant de reprise) parlent du bilan d'un exercice.
+     * La dotation n'en est pas affectée : celle d'un actif futur était déjà nulle.
+     *
+     * Deux niveaux de filtre :
+     *   - le BIEN d'abord : loué après la clôture (`isInServiceForYear()`), il ne porte
+     *     aucune immobilisation, ni composant, ni frais d'acquisition, ni meuble ;
+     *   - puis chaque travail et chaque meuble, sur sa propre date. Les composants de
+     *     l'immeuble, eux, suivent le bien et non leur `depreciation_start_date` : leur
+     *     base est comprise dans la valeur de référence que le 2033-A porte en 028 dès la
+     *     mise en location ; les retirer du seul 2033-C ferait diverger 044 et 496.
+     *
+     * @return list<array{type: string, name: string, base: string, annual: string, cumul: string, cerfa_category: string, in_service: string}>
      */
     public function depreciationDetailForYear(Property $property, int $year): array
     {
+        if (! $this->isInServiceForYear($property, $year)) {
+            return [];
+        }
+
+        $closing = sprintf('%04d-12-31', $year);
         $lines = [];
 
+        // Dotation de l'exercice : nulle avant le réel (années réputées pratiquées). Le
+        // cumul, lui, rejoue le PLAN — annuités réputées pratiquées comprises.
+        $deductible = $this->isDeductibleYear($property, $year);
+
         foreach ($property->components as $component) {
+            $start = $this->planStart($component, $property);
+
             $lines[] = [
                 'type'   => 'building',
                 'name'   => $component->name,
                 'base'   => (string) $component->base_amount,
-                'annual' => $this->calculateComponentForYear($component, $property, $year),
+                'annual' => $deductible ? $this->calculateComponentForYear($component, $property, $year) : '0',
                 'cumul'  => $this->withOpening($component->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateComponentForYear($component, $property, $y),
-                    $this->replayFrom(
-                        $component->opening_accumulated_year,
-                        (int) $this->componentStartDate($component, $property)->format('Y'),
-                    ),
+                    $this->replayFrom($component->opening_accumulated_year, (int) $start->format('Y')),
                     $year,
                 )),
                 'cerfa_category' => $component->cerfaCategory(),
+                'in_service' => $start->format('Y-m-d'),
             ];
         }
 
         foreach ($property->works as $work) {
+            $start = $this->planStart($work, $property);
+
+            if ($start->format('Y-m-d') > $closing) {
+                continue;
+            }
+
             $lines[] = [
                 'type'   => 'work',
                 'name'   => $work->description,
                 'base'   => $this->grossAmount($this->amortizableAmount($work, $property), $work->is_dedicated, $property),
-                'annual' => $this->calculateWorkForYear($work, $property, $year),
+                'annual' => $deductible ? $this->calculateWorkForYear($work, $property, $year) : '0',
                 'cumul'  => $this->withOpening($work->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateWorkForYear($work, $property, $y),
-                    $this->replayFrom($work->opening_accumulated_year, (int) $work->work_date->format('Y')),
+                    $this->replayFrom($work->opening_accumulated_year, (int) $start->format('Y')),
                     $year,
                 )),
                 'cerfa_category' => $work->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_FITTINGS,
+                'in_service' => $start->format('Y-m-d'),
             ];
         }
 
         foreach ($property->furniture as $item) {
+            $start = $this->planStart($item, $property);
+
+            if ($start->format('Y-m-d') > $closing) {
+                continue;
+            }
+
             $lines[] = [
                 'type'   => 'furniture',
                 'name'   => $item->description,
                 'base'   => $this->grossAmount($this->amortizableAmount($item, $property), $item->is_dedicated, $property),
-                'annual' => $this->calculateFurnitureForYear($item, $property, $year),
+                'annual' => $deductible ? $this->calculateFurnitureForYear($item, $property, $year) : '0',
                 'cumul'  => $this->withOpening($item->opening_accumulated_depreciation, $this->replay(
                     fn (int $y) => $this->calculateFurnitureForYear($item, $property, $y),
-                    $this->replayFrom($item->opening_accumulated_year, (int) $item->purchase_date->format('Y')),
+                    $this->replayFrom($item->opening_accumulated_year, (int) $start->format('Y')),
                     $year,
                 )),
                 'cerfa_category' => $item->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_OTHER,
+                'in_service' => $start->format('Y-m-d'),
             ];
         }
 
@@ -689,6 +748,12 @@ class DepreciationService
             // Émise même à dotation nulle, contrairement à calculateAnnualDepreciation() :
             // sans quoi la valeur BRUTE des frais disparaîtrait du bilan une fois amortis.
             // La somme des dotations n'en est pas affectée, une ligne à zéro ajoute zéro.
+            //
+            // Quote-part appliquée inconditionnellement (plus de condition sur la
+            // situation du bien) : les frais d'acquisition portent sur la propriété
+            // ENTIÈRE, au même titre que le prix d'achat dont `depreciable_base` tient
+            // déjà compte via `quota_share`. Cohérent avec travaux/mobilier, qui ne
+            // regardent que `is_dedicated` ci-dessous — jamais la situation du bien.
             $lines[] = [
                 'type'   => 'notary',
                 'name'   => $label,
@@ -697,10 +762,10 @@ class DepreciationService
                 // louée dans un bien qui n'était pas la résidence principale portait alors
                 // 100 % de ses frais face à une valeur déjà proratisée.
                 'base'   => bcmul((string) $property->$field, $property->quota_share, 0),
-                'annual' => $this->calculateAcquisitionFeesForYear($property, $field, $year),
+                'annual' => $deductible ? $this->calculateAcquisitionFeesForYear($property, $field, $year) : '0',
                 'cumul'  => $this->replay(
                     fn (int $y) => $this->calculateAcquisitionFeesForYear($property, $field, $y),
-                    (int) $property->rental_start_date->format('Y'),
+                    (int) $this->planStart(null, $property)->format('Y'),
                     $year,
                 ),
                 // ⚠️ CORPORELLES, et non incorporelles comme jusqu'au 2026-09-08. Un frais
@@ -710,10 +775,76 @@ class DepreciationService
                 // une ligne « immobilisations incorporelles » que rien n'expliquait — c'est
                 // exactement l'issue #11.
                 'cerfa_category' => PropertyComponent::CERFA_CATEGORY_CONSTRUCTIONS,
+                'in_service' => $this->planStart(null, $property)->format('Y-m-d'),
             ];
         }
 
         return $lines;
+    }
+
+    /**
+     * Vrai si le bien est entré dans l'activité au plus tard le 31 décembre de l'exercice.
+     *
+     * C'est la PREMIÈRE mise en location (`Property::activityStartDate()`, micro-BIC
+     * compris) qui fait entrer le bien — terrain compris — au bilan, comme elle fait
+     * démarrer son plan d'amortissement. Un bien loué en N+1 n'a rien à faire dans la
+     * liasse N, même s'il a été acheté avant. Sans date d'activité saisie, c'est le
+     * début du réel, comme avant le 2026-10-30.
+     */
+    public function isInServiceForYear(Property $property, int $year): bool
+    {
+        return (int) $property->activityStartDate()->format('Y') <= $year;
+    }
+
+    /**
+     * Vrai si l'exercice est au régime réel, donc si sa dotation se déduit.
+     *
+     * ⚠️ Avant le début du réel (`rental_start_date`), le bien est au micro-BIC : ses
+     * annuités sont RÉPUTÉES PRATIQUÉES. Elles entrent dans le cumul des amortissements
+     * (2033-A 030, 2033-C 570/576) mais jamais dans une dotation (2033-B 254, 2033-C
+     * dotations, FEC), et ce ne sont pas non plus des amortissements différés (318/350) :
+     * elles n'ont jamais été déductibles. C'est la lecture recommandée par le registre des
+     * pièges (P04), qui applique par analogie le BOI-BIC-AMT-10-30-30-10 § 470. La lecture
+     * du § 480, plus favorable (le plan part de l'ouverture du premier exercice au réel),
+     * reste à faire valider : elle se représente en datant chaque composant au début du
+     * réel (colonne « Début » de l'éditeur).
+     *
+     * Jusqu'au 2026-10-30, rien ne bornait la dotation : un meuble acheté avant la mise en
+     * location s'amortissait l'année de son achat, avant toute activité.
+     */
+    public function isDeductibleYear(Property $property, int $year): bool
+    {
+        return (int) $property->rental_start_date->format('Y') <= $year;
+    }
+
+    /**
+     * Début du plan d'amortissement d'un actif : sa propre date de mise en service, jamais
+     * avant le début de l'activité.
+     *
+     *   - composant de l'immeuble : `depreciation_start_date`, sinon le début d'activité ;
+     *   - travaux : `work_date` ; meuble : `purchase_date` ;
+     *   - frais d'acquisition (`$asset = null`) : le début d'activité.
+     *
+     * Un actif acheté AVANT la première mise en location n'est mis en service qu'à cette
+     * date : rien ne s'amortit avant que l'activité existe. C'est le point d'appui UNIQUE
+     * du prorata de première année, du terme du plan, du rejeu du cumul et de la colonne
+     * « mise en service » du 2033-C — une date prise ailleurs ferait diverger les deux.
+     *
+     * ⚠️ Le défaut est résolu À LA LECTURE, jamais recopié en base : déplacer la mise en
+     * location du bien doit continuer d'entraîner tout le plan avec elle.
+     */
+    public function planStart(PropertyComponent|PropertyWork|Furniture|null $asset, Property $property): CarbonInterface
+    {
+        $activity = $property->activityStartDate();
+
+        $own = match (true) {
+            $asset instanceof PropertyComponent => $asset->depreciation_start_date,
+            $asset instanceof PropertyWork => $asset->work_date,
+            $asset instanceof Furniture => $asset->purchase_date,
+            default => null,
+        };
+
+        return $own !== null && $own->greaterThan($activity) ? $own : $activity;
     }
 
     /**
@@ -722,7 +853,7 @@ class DepreciationService
      * ⚠️ Le HT quand le bien est assujetti à la TVA — la TVA étant récupérée, elle n'entre
      * pas dans le coût de l'immobilisation. La valeur BRUTE portée au bilan était prise en
      * TTC jusqu'au 2026-09-08 alors que la dotation, elle, se calculait déjà sur le HT :
-     * les cases 028/044 et la ligne 490 étaient surévaluées de la TVA, et la ligne ne
+     * les cases 028/044 et le total brut du 2033-C étaient surévaluées de la TVA, et la ligne ne
      * s'amortissait jamais entièrement. Même règle que `expectedAnnualDepreciation()` des
      * deux modèles — à ne pas réécrire une troisième fois.
      */
@@ -754,7 +885,7 @@ class DepreciationService
      * pour 4 736 € déclarés — soit exactement ses 4 736 € plus 4 760 € de reconstitution.
      *
      * ⚠️ Ne PAS confondre avec `depreciation_start_date`, qui est l'ORIGINE DU PLAN : elle
-     * ancre le terme (`$startYear + duration - 1`) et le prorata de première année. La
+     * ancre le terme (`planAnnuityForYear()`) et le prorata de première année. La
      * détourner pour retarder le rejeu repousserait la fin des plans d'autant. Ici on ne
      * touche qu'à la borne basse de la SOMME, jamais au plan lui-même.
      *
@@ -791,19 +922,17 @@ class DepreciationService
     }
 
     /**
-     * Date à laquelle le plan d'un composant démarre.
+     * Date à laquelle le plan d'un composant démarre — `planStart()` appliqué au composant.
      *
-     * Par défaut la mise en location du bien. Une date propre au composant traite deux
-     * cas que le défaut rendait irreprésentables : le passage du micro-BIC au réel
-     * plusieurs années après la mise en location, et les mises en service échelonnées
-     * (une toiture refaite en 2021 sur un bien loué depuis 2018).
-     *
-     * ⚠️ Le défaut est résolu À LA LECTURE, jamais recopié en base : déplacer la mise en
-     * location du bien doit continuer d'entraîner tout le plan avec elle.
+     * Par défaut le début de l'activité (première mise en location). Une date propre au
+     * composant traite les mises en service échelonnées (une toiture refaite en 2021 sur un
+     * bien loué depuis 2018). Elle ne peut pas précéder le début de l'activité. Le passage
+     * du micro-BIC au réel ne se règle plus par elle depuis le 2026-10-30, mais par la date
+     * de première mise en location du bien (`activity_start_date`).
      */
     public function componentStartDate(PropertyComponent $component, Property $property): CarbonInterface
     {
-        return $component->depreciation_start_date ?? $property->rental_start_date;
+        return $this->planStart($component, $property);
     }
 
     /**
@@ -811,23 +940,12 @@ class DepreciationService
      */
     private function calculateComponentForYear(PropertyComponent $component, Property $property, int $year): string
     {
-        $startDate = $this->componentStartDate($component, $property);
-        $startYear = (int) $startDate->format('Y');
-        $endYear = $startYear + $component->duration_years - 1;
-
-        // Pas encore commencé ou déjà terminé
-        if ($year < $startYear || $year > $endYear) {
-            return '0';
-        }
-
-        $annual = (string) $component->annual_depreciation;
-
-        // Prorata temporis la 1ère année
-        if ($year === $startYear) {
-            $annual = $this->prorateFirstYear($annual, $startDate);
-        }
-
-        return $annual;
+        return $this->planAnnuityForYear(
+            (string) $component->annual_depreciation,
+            $this->componentStartDate($component, $property),
+            (int) $component->duration_years,
+            $year,
+        );
     }
 
     /**
@@ -835,14 +953,6 @@ class DepreciationService
      */
     private function calculateWorkForYear(PropertyWork $work, Property $property, int $year): string
     {
-        $workDate = $work->work_date;
-        $startYear = (int) $workDate->format('Y');
-        $endYear = $startYear + $work->duration_years - 1;
-
-        if ($year < $startYear || $year > $endYear) {
-            return '0';
-        }
-
         // ⚠️ PAS de quote-part ici : `annual_depreciation` la porte DÉJÀ.
         // `PropertyWork::expectedAnnualDepreciation()` l'applique à l'assiette avant division,
         // et le hook `saving` fige le résultat en base. La réappliquer à la lecture donnait
@@ -850,14 +960,12 @@ class DepreciationService
         // dossiers, et 47,50 €/an d'écart sur 10 000 € de travaux à 95 %. Elle rendait aussi
         // la ligne incohérente avec sa propre valeur brute, qui n'applique `q` qu'une fois
         // (`grossAmount()`) : `base / durée` ne retombait pas sur `annual`.
-        $annual = (string) $work->annual_depreciation;
-
-        // Prorata temporis la 1ère année
-        if ($year === $startYear) {
-            $annual = $this->prorateFirstYear($annual, $workDate);
-        }
-
-        return $annual;
+        return $this->planAnnuityForYear(
+            (string) $work->annual_depreciation,
+            $this->planStart($work, $property),
+            (int) $work->duration_years,
+            $year,
+        );
     }
 
     /**
@@ -865,23 +973,13 @@ class DepreciationService
      */
     private function calculateFurnitureForYear(Furniture $item, Property $property, int $year): string
     {
-        $purchaseDate = $item->purchase_date;
-        $startYear = (int) $purchaseDate->format('Y');
-        $endYear = $startYear + $item->duration_years - 1;
-
-        if ($year < $startYear || $year > $endYear) {
-            return '0';
-        }
-
         // ⚠️ Idem : `Furniture::expectedAnnualDepreciation()` a déjà appliqué la quote-part.
-        $annual = (string) $item->annual_depreciation;
-
-        // Prorata temporis
-        if ($year === $startYear) {
-            $annual = $this->prorateFirstYear($annual, $purchaseDate);
-        }
-
-        return $annual;
+        return $this->planAnnuityForYear(
+            (string) $item->annual_depreciation,
+            $this->planStart($item, $property),
+            (int) $item->duration_years,
+            $year,
+        );
     }
 
     /**
@@ -901,11 +999,8 @@ class DepreciationService
         }
 
         $duration = $property->acquisitionFeesDurationYears();
-        $startDate = $property->rental_start_date;
-        $startYear = (int) $startDate->format('Y');
-        $endYear = $startYear + $duration - 1;
 
-        if ($year < $startYear || $year > $endYear) {
+        if ($duration <= 0) {
             return '0';
         }
 
@@ -916,12 +1011,44 @@ class DepreciationService
         // amortir 100 % de ses frais face à une base déjà proratisée.
         $annual = bcmul($annual, $property->quota_share, 0);
 
-        // Prorata temporis la 1ère année
-        if ($year === $startYear) {
-            $annual = $this->prorateFirstYear($annual, $startDate);
+        return $this->planAnnuityForYear($annual, $this->planStart(null, $property), $duration, $year);
+    }
+
+    /**
+     * Dotation d'un plan linéaire pour une année : prorata la première, annuité pleine
+     * ensuite, et le RELIQUAT de la première année l'année qui suit le terme nominal.
+     *
+     * ⚠️ Un plan qui ne démarre pas un 1er janvier dure `duration + 1` exercices. Jusqu'au
+     * 2026-10-16, les quatre familles d'actifs arrêtaient le plan à `startYear + duration - 1` :
+     * la part rognée la première année n'était jamais reprise, et un meuble mis en service
+     * le 1er juillet sur 10 ans n'amortissait que 95 % de sa base (ticket Zammad #30065).
+     * Le reliquat se calcule par différence, jamais par un second prorata : c'est ce qui
+     * garantit que le cumul retombe exactement sur `annual × duration`, au centime.
+     */
+    private function planAnnuityForYear(string $annual, CarbonInterface $start, int $duration, int $year): string
+    {
+        $startYear = (int) $start->format('Y');
+
+        if ($duration <= 0 || $year < $startYear) {
+            return '0';
         }
 
-        return $annual;
+        $firstYear = $this->prorateFirstYear($annual, $start);
+
+        if ($year === $startYear) {
+            return $firstYear;
+        }
+
+        $nominalEnd = $startYear + $duration - 1;
+
+        if ($year <= $nominalEnd) {
+            return $annual;
+        }
+
+        // Exercice de rattrapage : n'existe que si la première année a été rognée.
+        return $year === $nominalEnd + 1
+            ? bcsub($annual, $firstYear, 0)
+            : '0';
     }
 
     /**

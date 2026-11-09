@@ -51,7 +51,7 @@ class GetIncome extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'income_id' => $schema->integer('Identifiant de la recette')->required(),
+            'income_id' => $schema->integer()->description('Identifiant de la recette')->required(),
         ];
     }
 }

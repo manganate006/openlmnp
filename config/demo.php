@@ -49,6 +49,19 @@ return [
     */
     'links' => [
         'pro' => env('DEMO_URL_PRO', ''),
+
+        /*
+         * Point d'entrée qui enregistre une demande de rappels fiscaux, appelé quand le
+         * visiteur coche la case facultative en prolongeant son bac à sable.
+         *
+         * ⚠️ Vide par défaut, et c'est le point important : sans elle la case ne s'affiche
+         * pas et rien ne sort de l'instance. Une installation auto-hébergée n'a personne à
+         * qui transmettre, et ne doit surtout pas transmettre à nous.
+         *
+         * ⚠️ Transmet une INTENTION, pas un consentement : le destinataire renvoie sa
+         * propre demande de confirmation (double opt-in), qui seule fait foi.
+         */
+        'lead' => env('DEMO_LEAD_URL', ''),
     ],
 
     /*

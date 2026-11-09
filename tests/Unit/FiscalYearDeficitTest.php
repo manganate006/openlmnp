@@ -89,10 +89,15 @@ it('no longer prints the deferred depreciation in the deficit boxes of form 2033
     expect($form['982'])->toBe(0)
         ->and($form['983'])->toBe(0)
         ->and($form['984'])->toBe(0)
-        ->and($form['870'])->toBe(1500000);
+        ->and($form['870'])->toBe(0)
+        // Le stock reste suivi, hors du cadre des déficits (issue #19).
+        ->and($form['suivi_39c']['cloture'])->toBe(1500000)
+        ->and($form['suivi_39c']['ouverture'])->toBe(1200000);
 });
 
-it('prints the deficit stock in boxes 982, 983 and 984', function () {
+// Issue #19 : la notice 2033-NOT-SD réserve ce cadre aux sociétés à l'IS. Un déficit LMNP se
+// reporte sur la 2042-C-PRO (5GA à 5GJ) : le cadre reste vide, même avec un stock.
+it('leaves the deficit frame of the 2033-D empty for an LMNP', function () {
     $fiscalYear = FiscalYear::forceCreate([
         'user_id' => $this->user->id,
         'year' => 2026,
@@ -107,16 +112,16 @@ it('prints the deficit stock in boxes 982, 983 and 984', function () {
 
     $form = $this->tax->compute2033D($fiscalYear);
 
-    expect($form['982'])->toBe(400000)
-        ->and($form['983'])->toBe(300000)
-        ->and($form['984'])->toBe(100000);
+    expect([$form['982'], $form['983'], $form['984'], $form['860'], $form['870']])->toBe([0, 0, 0, 0, 0])
+        // Le stock de déficits reste suivi par l'exercice (annexe « Déficits antérieurs »).
+        ->and((int) $fiscalYear->deficit_carryforward)->toBe(100000);
 });
 
 // Ce test figeait jusqu'en v1.6.7 la ligne 360 du 2033-B sur `previous_deferred` : il
 // verrouillait le comportement d'origine sans le justifier. L'amortissement différé repris
 // passe en 350, « déductions diverses » ; et la 360 reste à zéro, un déficit LMNP s'imputant
 // sur la 2042-C-PRO (cases 5GA à 5GJ), pas sur la liasse (issue #13).
-it('keeps box 870 on the deferred depreciation and box 360 at zero', function () {
+it('tracks the deferred depreciation outside box 870 and keeps box 360 at zero', function () {
     $fiscalYear = FiscalYear::forceCreate([
         'user_id' => $this->user->id,
         'year' => 2026,
@@ -131,7 +136,8 @@ it('keeps box 870 on the deferred depreciation and box 360 at zero', function ()
 
     $form2033B = $this->tax->compute2033B($fiscalYear, collect(), 2026);
 
-    expect($this->tax->compute2033D($fiscalYear)['870'])->toBe(1500000)
+    expect($this->tax->compute2033D($fiscalYear)['870'])->toBe(0)
+        ->and($this->tax->compute2033D($fiscalYear)['suivi_39c']['cloture'])->toBe(1500000)
         ->and($form2033B['360'])->toBe(0)
         ->and($form2033B['370'])->toBe(300000);
 });
@@ -247,8 +253,9 @@ it('turns the deficit of the year into a new vintage, not imputable on itself', 
         ->and($fiscalYear->deficit_imputed)->toBe(0)
         ->and($fiscalYear->deficit_carryforward)->toBe(40000)
         ->and($fiscalYear->deficit_detail[0]['origin_year'])->toBe(2026)
-        ->and($form['860'])->toBe(40000)
-        ->and($form['984'])->toBe(40000);
+        // Cadre du 2033-D vide en LMNP (issue #19) : le déficit part en 5GA à 5GJ.
+        ->and($form['860'])->toBe(0)
+        ->and($form['870'])->toBe(0);
 });
 
 it('carries the deficit stock from one fiscal year to the next', function () {

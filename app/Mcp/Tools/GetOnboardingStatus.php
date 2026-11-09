@@ -52,7 +52,7 @@ class GetOnboardingStatus extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'year' => $schema->integer('Année fiscale (défaut : année précédente)'),
+            'year' => $schema->integer()->description('Année fiscale (défaut : année précédente)'),
         ];
     }
 }

@@ -1,0 +1,19 @@
+{
+  "document_type": "liasse_2033",
+  "confidence": 0.91,
+  "fields": [
+    { "name": "fiscal_year", "value": "2025", "confidence": 0.97, "evidence": "Exercice clos le 31/12/2025" },
+    { "name": "case_028", "value": "124150.00", "confidence": 0.95, "evidence": "2033-A case 028 : 124 150" },
+    { "name": "case_030", "value": "14820.00", "confidence": 0.94, "evidence": "2033-A case 030 : 14 820" },
+    { "name": "case_572", "value": "2280.00", "confidence": 0.93, "evidence": "2033-C ligne 572 : 2 280" }
+  ],
+  "items": [],
+  "schedule": [],
+  "lines": [],
+  "depreciation": [
+    { "label": "Terrains", "base": "27150.00", "duration_years": null, "annual": null, "cumul": null, "confidence": 0.9 },
+    { "label": "Gros œuvre", "base": "80000.00", "duration_years": 50, "annual": "1600.00", "cumul": "10400.00", "confidence": 0.95 },
+    { "label": "Toiture", "base": "17000.00", "duration_years": 25, "annual": "680.00", "cumul": "4420.00", "confidence": 0.93 }
+  ],
+  "carryforwards": []
+}

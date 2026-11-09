@@ -3,6 +3,7 @@
 use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Income;
+use App\Models\Loan;
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\PropertyWork;
@@ -60,6 +61,7 @@ function fillDossier(Property $property): void
             'depreciation_start_date' => '2022-07-01',
             'cerfa_category' => PropertyComponent::CERFA_CATEGORY_FITTINGS,
             'opening_accumulated_depreciation' => 123400,
+            'opening_accumulated_year' => 2023,
         ]);
 
     PropertyWork::create([
@@ -69,6 +71,7 @@ function fillDossier(Property $property): void
         'depreciation_source' => PropertyWork::DEPRECIATION_SOURCE_MANUAL,
         'annual_depreciation' => 53211,
         'opening_accumulated_depreciation' => 106422,
+        'opening_accumulated_year' => 2023,
     ]);
 
     Furniture::create([
@@ -130,7 +133,11 @@ it('carries the reprise columns through the round trip', function () {
         // La dotation manuelle survit : la relecture ne doit pas la recalculer.
         ->and($work->depreciation_source)->toBe(PropertyWork::DEPRECIATION_SOURCE_MANUAL)
         ->and((int) $work->annual_depreciation)->toBe(53211)
-        ->and((int) $work->opening_accumulated_depreciation)->toBe(106422);
+        ->and((int) $work->opening_accumulated_depreciation)->toBe(106422)
+        // L'année que couvre le cumul repris doit voyager avec lui : sans elle, le rejeu
+        // recompte depuis le début du plan les années que le cumul contient déjà.
+        ->and($roof->opening_accumulated_year)->toBe(2023)
+        ->and($work->opening_accumulated_year)->toBe(2023);
 });
 
 it('stamps a schema version on every archive', function () {
@@ -179,6 +186,35 @@ it('reads an archive written by an older version that lacked a column', function
 
     // La colonne retombe sur le défaut de la base, et l'import ne casse pas.
     expect($imported->emitsSeparateAcquisitionFeeLine())->toBeTrue();
+});
+
+it('carries residence_situation, tourism_classification and a dedicated loan through the round trip', function () {
+    $this->property->update([
+        'residence_situation' => Property::RESIDENCE_INDEPENDENT_UNIT,
+        'tourism_classification' => Property::CLASSIFICATION_CLASSIFIED,
+    ]);
+
+    Loan::create([
+        'property_id' => $this->property->id,
+        'bank_name' => 'Banque du studio',
+        'amount' => 5000000,
+        'annual_rate' => 1.8,
+        'duration_months' => 180,
+        'start_date' => '2022-06-01',
+        'monthly_payment' => 0,
+        'insurance_monthly' => 0,
+        'is_dedicated' => true,
+    ]);
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $this->archive->export($this->user), allowForeignOwner: true);
+
+    $imported = Property::withoutGlobalScopes()->where('user_id', $target->id)->first();
+    $importedLoan = Loan::withoutGlobalScopes()->where('property_id', $imported->id)->first();
+
+    expect($imported->residence_situation)->toBe(Property::RESIDENCE_INDEPENDENT_UNIT)
+        ->and($imported->tourism_classification)->toBe(Property::CLASSIFICATION_CLASSIFIED)
+        ->and($importedLoan->is_dedicated)->toBeTrue();
 });
 
 it('never mixes two users data in one archive', function () {
@@ -307,4 +343,75 @@ it('copies the documents that sit at the pre-Laravel-11 root as well', function 
 
     File::deleteDirectory($exportDir);
     File::deleteDirectory($storageRoot);
+});
+
+/**
+ * Le tableau d'amortissement d'un emprunt n'était pas recréé à l'import : un dossier importé
+ * n'avait plus aucune échéance, donc ni intérêts (294) ni assurance (242), et sa liasse
+ * surévaluait le résultat sans que rien ne le signale (dossier réel rejoué le 2026-10-29).
+ */
+function archiveLoan(Property $property, array $overrides = []): Loan
+{
+    $loan = Loan::create(array_merge([
+        'property_id' => $property->id, 'bank_name' => 'Banque', 'amount' => 12345678,
+        'annual_rate' => 1.65, 'duration_months' => 240, 'start_date' => '2021-04-01',
+        'monthly_payment' => 0, 'insurance_monthly' => 2345, 'is_dedicated' => true,
+    ], $overrides));
+    app(\App\Services\LoanService::class)->generateSchedule($loan, true);
+
+    return $loan;
+}
+
+function importedLoanFor(User $target): Loan
+{
+    $property = Property::withoutGlobalScopes()->where('user_id', $target->id)->first();
+
+    return Loan::withoutGlobalScopes()->where('property_id', $property->id)->first();
+}
+
+it('rebuilds a computed loan schedule on import, so the interest survives', function () {
+    $source = archiveLoan($this->property);
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $this->archive->export($this->user), allowForeignOwner: true);
+    $loan = importedLoanFor($target);
+
+    $interest = fn (Loan $l) => \App\Models\LoanPayment::withoutGlobalScopes()->where('loan_id', $l->id)
+        ->whereYear('payment_date', 2025)->sum('interest_amount');
+
+    expect($loan->payments()->withoutGlobalScopes()->count())->toBe(240)
+        ->and((int) $interest($loan))->toBeGreaterThan(0)
+        ->and((int) $interest($loan))->toBe((int) $interest($source));
+});
+
+it('carries a schedule imported from the bank as is, instead of recomputing it', function () {
+    $source = archiveLoan($this->property);
+    $source->payments()->withoutGlobalScopes()->delete();
+    $source->forceFill(['schedule_source' => Loan::SCHEDULE_IMPORTED])->save();
+    foreach ([1 => 41111, 2 => 40999] as $month => $interest) {
+        \App\Models\LoanPayment::forceCreate([
+            'loan_id' => $source->id, 'payment_date' => "2021-0{$month}-15", 'month_number' => $month,
+            'capital_amount' => 33333, 'interest_amount' => $interest, 'insurance_amount' => 2345,
+            'remaining_capital' => 12345678 - 33333 * $month,
+        ]);
+    }
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $this->archive->export($this->user), allowForeignOwner: true);
+    $loan = importedLoanFor($target);
+
+    expect($loan->hasImportedSchedule())->toBeTrue()
+        ->and($loan->payments()->withoutGlobalScopes()->orderBy('month_number')->pluck('interest_amount')->all())->toBe([41111, 40999]);
+});
+
+it('still reads a format 1 archive and computes its loan schedule', function () {
+    archiveLoan($this->property);
+    $payload = $this->archive->export($this->user);
+    $payload['schema_version'] = 1;
+    unset($payload['properties'][0]['loans'][0]['schedule_source']);
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $payload, allowForeignOwner: true);
+
+    expect(importedLoanFor($target)->payments()->withoutGlobalScopes()->count())->toBe(240);
 });

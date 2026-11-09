@@ -15,7 +15,7 @@ and produce your French tax return under the « régime réel », with no subscr
 ![Filament](https://img.shields.io/badge/Filament-5-FBBF24)
 ![Docker Pulls](https://img.shields.io/docker/pulls/manganate06/openlmnp?logo=docker&logoColor=white&label=Docker%20pulls)
 
-**[🚀 Live demo](https://app.openlmnp.fr)** · **[📦 Install](#quick-install-docker)** · **[📚 Documentation](#documentation)** · **[🇫🇷 Français](README.md)**
+**[🌐 Website](https://openlmnp.fr)** · **[🚀 Live demo](https://app.openlmnp.fr)** · **[📦 Install](#quick-install-docker)** · **[📚 Documentation](#documentation)** · **[🇫🇷 Français](README.md)**
 
 ![OpenLMNP demo: dashboard, simulator, projection and tax return helper](docs/screenshots/demo.gif)
 
@@ -69,7 +69,7 @@ chartered accountant is still recommended.
 - **Loans**: automatic amortization schedule, deductible interest
 - **Recurring expenses**: monthly or quarterly instalments generated, one-click expense duplication
 - **Accounting entries**: generated automatically following the LMNP chart of accounts
-- **Multi-property**: address, surfaces, main-residence share, market value estimated from actual sales in the town (French DVF open data)
+- **Multi-property**: address, surfaces, quota share, situation (separate unit, part of or independent unit within the main residence), market value estimated from actual sales in the town (French DVF open data)
 - **Take over existing books**: 5-step wizard starting from your accountant's last tax return, checked figure by figure
 
 ### 📋 Tax & filings
@@ -83,8 +83,10 @@ chartered accountant is still recommended.
 
 ### 🔌 Import & integrations
 - **Airbnb / Booking CSV import**: FR/EN formats, duplicate detection; generic CSV import for income, expenses, furniture and works
+- **AI document analysis** *(optional)* — drop an invoice, a property-tax notice, a loan schedule or a bank statement: fields are suggested, you review before anything is saved. OpenRouter, Anthropic or Google key — or a model running on your own machine, and nothing leaves it
 - **CSV export**: income, expenses, filing lines
-- **MCP API (45 tools)**: drive your accounting from an AI assistant (Claude, etc.)
+- **MCP API (46 tools)**: drive your accounting from an AI assistant (Claude, etc.)
+- **Built-in assistant (optional)**: answers your questions about using the software, never gives tax advice and never touches your data
 - **New versions flagged**: in the app, based on GitHub releases (a Docker instance updates with `docker pull`)
 
 ### 🛡️ Comfort & safety

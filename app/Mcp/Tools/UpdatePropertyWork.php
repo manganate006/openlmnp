@@ -9,9 +9,11 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[Description('Met à jour un poste de travaux immobiliers existant. Seuls les champs fournis sont modifiés (mise à jour partielle). Le montant est en euros. L\'amortissement annuel est recalculé automatiquement si le montant ou la durée changent.')]
+#[IsDestructive]
 #[IsIdempotent]
 class UpdatePropertyWork extends Tool
 {
@@ -81,13 +83,13 @@ class UpdatePropertyWork extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'work_id'        => $schema->integer('Identifiant des travaux à mettre à jour')->required(),
-            'description'    => $schema->string('Nouvelle description')->nullable(),
-            'amount'         => $schema->number('Montant TTC en euros')->nullable(),
-            'work_date'      => $schema->string('Date des travaux au format Y-m-d')->nullable(),
-            'duration_years' => $schema->integer('Durée d\'amortissement en années')->nullable(),
-            'is_dedicated'   => $schema->boolean('Travaux 100% dédiés à la location')->nullable(),
-            'tva_rate'       => $schema->number('Taux de TVA en pourcentage (ex: 20 pour 20%)')->nullable(),
+            'work_id'        => $schema->integer()->description('Identifiant des travaux à mettre à jour')->required(),
+            'description'    => $schema->string()->description('Nouvelle description')->nullable(),
+            'amount'         => $schema->number()->description('Montant TTC en euros')->nullable(),
+            'work_date'      => $schema->string()->description('Date des travaux au format Y-m-d')->nullable(),
+            'duration_years' => $schema->integer()->description('Durée d\'amortissement en années')->nullable(),
+            'is_dedicated'   => $schema->boolean()->description('Travaux 100% dédiés à la location')->nullable(),
+            'tva_rate'       => $schema->number()->description('Taux de TVA en pourcentage (ex: 20 pour 20%)')->nullable(),
         ];
     }
 }

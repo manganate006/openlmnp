@@ -5,7 +5,9 @@ namespace App\Livewire;
 use App\Models\Feedback;
 use App\Notifications\FeedbackReceived;
 use App\Services\UpdateService;
+use App\Support\DemoExpiry;
 use App\Support\FeedbackEligibility;
+use App\Support\Fr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Notification;
@@ -41,6 +43,14 @@ class FeedbackPrompt extends Component
     public string $authorEmail = '';
 
     public bool $canPublish = false;
+
+    /**
+     * Freins cochés, par identifiant. Enregistrés DÈS LE CLIC, comme le sentiment :
+     * quelqu'un qui coche puis referme sans envoyer a quand même livré son signal.
+     *
+     * @var list<string>
+     */
+    public array $blockers = [];
 
     /** Renseignés au montage, lus par le minuteur côté navigateur (lecture seule pour lui). */
     #[Locked]
@@ -80,9 +90,20 @@ class FeedbackPrompt extends Component
     #[Locked]
     public ?string $pageRoute = null;
 
+    /**
+     * Principal du compte courant (plan des dossiers liés § 2.3 : « Avis → Principal »)
+     * — une personne qui saisit depuis trois dossiers ne doit pas recevoir trois fois
+     * l'invitation, et son cooldown/sa variante tirée doivent rester les siens, pas
+     * ceux d'un sous-compte technique sans boîte mail.
+     */
+    private function principal(): ?\App\Models\User
+    {
+        return \App\Support\DossierContext::principal(Auth::user());
+    }
+
     public function mount(): void
     {
-        $eligibility = FeedbackEligibility::for(Auth::user(), request()->cookies->all());
+        $eligibility = FeedbackEligibility::for($this->principal(), request()->cookies->all());
 
         $this->eligible = $eligibility->shouldOffer();
         $this->pageRoute = request()->route()?->getName();
@@ -116,7 +137,7 @@ class FeedbackPrompt extends Component
         // à rien — et donc de départager les trois variantes.
         $this->record();
 
-        Auth::user()?->update(['feedback_prompted_at' => now()]);
+        $this->principal()?->update(['feedback_prompted_at' => now()]);
 
         // La variante est figée dès maintenant : la personne l'a vue, elle ne doit plus
         // en changer, y compris après la purge de son compte de démonstration.
@@ -228,6 +249,76 @@ class FeedbackPrompt extends Component
      *  - une URL est configurée — vide par défaut, donc rien ne s'affiche sur une instance
      *    auto-hébergée, et le dépôt public ne porte aucun argumentaire commercial.
      */
+    /**
+     * Enregistre les freins à chaque changement de case, sans attendre l'envoi.
+     *
+     * ⚠️ On filtre contre `Feedback::BLOCKERS` : rien ne garantit ce que le navigateur
+     * envoie, et une valeur libre polluerait durablement les comptages du rapport.
+     */
+    public function updatedBlockers(): void
+    {
+        $this->blockers = array_values(array_intersect(
+            array_unique($this->blockers),
+            array_keys(Feedback::BLOCKERS),
+        ));
+
+        $this->currentFeedback()?->update([
+            'blockers' => $this->blockers ?: null,
+        ]);
+    }
+
+    /**
+     * « Gardez votre travail 7 jours » — le seul geste utile à 4 minutes.
+     *
+     * Ne réimplémente rien : `DemoExpiryPrompt` porte déjà la validation, le consentement,
+     * la prolongation, l'envoi du lien de reprise et les événements. On lui passe la main.
+     */
+    public function keepSandbox(): void
+    {
+        if (! $this->showsKeepSandbox) {
+            return;
+        }
+
+        // Le commentaire déjà tapé ne doit pas disparaître parce qu'on change d'écran.
+        $this->currentFeedback()?->update([
+            'message' => trim($this->message) ?: null,
+            'author_email' => trim($this->authorEmail) ?: null,
+        ]);
+
+        $this->dispatch('analytics', [
+            'event' => 'feedback_cta_keep',
+            'feedback_variant' => $this->variant,
+        ]);
+
+        $this->dispatch('open-demo-extend')->to(DemoExpiryPrompt::class);
+
+        $this->step = 'idle';
+        $this->eligible = false;
+        $this->close();
+    }
+
+    /**
+     * Le visiteur est-il dans la démonstration ? Commande tout ce qui distingue un
+     * prospect d'un utilisateur : les gestes GitHub, la question posée, le consentement
+     * à publication.
+     */
+    public function getIsDemoProperty(): bool
+    {
+        return $this->audience === Feedback::AUDIENCE_DEMO;
+    }
+
+    /**
+     * Proposer de prolonger n'a de sens qu'en démonstration, et qu'une fois : la
+     * prolongation ne s'accorde pas deux fois, le bouton ne doit donc pas promettre.
+     */
+    public function getShowsKeepSandboxProperty(): bool
+    {
+        return $this->isDemo
+            && config('demo.enabled')
+            && ($user = Auth::user()) !== null
+            && DemoExpiry::for($user)->canExtend();
+    }
+
     public function getShowsProCtaProperty(): bool
     {
         return $this->audience === Feedback::AUDIENCE_DEMO
@@ -238,9 +329,17 @@ class FeedbackPrompt extends Component
      * Durée de vie du bac à sable, telle qu'elle est réellement configurée sur CETTE
      * instance : le texte du bloc l'annonce, autant qu'il dise vrai partout.
      */
-    public function getDemoHoursProperty(): int
+    /**
+     * Durée de vie du bac à sable, accordée : « 24 heures », « 1 heure ».
+     *
+     * ⚠️ Le nombre et son unité voyagent ENSEMBLE. `demo.ttl_hours` est un réglage
+     * d'instance, qu'un auto-hébergeur peut poser à 1 — et « s'efface dans 1 heures »
+     * est le même défaut que celui du bandeau d'expiration
+     * ({@see \App\Livewire\DemoExpiryPrompt::atRiskSentence()}).
+     */
+    public function getDemoDelayProperty(): string
     {
-        return max(1, (int) config('demo.ttl_hours'));
+        return Fr::accorde(max(1, (int) config('demo.ttl_hours')), 'heure');
     }
 
     public function render()
@@ -260,7 +359,7 @@ class FeedbackPrompt extends Component
                 'route' => $this->pageRoute,
                 'version' => app(UpdateService::class)->getCurrentVersion(),
             ],
-            'user_id' => Auth::id(),
+            'user_id' => $this->principal()?->id,
         ]);
 
         $this->feedbackId = $feedback->id;
@@ -269,7 +368,7 @@ class FeedbackPrompt extends Component
     private function currentFeedback(): ?Feedback
     {
         return $this->feedbackId
-            ? Feedback::where('user_id', Auth::id())->find($this->feedbackId)
+            ? Feedback::where('user_id', $this->principal()?->id)->find($this->feedbackId)
             : null;
     }
 
@@ -295,7 +394,7 @@ class FeedbackPrompt extends Component
 
     private function close(): void
     {
-        Auth::user()?->update(['feedback_answered_at' => now()]);
+        $this->principal()?->update(['feedback_answered_at' => now()]);
 
         $this->remember(['v' => $this->variant, 'at' => now()->toDateString()]);
     }

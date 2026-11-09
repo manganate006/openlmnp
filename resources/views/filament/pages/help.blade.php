@@ -162,7 +162,11 @@
                 <dt>Est-ce qu'OpenLMNP remplace un expert-comptable ?</dt>
                 <dd>Non. C'est un outil d'aide &agrave; la comptabilit&eacute;. Pour les cas complexes ou en cas de doute, consultez un professionnel.</dd>
                 <dt>Les donn&eacute;es sont-elles s&eacute;curis&eacute;es ?</dt>
-                <dd>OpenLMNP est auto-h&eacute;berg&eacute; : vos donn&eacute;es restent sur votre serveur. Aucune information n'est transmise &agrave; un tiers.</dd>
+                <dd>OpenLMNP est auto-h&eacute;berg&eacute; : vos donn&eacute;es restent sur votre serveur. Aucune information n'est transmise &agrave; un tiers. Pour aller plus loin, le <strong>coffre-fort</strong> (menu Param&egrave;tres) chiffre le contenu de vos justificatifs et des photos de biens avec une <strong>phrase de passe que vous seul connaissez</strong> : m&ecirc;me l'h&eacute;bergeur de l'instance ne peut plus les lire. C'est optionnel et r&eacute;versible.</dd>
+                <dt>Que se passe-t-il si j'oublie la phrase de passe du coffre-fort ?</dt>
+                <dd>Vos justificatifs deviennent d&eacute;finitivement illisibles &mdash; elle n'est enregistr&eacute;e nulle part et il n'existe aucune proc&eacute;dure de r&eacute;cup&eacute;ration. Elle est <strong>ind&eacute;pendante de votre mot de passe de connexion</strong> : changer ce dernier n'a aucun effet sur le coffre, et une r&eacute;initialisation de mot de passe vous rend l'acc&egrave;s &agrave; votre compte, pas &agrave; vos fichiers. Notez-la ailleurs avant d'activer.</dd>
+                <dt>Pourquoi une photo de bien n'appara&icirc;t-elle plus ?</dt>
+                <dd>Si vous avez activ&eacute; le coffre-fort, sa cl&eacute; expire &agrave; la fermeture du navigateur et apr&egrave;s deux heures d'inactivit&eacute;. Coffre verrouill&eacute;, les photos et justificatifs ne s'affichent pas, les champs de d&eacute;p&ocirc;t sont gris&eacute;s et l'export ZIP des justificatifs est refus&eacute;. Rien n'est perdu : d&eacute;verrouillez le coffre depuis <a href="/vault" style="color:var(--olmnp-info-accent);text-decoration:underline;font-weight:600;">Param&egrave;tres &gt; Coffre-fort</a>.</dd>
                 <dt>Puis-je g&eacute;rer plusieurs biens ?</dt>
                 <dd>Oui. Les calculs fiscaux consolident automatiquement tous vos biens.</dd>
                 <dt>Combien de temps conserver les justificatifs ?</dt>

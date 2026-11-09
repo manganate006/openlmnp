@@ -1,0 +1,139 @@
+{
+    "document_type": "income_statement",
+    "confidence": 0.94,
+    "fields": [
+        {
+            "name": "vendor",
+            "value": "Airbnb Ireland UC",
+            "confidence": 0.97,
+            "evidence": "Airbnb Ireland UC"
+        },
+        {
+            "name": "subject",
+            "value": "Rapport de revenus 2025",
+            "confidence": 0.95,
+            "evidence": "Rapport de revenus"
+        },
+        {
+            "name": "fiscal_year",
+            "value": "2025",
+            "confidence": 0.96,
+            "evidence": "2025"
+        },
+        {
+            "name": "period_start",
+            "value": "2025-01-01",
+            "confidence": 0.9,
+            "evidence": "1 janv. 2025"
+        },
+        {
+            "name": "period_end",
+            "value": "2025-12-31",
+            "confidence": 0.9,
+            "evidence": "31 déc. 2025"
+        },
+        {
+            "name": "gross_total",
+            "value": "13580.50",
+            "confidence": 0.95,
+            "evidence": "Revenus bruts 13 580,50 €"
+        },
+        {
+            "name": "service_fees",
+            "value": "-488.90",
+            "confidence": 0.93,
+            "evidence": "Frais de service -488,90 €"
+        },
+        {
+            "name": "adjustments",
+            "value": "-50.00",
+            "confidence": 0.9,
+            "evidence": "Régularisations -50,00 €"
+        },
+        {
+            "name": "net_total",
+            "value": "13041.60",
+            "confidence": 0.95,
+            "evidence": "Total 13 041,60 €"
+        },
+        {
+            "name": "tourist_tax_collected",
+            "value": "412.30",
+            "confidence": 0.88,
+            "evidence": "412,30 € ont été collectés"
+        }
+    ],
+    "items": [],
+    "schedule": [],
+    "lines": [],
+    "earnings": [
+        {
+            "month": 1,
+            "gross": "0.00",
+            "net": "0.00",
+            "confidence": 0.93
+        },
+        {
+            "month": 3,
+            "gross": "0.00",
+            "net": "0.00",
+            "confidence": 0.93
+        },
+        {
+            "month": 4,
+            "gross": "1200.00",
+            "net": "1156.80",
+            "confidence": 0.93
+        },
+        {
+            "month": 5,
+            "gross": "980.50",
+            "net": "945.20",
+            "confidence": 0.93
+        },
+        {
+            "month": 6,
+            "gross": "1450.00",
+            "net": "1397.80",
+            "confidence": 0.93
+        },
+        {
+            "month": 7,
+            "gross": "2600.00",
+            "net": "2506.40",
+            "confidence": 0.93
+        },
+        {
+            "month": 8,
+            "gross": "2950.00",
+            "net": "2843.80",
+            "confidence": 0.93
+        },
+        {
+            "month": 9,
+            "gross": "1780.00",
+            "net": "1715.92",
+            "confidence": 0.93
+        },
+        {
+            "month": 10,
+            "gross": "860.00",
+            "net": "829.04",
+            "confidence": 0.93
+        },
+        {
+            "month": 11,
+            "gross": "0.00",
+            "net": "0.00",
+            "confidence": 0.93
+        },
+        {
+            "month": 12,
+            "gross": "1120.00",
+            "net": "1029.68",
+            "confidence": 0.93
+        }
+    ],
+    "depreciation": [],
+    "carryforwards": []
+}

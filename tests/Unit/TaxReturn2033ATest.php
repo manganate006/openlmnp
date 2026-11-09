@@ -12,7 +12,7 @@ use App\Services\TaxReturnService;
  * Le bilan 2033-A.
  *
  * Ce formulaire n'avait AUCUN test jusqu'au 2026-09-05, et c'est ce qui a laissé passer trois
- * lignes fausses, découvertes en rejouant la liasse réelle d'un cabinet :
+ * lignes fausses, découvertes en rejouant la liasse d'un dossier de test :
  *
  *   1. la case 028 ne portait que la valeur de référence du bien — travaux et mobilier, qui
  *      sont pourtant des immobilisations corporelles et figurent dans notre propre 2033-C,
@@ -64,8 +64,8 @@ function form2033A(User $user, int $year): array
 }
 
 it('counts works and furniture among the gross corporeal assets', function () {
-    // Le défaut d'origine : 028 valait le seul prix d'acquisition. Sur la liasse réelle, il y
-    // manquait exactement les travaux et le mobilier — 7 610 € sur 188 400 €.
+    // Le défaut d'origine : 028 valait le seul prix d'acquisition. Sur le dossier de test, il
+    // y manquait exactement les travaux et le mobilier — 7 610 € sur 188 400 €.
     $property = balanceProperty($this->user);
     $this->depreciation->generateDefaultComponents($property);
 
@@ -152,8 +152,11 @@ it('totals the two families and keeps the balance sheet balanced', function () {
     expect($form['044'])->toBe($form['028'] + $form['014'])
         ->and($form['048'])->toBe($form['030'] + $form['016'])
         // L'actif net porte les DEUX familles, sinon le total ne se réconcilie plus à l'écran.
-        ->and($form['112'])->toBe($form['044'] - $form['048'])
-        ->and($form['180'])->toBe($form['112']);
+        ->and($form['net'])->toBe($form['044'] - $form['048'])
+        ->and($form['180'])->toBe($form['net'])
+        // 110 et 112 sont les totaux généraux brut et amortissements, pas le net.
+        ->and($form['110'])->toBe($form['044'])
+        ->and($form['112'])->toBe($form['048']);
 });
 
 it('applies the quota share of a partly rented home to the gross assets', function () {

@@ -5,7 +5,9 @@ namespace App\Filament\Pages;
 use App\Filament\Pages\Concerns\NavigationAware;
 use App\Filament\Resources\Loans\LoanResource;
 use App\Models\Loan;
+use App\Services\LoanService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -83,13 +85,13 @@ class LoanDetail extends Page
         // Prochaines échéances (6 prochaines)
         $nextPayments = $payments->filter(fn ($p) => $p->payment_date->format('Y-m-d') > $today)->take(6);
 
-        // Intérêts déductibles par année (avec quote-part)
+        // Intérêts déductibles par année (avec quote-part, sauf emprunt dédié)
         $quotaShare = $loan->property?->quota_share ?? '1';
         $interestByYear = [];
         foreach ($payments->groupBy(fn ($p) => $p->payment_date->format('Y')) as $year => $yearPayments) {
             $yearInterest = $yearPayments->sum('interest_amount');
             $yearInsurance = $yearPayments->sum('insurance_amount');
-            $deductible = (int) bcmul((string) ($yearInterest + $yearInsurance), $quotaShare, 0);
+            $deductible = (int) $loan->prorate((string) ($yearInterest + $yearInsurance), $quotaShare);
             $interestByYear[$year] = [
                 'interest' => $yearInterest,
                 'insurance' => $yearInsurance,
@@ -120,5 +122,103 @@ class LoanDetail extends Page
     public function updatedLoanId(): void
     {
         unset($this->loanData);
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('recomputeSchedule')
+                ->label('Recalculer le tableau théorique')
+                ->icon('heroicon-o-arrow-path')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Remplacer les échéances importées ?')
+                ->modalDescription(
+                    'Ce prêt utilise le tableau d\'amortissement importé de votre banque : il porte les '
+                    . 'montants réels (différé, assurance dégressive, modulation). Le recalcul les remplacera '
+                    . 'par des échéances théoriques, ce qui peut faire varier les intérêts déductibles que '
+                    . 'vous avez déjà déclarés.'
+                )
+                ->modalSubmitActionLabel('Recalculer quand même')
+                // N'a de sens que sur un tableau importé : ailleurs, il est déjà théorique.
+                ->visible(fn () => $this->currentLoan()?->hasImportedSchedule() ?? false)
+                ->action(function () {
+                    $loan = $this->currentLoan();
+
+                    if ($loan === null) {
+                        return;
+                    }
+
+                    app(LoanService::class)->generateSchedule($loan, force: true);
+
+                    unset($this->loanData);
+
+                    Notification::make()
+                        ->title('Tableau théorique recalculé')
+                        ->body('Les échéances importées ont été remplacées.')
+                        ->success()
+                        ->send();
+                }),
+        ];
+    }
+
+    private function currentLoan(): ?Loan
+    {
+        return $this->loanId ? Loan::find($this->loanId) : null;
+    }
+
+    /**
+     * Écart entre les intérêts réellement facturés par la banque et ceux que
+     * notre calcul théorique aurait produits, sur l'année en cours.
+     *
+     * C'est le chiffre qui justifie l'import : il dit à l'utilisateur combien
+     * son tableau réel diffère de l'estimation.
+     */
+    #[Computed]
+    public function theoreticalGap(): ?array
+    {
+        $loan = $this->currentLoan();
+
+        if ($loan === null || ! $loan->hasImportedSchedule()) {
+            return null;
+        }
+
+        $year = (int) date('Y');
+        $reels = $loan->getInterestsForYear($year);
+
+        // Tableau théorique calculé À BLANC : aucune écriture en base.
+        $theoriques = $this->theoreticalInterests($loan, $year);
+
+        return [
+            'year' => $year,
+            'imported' => $reels,
+            'theoretical' => $theoriques,
+            'gap' => (int) bcsub((string) $reels, (string) $theoriques, 0),
+        ];
+    }
+
+    /**
+     * Intérêts théoriques d'une année, simulés sans toucher aux LoanPayment
+     * existants — les recalculer en base effacerait le tableau importé.
+     */
+    private function theoreticalInterests(Loan $loan, int $year): int
+    {
+        $remaining = (int) $loan->amount;
+        $monthlyRate = ((float) $loan->annual_rate / 100) / 12;
+        $monthly = (int) $loan->monthly_payment;
+        $total = 0;
+
+        for ($i = 1; $i <= (int) $loan->duration_months; $i++) {
+            $interest = (int) round($remaining * $monthlyRate);
+            $capital = $i === (int) $loan->duration_months ? $remaining : $monthly - $interest;
+
+            if ((int) $loan->start_date->copy()->addMonths($i)->format('Y') === $year) {
+                $total = (int) bcadd((string) $total, (string) $interest, 0);
+            }
+
+            $remaining = max(0, $remaining - $capital);
+        }
+
+        return $total;
     }
 }

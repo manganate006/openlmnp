@@ -1,0 +1,22 @@
+{
+  "document_type": "furniture_invoice",
+  "confidence": 0.89,
+  "fields": [
+    { "name": "issue_date", "value": "2026-03-18", "confidence": 0.95, "evidence": "Le 18/03/2026" },
+    { "name": "total_ttc", "value": "1854.90", "confidence": 0.93, "evidence": "Total TTC 1 854,90 €" },
+    { "name": "vat_rate", "value": "20", "confidence": 0.9, "evidence": "TVA 20 %" },
+    { "name": "vendor", "value": "Meubles Rivière", "confidence": 0.94, "evidence": "MEUBLES RIVIÈRE SAS" },
+    { "name": "subject", "value": "Ameublement studio", "confidence": 0.8, "evidence": "Commande n° 88421" },
+    { "name": "is_second_hand", "value": "false", "confidence": 0.85, "evidence": "Articles neufs" }
+  ],
+  "items": [
+    { "label": "Canapé convertible 3 places", "total_ttc": "849.00", "vat_rate": "20", "is_second_hand": false, "confidence": 0.92 },
+    { "label": "Lave-vaisselle encastrable", "total_ttc": "639.00", "vat_rate": "20", "is_second_hand": false, "confidence": 0.91 },
+    { "label": "Table basse chêne", "total_ttc": "189.00", "vat_rate": "20", "is_second_hand": false, "confidence": 0.88 },
+    { "label": "Lot de 4 coussins", "total_ttc": "39.90", "vat_rate": "20", "is_second_hand": false, "confidence": 0.76 },
+    { "label": "Set de vaisselle 12 pièces", "total_ttc": "59.00", "vat_rate": "20", "is_second_hand": false, "confidence": 0.74 },
+    { "label": "Rideaux occultants", "total_ttc": "79.00", "vat_rate": "20", "is_second_hand": false, "confidence": 0.71 }
+  ],
+  "schedule": [],
+  "lines": []
+}

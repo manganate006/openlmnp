@@ -69,6 +69,7 @@
                     <thead>
                         <tr>
                             <th>Nom</th>
+                            <th>Dossier</th>
                             <th>Dernière utilisation</th>
                             <th>Créé le</th>
                             <th style="text-align:right;">Actions</th>
@@ -78,6 +79,7 @@
                         @foreach($tokens as $token)
                             <tr>
                                 <td style="font-weight:500;">{{ $token['name'] }}</td>
+                                <td class="mt-muted">{{ $token['dossier_name'] ?? 'Mon dossier personnel' }}</td>
                                 <td class="mt-muted">{{ $token['last_used_at'] }}</td>
                                 <td class="mt-muted">{{ $token['created_at'] }}</td>
                                 <td style="text-align:right;">

@@ -9,10 +9,12 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[Description('Calcule le résultat fiscal complet d\'un exercice LMNP pour une année donnée : recettes, charges, amortissements (avec plafonnement et report), résultat fiscal net, et solde TVA. Crée l\'exercice s\'il n\'existe pas encore. Tous les montants sont retournés en euros.')]
 #[IsIdempotent]
+#[IsDestructive(false)]
 class ComputeFiscalYear extends Tool
 {
     protected string $name = 'compute_fiscal_year';
@@ -72,7 +74,7 @@ class ComputeFiscalYear extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'year' => $schema->integer('Année fiscale à calculer (ex : 2025)')->required(),
+            'year' => $schema->integer()->description('Année fiscale à calculer (ex : 2025)')->required(),
         ];
     }
 }

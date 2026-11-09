@@ -10,6 +10,7 @@ use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\PropertyWork;
 use App\Models\User;
+use App\Support\MicroBicRules;
 
 /**
  * Service de calcul du résultat fiscal LMNP.
@@ -100,14 +101,14 @@ class FiscalYearService
             $dedicated = $property->expenses()
                 ->whereYear('expense_date', $year)
                 ->where('is_dedicated', true)
-                ->sum($amountField);
+                ->sum(Expense::usageAdjustedSql($amountField));
             $totalExpenses = bcadd($totalExpenses, (string) $dedicated, 0);
 
             // Charges au prorata
             $shared = $property->expenses()
                 ->whereYear('expense_date', $year)
                 ->where('is_dedicated', false)
-                ->sum($amountField);
+                ->sum(Expense::usageAdjustedSql($amountField));
             $sharedProrata = bcmul((string) $shared, $property->quota_share, 0);
             $totalExpenses = bcadd($totalExpenses, $sharedProrata, 0);
 
@@ -116,13 +117,13 @@ class FiscalYearService
                 $dedicatedTva = $property->expenses()
                     ->whereYear('expense_date', $year)
                     ->where('is_dedicated', true)
-                    ->sum('amount_tva');
+                    ->sum(Expense::usageAdjustedSql('amount_tva'));
                 $totalTvaDeductible = bcadd($totalTvaDeductible, (string) $dedicatedTva, 0);
 
                 $sharedTva = $property->expenses()
                     ->whereYear('expense_date', $year)
                     ->where('is_dedicated', false)
-                    ->sum('amount_tva');
+                    ->sum(Expense::usageAdjustedSql('amount_tva'));
                 $sharedTvaProrata = bcmul((string) $sharedTva, $property->quota_share, 0);
                 $totalTvaDeductible = bcadd($totalTvaDeductible, $sharedTvaProrata, 0);
 
@@ -137,19 +138,19 @@ class FiscalYearService
                 $totalTvaDeductible = bcadd($totalTvaDeductible, (string) $furnitureTva, 0);
             }
 
-            // Intérêts d'emprunt (quote-part) — pas de TVA sur les intérêts
+            // Intérêts d'emprunt (quote-part, sauf emprunt dédié) — pas de TVA sur les intérêts
             foreach ($property->loans as $loan) {
                 $yearlyInterest = $loan->payments()
                     ->whereYear('payment_date', $year)
                     ->sum('interest_amount');
-                $interestProrata = bcmul((string) $yearlyInterest, $property->quota_share, 0);
+                $interestProrata = $loan->prorate((string) $yearlyInterest, $property->quota_share);
                 $totalExpenses = bcadd($totalExpenses, $interestProrata, 0);
 
-                // Assurance emprunteur (quote-part)
+                // Assurance emprunteur (quote-part, sauf emprunt dédié)
                 $yearlyInsurance = $loan->payments()
                     ->whereYear('payment_date', $year)
                     ->sum('insurance_amount');
-                $insuranceProrata = bcmul((string) $yearlyInsurance, $property->quota_share, 0);
+                $insuranceProrata = $loan->prorate((string) $yearlyInsurance, $property->quota_share);
                 $totalExpenses = bcadd($totalExpenses, $insuranceProrata, 0);
             }
         }
@@ -680,10 +681,41 @@ class FiscalYearService
      * Année proposée par défaut dans l'assistant de clôture : premier
      * exercice manquant de la chaîne, entre le début de la chaîne
      * existante (à défaut la première année d'activité) et N-1.
+     *
+     * Après une reprise, la chaîne démarre à l'exercice qui porte les soldes
+     * d'ouverture (celui qui suit la dernière liasse du cabinet) : on propose
+     * le premier exercice non clôturé à partir de lui, même déjà enregistré
+     * en brouillon. Les années antérieures sont couvertes par la reprise et ne
+     * sont jamais proposées. Sans ce cas, une reprise sur l'année en cours
+     * laissait la boucle vide et proposait N-1, l'année déclarée par le cabinet.
      */
     public function nextYearToCreate(User $user): int
     {
         $currentYear = (int) date('Y');
+
+        $repriseYear = FiscalYear::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->orderByDesc('year')
+            ->get()
+            ->first(fn (FiscalYear $fiscalYear) => $fiscalYear->hasOpeningBalances())
+            ?->year;
+
+        if ($repriseYear !== null) {
+            $closedYears = FiscalYear::withoutGlobalScopes()
+                ->where('user_id', $user->id)
+                ->where('year', '>=', $repriseYear)
+                ->where('status', FiscalYear::STATUS_CLOSED)
+                ->pluck('year')
+                ->map(fn ($year) => (int) $year)
+                ->all();
+
+            $year = (int) $repriseYear;
+            while (in_array($year, $closedYears, true)) {
+                $year++;
+            }
+
+            return $year;
+        }
 
         $chainStart = FiscalYear::withoutGlobalScopes()
             ->where('user_id', $user->id)
@@ -706,11 +738,20 @@ class FiscalYearService
     /**
      * Comparaison micro-BIC vs régime réel pour une année.
      *
+     * `$abatement` reste le taux brut ("50"/"30"…) pour compatibilité avec les
+     * appelants existants (simulateur, outils MCP) : le plafond associé est
+     * retrouvé via `App\Support\MicroBicRules::ceilingForRate()`, seule source des
+     * barèmes. Au-delà du plafond, `available` passe à `false` et `unavailable_reason`
+     * porte le motif — le micro-BIC ne doit alors plus être présenté comme possible.
+     *
      * @return array{
+     *     gross_income: string,
      *     micro_bic_result: string,
      *     real_result: string,
      *     advantage: string,
-     *     recommended: string
+     *     recommended: string,
+     *     available: bool,
+     *     unavailable_reason: ?string
      * }
      */
     public function compareMicroBicVsReal(User $user, int $year, string $abatement = '50'): array
@@ -741,12 +782,20 @@ class FiscalYearService
         // Avantage du réel (positif = le réel est mieux)
         $advantage = bcsub($microBicResult, $realResult, 0);
 
+        $grossIncomeInt = (int) $grossIncome;
+
         return [
             'gross_income'     => $grossIncome,
             'micro_bic_result' => $microBicResult,
             'real_result'      => $realResult,
             'advantage'        => $advantage,
             'recommended'      => bccomp($realResult, $microBicResult, 0) < 0 ? 'real' : 'micro_bic',
+            // Micro-BIC : mêmes règles qu'un dossier individuel pour une indivision (piège P13,
+            // simplification du 2026-10-15 — voir App\Support\Indivision). Le plafond porte déjà
+            // sur les recettes TOTALES, puisque le dossier de l'indivision les contient toutes.
+            'available'        => MicroBicRules::isAvailableForRate($abatement, $year, $grossIncomeInt),
+            'unavailable_reason' => MicroBicRules::unavailableReasonForRate($abatement, $year, $grossIncomeInt),
+            'warning'          => null,
         ];
     }
 }

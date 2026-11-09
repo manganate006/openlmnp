@@ -79,9 +79,9 @@ class DiagnosticReportService
 
         $fiscalYear = $this->fiscalYearService->getOrCreate($user, $year);
 
-        $form2033A = $this->taxReturnService->compute2033A($fiscalYear, $properties, $year);
         $breakdown = $this->taxReturnService->resultBreakdown($fiscalYear, $properties, $year);
         $form2033B = $this->taxReturnService->compute2033B($fiscalYear, $properties, $year, $breakdown);
+        $form2033A = $this->taxReturnService->compute2033A($fiscalYear, $properties, $year, $form2033B['310']);
         $form2033C = $this->taxReturnService->compute2033C($properties, $year);
 
         $report['forms'] = [
@@ -119,7 +119,8 @@ class DiagnosticReportService
         $base = $properties->sum(fn (Property $p) => (int) $p->depreciable_base);
 
         $report['gaps'] = [
-            '044_moins_490'          => $form2033A['044'] - $form2033C['total_brut'],
+            // 496 = total des valeurs brutes de FIN du 2033-C (490 est la colonne du début).
+            '044_moins_496'          => $form2033A['044'] - $form2033C['total_brut'],
             '572_moins_254'          => $form2033C['total_dotation'] - (int) $form2033B['254'],
             'base_moins_composants'  => $base - $allocated,
         ];
@@ -145,6 +146,8 @@ class DiagnosticReportService
                 'quote_part'              => $property->quota_share,
                 'residence_principale'    => (bool) $property->is_primary_residence,
                 'date_mise_en_location'   => $property->rental_start_date?->format('Y-m-d'),
+                // Première location (micro-BIC compris) : vide si elle se confond avec le réel.
+                'date_premiere_location'  => $property->activity_start_date?->format('Y-m-d'),
                 'regime_tva'              => $property->tva_regime,
                 'frais_notaire'           => (int) $property->notary_fees,
                 'frais_agence'            => (int) $property->agency_fees,
@@ -226,6 +229,7 @@ class DiagnosticReportService
                 $in['surface_louee'], $in['surface_totale'], $in['quote_part']);
             $out[] = 'Résidence principale ....... ' . ($in['residence_principale'] ? 'oui' : 'non');
             $out[] = 'Mise en location ........... ' . ($in['date_mise_en_location'] ?? '—');
+            $out[] = 'Première location (micro) .. ' . ($in['date_premiere_location'] ?? '— (début du réel)');
             $out[] = 'Régime TVA ................. ' . ($in['regime_tva'] ?? '—');
             $out[] = 'Frais notaire / agence ..... ' . $euro($in['frais_notaire']) . ' / ' . $euro($in['frais_agence']);
             $out[] = sprintf('Traitement des frais ....... %s (sur %d ans)',
@@ -283,7 +287,10 @@ class DiagnosticReportService
 
         $out[] = '--- 2033-A (bilan) ---';
         foreach ($report['forms']['2033A'] as $line => $value) {
-            $out[] = sprintf('  case %-4s %s', $line, $euro((int) $value));
+            // Le total net de l'actif n'a pas de numéro de case sur le Cerfa.
+            $out[] = $line === 'net'
+                ? sprintf('  net (sans case) %s', $euro((int) $value))
+                : sprintf('  case %-4s %s', $line, $euro((int) $value));
         }
         $out[] = '';
 
@@ -296,7 +303,7 @@ class DiagnosticReportService
         $out[] = '--- Passage au résultat (par bien) ---';
         foreach ($report['result']['properties'] as $p) {
             $out[] = sprintf(
-                '  %s : quote-part %s%s · recettes %s − commissions %s · %d charge(s) : dédiées %s (242) + %s (244), partagées %s → %s retenus · emprunts %s · dotation %s',
+                '  %s : quote-part %s%s · recettes brutes %s (218) · commissions %s (242, sans quote-part) · %d charge(s) : dédiées %s (242) + %s (244), partagées %s → %s retenus · emprunts %s · dotation %s',
                 $p['label'], $p['quote_part'], $p['tva'] ? ' (HT)' : '',
                 $euro($p['recettes_brutes']), $euro($p['commissions']), $p['charges_nb'],
                 $euro($p['dediees_242']), $euro($p['dediees_244']),
@@ -314,24 +321,40 @@ class DiagnosticReportService
             . ' · restant ' . $euro($d['carryforward']);
         $out[] = '';
 
-        $out[] = '--- 2033-C, cadre I (immobilisations) ---';
+        $c2033 = $report['forms']['2033C'];
+        $out[] = '--- 2033-C, cadre I (valeurs brutes : début + augmentations − diminutions = fin) ---';
         $out[] = $this->table(
-            ['Catégorie', 'Lignes', 'Brut', 'Dotation', 'Cumul'],
+            ['Catégorie', 'Cases', 'Début', 'Augm.', 'Dimin.', 'Fin'],
             array_map(fn (string $name, array $cat) => [
                 $name,
-                $cat['lines']['immo'] . ($cat['lines']['amort'] ? ' / ' . $cat['lines']['amort'] : ''),
-                $euro($cat['brut']), $euro($cat['dotation']), $euro($cat['cumul']),
-            ], array_keys($report['forms']['2033C']['categories']), $report['forms']['2033C']['categories']),
+                implode('/', $cat['lines']['immo']),
+                $euro($cat['debut']), $euro($cat['augmentations']), $euro($cat['diminutions']), $euro($cat['brut']),
+            ], array_keys($c2033['categories']), $c2033['categories']),
         );
-        $out[] = sprintf('  TOTAL 490/572/570 : %s · %s · %s',
-            $euro($report['forms']['2033C']['total_brut']),
-            $euro($report['forms']['2033C']['total_dotation']),
-            $euro($report['forms']['2033C']['total_cumul']),
+        $out[] = sprintf('  TOTAL %s : %s · %s · %s · %s',
+            implode('/', $c2033['total_lines']['immo']),
+            $euro($c2033['total_debut']), $euro($c2033['total_augmentations']),
+            $euro($c2033['total_diminutions']), $euro($c2033['total_brut']),
+        );
+        $out[] = '--- 2033-C, cadre II (amortissements : début + dotations − diminutions = fin) ---';
+        $amortissables = array_filter($c2033['categories'], fn (array $cat) => $cat['lines']['amort'] !== null);
+        $out[] = $this->table(
+            ['Catégorie', 'Cases', 'Début', 'Dotation', 'Dimin.', 'Fin'],
+            array_map(fn (string $name, array $cat) => [
+                $name,
+                implode('/', $cat['lines']['amort']),
+                $euro($cat['cumul_debut']), $euro($cat['dotation']), $euro($cat['diminutions_amort']), $euro($cat['cumul']),
+            ], array_keys($amortissables), $amortissables),
+        );
+        $out[] = sprintf('  TOTAL %s : %s · %s · %s · %s',
+            implode('/', $c2033['total_lines']['amort']),
+            $euro($c2033['total_cumul_debut']), $euro($c2033['total_dotation']),
+            $euro($c2033['total_diminutions_amort']), $euro($c2033['total_cumul']),
         );
         $out[] = '';
 
         $out[] = '--- Écarts ---';
-        $out[] = '  044 − 490 ............... ' . $euro($report['gaps']['044_moins_490'])
+        $out[] = '  044 − 496 ............... ' . $euro($report['gaps']['044_moins_496'])
             . '  (doit valoir la part non ventilée)';
         $out[] = '  572 − 254 ............... ' . $euro($report['gaps']['572_moins_254'])
             . '  (doit valoir zéro)';

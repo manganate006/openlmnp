@@ -52,7 +52,8 @@ class DemoDataService
             'land_percentage' => 15,
             'rental_start_date' => '2022-06-01',
             'rental_type' => 'seasonal',
-            'is_primary_residence' => true,
+            'residence_situation' => Property::RESIDENCE_PART_OF_RESIDENCE,
+            'tourism_classification' => Property::CLASSIFICATION_UNCLASSIFIED,
         ]);
 
         // Composants d'amortissement
@@ -231,6 +232,17 @@ class DemoDataService
                 'fiscal_year_ids' => $seededYears,
             ],
         ])->save();
+
+        // ⚠️ Les badges s'attribuent sur des ACTIONS (`evaluate($user, 'expense_created')`
+        // et consorts), jamais sur l'état. Un bac à sable arrive donc rempli — un bien,
+        // quatre exercices, des recettes — et avec ZÉRO badge, puisque aucune action n'est
+        // passée par l'interface. Mesuré : 0 au seed, puis **10 d'un coup** au premier
+        // geste, quel qu'il soit. Le visiteur voit une pluie de récompenses pour avoir
+        // ouvert le simulateur, ce qui décrédibilise le dispositif entier.
+        //
+        // `silent` : pas de notification. Ces badges récompensent le jeu de démonstration,
+        // pas quelque chose que le visiteur vient de faire.
+        app(BadgeService::class)->evaluateAll($user, silent: true);
     }
 
     /**

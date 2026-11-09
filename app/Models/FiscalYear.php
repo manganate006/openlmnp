@@ -43,6 +43,8 @@ class FiscalYear extends Model
         'opening_deficits',
         'opening_accumulated_depreciation',
         'opening_source',
+        'opening_declared_gross_assets',
+        'opening_declared_result',
         'previous_deficit',
         'deficit_imputed',
         'deficit_carryforward',
@@ -52,8 +54,17 @@ class FiscalYear extends Model
         'total_tva_deductible',
         'tva_balance',
         'form_data',
+        // ⚠️ `pdf_path` / `fec_path` ne sont PLUS écrites ni lues : la liasse et le FEC ne sont
+        // plus persistés sur le disque (ils portaient toute la comptabilité en clair, à côté
+        // d'un coffre-fort censé la protéger). Elles restent déclarées le temps qu'une bascule
+        // arrière de l'image reste possible ; `openlmnp:purge-legacy-files --fix` les vide.
         'pdf_path',
         'fec_path',
+        // Ce qui porte désormais le signal « ce document a été produit » : une date, pas un
+        // fichier. Lue par la checklist d'accueil, les badges, les statistiques admin, les
+        // signaux de cycle de vie et l'encart de correction du 2033-D.
+        'tax_return_generated_at',
+        'fec_generated_at',
         'transmitted_at',
         'ack_number',
     ];
@@ -61,10 +72,12 @@ class FiscalYear extends Model
     protected function casts(): array
     {
         return [
-            'form_data'        => 'array',
-            'opening_deficits' => 'array',
-            'deficit_detail'   => 'array',
-            'transmitted_at'   => 'datetime',
+            'form_data'               => 'array',
+            'opening_deficits'        => 'array',
+            'deficit_detail'          => 'array',
+            'tax_return_generated_at' => 'datetime',
+            'fec_generated_at'        => 'datetime',
+            'transmitted_at'          => 'datetime',
         ];
     }
 
@@ -86,14 +99,23 @@ class FiscalYear extends Model
     }
 
     /**
-     * Soldes d'ouverture saisis : l'exercice est un exercice de REPRISE.
+     * L'exercice est un exercice de REPRISE : le point de départ de la chaîne d'exercices.
      *
-     * `opening_accumulated_depreciation` n'entre pas dans ce test : c'est une donnée de
-     * contrôle, elle ne suffit pas à faire d'un exercice une reprise.
+     * ⚠️ `opening_source` suffit, même sans différé ni déficit. C'est le cas le plus courant
+     * d'un loueur meublé bénéficiaire : sa liasse ne porte ni amortissement différé ni
+     * déficit, et sa reprise n'en est pas moins terminée. Jusqu'au 2026-10-15, ce test ne
+     * regardait que les deux stocks : une reprise « à zéro » n'était pas reconnue, et
+     * l'assistant de clôture lui réclamait l'exercice précédent, qu'elle n'a par définition
+     * jamais tenu ici. `opening_source` n'est écrit QUE par la fin de la reprise
+     * (`RepriseDossier::applyOpeningBalances()`).
+     *
+     * `opening_accumulated_depreciation` seul n'entre toujours pas dans ce test : c'est une
+     * donnée de contrôle, elle ne suffit pas à faire d'un exercice une reprise.
      */
     public function hasOpeningBalances(): bool
     {
-        return (int) $this->opening_deferred_depreciation > 0
+        return $this->opening_source !== null
+            || (int) $this->opening_deferred_depreciation > 0
             || $this->openingDeficitsTotal() > 0;
     }
 

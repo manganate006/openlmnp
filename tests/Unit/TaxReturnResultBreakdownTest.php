@@ -136,8 +136,11 @@ it('builds the 2033-B from the same rules as the fiscal year, to the cent', func
     $properties = collect([$property]);
     $form = $this->tax->compute2033B($fy, $properties, 2026);
 
-    expect($form['218'])->toBe((int) $fy->total_income)
-        ->and($form['242'] + $form['244'] + $form['294'])->toBe((int) $fy->total_expenses)
+    // Depuis le 30/10/2026, 218 porte les loyers BRUTS et les commissions vont en 242 :
+    // `total_income` (net) et `total_expenses` (hors commissions) ne bougent pas, donc
+    // 218 = recettes nettes + commissions et 242 + 244 + 294 = charges + commissions.
+    expect($form['218'])->toBe((int) $fy->total_income + 7500)
+        ->and($form['242'] + $form['244'] + $form['294'])->toBe((int) $fy->total_expenses + 7500)
         // 244 = taxe foncière partagée × 45 %, tronquée
         ->and($form['244'])->toBe((int) bcmul('77777', $property->quota_share, 0))
         ->and(breakdownChecks($this->tax, $fy, $properties)['resultat']['status'])
@@ -156,6 +159,7 @@ it('uses amounts before VAT for a property liable to VAT, as the fiscal year doe
 
     $form = $this->tax->compute2033B($fy, collect([$property]), 2026);
 
+    // Sans commission, 218 (loyers bruts HT) et les recettes nettes de l'exercice coïncident.
     expect($form['218'])->toBe(100000)
         ->and($form['242'])->toBe(20000)
         ->and($form['218'])->toBe((int) $fy->total_income)
@@ -270,6 +274,7 @@ it('prints every charge with its allocation and the quota share applied to the s
         ->toContain('Dédiée (100 %)')
         ->toContain('quote-part locative 45 %')
         ->toContain('400,00 € × 45 % = 180,00 €')
-        ->and($row['expense_totals']['retained_242'] + $row['expense_totals']['retained_244'])
+        // Les commissions (7 500) s'ajoutent en 242 depuis le 30/10/2026, hors des charges retenues.
+        ->and($row['expense_totals']['retained_242'] + $row['expense_totals']['retained_244'] + $row['income']['fees'])
         ->toBe($data['form2033B']['242'] + $data['form2033B']['244']);
 });

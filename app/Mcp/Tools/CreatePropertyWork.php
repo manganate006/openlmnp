@@ -70,13 +70,13 @@ class CreatePropertyWork extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id'    => $schema->integer('Identifiant du bien immobilier')->required(),
-            'description'    => $schema->string('Description des travaux (ex: Réfection de la salle de bain, Installation cuisine)')->required(),
-            'amount'         => $schema->number('Montant TTC en euros (ex: 12500.00)')->required(),
-            'work_date'      => $schema->string('Date des travaux au format Y-m-d (ex: 2025-06-01)')->required(),
-            'duration_years' => $schema->integer('Durée d\'amortissement en années (défaut : 10 ans)')->nullable(),
-            'is_dedicated'   => $schema->boolean('Travaux 100% dédiés à la location (true) ou au prorata de la quote-part (false, défaut)')->nullable(),
-            'tva_rate'       => $schema->number('Taux de TVA en pourcentage (ex: 20 pour 20%, 10 pour taux réduit travaux, 0 pour exonéré)')->nullable(),
+            'property_id'    => $schema->integer()->description('Identifiant du bien immobilier')->required(),
+            'description'    => $schema->string()->description('Description des travaux (ex: Réfection de la salle de bain, Installation cuisine)')->required(),
+            'amount'         => $schema->number()->description('Montant TTC en euros (ex: 12500.00)')->required(),
+            'work_date'      => $schema->string()->description('Date des travaux au format Y-m-d (ex: 2025-06-01)')->required(),
+            'duration_years' => $schema->integer()->description('Durée d\'amortissement en années (défaut : 10 ans)')->nullable(),
+            'is_dedicated'   => $schema->boolean()->description('Travaux 100% dédiés à la location (true) ou au prorata de la quote-part (false, défaut)')->nullable(),
+            'tva_rate'       => $schema->number()->description('Taux de TVA en pourcentage (ex: 20 pour 20%, 10 pour taux réduit travaux, 0 pour exonéré)')->nullable(),
         ];
     }
 }

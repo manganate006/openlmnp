@@ -5,9 +5,12 @@ namespace App\Livewire;
 use App\Models\User;
 use App\Notifications\DemoResumeLink;
 use App\Support\DemoExpiry;
+use App\Support\Fr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -78,6 +81,15 @@ class DemoExpiryPrompt extends Component
 
     #[Validate('accepted')]
     public bool $consent = false;
+
+    /**
+     * Case FACULTATIVE, distincte du consentement ci-dessus.
+     *
+     * ⚠️ Ne jamais la fondre dans `$consent` : celui-ci promet « aucune autre utilisation ».
+     * Étendre cette promesse au marketing la viderait de son sens, et ce serait exactement
+     * le genre de raccourci qu'un consentement est censé empêcher.
+     */
+    public bool $newsletter = false;
 
     public function mount(): void
     {
@@ -212,6 +224,8 @@ class DemoExpiryPrompt extends Component
 
         DemoExpiry::resetSeen($user);
 
+        $this->registerNewsletterIntent($user);
+
         $this->resumeUrl = DemoResumeLink::urlFor($user);
         $user->notify(new DemoResumeLink($this->resumeUrl));
 
@@ -231,6 +245,51 @@ class DemoExpiryPrompt extends Component
     }
 
     /**
+     * Ouvre la prolongation à la demande d'un autre composant — aujourd'hui l'invitation
+     * à donner son avis, qui est le seul point de contact d'une session courte : les
+     * paliers d'expiration ne se déclenchent qu'au bout de plusieurs heures.
+     */
+    #[On('open-demo-extend')]
+    public function openExtendFromPrompt(): void
+    {
+        if (! $this->applies) {
+            return;
+        }
+
+        $this->openExtend();
+    }
+
+    /**
+     * Transmet l'intention de recevoir les rappels fiscaux — et rien de plus.
+     *
+     * ⚠️ Ce n'est PAS un consentement. Le consentement reste le double opt-in du site
+     * (lien signé à cliquer) : cet appel ne fait que déclencher la demande de
+     * confirmation. Rien ne part vers le visiteur avant qu'il clique.
+     *
+     * ⚠️ Sans `demo.lead_url`, on ne fait rien : une instance auto-hébergée n'a personne
+     * à qui transmettre, et n'affiche d'ailleurs pas la case.
+     */
+    private function registerNewsletterIntent(User $user): void
+    {
+        if (! $this->newsletter || blank(config('demo.links.lead'))) {
+            return;
+        }
+
+        $user->forceFill(['demo_newsletter_at' => Carbon::now()])->save();
+
+        try {
+            Http::withToken((string) config('services.provisioning.token'))
+                ->timeout(5)
+                ->post((string) config('demo.links.lead'), ['email' => $this->email]);
+        } catch (\Throwable $e) {
+            // Un site injoignable ne doit JAMAIS faire échouer une prolongation : le
+            // visiteur a demandé à garder son travail, c'est ça qui compte. L'intention
+            // reste datée en base, rattrapable.
+            report($e);
+        }
+    }
+
+    /**
      * Ouvre la prolongation depuis la pastille, sans attendre un palier.
      */
     public function openExtend(): void
@@ -244,27 +303,47 @@ class DemoExpiryPrompt extends Component
     }
 
     /**
-     * Phrase courte du bandeau : « Vos 2 biens et vos 4 exercices ».
+     * Phrase complète du bandeau : « Vos 2 biens et votre exercice seront supprimés.
+     * Vous pouvez les garder. »
+     *
+     * ⚠️ Elle porte le VERBE et le PRONOM qui la suivent, parce que leur accord dépend
+     * de ce qu'elle énumère. Laissés au pluriel dans la vue, ils donnaient « Vos 1
+     * exercice seront supprimés. Vous pouvez les garder. » — sur le cas le plus courant,
+     * un visiteur qui n'a créé qu'une seule chose.
      *
      * ⚠️ Accords écrits à la main. `Str::plural()` est un pluraliseur ANGLAIS : il rend
      * « sas » pour « sa » et « sons » pour « son ». Il tombe juste sur « biens » et
      * « exercices » par coïncidence, pas par compétence.
+     *
+     * ⚠️ Les deux noms énumérés sont MASCULINS, ce dont dépendent « supprimé » et « le ».
+     * Un nom féminin ajouté ici imposerait de porter le genre avec chaque groupe.
      */
     public function atRiskSentence(): string
     {
         $parts = [];
+        $total = 0;
 
-        if (($this->atRisk['properties'] ?? 0) > 0) {
-            $n = $this->atRisk['properties'];
-            $parts[] = "vos {$n} bien".($n > 1 ? 's' : '');
+        foreach ([['properties', 'bien'], ['fiscal_years', 'exercice']] as [$cle, $nom]) {
+            $n = (int) ($this->atRisk[$cle] ?? 0);
+
+            if ($n < 1) {
+                continue;
+            }
+
+            $total += $n;
+            // « votre bien », pas « vos 1 bien » : au singulier le nombre n'apprend rien.
+            $parts[] = $n > 1 ? 'vos '.Fr::accorde($n, $nom) : "votre {$nom}";
         }
 
-        if (($this->atRisk['fiscal_years'] ?? 0) > 0) {
-            $n = $this->atRisk['fiscal_years'];
-            $parts[] = "vos {$n} exercice".($n > 1 ? 's' : '');
+        if ($parts === []) {
+            return '';
         }
 
-        return ucfirst(implode(' et ', $parts));
+        $sujet = ucfirst(implode(' et ', $parts));
+
+        return $total > 1
+            ? "{$sujet} seront supprimés. Vous pouvez les garder."
+            : "{$sujet} sera supprimé. Vous pouvez le garder.";
     }
 
     /**

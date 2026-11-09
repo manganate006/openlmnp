@@ -23,8 +23,17 @@ return [
     | Contrôle la page /register du panel :
     | - "auto" (défaut) : ouverte uniquement tant qu'aucun compte (hors démo)
     |   n'existe — l'installateur s'inscrit, puis la porte se referme.
+    | - "invite" : sur invitation seulement. Ouverte tant qu'aucun compte réel
+    |   n'existe (sinon personne ne pourrait émettre la première invitation),
+    |   puis il faut un lien nominatif — voir config/invitations.php et
+    |   `php artisan openlmnp:invite`.
     | - true : toujours ouverte (instance multi-comptes assumée).
     | - false : toujours fermée (comptes créés par provisioning ou CLI).
+    |
+    | ⚠️ `filter_var('invite', FILTER_VALIDATE_BOOL)` rend FALSE : RegistrationGate
+    | court-circuite donc ce mode AVANT la conversion booléenne. Sans ça, « invite »
+    | se comporterait exactement comme « false » et tous les liens d'invitation
+    | tomberaient en 404, sans le moindre message.
     |
     */
 

@@ -107,7 +107,7 @@
                 $isTvaLiable = $this->previewPropertyId
                     ? \App\Models\Property::find($this->previewPropertyId)?->isTvaLiable()
                     : false;
-                $colCount = $isTvaLiable ? 9 : 7;
+                $colCount = $isTvaLiable ? 10 : 8;
             @endphp
             @if(count($previewData['rows']) > 0)
                 <div style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--olmnp-border);">
@@ -120,6 +120,7 @@
                                 <th>Check-in</th>
                                 <th class="num">{{ $isTvaLiable ? 'Montant TTC' : 'Montant' }}</th>
                                 <th class="num">Commission</th>
+                                <th class="num">Taxe de séjour</th>
                                 @if($isTvaLiable)
                                     <th class="num">HT</th>
                                     <th class="num">TVA 10%</th>
@@ -139,6 +140,7 @@
                                     <td>{{ $row['checkin'] ?? '—' }}</td>
                                     <td class="num" style="font-weight: 600;">{{ number_format($row['amount'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
                                     <td class="num">{{ number_format($row['host_fee'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
+                                    <td class="num">{{ number_format($row['tourist_tax'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
                                     @if($isTvaLiable)
                                         <td class="num">{{ number_format($htData['ht'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
                                         <td class="num">{{ number_format($htData['tva'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
@@ -163,6 +165,7 @@
                                         <td><span class="import-mono">{{ $row['confirmation'] ?? '—' }}</span></td>
                                         <td>{{ $row['checkin'] ?? '—' }}</td>
                                         <td class="num">{{ number_format($row['amount'] / 100, 2, ',', "\u{202F}") }}&nbsp;€</td>
+                                        <td class="num">—</td>
                                         <td class="num">—</td>
                                         @if($isTvaLiable)
                                             <td class="num">—</td>

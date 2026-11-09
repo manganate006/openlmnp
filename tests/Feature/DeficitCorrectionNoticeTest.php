@@ -37,7 +37,7 @@ it('warns about the 2033-D correction when a tax return was already generated', 
         'user_id' => $this->user->id,
         'year' => 2025,
         'status' => FiscalYear::STATUS_CLOSED,
-        'pdf_path' => 'tax-returns/2025/liasse_fiscale_2025.pdf',
+        'tax_return_generated_at' => '2026-03-01 10:00:00',
     ]);
 
     $this->actingAs($this->user)

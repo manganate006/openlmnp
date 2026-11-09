@@ -6,7 +6,6 @@ use App\Models\Property;
 use App\Models\User;
 use App\Services\DepreciationService;
 use App\Services\TaxReturnService;
-use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -59,13 +58,12 @@ it('generates a PDF tax return', function () {
         'status' => 'draft',
     ]);
 
-    $path = $this->service->generatePdf($fiscalYear);
+    $pdf = $this->service->renderPdf($fiscalYear);
 
-    expect($path)->toContain('liasse_fiscale_2024')
-        ->toStartWith("tax-returns/{$this->user->id}/2024/");
-    expect(Storage::exists($path))->toBeTrue();
+    expect($this->service->filename($fiscalYear))->toBe('liasse_fiscale_2024.pdf');
+    expect($pdf)->toStartWith('%PDF-');
 
     $fiscalYear->refresh();
-    expect($fiscalYear->pdf_path)->toBe($path);
+    expect($fiscalYear->tax_return_generated_at)->not->toBeNull();
     expect($fiscalYear->fiscal_result)->toBeGreaterThanOrEqual(0);
 });

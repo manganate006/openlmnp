@@ -129,13 +129,13 @@ it('garde l\'e-mail et les jetons du compte démo public', function () {
 
     Livewire::actingAs($demo)
         ->test(EditProfile::class)
-        ->fillForm(['name' => 'Pirate', 'email' => 'pirate@exemple.test', 'siren' => '666666666', 'timezone' => 'Europe/Paris'])
+        ->fillForm(['name' => 'Pirate', 'email' => 'pirate@exemple.test', 'siren' => '666666664', 'timezone' => 'Europe/Paris'])
         ->call('save')
         ->assertHasNoFormErrors();
 
     expect($demo->fresh()->email)->toBe('demo@exemple.test')
         ->and($demo->fresh()->name)->not->toBe('Pirate')
-        ->and($demo->fresh()->siren)->not->toBe('666666666');
+        ->and($demo->fresh()->siren)->not->toBe('666666664');
 
     Livewire::actingAs($demo)
         ->test(McpTokens::class)
@@ -220,10 +220,13 @@ it('n\'archive pas le fichier d\'un autre utilisateur dans l\'export ZIP', funct
 it('ne lit pas le CSV déposé par un autre utilisateur dans son dossier d\'import', function () {
     $this->actingAs($this->user);
 
-    expect(App\Support\DocumentStorage::isImportUpload("imports/{$this->user->id}/releve.csv"))->toBeTrue()
-        ->and(App\Support\DocumentStorage::isImportUpload("imports/{$this->other->id}/releve.csv"))->toBeFalse()
+    $mien = App\Support\ImportUpload::directoryFor($this->user->id);
+    $sien = App\Support\ImportUpload::directoryFor($this->other->id);
+
+    expect(App\Support\DocumentStorage::isImportUpload("{$mien}/releve.csv"))->toBeTrue()
+        ->and(App\Support\DocumentStorage::isImportUpload("{$sien}/releve.csv"))->toBeFalse()
         ->and(App\Support\DocumentStorage::isImportUpload('imports/releve.csv'))->toBeFalse()
-        ->and(App\Support\DocumentStorage::isImportUpload("imports/{$this->user->id}/../{$this->other->id}/r.csv"))->toBeFalse();
+        ->and(App\Support\DocumentStorage::isImportUpload("{$mien}/../../{$this->other->id}/imports/r.csv"))->toBeFalse();
 });
 
 it('ne laisse pas le navigateur forcer l\'affichage ou la variante du recueil d\'avis', function () {
@@ -234,3 +237,27 @@ it('ne laisse pas le navigateur forcer l\'affichage ou la variante du recueil d\
     expect(fn () => $page->set('eligible', true))->toThrow(CannotUpdateLockedPropertyException::class)
         ->and(fn () => $page->set('variant', 'b'))->toThrow(CannotUpdateLockedPropertyException::class);
 });
+
+/*
+ * 2.0 : l'analyse de justificatifs par l'IA et la reprise de dossier gardent le chemin du
+ * fichier analysé dans l'état Livewire. Il ne doit ni viser le fichier d'un autre compte,
+ * ni faire effacer quoi que ce soit hors du dossier de l'utilisateur.
+ */
+
+it('n\'efface pas le fichier d\'un autre utilisateur en abandonnant une analyse', function () {
+    $this->actingAs($this->user);
+
+    app(App\Services\Ai\DocumentAnalysisService::class)->discard($this->secret);
+
+    expect(Storage::disk('local')->exists($this->secret))->toBeTrue();
+});
+
+it('verrouille le résultat d\'analyse de l\'import de justificatif', function (string $page, string $propriete) {
+    config()->set('ai.enabled', true);
+    config()->set('ai.api_key', 'cle-de-test');
+
+    expect(fn () => Livewire::actingAs($this->user)->test($page)->set($propriete, ['file_path' => $this->secret]))
+        ->toThrow(CannotUpdateLockedPropertyException::class);
+})->with([
+    'import de justificatif' => [App\Filament\Pages\ImportDocument::class, 'analysis'],
+]);

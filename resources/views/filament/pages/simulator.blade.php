@@ -37,7 +37,7 @@
             const savedYear = localStorage.getItem('sim_year');
             const savedAbatement = localStorage.getItem('sim_abatement');
             if (savedYear) $wire.set('year', parseInt(savedYear));
-            if (savedAbatement) $wire.set('abatement', savedAbatement);
+            if (['30', '50'].includes(savedAbatement)) $wire.set('abatement', savedAbatement);
         }
     }"></div>
 
@@ -55,9 +55,12 @@
             <div>
                 <div class="sim-label">Abattement micro-BIC</div>
                 <select wire:model.live="abatement" class="sim-select" x-on:change="localStorage.setItem('sim_abatement', $event.target.value)">
-                    <option value="30">30% (meublé non classé)</option>
-                    <option value="50">50% (meublé classé)</option>
-                    <option value="71">71% (achat-revente)</option>
+                    {{-- Deux taux seulement pour une location meublée (loi Le Meur, revenus
+                         2025 et suivants). Le 71 % proposé jusqu'ici était celui des ventes de
+                         marchandises — et l'ancien taux des meublés classés : un loueur
+                         pouvait le prendre pour le sien. --}}
+                    <option value="30">30% (meublé de tourisme non classé)</option>
+                    <option value="50">50% (longue durée, ou meublé de tourisme classé)</option>
                 </select>
             </div>
         </div>
@@ -93,7 +96,11 @@
                 <div class="sim-card sim-card-amber">
                     <div class="sim-label" style="color: var(--olmnp-warning-fg);">Résultat micro-BIC (abattement {{ $r['abatement'] }}%)</div>
                     <div class="sim-value" style="color: var(--olmnp-warning-fg);">{{ $r['micro_bic_result'] }} €</div>
-                    <div class="sim-sub" style="color: var(--olmnp-warning-fg);">Base imposable ajoutée au foyer</div>
+                    @if(! ($r['micro_bic_available'] ?? true))
+                        <div class="sim-sub" style="color: var(--olmnp-danger-accent); font-weight: 600;">Non disponible</div>
+                    @else
+                        <div class="sim-sub" style="color: var(--olmnp-warning-fg);">Base imposable ajoutée au foyer</div>
+                    @endif
                 </div>
                 <div class="sim-card sim-card-green">
                     <div class="sim-label" style="color: var(--olmnp-success-fg);">Résultat régime réel</div>
@@ -101,6 +108,17 @@
                     <div class="sim-sub" style="color: var(--olmnp-success-accent);">Base imposable ajoutée au foyer</div>
                 </div>
             </div>
+
+            @if(! ($r['micro_bic_available'] ?? true))
+                <div class="sim-verdict sim-verdict-amber">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;color:var(--olmnp-warning-accent);flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                    <div>{{ $r['micro_bic_unavailable_reason'] }}</div>
+                </div>
+            @elseif(! empty($r['micro_bic_warning']))
+                <div class="sim-verdict sim-verdict-amber">
+                    <div>{{ $r['micro_bic_warning'] }}</div>
+                </div>
+            @endif
 
             {{-- Verdict --}}
             @if($r['recommended'] === 'real')
@@ -340,6 +358,47 @@
                     </table>
                 </div>
             </div>
+
+            {{-- Repère de loyer du marché (Carte des loyers, ANIL) --}}
+            @php
+                $benchmarks = $this->rentBenchmarks;
+                $rentMapVintage = $this->rentMapVintage;
+                $rentMapDatasetUrl = $this->rentMapDatasetUrl;
+            @endphp
+            @if(!empty($benchmarks))
+                <div class="sim-card">
+                    <h3 style="font-size:16px;font-weight:700;margin:0 0 8px;">Repère de loyer du marché</h3>
+                    <p class="sim-sub" style="margin-bottom:12px;">
+                        Loyer d'annonce d'une location <strong>NON meublée</strong>, charges comprises — ce n'est pas
+                        une recette de meublé, seulement un repère du marché de la location vide pour situer vos biens.
+                        @if($rentMapVintage !== null)
+                            Source :
+                            <a href="{{ $rentMapDatasetUrl }}" target="_blank" rel="noopener">« Carte des loyers »</a>
+                            ({{ \App\Services\OpenData\RentMapSource::ATTRIBUTION }}), millésime {{ $rentMapVintage }}.
+                        @endif
+                    </p>
+                    <table class="sim-table">
+                        <tr><th>Bien</th><th>€/m² (intervalle)</th><th class="text-right">Loyer mensuel estimé</th></tr>
+                        @foreach($benchmarks as $b)
+                            <tr>
+                                <td>{{ $b['property_name'] }} <span style="color:var(--olmnp-fg-subtle);font-size:12px;">({{ $b['city'] }})</span></td>
+                                @if($b['status'] === 'ok')
+                                    <td>{{ $b['per_m2'] }} € <span style="color:var(--olmnp-fg-subtle);font-size:12px;">({{ $b['low_per_m2'] }} - {{ $b['high_per_m2'] }} €)</span>
+                                        @if($b['caution'])
+                                            <span style="color:var(--olmnp-warning-accent);font-size:12px;">— à interpréter avec prudence (échantillon réduit)</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right">{{ $b['estimated_monthly'] }} € <span style="color:var(--olmnp-fg-subtle);font-size:12px;">pour {{ $b['surface_m2'] }} m²</span></td>
+                                @elseif($b['status'] === 'unknown_commune')
+                                    <td colspan="2" style="color:var(--olmnp-fg-muted);">Commune non renseignée — utilisez « Estimer (DVF) » sur la fiche du bien pour l'identifier.</td>
+                                @else
+                                    <td colspan="2" style="color:var(--olmnp-fg-muted);">Aucun repère disponible pour cette commune.</td>
+                                @endif
+                            </tr>
+                        @endforeach
+                    </table>
+                </div>
+            @endif
         @endif
     </div>
 

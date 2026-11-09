@@ -18,6 +18,12 @@
     <h3>Gestion des doublons</h3>
     <p>Les réservations déjà importées sont détectées automatiquement et ne seront pas dupliquées.</p>
 
+    <h3>Taxe de séjour</h3>
+    <p>Quand l'export « Historique des transactions » la détaille (colonne <strong>Taxes reversées par Airbnb</strong>), elle est reprise dans le champ <strong>Taxe de séjour</strong> de chaque recette, visible dans l'aperçu avant import. Elle n'est <strong>pas comprise dans le montant du loyer</strong> : Airbnb la collecte et la reverse à la commune pour votre compte, ce n'est pas une recette imposable. L'export « Réservations » ne contient pas cette colonne : la taxe de séjour y reste à 0, comme avant.</p>
+
+    <h3>Ce que devient le fichier déposé</h3>
+    <p>Votre export Airbnb contient les noms de vos voyageurs et les montants versés. Il est <strong>supprimé du serveur dès l'import confirmé</strong> ; un aperçu que vous abandonnez en cours de route est effacé sous 24 heures. Rien à nettoyer de votre côté.</p>
+
     <div class="ctx-warning">
         <strong>Attention :</strong> Vérifiez que le bien sélectionné correspond bien aux réservations du fichier CSV.
     </div>

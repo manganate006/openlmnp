@@ -118,7 +118,7 @@ class ComputeTva extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'year' => $schema->integer('Année fiscale pour la déclaration TVA (ex : 2025)')->required(),
+            'year' => $schema->integer()->description('Année fiscale pour la déclaration TVA (ex : 2025)')->required(),
         ];
     }
 }

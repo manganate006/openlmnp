@@ -235,8 +235,11 @@ it('offers the hosted plan to nobody when no URL is configured', function () {
         ->call('choose', 'positive')
         ->assertSet('showsProCta', false)
         ->assertDontSee('Cloud Pro')
-        // L'accroche reste celle du soutien au projet, pas celle de la conversion.
-        ->assertSee('Voici comment nous aider');
+        // ⚠️ L'accroche NE dépend plus de la présence d'un CTA commercial mais de
+        // l'audience : un visiteur de la démonstration reste un prospect même quand
+        // aucune offre n'est configurée, et « voici comment nous aider » ne s'adresse
+        // pas à lui. Cette assertion attendait l'inverse jusqu'au 2026-09-06.
+        ->assertSee('Merci ! Une dernière chose');
 });
 
 it('offers the hosted plan only from the demonstration, never to a real account', function () {
@@ -270,7 +273,10 @@ it('offers the hosted plan to a demo visitor who likes the software', function (
         // L'hébergement par soi-même reste proposé : le produit est sous AGPL, taire
         // cette voie au moment de vendre l'offre payante serait malhonnête.
         ->assertSee('si vous préférez l\'héberger vous-même', false)
-        ->assertSee('Mettre une étoile sur GitHub');
+        // ⚠️ Plus de lien GitHub en démonstration depuis le 2026-09-06 : le séparateur
+        // reste, parce qu'il accompagne le CTA commercial, mais les trois gestes qui le
+        // suivaient s'adressaient à un contributeur, pas à quelqu'un qui découvre.
+        ->assertDontSee('Mettre une étoile sur GitHub');
 });
 
 it('annonce la vraie durée du bac à sable de cette instance', function () {
@@ -282,6 +288,18 @@ it('annonce la vraie durée du bac à sable de cette instance', function () {
         ->call('open')
         ->call('choose', 'positive')
         ->assertSee('s\'efface dans 72 heures', false);
+
+    // ⚠️ `demo.ttl_hours` est un réglage d'instance, qu'un auto-hébergeur peut poser à 1 :
+    // le nombre et son unité voyagent ensemble, sinon on écrit « dans 1 heures » — le même
+    // défaut que celui corrigé sur le bandeau d'expiration (`atRiskSentence()`).
+    config()->set('demo.ttl_hours', 1);
+
+    Livewire::actingAs(User::factory()->create(['is_demo' => true]))
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSee('s\'efface dans 1 heure.', false)
+        ->assertDontSee('1 heures');
 });
 
 it('never sells anything to someone who just said they were not convinced', function () {
@@ -334,4 +352,159 @@ it('keeps the feedback when the demo account that wrote it is purged', function 
         ->and(Feedback::count())->toBe(1)
         ->and(Feedback::sole()->user_id)->toBeNull()
         ->and(Feedback::sole()->sentiment)->toBe(Feedback::SENTIMENT_POSITIVE);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Écran « j'aime » vu par un PROSPECT de la démonstration
+//
+// Sur le cloud, `FEEDBACK_AUDIENCES=demo` : la quasi-totalité des invitations
+// s'adressent à des visiteurs qui découvrent le produit, pas à des développeurs.
+// ─────────────────────────────────────────────────────────────────────────────
+
+it('ne propose aucun geste GitHub à un visiteur de la démonstration', function () {
+    // LE test qui répond au constat d'origine : étoile, parrainage et Discussions
+    // n'ont aucun sens pour quelqu'un qui découvre le produit depuis quatre minutes.
+    Livewire::actingAs(User::factory()->create(['is_demo' => true]))
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSet('isDemo', true)
+        ->assertDontSee('Mettre une étoile sur GitHub')
+        ->assertDontSee('Devenir sponsor')
+        ->assertDontSee('En parler dans les Discussions');
+});
+
+it('garde les gestes GitHub pour un compte réel', function () {
+    // Non-régression : pour une instance auto-hébergée, ces trois gestes sont
+    // exactement ce qu'il faut proposer.
+    Livewire::actingAs($this->user)
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSet('isDemo', false)
+        ->assertSee('Mettre une étoile sur GitHub')
+        ->assertSee('Devenir sponsor');
+});
+
+it('enregistre un frein coché SANS aucun envoi', function () {
+    // Le cœur de la demande : quelqu'un qui coche puis referme a quand même répondu.
+    // Aucun appel à submit() ici — c'est tout l'intérêt.
+    Livewire::actingAs(User::factory()->create(['is_demo' => true]))
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->set('blockers', ['prix', 'reprise']);
+
+    expect(Feedback::sole()->blockers)->toEqualCanonicalizing(['prix', 'reprise']);
+});
+
+it('retire un frein décoché', function () {
+    $component = Livewire::actingAs(User::factory()->create(['is_demo' => true]))
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->set('blockers', ['prix', 'avis']);
+
+    expect(Feedback::sole()->blockers)->toEqualCanonicalizing(['prix', 'avis']);
+
+    $component->set('blockers', ['prix']);
+    expect(Feedback::sole()->fresh()->blockers)->toBe(['prix']);
+
+    // Tout décocher ne doit pas laisser un tableau vide qui se compterait comme
+    // « a répondu » dans le rapport : on revient à null.
+    $component->set('blockers', []);
+    expect(Feedback::sole()->fresh()->blockers)->toBeNull();
+});
+
+it('rejette un frein que le formulaire ne propose pas', function () {
+    // Rien ne garantit ce que le navigateur envoie, et une valeur libre polluerait
+    // durablement les comptages — les identifiants sont une énumération fermée.
+    Livewire::actingAs(User::factory()->create(['is_demo' => true]))
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->set('blockers', ['prix', 'n_importe_quoi', '<script>']);
+
+    expect(Feedback::sole()->blockers)->toBe(['prix']);
+});
+
+it('pose la question qui compte au prospect, et celle du témoignage à un compte réel', function () {
+    Livewire::actingAs(User::factory()->create(['is_demo' => true]))
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSee('Qu\'est-ce qui vous manque pour franchir le pas ?', false)
+        // Le consentement à publication ne peut mener à rien en démonstration :
+        // isPublishableAsTestimonial() refuse par construction ce qui en vient.
+        ->assertDontSee('J\'autorise OpenLMNP à publier', false)
+        ->assertDontSee('Prénom');
+
+    Livewire::actingAs($this->user)
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSee('Ce qui vous a plu')
+        ->assertSee('J\'autorise OpenLMNP à publier', false);
+});
+
+it('propose de garder le bac à sable, et passe la main sans rien réimplémenter', function () {
+    config()->set('demo.enabled', true);
+
+    $demo = User::factory()->create([
+        'is_demo' => true,
+        'demo_expires_at' => now()->addHours(20),
+    ]);
+
+    Livewire::actingAs($demo)
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSet('showsKeepSandbox', true)
+        ->assertSee('Gardez votre travail 7 jours')
+        // Un mot déjà tapé ne doit pas disparaître parce qu'on change d'écran.
+        ->set('message', 'Il me manque la reprise de mon historique.')
+        ->call('keepSandbox')
+        ->assertDispatched('open-demo-extend');
+
+    expect(Feedback::sole()->message)->toBe('Il me manque la reprise de mon historique.');
+});
+
+it('ne promet pas une prolongation déjà accordée', function () {
+    config()->set('demo.enabled', true);
+
+    $demo = User::factory()->create([
+        'is_demo' => true,
+        'demo_expires_at' => now()->addDays(6),
+        'demo_extended_at' => now()->subDay(),
+    ]);
+
+    Livewire::actingAs($demo)
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->assertSet('showsKeepSandbox', false)
+        ->assertDontSee('Gardez votre travail 7 jours');
+});
+
+it('conserve les freins quand le compte démo qui les a laissés est purgé', function () {
+    // LE test qui compte pour un lot d'audience démo : `feedback.user_id` est en
+    // nullOnDelete() et les sandboxes sont purgés à l'heure. Un frein déclaré est
+    // précisément une donnée qu'on veut garder après la purge.
+    $demo = User::factory()->create([
+        'is_demo' => true,
+        'demo_expires_at' => now()->subHour(),
+    ]);
+
+    Livewire::actingAs($demo)
+        ->test(FeedbackPrompt::class)
+        ->call('open')
+        ->call('choose', 'positive')
+        ->set('blockers', ['confiance', 'teletransmission']);
+
+    $this->artisan('openlmnp:demo-cleanup')->assertSuccessful();
+
+    expect(User::find($demo->id))->toBeNull()
+        ->and(Feedback::count())->toBe(1)
+        ->and(Feedback::sole()->user_id)->toBeNull()
+        ->and(Feedback::sole()->blockers)->toEqualCanonicalizing(['confiance', 'teletransmission']);
 });

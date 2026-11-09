@@ -2,6 +2,7 @@
 
 namespace App\Filament\Schemas;
 
+use App\Models\Property;
 use App\Services\OpenData\DvfUnavailable;
 use App\Services\OpenData\MarketValueEstimator;
 use Filament\Actions\Action;
@@ -47,7 +48,7 @@ class MarketValueEstimate
                 'insee' => $get('insee_code'),
                 'year' => self::defaultYear($get),
                 'area' => (int) ($get('total_area') ?: 0),
-                'property_type' => (string) ($get('type') ?: 'apartment'),
+                'property_type' => self::buildingType($get),
                 'query' => trim((string) ($get('postal_code') ?: $get('city'))),
             ])
             ->schema([
@@ -137,6 +138,25 @@ class MarketValueEstimate
         }
 
         return $options;
+    }
+
+    /**
+     * Type de BÂTIMENT à comparer sur DVF — distinct du type de LOGEMENT loué.
+     *
+     * Pour un logement indépendant dans la résidence principale (studio avec entrée
+     * propre, dépendance...), `total_area` porte la surface de la PROPRIÉTÉ ENTIÈRE,
+     * pas celle du seul logement loué : c'est donc le bâtiment entier qu'il faut
+     * comparer, presque toujours une maison dans ce cas de figure. Le type du
+     * logement loué (studio, chambre...) resterait trompeur ici — DVF n'a que deux
+     * catégories d'habitation (maison, appartement).
+     */
+    private static function buildingType(Get $get): string
+    {
+        if ($get('residence_situation') === Property::RESIDENCE_INDEPENDENT_UNIT) {
+            return Property::TYPE_HOUSE;
+        }
+
+        return (string) ($get('type') ?: Property::TYPE_APARTMENT);
     }
 
     /**

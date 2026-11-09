@@ -76,14 +76,14 @@ class CreateFurniture extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id'    => $schema->integer('Identifiant du bien immobilier')->required(),
-            'description'    => $schema->string('Description du mobilier (ex: Canapé convertible, Lave-vaisselle)')->required(),
-            'amount'         => $schema->number('Montant TTC en euros (ex: 850.00)')->required(),
-            'purchase_date'  => $schema->string('Date d\'achat au format Y-m-d (ex: 2025-03-15)')->required(),
-            'duration_years' => $schema->integer('Durée d\'amortissement en années (défaut : 5 ans neuf, 3 ans occasion)')->nullable(),
-            'is_dedicated'   => $schema->boolean('Mobilier 100% dédié à la location (true) ou au prorata de la quote-part (false, défaut)')->nullable(),
-            'is_second_hand' => $schema->boolean('Mobilier d\'occasion (true) — durée réduite à 3 ans par défaut')->nullable(),
-            'tva_rate'       => $schema->number('Taux de TVA en pourcentage (ex: 20 pour 20%, 0 pour exonéré)')->nullable(),
+            'property_id'    => $schema->integer()->description('Identifiant du bien immobilier')->required(),
+            'description'    => $schema->string()->description('Description du mobilier (ex: Canapé convertible, Lave-vaisselle)')->required(),
+            'amount'         => $schema->number()->description('Montant TTC en euros (ex: 850.00)')->required(),
+            'purchase_date'  => $schema->string()->description('Date d\'achat au format Y-m-d (ex: 2025-03-15)')->required(),
+            'duration_years' => $schema->integer()->description('Durée d\'amortissement en années (défaut : 5 ans neuf, 3 ans occasion)')->nullable(),
+            'is_dedicated'   => $schema->boolean()->description('Mobilier 100% dédié à la location (true) ou au prorata de la quote-part (false, défaut)')->nullable(),
+            'is_second_hand' => $schema->boolean()->description('Mobilier d\'occasion (true) — durée réduite à 3 ans par défaut')->nullable(),
+            'tva_rate'       => $schema->number()->description('Taux de TVA en pourcentage (ex: 20 pour 20%, 0 pour exonéré)')->nullable(),
         ];
     }
 }

@@ -8,6 +8,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
@@ -77,6 +78,10 @@ class LoanForm
                                 ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
                                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
                                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Laissez à 0 pour un calcul automatique. Si vous saisissez un montant, il sera utilisé tel quel.'),
+                            Toggle::make('is_dedicated')
+                                ->label('Emprunt dédié à ce logement')
+                                ->helperText('Cochez si cet emprunt finance exclusivement le logement loué (ex : prêt travaux du studio indépendant). Les intérêts et l\'assurance sont alors déduits à 100 %, sans quote-part. Sinon (achat de toute la propriété, résidence principale comprise), la quote-part surface s\'applique.')
+                                ->default(false),
                         ]),
 
                     Step::make('Assurance emprunteur')
@@ -152,6 +157,11 @@ class LoanForm
                                 ->content(fn (callable $get) => ($get('monthly_payment') && (float) $get('monthly_payment') > 0)
                                     ? number_format((float) $get('monthly_payment'), 2, ',', ' ') . ' €'
                                     : 'Calcul automatique'),
+                            Placeholder::make('summary_dedicated')
+                                ->label('Quote-part')
+                                ->content(fn (callable $get) => $get('is_dedicated')
+                                    ? 'Emprunt dédié — déduit à 100 %, sans quote-part'
+                                    : 'Quote-part surface appliquée'),
                             Placeholder::make('summary_insurance')
                                 ->label('Assurance emprunteur')
                                 ->content(function (callable $get) {

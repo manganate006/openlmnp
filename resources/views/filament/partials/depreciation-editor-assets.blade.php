@@ -91,7 +91,26 @@
         /* Cumul repris saisi sans borne : la combinaison qui double la case 030.
            Jetons --olmnp-danger-* uniquement, jamais de couleur littérale. */
         .de-amount-unbounded { border-color: var(--olmnp-danger-border); background: var(--olmnp-danger-bg); color: var(--olmnp-danger-fg); }
-        .de-manual-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--olmnp-info-bg); color: var(--olmnp-info-fg); border: 1px solid var(--olmnp-info-border); }
+        /* Base saisie à la main : signalée par la LIGNE, pas par une pastille.
+           Une pastille sous le nom du composant n'allongeait que les lignes qui la
+           portaient, et le tableau perdait son rythme vertical — hautes et basses en
+           alternance, selon une information qui n'a rien à voir avec la mise en page.
+           Rien ici ne consomme de hauteur : un fond, une bordure INTÉRIEURE (`inset`,
+           qui ne décale aucune colonne) et un repère glyphique déjà sur la ligne de base
+           du texte.
+           ⚠️ WCAG 1.4.1 : la couleur ne peut pas porter seule l'information. Le repère
+           `de-manual-mark` et l'intitulé accessible de la ligne restent lisibles en noir
+           et blanc, à l'impression, et pour un daltonien. Les deux, jamais l'un des deux. */
+        .de-amounts tr.de-row-manual > td { background: var(--olmnp-info-bg); }
+        .de-amounts tr.de-row-manual > td:first-child { box-shadow: inset 3px 0 0 var(--olmnp-info-accent); }
+        .de-manual-mark { color: var(--olmnp-info-accent); font-weight: 700; margin-right: 4px; }
+        /* Ligne de GABARIT : proposée par le catalogue, jamais enregistrée. L'écran
+           l'affichait à « 0,00 » exactement comme un composant réel — d'où la surprise
+           de l'enregistrement qui remplace (voir `.de-doomed`). Repère glyphique + nom
+           atténué + intitulé accessible : la couleur ne porte rien toute seule. */
+        .de-template-mark { color: var(--olmnp-fg-subtle); font-weight: 700; margin-right: 4px; }
+        .de-amounts tr.de-row-template .de-name-cell { color: var(--olmnp-fg-muted); }
+        .de-legend { margin-top: 10px; font-size: 12px; color: var(--olmnp-fg-muted); }
         .de-remainder { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; }
         .de-remainder-ok { background: var(--olmnp-success-bg); color: var(--olmnp-success-fg); border: 1px solid var(--olmnp-success-border); }
         .de-remainder-under { background: var(--olmnp-warning-bg); color: var(--olmnp-warning-fg); border: 1px solid var(--olmnp-warning-border); }
@@ -108,6 +127,18 @@
         .de-btn-add { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: var(--olmnp-success-accent); border: 1px dashed var(--olmnp-success-border); }
         .de-btn-add:hover { background: var(--olmnp-success-bg); }
         .de-custom-title { font-size: 13px; font-weight: 700; color: var(--olmnp-fg-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--olmnp-border); }
+
+        /* Pied de l'éditeur : il ne vit plus dans une carte à lui, il ferme la carte du
+           mode courant. Le bouton d'enregistrement y côtoie ce qu'il va faire. */
+        .de-editor-foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--olmnp-border); }
+        .de-editor-foot-left { margin-right: auto; }
+        /* Ce que l'enregistrement va SUPPRIMER, nommé et compté, AVANT le clic.
+           `syncComponents()` est une réconciliation : tout composant absent du lot soumis
+           disparaît. Le remplacement est voulu ; le silence ne l'était pas. */
+        .de-doomed { margin-top: 14px; padding: 12px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.5;
+            background: var(--olmnp-danger-bg); color: var(--olmnp-danger-fg); border: 1px solid var(--olmnp-danger-border); }
+        .de-doomed b { display: block; margin-bottom: 3px; font-size: 13px; }
+        .de-doomed-why { display: block; margin-top: 5px; }
     </style>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
         <script>
@@ -542,7 +573,74 @@
                         this.chart.update('none');
                     },
 
+                    /**
+                     * Cette ligne survivra-t-elle à l'enregistrement ?
+                     *
+                     * ⚠️ MIROIR EXACT de la règle serveur (`saveComponents()`) : une ligne
+                     * sans nom, décochée, ou vide dans son propre mode n'est pas envoyée —
+                     * et `syncComponents()` supprime alors le composant correspondant.
+                     * Si les deux règles divergent, l'avertissement annonce des
+                     * suppressions qui n'arrivent pas, ou tait celles qui arrivent.
+                     */
+                    willBeKept(comp) {
+                        if ((comp.name || '').trim() === '') return false;
+                        if (! comp.enabled) return false;
+
+                        return comp.baseSource === 'manual'
+                            ? this.baseCentsOf(comp) > 0
+                            : comp.percentage > 0;
+                    },
+
+                    /** Noms des composants DÉJÀ EN BASE que cet enregistrement supprimerait. */
+                    pendingDeletions() {
+                        return this.components
+                            .filter(c => c.id && ! this.willBeKept(c))
+                            .map(c => c.name);
+                    },
+
+                    doomedHeadline() {
+                        const n = this.pendingDeletions().length;
+
+                        return n > 1
+                            ? 'Enregistrer supprimera ' + n + ' composants déjà enregistrés :'
+                            : 'Enregistrer supprimera 1 composant déjà enregistré :';
+                    },
+
+                    /** Une ligne du catalogue tant qu'elle n'a pas d'identifiant en base. */
+                    isTemplateRow(comp) {
+                        return ! comp.id;
+                    },
+
+                    /** Intitulé accessible d'une ligne : la couleur ne porte jamais seule. */
+                    rowLabel(comp) {
+                        const parts = [];
+                        if (comp.baseSource === 'manual') parts.push('Base saisie \u00e0 la main');
+                        if (this.isTemplateRow(comp)) parts.push('Ligne de gabarit, pas encore enregistr\u00e9e');
+
+                        return parts.length ? parts.join(' \u2014 ') : null;
+                    },
+
                     save() {
+                        // ⚠️ `syncComponents()` est une RÉCONCILIATION : tout composant
+                        // absent du lot soumis est SUPPRIMÉ. Le remplacement est VOULU —
+                        // c'est ce qui permet de recopier un plan de cabinet par-dessus la
+                        // ventilation par défaut — mais il se faisait sans un mot, et
+                        // l'écran n'aide pas : les lignes du catalogue s'affichent à
+                        // « 0,00 » comme si elles existaient déjà. Constaté le 2026-09-24 :
+                        // 6 composants ramenés à 1. Le bandeau « reste à ventiler » parle
+                        // de ventilation, jamais de suppression.
+                        const doomed = this.pendingDeletions();
+
+                        if (doomed.length > 0) {
+                            const pluriel = doomed.length > 1;
+                            const message = 'Enregistrer REMPLACE votre plan d\'amortissement.\n\n'
+                                + doomed.length + (pluriel ? ' composants seront supprimés' : ' composant sera supprimé')
+                                + ' : ' + doomed.join(', ') + '.\n\n'
+                                + 'Leur base, leur durée et leur cumul repris seront perdus. Continuer ?';
+
+                            if (! window.confirm(message)) return;
+                        }
+
                         // Plus d'arrondi de Hamilton ici : l'invariant se vérifie en
                         // centimes côté serveur, qui refuse la sur-ventilation et absorbe
                         // lui-même la poussière de troncature. Le JS n'a plus à corriger

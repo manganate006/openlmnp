@@ -1,5 +1,7 @@
 <?php
 
+use Filament\Facades\Filament;
+
 // Bloc démo + lien « Découvrir OpenLMNP » injectés sous le formulaire de login
 // via le render hook AUTH_LOGIN_FORM_AFTER (voir AdminPanelProvider) et pilotés
 // par config : demo.enabled (DEMO_MODE) et services.website.url (OPENLMNP_WEBSITE_URL).
@@ -45,6 +47,71 @@ it('hides the official website link on /login when the website url is empty', fu
     $this->get('/login')
         ->assertOk()
         ->assertDontSee('Découvrir OpenLMNP');
+});
+
+// === LIEN D'INSCRIPTION (config services.website.signup_url) ===
+//
+// La porte de l'inscription se ferme au BOOT du panel ; en test HTTP il est déjà booté, on
+// la referme donc sur l'objet Panel lui-même — registration(null) vide l'action de route,
+// et c'est exactement ce que lit hasRegistration(). Aucune route n'est touchée : seul
+// l'affichage l'est, ce qui est tout ce qu'on teste ici (la route de repli, elle, est
+// couverte par RegistrationRedirectTest).
+
+it('shows both links on /login when registration is closed and a subscription page exists', function () {
+    config([
+        'services.website.url' => 'https://openlmnp.fr',
+        'services.website.signup_url' => 'https://openlmnp.fr/tarifs#creer-un-compte',
+    ]);
+    Filament::getDefaultPanel()->registration(null);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertSee('Pas encore de compte ?')
+        ->assertSee('Créer un compte')
+        ->assertSee('https://openlmnp.fr/tarifs#creer-un-compte', false)
+        ->assertSee('Découvrir OpenLMNP');
+});
+
+it('keeps only the neutral website link while registration is still open', function () {
+    // Sinon /login proposerait DEUX chemins contradictoires pour créer un compte : celui de
+    // Filament (« ou créer un compte », vers /register) et le nôtre, vers l'extérieur.
+    config([
+        'services.website.url' => 'https://openlmnp.fr',
+        'services.website.signup_url' => 'https://openlmnp.fr/tarifs#creer-un-compte',
+    ]);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertSee('Découvrir OpenLMNP')
+        // ⚠️ On asserte l'URL et NON le libellé : la traduction FR de Filament porte déjà
+        // « créer un compte » sur cette page, un assertDontSee dessus serait un faux échec.
+        ->assertDontSee('https://openlmnp.fr/tarifs#creer-un-compte', false);
+});
+
+it('falls back to the website link when registration is closed without a subscription page', function () {
+    // L'état par défaut du dépôt public : aucune URL commerciale déclarée.
+    config([
+        'services.website.url' => 'https://openlmnp.fr',
+        'services.website.signup_url' => '',
+    ]);
+    Filament::getDefaultPanel()->registration(null);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertSee('Découvrir OpenLMNP')
+        ->assertDontSee('Créer un compte');
+});
+
+it('shows no signup line at all when neither url is configured', function () {
+    config(['services.website.url' => '', 'services.website.signup_url' => '']);
+    Filament::getDefaultPanel()->registration(null);
+
+    $this->get('/login')
+        ->assertOk()
+        // ⚠️ On asserte l'ATTRIBUT du <p>, pas la phrase : le <style> de la vue est servi
+        // au navigateur, commentaires CSS compris, et une phrase citée dans l'un d'eux
+        // ferait échouer l'assertion alors même que le bloc n'est pas rendu.
+        ->assertDontSee('class="olmnp-login-signup"', false);
 });
 
 // === GARDE-FOUS DE RENDU ===

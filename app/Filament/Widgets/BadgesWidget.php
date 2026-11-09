@@ -7,6 +7,8 @@ use Filament\Widgets\Widget;
 
 class BadgesWidget extends Widget
 {
+    use Concerns\HiddenForMemberPrincipal;
+
     protected string $view = 'filament.widgets.badges-widget';
     protected int | string | array $columnSpan = [
         'default' => 1,

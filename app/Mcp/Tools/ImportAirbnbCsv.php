@@ -81,9 +81,9 @@ class ImportAirbnbCsv extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id' => $schema->integer('ID du bien dans lequel importer les revenus')->required(),
-            'csv_base64'  => $schema->string('Contenu du fichier CSV Airbnb encodé en base64')->required(),
-            'preview'     => $schema->boolean('Si true, simule l\'import sans enregistrer (affiche les 5 premières lignes)'),
+            'property_id' => $schema->integer()->description('ID du bien dans lequel importer les revenus')->required(),
+            'csv_base64'  => $schema->string()->description('Contenu du fichier CSV Airbnb encodé en base64')->required(),
+            'preview'     => $schema->boolean()->description('Si true, simule l\'import sans enregistrer (affiche les 5 premières lignes)'),
         ];
     }
 }

@@ -8,6 +8,7 @@ use App\Filament\Resources\PropertyWorks\Pages\ListPropertyWorks;
 use App\Filament\Resources\PropertyWorks\Schemas\PropertyWorkForm;
 use App\Filament\Resources\PropertyWorks\Tables\PropertyWorksTable;
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Resources\Concerns\BlocksMemberPrincipal;
 use App\Models\PropertyWork;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -17,6 +18,7 @@ use Filament\Tables\Table;
 
 class PropertyWorkResource extends Resource
 {
+    use BlocksMemberPrincipal;
     use NavigationAware;
 
     protected static ?string $model = PropertyWork::class;

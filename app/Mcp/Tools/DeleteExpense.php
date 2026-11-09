@@ -44,7 +44,7 @@ class DeleteExpense extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'expense_id' => $schema->integer('Identifiant de la charge à supprimer')->required(),
+            'expense_id' => $schema->integer()->description('Identifiant de la charge à supprimer')->required(),
         ];
     }
 }

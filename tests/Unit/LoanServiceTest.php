@@ -123,3 +123,38 @@ it('computes variable insurance from a percentage rate', function () {
     expect($firstYear)->toBeLessThan(600_000)   // < 6 000 €
         ->and($firstYear)->toBeGreaterThan(400_000); // > 4 000 €
 });
+
+it('returns the remaining capital after the last payment of each year', function () {
+    $loan = Loan::create([
+        'property_id' => $this->property->id,
+        'amount' => 10000000, // 100k€
+        'annual_rate' => 2.000,
+        'duration_months' => 120, // 10 ans
+        'start_date' => '2020-01-01',
+        'monthly_payment' => 0,
+        'insurance_monthly' => 0,
+    ]);
+
+    $this->service->generateSchedule($loan);
+    $loan->refresh();
+
+    $previous = $loan->amount;
+    foreach ([2020, 2021, 2022] as $year) {
+        $expected = $loan->payments()->reorder()
+            ->whereYear('payment_date', $year)
+            ->orderByDesc('month_number')
+            ->first()
+            ->remaining_capital;
+
+        $remaining = $loan->getRemainingCapitalAtEndOfYear($year);
+
+        expect($remaining)->toBe($expected)
+            ->and($remaining)->toBeLessThan($previous);
+        $previous = $remaining;
+    }
+
+    // Avant la première échéance : le capital emprunté.
+    expect($loan->getRemainingCapitalAtEndOfYear(2019))->toBe($loan->amount);
+    // Après la dernière : zéro.
+    expect($loan->getRemainingCapitalAtEndOfYear(2035))->toBe(0);
+});

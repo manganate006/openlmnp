@@ -35,7 +35,7 @@ class DuplicateExpenseAction extends ReplicateAction
             ->icon('heroicon-o-document-duplicate')
             ->color('gray')
             ->modalHeading('Dupliquer la charge')
-            ->modalDescription('La copie reprend le bien, la catégorie, la description, la TVA et la quote-part. Ajustez la date et le montant ; le justificatif, lui, n\'est pas recopié.')
+            ->modalDescription('La copie reprend le bien, la catégorie, la description, la TVA, la quote-part et la part d\'usage. Ajustez la date et le montant ; le justificatif, lui, n\'est pas recopié.')
             ->modalSubmitActionLabel('Dupliquer')
             ->successNotificationTitle('Charge dupliquée')
             // ⚠️ `documents_count` n'est PAS une colonne : c'est l'agrégat posé sur le modèle

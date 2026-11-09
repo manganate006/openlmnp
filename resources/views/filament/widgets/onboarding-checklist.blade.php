@@ -34,7 +34,7 @@
         <div class="oc-header">
             <div class="oc-title">
                 <x-filament::icon icon="heroicon-o-rocket-launch" style="color: var(--olmnp-info-accent);" />
-                Guide de demarrage
+                Guide de démarrage
             </div>
             <select class="oc-year-select" wire:change="setYear($event.target.value)">
                 @for($y = (int) date('Y'); $y >= (int) date('Y') - 3; $y--)

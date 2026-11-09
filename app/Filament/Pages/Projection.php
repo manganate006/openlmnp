@@ -2,11 +2,13 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Expense;
 use App\Filament\Pages\Concerns\NavigationAware;
 use App\Models\Property;
 use App\Services\BadgeService;
 use App\Services\DepreciationService;
 use App\Services\FiscalYearService;
+use App\Support\MicroBicRules;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -93,11 +95,11 @@ class Projection extends Page
                 }
                 $totalIncome += $income;
 
-                $dedicated = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', true)->sum('amount');
-                $shared = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', false)->sum('amount');
+                $dedicated = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', true)->sum(Expense::usageAdjustedSql('amount'));
+                $shared = $property->expenses()->whereYear('expense_date', $year)->where('is_dedicated', false)->sum(Expense::usageAdjustedSql('amount'));
                 if ($dedicated == 0 && $shared == 0 && $i > 0) {
-                    $dedicated = $property->expenses()->where('is_dedicated', true)->sum('amount');
-                    $shared = $property->expenses()->where('is_dedicated', false)->sum('amount');
+                    $dedicated = $property->expenses()->where('is_dedicated', true)->sum(Expense::usageAdjustedSql('amount'));
+                    $shared = $property->expenses()->where('is_dedicated', false)->sum(Expense::usageAdjustedSql('amount'));
                     $expYears = $property->expenses()->selectRaw('COUNT(DISTINCT strftime("%Y", expense_date)) as y')->value('y') ?: 1;
                     $dedicated = (int) ($dedicated / $expYears);
                     $shared = (int) ($shared / $expYears);
@@ -130,9 +132,17 @@ class Projection extends Page
 
             $fiscalResult = max(0, $resultBefore - $capped);
 
-            // Micro-BIC comparaison
-            $microBic50 = (int) ($totalIncome * 0.50);
-            $microBic30 = (int) ($totalIncome * 0.70); // abattement 30% = 70% imposable
+            // Micro-BIC comparaison : taux centralisés (App\Support\MicroBicRules), pas
+            // de 50/30 en dur — ils varient selon l'année (barème triennal).
+            $classifiedRate = (float) MicroBicRules::rate(Property::CLASSIFICATION_CLASSIFIED, $year);
+            $unclassifiedRate = (float) MicroBicRules::rate(Property::CLASSIFICATION_UNCLASSIFIED, $year);
+            $microBic50 = (int) ($totalIncome * $classifiedRate / 100);
+            $microBic30 = (int) ($totalIncome * (100 - $unclassifiedRate) / 100); // abattement non classé = 100 % - taux imposable
+
+            // Micro-BIC : mêmes règles qu'un dossier individuel pour une indivision (piège P13,
+            // simplification du 2026-10-15 — voir App\Support\Indivision).
+            $microBic50Available = MicroBicRules::isAvailable(Property::CLASSIFICATION_CLASSIFIED, $year, $totalIncome);
+            $microBic30Available = MicroBicRules::isAvailable(Property::CLASSIFICATION_UNCLASSIFIED, $year, $totalIncome);
 
             $rows[] = [
                 'year' => $year,
@@ -147,7 +157,9 @@ class Projection extends Page
                 'fiscal_result' => $fiscalResult,
                 'micro_bic_50' => $microBic50,
                 'micro_bic_30' => $microBic30,
-                'recommended' => $fiscalResult < $microBic50 ? 'real' : 'micro_bic',
+                'micro_bic_50_available' => $microBic50Available,
+                'micro_bic_30_available' => $microBic30Available,
+                'recommended' => ($microBic50Available && $fiscalResult >= $microBic50) ? 'micro_bic' : 'real',
             ];
         }
 
@@ -180,8 +192,8 @@ class Projection extends Page
             }
 
             // Charges moyennes
-            $ded = $property->expenses()->where('is_dedicated', true)->sum('amount');
-            $sha = $property->expenses()->where('is_dedicated', false)->sum('amount');
+            $ded = $property->expenses()->where('is_dedicated', true)->sum(Expense::usageAdjustedSql('amount'));
+            $sha = $property->expenses()->where('is_dedicated', false)->sum(Expense::usageAdjustedSql('amount'));
             $ey = $property->expenses()->selectRaw('COUNT(DISTINCT strftime("%Y", expense_date)) as y')->value('y') ?: 1;
             $totalDedicated += (int) ($ded / $ey);
             $totalShared += (int) ($sha / $ey);

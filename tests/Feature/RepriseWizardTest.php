@@ -8,6 +8,9 @@ use App\Models\PropertyComponent;
 use App\Models\User;
 use App\Services\DepreciationService;
 use App\Services\ReprisesCheckService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 /**
@@ -187,6 +190,34 @@ it('nets the land share out of the depreciable base shown at step 2', function (
     expect($component->instance()->depreciableBaseCents())->toBe(17_000_000);
 });
 
+it('describes the acquisition price positively, without citing box 028 at all', function () {
+    // ⚠️ Recopier la case 028 (qui agrège le bien, les travaux, le mobilier et les frais)
+    // dans ce champ gonflait la base amortissable. L'aide disait « ce n'est pas la case
+    // 028 » : elle dit désormais ce qu'il faut saisir, et où le lire sur la balance.
+    $component = Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->call('nextStep');
+
+    $html = $component->html();
+    $start = strpos($html, 'for="rp-price"');
+    $field = substr($html, $start, strpos($html, 'for="rp-notary"', $start) - $start);
+
+    expect($field)->toContain('Prix d\'acquisition')
+        ->toContain('terrain compris')
+        ->toContain('compte 211')
+        ->toContain('213')
+        ->not->toContain('028')
+        ->not->toContain('Ce n\'est pas');
+
+    $help = file_get_contents(resource_path('views/help/reprise-dossier.blade.php'));
+    $item = substr($help, strpos($help, '<strong>Prix d\'acquisition</strong>'));
+    $item = substr($item, 0, strpos($item, '</li>'));
+
+    expect($item)->not->toContain('028')->and($item)->toContain('211');
+});
+
 it('updates an existing property instead of creating a second one', function () {
     $property = repriseProperty($this->user);
 
@@ -226,8 +257,10 @@ it('spells out the pros and cons of both methods, as arbitrated in the mock-up',
         ->assertSee('Répartir automatiquement ma base')
         ->assertSee('≈ 10 minutes, liasse sous les yeux')
         ->assertSee('Un clic, rien à saisir')
-        ->assertSee('Ne reproduit pas le plan de votre comptable')
-        ->assertSee('Si vous avez un plan, recopiez-le.');
+        // `false` : le texte est écrit en HTML brut dans la vue, son apostrophe n'est donc
+        // pas échappée — `assertSee()` échappe par défaut et ne la trouverait pas.
+        ->assertSee("Ne reproduit pas le plan d'amortissement de votre comptable", false)
+        ->assertSee("Si vous avez un plan d'amortissement, recopiez-le.", false);
 });
 
 it('spreads the base over the standard components when that method is chosen', function () {
@@ -291,6 +324,71 @@ it('keys the embedded editor on the chosen method, so changing method removes it
         ->set('method', null)
         ->assertDontSee('wire:key="reprise-editor-' . RepriseDossier::METHOD_COPY . '-' . $property->id . '"', false)
         ->assertSee('Recopier les lignes de ma liasse');
+});
+
+it('links to the works and furniture screens, so a cabinet\'s plan is not left incomplete', function () {
+    // ⚠️ L'éditeur de l'étape 3 ne porte QUE les composants du bien (`property_components`) :
+    // des travaux ou du mobilier déjà amortis par le cabinet n'ont aucune autre porte
+    // d'entrée dans l'assistant. Sans ce renvoi, l'étape 5 affichait un écart sur « Total
+    // des immobilisations brutes » que rien n'expliquait (+7 610 € dans le dossier de test).
+    $property = repriseProperty($this->user);
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    $component = Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_COPY);
+
+    $component->assertSee('Des travaux ou du mobilier déjà amortis', false)
+        ->assertSee(
+            \App\Filament\Resources\PropertyWorks\PropertyWorkResource::getUrl('property', ['propertyId' => $property->id]),
+            false,
+        )
+        ->assertSee(
+            \App\Filament\Resources\Furniture\FurnitureResource::getUrl('property', ['propertyId' => $property->id]),
+            false,
+        );
+});
+
+it('bounds the opening cumul of works and furniture too, not only components', function () {
+    // Contrepartie du renvoi ci-dessus : un cumul saisi sur ces écrans externes doit
+    // recevoir la même borne que les composants, sous peine du même double comptage
+    // (9 496 € affichés pour 4 736 € déclarés, signalé le 2026-09-09 pour les composants).
+    $property = repriseProperty($this->user);
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    $work = $property->works()->create([
+        'description' => 'Toiture refaite',
+        'work_date' => '2020-01-01',
+        'amount' => 500_000,
+        'duration_years' => 15,
+        'is_dedicated' => true,
+        'opening_accumulated_depreciation' => 50_000,
+    ]);
+
+    $furniture = $property->furniture()->create([
+        'description' => 'Canapé-lit',
+        'purchase_date' => '2020-01-01',
+        'amount' => 80_000,
+        'duration_years' => 5,
+        'is_dedicated' => true,
+        'opening_accumulated_depreciation' => 20_000,
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_COPY)
+        ->call('nextStep');
+
+    expect($work->fresh()->opening_accumulated_year)->toBe(2025)
+        ->and($furniture->fresh()->opening_accumulated_year)->toBe(2025);
 });
 
 it('refuses a method that the browser invented', function () {
@@ -440,16 +538,48 @@ it('shows the diagnostics in order when the cumulated depreciation does not tall
     $line = collect($component->instance()->report['lines'])
         ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
 
+    // La piste chiffrée passe en tête, devant celles qu'aucun montant n'appuie.
     expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_MISMATCH)
         ->and(array_column($line['diagnostics'], 'code'))->toBe([
-            'rental_start_date', 'land_share', 'acquisition_fees', 'missing_component', 'market_value',
+            'acquisition_fees', 'rental_start_date', 'land_share', 'missing_component', 'market_value',
         ]);
 
-    // La piste chiffrée est corroborée : c'est elle qui porte le bouton de correction.
-    expect($component->instance()->corroboratedAcquisitionFees())->toBeTrue();
+    // ⚠️ Mais sans la case 044, rien ne distingue des frais passés en charges de frais
+    // amortis en 016 par le cabinet : le bouton qui les passe en charges ne s'affiche pas.
+    expect($component->instance()->acquisitionFeesExpensedByFirm())->toBeFalse();
 
-    $component->assertSee('Passer mes frais d\'acquisition en charges', false)
+    $component->assertDontSee('Passer mes frais en charges', false)
         ->assertSee('Terminer quand même');
+});
+
+it('shows the precise 030/016 explanation for a close gap, not a vague convention note', function () {
+    // ⚠️ Même mécanique que le test précédent, mais avec des frais d'acquisition trop
+    // petits pour franchir le seuil de 1 % : l'écart reste « proche », et doit porter la
+    // cause précise plutôt que le texte générique de convention de prorata — régression du
+    // 2026-10-15, un dossier de test où un écart de quelques centaines d'euros a été pris à
+    // tort pour de l'arrondi.
+    $property = repriseProperty($this->user, ['notary_fees' => 60_000, 'agency_fees' => 0]);
+
+    $component = repriseAtStepFour($this->user, $property)
+        ->set('openingDeferred', '0')
+        ->call('nextStep');
+
+    $computed = collect($component->instance()->report['lines'])
+        ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION)['computed'];
+
+    $component->call('goToStep', 4)
+        ->set('openingAccumulated', RepriseDossier::eurosFromCents($computed - notaryCumulOf($property)))
+        ->call('nextStep')
+        ->assertSet('step', 5);
+
+    $line = collect($component->instance()->report['lines'])
+        ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_CLOSE);
+
+    $component->assertSee('amortis en 030', false)
+        ->assertSee('016', false)
+        ->assertDontSee('il s\'explique le plus souvent par une convention', false);
 });
 
 it('switches the acquisition fees to charges and stops amortising them', function () {
@@ -458,14 +588,27 @@ it('switches the acquisition fees to charges and stops amortising them', functio
     // 2026-09-05 les frais sont portés en 014/016, là où un cabinet les met : la case 030 ne
     // bouge donc plus quand on les passe en charges — c'est le signe que le mélange a cessé.
     // Ce qui reste vrai, et ce que ce test vérifie, c'est que le remède agit réellement.
+    //
+    // Depuis le 2026-10-15, le bouton n'est offert QUE si la case 044 de la liasse montre
+    // que le cabinet ne porte pas les frais parmi ses immobilisations : 200 000 € de bien,
+    // sans les 16 000 € de frais.
     $property = repriseProperty($this->user);
 
     $component = repriseAtStepFour($this->user, $property)
         ->set('openingDeferred', '12480')
+        ->set('declaredGrossAssets', '200000')
         ->call('nextStep');
 
     $line = fn () => collect($component->instance()->report['lines'])
         ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION)['computed'];
+
+    $gross = collect($component->instance()->report['lines'])
+        ->firstWhere('key', ReprisesCheckService::LINE_GROSS_ASSETS);
+
+    expect($gross['diagnostics'][0]['code'])->toBe('acquisition_fees_expensed')
+        ->and($component->instance()->acquisitionFeesExpensedByFirm())->toBeTrue();
+
+    $component->assertSee('Passer mes frais en charges, comme mon cabinet', false);
 
     $before = $line();
     $cumulAvant = notaryCumulOf($property);
@@ -657,6 +800,58 @@ it('stores the opening balances on the reprise fiscal year when the reprise is f
         ->and((int) $fiscalYear->previous_deferred)->toBe(1_248_000);
 });
 
+it('survives a page reload after finishing : method and reports are not lost', function () {
+    // ⚠️ Régression du 2026-10-15 : rien ne réveillait l'écran final à un nouveau montage
+    // du composant (rechargement de la page, nouvel onglet) — un simple `Livewire::test()`
+    // frais retombait sur une page 1 vierge, méthode et reports compris. « Revoir ma
+    // reprise », cliqué APRÈS un tel rechargement, affichait donc un formulaire vide qui
+    // ne reflétait plus ce qui avait été repris.
+    $property = repriseProperty($this->user);
+
+    repriseAtStepFour($this->user, $property)
+        ->set('openingDeferred', '12480')
+        ->set('openingAccumulated', '47394')
+        ->call('addDeficit')
+        ->set('deficits.0.origin_year', 2023)
+        ->set('deficits.0.amount', '1250')
+        ->call('nextStep')
+        ->call('finish')
+        ->assertSet('finished', true);
+
+    // Nouveau montage du composant, comme un rechargement de page ou un nouvel onglet.
+    $fresh = Livewire::actingAs($this->user)->test(RepriseDossier::class);
+
+    $fresh->assertSet('finished', true)
+        ->assertSet('method', RepriseDossier::METHOD_COPY)
+        ->assertSet('openingDeferred', '12480')
+        ->assertSet('openingAccumulated', '47394')
+        ->assertSet('deficits', [['origin_year' => 2023, 'amount' => '1250']])
+        ->assertSee('Votre dossier est repris');
+
+    // « Revoir ma reprise » doit alors retomber sur le contrôle, avec les BONS montants —
+    // pas un formulaire d'étape 4 vierge qui rejouerait la reprise depuis zéro.
+    $fresh->call('reviewReprise')
+        ->assertSet('finished', false)
+        ->assertSet('step', 5);
+
+    $line = collect($fresh->instance()->report['lines'])
+        ->firstWhere('key', ReprisesCheckService::LINE_DEFERRED_DEPRECIATION);
+
+    expect($line['declared'])->toBe(1_248_000);
+});
+
+it('still starts a blank wizard when no reprise was ever finished for this property', function () {
+    // Contre-épreuve : le réveil ne doit se déclencher QUE si un exercice de reprise a
+    // réellement été clôturé — un dossier neuf, ou en cours de route, repart bien à vide.
+    repriseProperty($this->user);
+
+    Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->assertSet('finished', false)
+        ->assertSet('step', 1)
+        ->assertSet('method', null);
+});
+
 it('refuses to overwrite the opening balances of a closed fiscal year', function () {
     $property = repriseProperty($this->user);
 
@@ -810,4 +1005,923 @@ it('offers the reprise from the fiscal years list', function () {
         ->assertOk()
         ->assertSee('Reprendre un dossier')
         ->assertSee(RepriseDossier::getUrl(), false);
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Étape 3 — lecture IA de la liasse (lot 6)
+// ─────────────────────────────────────────────────────────────────────
+
+/** Configuration d'instance qui rend la lecture IA disponible (fournisseur simulé). */
+function repriseAiConfig(): void
+{
+    config([
+        'ai.enabled' => true,
+        'ai.api_key' => 'sk-or-v1-factice-pour-les-tests',
+        // Épinglé : l'hôte de test n'est pas openrouter.ai, la détection
+        // automatique le classerait donc en serveur local.
+        'ai.provider' => 'openrouter',
+        'ai.base_url' => 'https://openrouter.test/api/v1',
+        'ai.models.documents' => 'modele/test',
+        'ai.models.documents_fallback' => '',
+        'ai.pdf_text_fallback' => 'never',
+        'ai.docs_monthly_quota' => 0,
+        'demo.email' => 'demo@openlmnp.fr',
+    ]);
+}
+
+/** Fait répondre le fournisseur simulé avec la fixture de liasse. */
+function faireLireLaLiasse(): void
+{
+    Http::fake(['https://openrouter.test/api/v1/chat/completions' => Http::response([
+        'id' => 'gen-test',
+        'model' => 'modele/test',
+        'choices' => [[
+            'message' => [
+                'role' => 'assistant',
+                'content' => (string) file_get_contents(base_path('tests/Fixtures/ai/liasse-2033.json')),
+            ],
+            'finish_reason' => 'stop',
+        ]],
+        'usage' => ['prompt_tokens' => 4000, 'completion_tokens' => 500, 'cost' => 0.0024],
+    ])]);
+}
+
+/**
+ * Fait répondre le fournisseur simulé avec une liasse portant une ligne « Terrains ».
+ * Fixture fictive (2033-C, terrain de 27 150 € sans durée ni dotation).
+ */
+function faireLireLaLiasseAvecTerrain(): void
+{
+    Http::fake(['https://openrouter.test/api/v1/chat/completions' => Http::response([
+        'id' => 'gen-test',
+        'model' => 'modele/test',
+        'choices' => [[
+            'message' => [
+                'role' => 'assistant',
+                'content' => (string) file_get_contents(base_path('tests/Fixtures/ai/liasse-2033-with-land.json')),
+            ],
+            'finish_reason' => 'stop',
+        ]],
+        'usage' => ['prompt_tokens' => 4000, 'completion_tokens' => 500, 'cost' => 0.0024],
+    ])]);
+}
+
+/** PDF minimal reconnu comme tel par finfo — l'analyse vérifie le type réel du fichier. */
+function fauxPdfLiasse(): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent(
+        'liasse-2025.pdf',
+        "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF",
+    );
+}
+
+/** Amène l'assistant à l'étape 3, méthode IA choisie, fournisseur simulé prêt. */
+function repriseAtStepThreeAi(User $user): \Livewire\Features\SupportTesting\Testable
+{
+    repriseAiConfig();
+    Storage::fake('local');
+    faireLireLaLiasse();
+
+    return Livewire::actingAs($user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->set('regime', RepriseDossier::REGIME_SINCE_START)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_AI);
+}
+
+it('ignore la méthode IA quand l\'IA de l\'instance est coupée', function () {
+    repriseProperty($this->user);
+
+    Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->set('regime', RepriseDossier::REGIME_SINCE_START)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_AI)
+        ->assertSet('method', null);
+});
+
+it('refuse la méthode IA à un compte démo, même quand l\'instance l\'active', function () {
+    repriseAiConfig();
+
+    $demo = User::factory()->create(['is_demo' => true]);
+    repriseProperty($demo);
+
+    Livewire::actingAs($demo)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->set('regime', RepriseDossier::REGIME_SINCE_START)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_AI)
+        ->assertSet('method', null);
+});
+
+it('ne lance rien sans la case de consentement cochée', function () {
+    repriseProperty($this->user);
+
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse')
+        ->assertSet('liasseAnalysis', null)
+        ->assertSet('liasseError', 'Cochez la case de consentement avant de lancer la lecture.');
+
+    Http::assertNothingSent();
+
+    // Sans envoi, pas d'horodatage de consentement posé.
+    expect($this->user->fresh()->ai_consented_at)->toBeNull();
+});
+
+it('retient l\'étape 3 tant qu\'une lecture IA n\'a pas été appliquée : pas de plan vide', function () {
+    repriseProperty($this->user);
+
+    repriseAtStepThreeAi($this->user)
+        ->call('nextStep')
+        ->assertSet('step', 3)
+        ->assertSee('Lancez la lecture puis');
+});
+
+it('lit la liasse, impose la relecture, puis recopie lignes et reports d\'un clic', function () {
+    $property = repriseProperty($this->user);
+
+    $wizard = repriseAtStepThreeAi($this->user)
+        ->set('liasseConsent', true)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse')
+        ->assertSet('liasseError', null)
+        ->assertSet('liasseApplied', false);
+
+    // La lecture n'est qu'une PROPOSITION : rien n'est écrit avant le clic de relecture.
+    expect(PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->count())->toBe(0)
+        ->and($this->user->fresh()->ai_consented_at)->not->toBeNull();
+
+    $wizard->call('applyLiasse')
+        ->assertSet('liasseApplied', true)
+        ->assertSet('method', RepriseDossier::METHOD_AI)
+        // Étape 4 pré-remplie avec les SEULES cases lues : la case 014, absente
+        // de la liasse, laisse son champ vide — jamais un zéro à sa place.
+        ->assertSet('openingDeferred', '12480')
+        ->assertSet('openingAccumulated', '47394')
+        // Case 044 : la liasse ne porte que la 028, aucune incorporelle (014 vide).
+        ->assertSet('declaredGrossAssets', '200000')
+        ->assertSet('deficits', [['origin_year' => 2023, 'amount' => '1250']]);
+
+    $components = PropertyComponent::withoutGlobalScopes()
+        ->where('property_id', $property->id)
+        ->orderBy('sort_order')
+        ->get();
+
+    // 8 lignes lues, 7 recopiées : les frais d'acquisition (incorporelles) sont
+    // écartés — l'application les amortit déjà depuis les frais de l'étape 2.
+    expect($components)->toHaveCount(7)
+        ->and($components->pluck('name'))->not->toContain('Frais d\'acquisition')
+        ->and($components[0]->name)->toBe('Gros œuvre')
+        ->and((int) $components[0]->base_amount)->toBe(8_000_000)
+        ->and((int) $components[0]->duration_years)->toBe(50)
+        ->and((int) $components[0]->opening_accumulated_depreciation)->toBe(1_040_000)
+        ->and($components[0]->base_source)->toBe(PropertyComponent::BASE_SOURCE_MANUAL)
+        // La dotation du cabinet est recopiée AU CENTIME (566,67 €) : un recalcul
+        // base ÷ durée donnerait 56 666 centimes, pas 56 667.
+        ->and((int) $components[3]->annual_depreciation)->toBe(56_667);
+});
+
+/**
+ * Un terrain ne s'amortit JAMAIS. Recopier la ligne 420 d'un 2033-C créait un composant
+ * sans durée imprimée par la liasse (l'assistant lui en complétait une par défaut, 10 ans)
+ * et donc une dotation fictive — constaté lors d'un test de reprise.
+ */
+it('refuse de recopier la ligne "Terrains" d\'une liasse comme composant amortissable', function () {
+    $property = repriseProperty($this->user);
+
+    repriseAiConfig();
+    Storage::fake('local');
+    faireLireLaLiasseAvecTerrain();
+
+    $wizard = Livewire::actingAs($this->user)
+        ->test(RepriseDossier::class)
+        ->set('rentalStartDate', '2019-06-01')
+        ->set('firstYear', 2026)
+        ->set('regime', RepriseDossier::REGIME_SINCE_START)
+        ->call('nextStep')
+        ->call('nextStep')
+        ->call('chooseMethod', RepriseDossier::METHOD_AI)
+        ->set('liasseConsent', true)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse')
+        ->assertSet('liasseError', null)
+        ->call('applyLiasse')
+        ->assertSet('liasseApplied', true);
+
+    $components = PropertyComponent::withoutGlobalScopes()
+        ->where('property_id', $property->id)
+        ->get();
+
+    // Les deux lignes de bâti sont recopiées, la ligne "Terrains" ne l'est jamais.
+    expect($components)->toHaveCount(2)
+        ->and($components->pluck('name'))->not->toContain('Terrains')
+        ->and($components->pluck('name')->all())->toBe(['Gros œuvre', 'Toiture']);
+
+    $wizard->assertNotified('Terrain non recopié : Terrains');
+});
+
+it('grave la provenance « lecture assistée » et porte le résultat fiscal lu au contrôle', function () {
+    repriseProperty($this->user);
+
+    $wizard = repriseAtStepThreeAi($this->user)
+        ->set('liasseConsent', true)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse')
+        ->call('applyLiasse')
+        ->call('nextStep')
+        ->assertSet('step', 4)
+        ->call('nextStep')
+        ->assertSet('step', 5);
+
+    // Le résultat fiscal (2033-B) n'est connu que par la lecture : la ligne du
+    // contrôle le reprend, en négatif puisque la liasse porte un déficit (case 354).
+    $fiscal = collect($wizard->get('report')['lines'])
+        ->firstWhere('key', ReprisesCheckService::LINE_FISCAL_RESULT);
+
+    expect($fiscal)->not->toBeNull()
+        ->and($fiscal['declared'])->toBe(-85_000);
+
+    $wizard->call('finish')->assertSet('finished', true);
+
+    $fiscalYear = FiscalYear::withoutGlobalScopes()
+        ->where('user_id', $this->user->id)
+        ->where('year', 2026)
+        ->firstOrFail();
+
+    expect($fiscalYear->opening_source)->toBe(FiscalYear::OPENING_SOURCE_AI)
+        ->and((int) $fiscalYear->opening_deferred_depreciation)->toBe(1_248_000)
+        ->and((int) $fiscalYear->opening_accumulated_depreciation)->toBe(4_739_400)
+        ->and($fiscalYear->opening_deficits)->toBe([['origin_year' => 2023, 'amount' => 125_000]]);
+});
+
+it('abandonner la lecture supprime le fichier déposé et ne laisse rien derrière', function () {
+    $property = repriseProperty($this->user);
+
+    $wizard = repriseAtStepThreeAi($this->user)
+        ->set('liasseConsent', true)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse');
+
+    $chemin = $wizard->get('liasseAnalysis')['file_path'];
+
+    // ⚠️ Sans cette garde, le test est VACUEMENT vert : assertExists(null)
+    // boucle sur Arr::wrap(null) = [] et ne vérifie rien du tout.
+    expect($chemin)->not->toBeNull();
+    Storage::disk()->assertExists($chemin);
+
+    $wizard->call('discardLiasse')
+        ->assertSet('liasseAnalysis', null)
+        ->assertSet('liasseApplied', false);
+
+    Storage::disk()->assertMissing($chemin);
+
+    expect(PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->count())->toBe(0);
+});
+
+it('affiche le refus quand aucune ligne lue ne porte de valeur brute', function () {
+    repriseProperty($this->user);
+
+    // Lecture dégradée : des lignes sans base — rien d'exploitable à recopier.
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', [
+            'document_type' => 'liasse_2033',
+            'confidence' => 0.4,
+            'values' => [],
+            'rows' => [
+                ['label' => 'Gros œuvre', 'base' => null, 'duration_years' => null, 'annual' => null, 'cumul' => null, 'cerfa_category' => 'constructions', 'confidence' => 0.3],
+                // Une base lue « 0 » vaut absence : un composant à base nulle
+                // polluerait le plan (constaté sur une vraie liasse, 2026-09-06).
+                ['label' => 'Constructions', 'base' => 0, 'duration_years' => 1, 'annual' => 70260, 'cumul' => 70260, 'cerfa_category' => 'constructions', 'confidence' => 0.5],
+            ],
+            'file_path' => 'documents/1/ai-staging/liasse-test.pdf',
+            'file_name' => 'liasse-test.pdf',
+        ])
+        ->call('applyLiasse')
+        ->assertSet('liasseApplied', false)
+        // L'erreur doit être VISIBLE dans l'écran de relecture — un clic sans
+        // effet apparent est le pire des refus.
+        ->assertSee('Aucune ligne exploitable');
+
+    expect(PropertyComponent::withoutGlobalScopes()->count())->toBe(0);
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Étape 3 — le dépôt de la liasse (lot ergonomie, 2026-09-24)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Le dépôt était un `<input type="file">` nu — le seul du dépôt, partout ailleurs on passe
+ * par le `FileUpload` de Filament. Le navigateur rendait « Choisir un fichier / Aucun
+ * fichier choisi », invisible sur un écran qui demande par ailleurs un consentement.
+ *
+ * ⚠️ Ce que ce test protège n'est PAS l'esthétique du cadre : c'est le fait que l'input
+ * reste atteignable au clavier. La manière habituelle d'habiller un dépôt de fichier est
+ * de masquer l'input en `display: none` et de piloter un bouton en JavaScript — ce qui le
+ * sort du parcours de tabulation, et fait dépendre le clic du JavaScript.
+ */
+it('habille le dépôt de la liasse sans le retirer du parcours clavier', function () {
+    repriseProperty($this->user);
+
+    $html = repriseAtStepThreeAi($this->user)->html();
+
+    expect($html)
+        ->toContain('Glissez votre liasse ici, ou cliquez pour la choisir')
+        ->toContain('rp-drop-input')
+        // L'intitulé est rattaché au champ : cliquer dessus ouvre le sélecteur, et un
+        // lecteur d'écran annonce le champ.
+        ->toContain('for="rp-liasse-file"')
+        ->toContain('id="rp-liasse-file"');
+
+    // La règle qui masque l'input, telle qu'elle est réellement servie.
+    preg_match('/\.rp-drop-input\s*\{([^}]*)\}/', $html, $regle);
+
+    expect($regle[1] ?? '')
+        ->toContain('opacity: 0')
+        // `display: none` et `visibility: hidden` retirent l'élément de la tabulation, et
+        // le glisser-déposer natif du navigateur ne l'atteint plus non plus.
+        ->not->toContain('display: none')
+        ->not->toContain('display:none')
+        ->not->toContain('visibility: hidden');
+});
+
+/**
+ * Le nom du fichier choisi venait du rendu natif du navigateur. Le cadre le masque : il
+ * faut donc le réafficher, sinon l'écran ne dit plus du tout ce qu'on s'apprête à envoyer.
+ */
+it('réaffiche le nom du fichier déposé, que le cadre masque au navigateur', function () {
+    repriseProperty($this->user);
+
+    $html = repriseAtStepThreeAi($this->user)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->html();
+
+    expect($html)->toContain('liasse-2025.pdf');
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Étape 3 — l'attente de la lecture (lot ergonomie, 2026-09-24)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * L'attente se jouait en petit dans le flux, sous forme d'une liste d'étapes SIMULÉE :
+ * trois lignes qui s'allumaient sur un `setInterval` de 4 secondes, sans le moindre rapport
+ * avec le serveur, et une quatrième sans liaison qui ne s'allumait jamais.
+ *
+ * ⚠️ Ce que ce test verrouille n'est pas la modale — c'est l'ABSENCE de ces étapes. Les
+ * recopier au centre de l'écran, en grand, aurait affirmé plus fort ce qu'on ne sait pas :
+ * l'application envoie le document en une fois et attend, elle n'a aucun moyen de savoir
+ * que « les tableaux 2033-A à 2033-D ont été repérés ».
+ */
+it('attend la lecture dans une modale, sans afficher d\'étapes qu\'elle ne connaît pas', function () {
+    repriseProperty($this->user);
+
+    $html = repriseAtStepThreeAi($this->user)->html();
+
+    // La modale existe, et elle dit franchement ce qu'elle sait.
+    expect($html)
+        ->toContain('rp-modal-backdrop')
+        ->toContain('Lecture de votre liasse en cours')
+        ->toContain('ne vous montrera donc pas d\'étapes qu\'elle ne connaît pas');
+
+    // Les quatre fausses étapes ont disparu, et ne doivent jamais revenir.
+    expect($html)
+        ->not->toContain('Document transmis au modèle')
+        ->not->toContain('Tableaux 2033-A à 2033-D repérés')
+        ->not->toContain('Lignes d\'amortissement et cases de report extraites')
+        ->not->toContain('Contrôle de cohérence (ligne 572)');
+});
+
+/**
+ * Une modale qui ne prévoit que le cas heureux est un piège. Trois sorties, toutes
+ * présentes dans le markup : l'échec (la fenêtre se ferme et l'écran dit pourquoi),
+ * l'abandon (on la masque sans annuler la lecture) et la touche Échap.
+ */
+it('laisse toujours une sortie à la modale d\'attente, et des astuces qui apprennent quelque chose', function () {
+    repriseProperty($this->user);
+
+    $html = repriseAtStepThreeAi($this->user)->html();
+
+    expect($html)
+        ->toContain('Masquer cette fenêtre')
+        ->toContain('keydown.escape.window')
+        ->toContain('La masquer n\'annule pas la lecture')
+        // La première astuce est rendue par le serveur : sans JavaScript, l'encart
+        // n'est pas vide. ⚠️ Assertion sans apostrophe : `{{ }}` échappe la sienne en
+        // `&#039;`, et le motif ne se retrouverait pas dans le HTML servi.
+        ->toContain('qui dira si le tableau a été lu en entier');
+
+    // Chaque astuce tient sur une ligne : une astuce qui déborde n'est plus une astuce.
+    foreach (app(RepriseDossier::class)->liasseWaitTips() as $astuce) {
+        expect(mb_strlen($astuce))->toBeLessThanOrEqual(130);
+    }
+});
+
+/**
+ * Le motif d'un refus était rendu par un `<span>` de 11,5 px sous le champ de dépôt —
+ * invisible pour qui regarde le bouton qu'il vient de cliquer.
+ */
+it('affiche le refus de lecture en encart, avec sa sortie de secours', function () {
+    repriseProperty($this->user);
+
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse')
+        ->assertSet('liasseAnalysis', null)
+        ->assertSee('La lecture n\'a pas eu lieu.', false)
+        ->assertSee('Cochez la case de consentement avant de lancer la lecture.')
+        ->assertSee('recopier les lignes de votre liasse à la main', false);
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Étape 3 — disposition de l'écran de relecture (lot ergonomie, 2026-09-24)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * L'écran plaçait l'aperçu du document à gauche (5fr) et la lecture à droite (7fr), pour
+ * permettre une comparaison œil à œil. Arbitré par Jérémie : cette comparaison n'existait
+ * pas, une liasse affichée sur un demi-écran étant ILLISIBLE.
+ *
+ * Les deux tableaux lus passent donc côte à côte en haut, l'aperçu sur toute la largeur en
+ * dessous — et la conséquence se traite dans le même geste : la comparaison passant par le
+ * défilement, l'aperçu doit devenir exploitable (pagination, zoom, page entière).
+ */
+it('empile la relecture : les deux tableaux lus en haut, l\'aperçu sur toute la largeur', function () {
+    repriseProperty($this->user);
+
+    $html = repriseAtStepThreeAi($this->user)
+        ->set('liasseConsent', true)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse')
+        ->html();
+
+    // Deux colonnes égales, et non plus l'aperçu contre la lecture.
+    preg_match('/\.rp-ai-review\s*\{([^}]*)\}/', $html, $grille);
+    expect($grille[1] ?? '')
+        ->toContain('repeat(2, minmax(0, 1fr))')
+        ->not->toContain('5fr');
+
+    // L'aperçu vient APRÈS la grille des deux tableaux, hors d'elle.
+    $grillePos = strpos($html, 'class="rp-ai-review"');
+    $apercuPos = strpos($html, 'class="rp-ai-doc"');
+
+    expect($grillePos)->not->toBeFalse()
+        ->and($apercuPos)->not->toBeFalse()
+        ->and($apercuPos)->toBeGreaterThan($grillePos);
+
+    // Le repli sous 900 px reste en place, pour les deux moitiés de l'écran.
+    expect($html)
+        ->toContain('@media (max-width: 900px) { .rp-ai-review { grid-template-columns: 1fr; } }')
+        ->toContain('height: 60vh');
+});
+
+/**
+ * Sans pagination ni zoom, un aperçu que l'on ne peut plus comparer d'un coup d'œil ne sert
+ * plus à rien : c'est la contrepartie de l'empilement.
+ */
+it('rend l\'aperçu de la liasse exploitable : pagination, zoom, page entière', function () {
+    repriseProperty($this->user);
+
+    $html = repriseAtStepThreeAi($this->user)
+        ->set('liasseConsent', true)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse')
+        ->html();
+
+    expect($html)
+        ->toContain('Page précédente')
+        ->toContain('Page suivante')
+        ->toContain('rp-ai-doc-zoom')
+        ->toContain('Ouvrir dans un onglet')
+        // La navigation passe par les `open parameters` du PDF : c'est ce qui évite
+        // d'embarquer pdf.js pour tourner sept pages.
+        ->toContain('#page=1&amp;zoom=100');
+
+    // Une page entière, et non plus les 420 px d'avant.
+    preg_match('/\.rp-ai-doc iframe\s*\{([^}]*)\}/', $html, $cadre);
+    expect($cadre[1] ?? '')
+        ->toContain('min-height: 520px')
+        ->not->toContain('420px');
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Étape 3 — le refus de ventilation devient actionnable (lot ergonomie, 2026-09-24)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Lecture dont les lignes débordent la base amortissable : 100 000 € de prix, 15 % de
+ * terrain, donc 85 000 € à ventiler — et 100 000 € de lignes lues.
+ */
+function liasseQuiDeborde(): array
+{
+    $ligne = fn (string $label, int $base) => [
+        'label' => $label,
+        'base' => $base,
+        'duration_years' => 20,
+        'annual' => (int) ($base / 20),
+        'cumul' => 0,
+        'cerfa_category' => 'constructions',
+        'confidence' => 0.9,
+    ];
+
+    return [
+        'document_type' => 'liasse_2033',
+        'confidence' => 0.9,
+        'values' => [],
+        'rows' => [
+            $ligne('Gros œuvre', 5_000_000),
+            $ligne('Toiture', 3_000_000),
+            $ligne('Terrain de sport attenant', 2_000_000),
+        ],
+        'file_path' => 'documents/1/ai-staging/liasse-test.pdf',
+        'file_name' => 'liasse-test.pdf',
+    ];
+}
+
+/**
+ * Le refus était juste — rien n'est écrit, ce n'est pas un faux positif — mais il tenait
+ * dans un message de 11,5 px qui disait quoi faire sans offrir le moindre moyen de le faire.
+ */
+it('rend le refus de ventilation actionnable, au lieu d\'un message sans bouton', function () {
+    $property = repriseProperty($this->user, ['acquisition_price' => 10_000_000]);
+
+    $wizard = repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseQuiDeborde())
+        ->call('applyLiasse');
+
+    // Le refus refuse VRAIMENT : rien n'est écrit.
+    expect(PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->count())->toBe(0);
+
+    $wizard->assertSet('liasseApplied', false)
+        ->assertSee('La ventilation dépasse la base amortissable')
+        // Les trois remèdes que le message nommait, désormais à portée de clic.
+        ->assertSee('Corriger la valeur retenue ou la part du terrain')
+        ->assertSee('Écarter les lignes qui ne portent pas sur le bâti')
+        ->assertSee('Revenir à l\'étape 2', false)
+        // Et les lignes à décocher, avec leur montant.
+        ->assertSee('Terrain de sport attenant');
+
+    expect($wizard->get('liasseOverflow'))->not->toBeNull();
+});
+
+it('écarte une ligne depuis la modale, et la recopie passe', function () {
+    $property = repriseProperty($this->user, ['acquisition_price' => 10_000_000]);
+
+    $wizard = repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseQuiDeborde())
+        ->call('applyLiasse')
+        ->assertSet('liasseApplied', false);
+
+    // La troisième ligne, 20 000 € de trop.
+    $wizard->call('toggleLiasseRow', 2)
+        ->call('applyLiasse')
+        ->assertSet('liasseApplied', true)
+        ->assertSet('liasseOverflow', null);
+
+    $composants = PropertyComponent::withoutGlobalScopes()
+        ->where('property_id', $property->id)
+        ->pluck('name');
+
+    expect($composants)->toHaveCount(2)
+        ->and($composants)->not->toContain('Terrain de sport attenant');
+});
+
+it('corrige la valeur retenue depuis la modale, sans quitter l\'écran', function () {
+    $property = repriseProperty($this->user, ['acquisition_price' => 10_000_000]);
+
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseQuiDeborde())
+        ->call('applyLiasse')
+        ->assertSet('liasseApplied', false)
+        // Le comptable avait retenu 200 000 € : la base passe à 170 000 €, les lignes tiennent.
+        ->set('acquisitionPrice', '200000')
+        ->call('fixPropertyFromOverflow')
+        ->assertSet('liasseOverflow', null)
+        ->assertSet('liasseApplied', true);
+
+    expect((int) $property->fresh()->acquisition_price)->toBe(20_000_000)
+        ->and(PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->count())->toBe(3);
+});
+
+it('refuse une correction illisible plutôt que d\'écrire un prix nul', function () {
+    $property = repriseProperty($this->user, ['acquisition_price' => 10_000_000]);
+
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseQuiDeborde())
+        ->call('applyLiasse')
+        ->set('acquisitionPrice', 'beaucoup')
+        ->call('fixPropertyFromOverflow')
+        // La modale reste ouverte, et dit pourquoi. ⚠️ Message interpolé par `{{ }}` :
+        // son apostrophe EST échappée, donc `assertSee()` par défaut — contrairement aux
+        // textes écrits en HTML brut dans la vue, qui demandent le second argument à `false`.
+        ->assertSee('Indiquez le prix d\'acquisition du bien.');
+
+    expect((int) $property->fresh()->acquisition_price)->toBe(10_000_000);
+});
+
+it('n\'accepte pas un index de ligne inventé par le navigateur', function () {
+    repriseProperty($this->user, ['acquisition_price' => 10_000_000]);
+
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseQuiDeborde())
+        ->call('applyLiasse')
+        ->call('toggleLiasseRow', 99)
+        ->assertSet('liasseExcludedRows', []);
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Correctifs de la recette bêta du 2026-10-15 (dossier de test rejoué)
+// ─────────────────────────────────────────────────────────────────────
+
+it('treats a finished reprise without deferred depreciation nor deficit as the start of the chain', function () {
+    // D14 : le cas le plus courant d'un loueur bénéficiaire. La liasse ne porte ni
+    // amortissement différé ni déficit, la reprise est terminée, et l'assistant de clôture
+    // réclamait pourtant l'exercice précédent, que l'utilisateur n'a jamais tenu ici.
+    $property = repriseProperty($this->user);
+
+    repriseAtStepFour($this->user, $property)
+        ->set('openingDeferred', '0')
+        ->set('openingAccumulated', '47394')
+        ->call('nextStep')
+        ->call('finish')
+        ->assertSet('finished', true);
+
+    $fiscalYear = FiscalYear::withoutGlobalScopes()
+        ->where('user_id', $this->user->id)->where('year', 2026)->firstOrFail();
+
+    expect((int) $fiscalYear->opening_deferred_depreciation)->toBe(0)
+        ->and($fiscalYear->openingDeficitsTotal())->toBe(0)
+        ->and($fiscalYear->hasOpeningBalances())->toBeTrue();
+
+    Livewire::actingAs($this->user)
+        ->test(FiscalYearWizard::class)
+        ->set('data.year', 2026)
+        ->assertDontSee('L\'exercice 2025 n\'existe pas', false)
+        ->set('data.status', FiscalYear::STATUS_CLOSED)
+        ->call('create')
+        ->assertHasNoErrors();
+
+    // La notification de la reprise est encore dans la session : on lit la dernière.
+    expect(collect(session('filament.notifications'))->pluck('title')->all())->toContain('Exercice fiscal créé')
+        ->and($fiscalYear->fresh()->status)->toBe(FiscalYear::STATUS_CLOSED);
+});
+
+it('proposes the year that follows the reprise in the fiscal year wizard', function () {
+    // Recette bêta : reprise terminée sur la liasse 2025 du cabinet, l'assistant de
+    // clôture proposait 2025 (l'année déjà déclarée) au lieu de 2026.
+    $property = repriseProperty($this->user);
+
+    repriseAtStepFour($this->user, $property)
+        ->set('openingDeferred', '0')
+        ->set('openingAccumulated', '47394')
+        ->call('nextStep')
+        ->call('finish')
+        ->assertSet('finished', true);
+
+    Livewire::actingAs($this->user)
+        ->test(FiscalYearWizard::class)
+        ->assertSet('data.year', 2026)
+        ->assertDontSee('L\'exercice 2025 n\'existe pas', false);
+});
+
+it('still asks for the previous year when nothing was ever taken over', function () {
+    // Contre-épreuve : un exercice sans provenance de reprise n'est pas un point de départ.
+    $property = repriseProperty($this->user);
+    app(DepreciationService::class)->generateDefaultComponents($property);
+
+    FiscalYear::forceCreate([
+        'user_id' => $this->user->id,
+        'year' => 2026,
+        'status' => FiscalYear::STATUS_DRAFT,
+        'opening_accumulated_depreciation' => 4_739_400,
+    ]);
+
+    expect(FiscalYear::withoutGlobalScopes()->where('user_id', $this->user->id)->first()->hasOpeningBalances())
+        ->toBeFalse();
+
+    Livewire::actingAs($this->user)
+        ->test(FiscalYearWizard::class)
+        ->set('data.year', 2026)
+        ->assertSee('L\'exercice 2025 n\'existe pas', false);
+});
+
+it('never offers to expense fees that the accountant amortises in 016', function () {
+    // D11 : écart sur 030 égal au cumul des frais, total brut 044 identique. Les frais sont
+    // amortis des deux côtés, rangés en 016 chez le cabinet. Les passer en charges les
+    // retirerait des immobilisations et supprimerait leur dotation annuelle.
+    $property = repriseProperty($this->user);
+
+    $component = repriseAtStepFour($this->user, $property)
+        ->set('openingDeferred', '0')
+        ->call('nextStep');
+
+    $lines = collect($component->instance()->report['lines'])->keyBy('key');
+    $gross = $lines[ReprisesCheckService::LINE_GROSS_ASSETS]['computed'];
+    $cumul = $lines[ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION]['computed'];
+
+    $component->call('goToStep', 4)
+        ->set('declaredGrossAssets', RepriseDossier::eurosFromCents($gross))
+        ->set('openingAccumulated', RepriseDossier::eurosFromCents($cumul - notaryCumulOf($property)))
+        ->call('nextStep')
+        ->assertSet('step', 5);
+
+    $line = collect($component->instance()->report['lines'])
+        ->firstWhere('key', ReprisesCheckService::LINE_ACCUMULATED_DEPRECIATION);
+
+    expect($line['verdict'])->toBe(ReprisesCheckService::VERDICT_EXPLAINED)
+        ->and($component->instance()->acquisitionFeesExpensedByFirm())->toBeFalse();
+
+    $component->assertSee('expliqué')
+        ->assertSee('Votre reprise est fidèle à votre liasse.')
+        ->assertDontSee('Passer mes frais en charges', false)
+        ->assertDontSee('Terminer quand même');
+
+    // Et l'action appelée depuis le navigateur ne passe pas non plus.
+    $component->call('expenseAcquisitionFees');
+
+    expect($property->fresh()->acquisition_fees_treatment)->not->toBe(Property::ACQUISITION_FEES_EXPENSED);
+});
+
+/** Lecture de liasse simulée, montants synthétiques en centimes. */
+function liasseSynthetique(array $rows, array $values = []): array
+{
+    return [
+        'document_type' => 'liasse_2033',
+        'confidence' => 0.9,
+        'values' => $values,
+        'rows' => array_map(fn (array $row) => $row + [
+            'duration_years' => 50,
+            'cumul' => null,
+            'cerfa_category' => PropertyComponent::cerfaCategoryForLiasseLabel($row['label']),
+            'confidence' => 0.9,
+        ], $rows),
+        'file_path' => 'documents/1/ai-staging/liasse-test.pdf',
+        'file_name' => 'liasse-test.pdf',
+    ];
+}
+
+it('absorbs the euro rounding of a liasse instead of refusing it for a few cents', function () {
+    // D8 : 200 001 € moins 15 % de terrain = 170 000,85 € de base ; la liasse arrondit la
+    // ligne Constructions à 170 001 €. Refusée au centime, la recopie affichait « 0 € »
+    // d'excédent à résorber.
+    $property = repriseProperty($this->user, ['acquisition_price' => 20_000_100, 'notary_fees' => 0]);
+
+    expect((int) $property->depreciable_base)->toBe(17_000_085);
+
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseSynthetique([
+            ['label' => 'Constructions', 'base' => 17_000_100, 'annual' => 340_000],
+        ]))
+        ->call('applyLiasse')
+        ->assertSet('liasseOverflow', null)
+        ->assertSet('liasseApplied', true)
+        ->assertNotified('Arrondi à l\'euro de la liasse absorbé');
+
+    $component = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->sole();
+
+    // La base tient dans la base amortissable, la dotation lue n'a pas bougé.
+    expect((int) $component->base_amount)->toBe(17_000_085)
+        ->and((int) $component->annual_depreciation)->toBe(340_000);
+});
+
+it('still refuses a real overflow, and shows its cents instead of 0 €', function () {
+    // Contre-épreuve : 1,15 € de trop sur une seule ligne n'est plus un arrondi à l'euro.
+    $property = repriseProperty($this->user, ['acquisition_price' => 20_000_100, 'notary_fees' => 0]);
+
+    $wizard = repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseSynthetique([
+            ['label' => 'Constructions', 'base' => 17_000_200, 'annual' => 340_000],
+        ]))
+        ->call('applyLiasse')
+        ->assertSet('liasseApplied', false);
+
+    expect($wizard->get('liasseOverflow')['message'])->toContain('170 000,85 €');
+
+    $wizard->assertSee('1,15 €')
+        ->assertSee('Excédent à résorber')
+        ->assertDontSee('Ça tient désormais');
+
+    expect(PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->count())->toBe(0);
+});
+
+it('keeps the Constructions line of a liasse in its own rubric once copied', function () {
+    // D9 : même une lecture rangée en « autres » (lue avant le correctif) retrouve sa
+    // rubrique d'origine à la recopie.
+    $property = repriseProperty($this->user);
+
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseSynthetique([
+            ['label' => 'Constructions', 'base' => 15_000_000, 'annual' => 375_000,
+                'cerfa_category' => PropertyComponent::CERFA_CATEGORY_OTHER],
+        ]))
+        ->call('applyLiasse')
+        ->assertSet('liasseApplied', true);
+
+    $component = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->sole();
+
+    expect($component->cerfa_category)->toBe(PropertyComponent::CERFA_CATEGORY_CONSTRUCTIONS);
+});
+
+it('keeps the depreciation read on the liasse, in the editor and through a save', function () {
+    // D10 : la dotation du cabinet (3 700 €) n'est pas base ÷ durée (3 750 €). L'éditeur
+    // la recalculait à l'affichage, et l'enregistrait ainsi au premier « Enregistrer ».
+    $property = repriseProperty($this->user);
+
+    $wizard = repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseSynthetique([
+            ['label' => 'Constructions', 'base' => 15_000_000, 'annual' => 370_000, 'duration_years' => 40],
+        ]))
+        ->call('applyLiasse')
+        ->assertSet('liasseApplied', true);
+
+    $component = PropertyComponent::withoutGlobalScopes()->where('property_id', $property->id)->sole();
+
+    expect((int) $component->annual_depreciation)->toBe(370_000);
+
+    $line = collect($wizard->instance()->editorData()['components'])->firstWhere('id', $component->id);
+
+    expect($line['annualDepreciation'])->toBe(370_000);
+
+    // Le navigateur renvoie la ligne telle qu'il l'affiche (même calcul que `annualCentsOf()`).
+    $wizard->call('saveComponents', [[
+        'id' => $component->id,
+        'name' => $line['name'],
+        'percentage' => $line['percentage'],
+        'baseAmount' => $line['baseAmount'],
+        'baseSource' => $line['baseSource'],
+        'annualDepreciation' => $line['annualDepreciation'] ?? intdiv($line['baseAmount'], $line['duration']),
+        'duration' => $line['duration'],
+        'sortOrder' => $line['sortOrder'],
+        'enabled' => true,
+        'cerfaCategory' => $line['cerfaCategory'],
+    ]]);
+
+    expect((int) $component->fresh()->annual_depreciation)->toBe(370_000);
+});
+
+it('prefills box 044 with the total of the liasse, not with box 028', function () {
+    // D12 : le champ « case 044 » recevait la case 028 lue, d'où un faux écart au contrôle
+    // égal aux incorporelles (les frais rangés en 014 par le cabinet).
+    repriseProperty($this->user);
+
+    $rows = [['label' => 'Constructions', 'base' => 15_000_000, 'annual' => 375_000]];
+
+    // 044 absente : 028 + 014.
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseSynthetique($rows, ['gross_assets' => 20_000_000, 'intangible_assets' => 1_000_000]))
+        ->call('applyLiasse')
+        ->assertSet('declaredGrossAssets', '210000');
+
+    // 044 lue : elle fait foi.
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseAnalysis', liasseSynthetique($rows, [
+            'gross_assets' => 20_000_000,
+            'intangible_assets' => 1_000_000,
+            'total_gross_assets' => 21_050_000,
+        ]))
+        ->call('applyLiasse')
+        ->assertSet('declaredGrossAssets', '210500');
+});
+
+it('gets box 044 and the declared result back when reviewing a reprise after a reload', function () {
+    // D13 : après « Terminer », rechargement, puis « Revoir ma reprise » : la case 044 et le
+    // résultat fiscal revenaient « non renseigné », et l'étape 3 réaffichait un dépôt vide.
+    repriseProperty($this->user);
+
+    repriseAtStepThreeAi($this->user)
+        ->set('liasseConsent', true)
+        ->set('liasseFile', fauxPdfLiasse())
+        ->call('analyzeLiasse')
+        ->call('applyLiasse')
+        ->call('nextStep')
+        ->call('nextStep')
+        ->assertSet('step', 5)
+        ->call('finish')
+        ->assertSet('finished', true);
+
+    $fresh = Livewire::actingAs($this->user)->test(RepriseDossier::class)
+        ->assertSet('finished', true)
+        ->assertSet('declaredGrossAssets', '200000')
+        ->assertSet('declaredFiscalResult', -85_000)
+        ->assertSet('liasseApplied', true)
+        ->call('reviewReprise');
+
+    $lines = collect($fresh->instance()->report['lines'])->keyBy('key');
+
+    expect($lines[ReprisesCheckService::LINE_GROSS_ASSETS]['declared'])->toBe(20_000_000)
+        ->and($lines[ReprisesCheckService::LINE_FISCAL_RESULT]['declared'])->toBe(-85_000);
+
+    // L'étape 3 montre le plan recopié, pas un nouveau dépôt de liasse.
+    $fresh->call('goToStep', 3)
+        ->assertSee('Enregistrer mon plan')
+        ->assertDontSee('Faire lire ma liasse');
 });

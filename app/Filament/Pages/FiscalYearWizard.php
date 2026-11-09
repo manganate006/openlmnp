@@ -8,6 +8,8 @@ use App\Models\Income;
 use App\Models\Expense;
 use App\Models\Property;
 use App\Services\FiscalYearService;
+use App\Support\DossierContext;
+use App\Support\MicroBicRules;
 use BackedEnum;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
@@ -48,6 +50,16 @@ class FiscalYearWizard extends Page
     }
     protected string $view = 'filament.pages.fiscal-year-wizard';
 
+    /**
+     * Un compte « membre » n'a jamais de biens à lui, donc aucun exercice à clore
+     * (lot « dossiers membre », décision du 2026-10-15). `FiscalYearResource` n'a pas
+     * de page de création propre : c'est CET assistant qu'il faut bloquer.
+     */
+    public static function canAccess(): bool
+    {
+        return parent::canAccess() && ! DossierContext::isMemberActingAsPrincipal();
+    }
+
     // -------------------------------------------------------------------------
     // État du formulaire
     // -------------------------------------------------------------------------
@@ -60,6 +72,17 @@ class FiscalYearWizard extends Page
         $this->data = [
             'year'   => app(FiscalYearService::class)->nextYearToCreate(auth()->user()),
             'status' => FiscalYear::STATUS_DRAFT,
+            // Défaut gênant n°12 du test de bout en bout (2026-10-15) : le Wizard
+            // rend TOUTES ses étapes dès le montage (masquées par Alpine, pas
+            // absentes du DOM) — le `Toggle::make('is_closed')` de l'étape
+            // « Confirmation » tente donc d'`entangle()` `data.is_closed` dès le
+            // premier rendu. Sans cette clé dans l'état initial, la propriété
+            // n'existe pas encore côté serveur au moment où le JS s'y accroche :
+            // « Livewire Entangle Error: … cannot be found on component ». Posé
+            // ICI pour correspondre au `->default(false)` du champ, qui ne
+            // s'applique qu'au `fill()` d'un formulaire — jamais à un état
+            // construit à la main comme celui-ci.
+            'is_closed' => false,
         ];
     }
 
@@ -381,21 +404,21 @@ class FiscalYearWizard extends Page
             $dedicated = $property->expenses()
                 ->whereYear('expense_date', $year)
                 ->where('is_dedicated', true)
-                ->sum('amount');
+                ->sum(Expense::usageAdjustedSql('amount'));
             $total += (int) $dedicated;
 
             // Charges partagées au prorata
             $shared = $property->expenses()
                 ->whereYear('expense_date', $year)
                 ->where('is_dedicated', false)
-                ->sum('amount');
+                ->sum(Expense::usageAdjustedSql('amount'));
             $total += (int) bcmul((string) $shared, $property->quota_share, 0);
 
-            // Intérêts et assurances d'emprunt (quote-part)
+            // Intérêts et assurances d'emprunt (quote-part, sauf emprunt dédié)
             foreach ($property->loans as $loan) {
                 $interest  = $loan->payments()->whereYear('payment_date', $year)->sum('interest_amount');
                 $insurance = $loan->payments()->whereYear('payment_date', $year)->sum('insurance_amount');
-                $total    += (int) bcmul((string) ($interest + $insurance), $property->quota_share, 0);
+                $total    += (int) $loan->prorate((string) ($interest + $insurance), $property->quota_share);
             }
         }
 
@@ -705,19 +728,43 @@ class FiscalYearWizard extends Page
                 ->sum('amount');
         }
 
-        $microBic50 = (int) bcmul((string) $grossIncome, '0.5', 0);
-        $microBic30 = (int) bcmul((string) $grossIncome, '0.7', 0); // abattement 30 %, 70 % imposable
+        // Taux centralisés (App\Support\MicroBicRules), pas de 50/30 en dur.
+        $classifiedRate = (string) MicroBicRules::rate(Property::CLASSIFICATION_CLASSIFIED, $year);
+        $unclassifiedRate = (string) MicroBicRules::rate(Property::CLASSIFICATION_UNCLASSIFIED, $year);
+        $microBic50 = (int) bcmul((string) $grossIncome, bcdiv($classifiedRate, '100', 10), 0);
+        $microBic30 = (int) bcmul((string) $grossIncome, bcsub('1', bcdiv($unclassifiedRate, '100', 10), 10), 0);
         $realResult = $this->getFiscalResult();
 
-        $advantageVs50 = $microBic50 - $realResult;
-        $advantageVs30 = $microBic30 - $realResult;
+        // Micro-BIC : mêmes règles qu'un dossier individuel pour une indivision (piège P13,
+        // simplification du 2026-10-15 — voir App\Support\Indivision).
+        $available50 = MicroBicRules::isAvailable(Property::CLASSIFICATION_CLASSIFIED, $year, $grossIncome);
+        $available30 = MicroBicRules::isAvailable(Property::CLASSIFICATION_UNCLASSIFIED, $year, $grossIncome);
+        $unavailableLabel = ' — plafond dépassé';
 
-        $recommended = $realResult < $microBic50 ? 'réel' : 'micro-BIC (50 %)';
+        // Défaut gênant n°11 du test de bout en bout (2026-10-15) : une base
+        // imposable micro-BIC PLUS ÉLEVÉE que le réel coûte PLUS CHER au foyer
+        // (c'est un désavantage), mais `$microBicX - $realResult` est alors
+        // POSITIF — et `formatSignedEuros()` affiche tout positif en VERT avec un
+        // « + », comme un gain. L'avantage DU MICRO-BIC, c'est au contraire une
+        // base plus BASSE que le réel : `$realResult - $microBicX`, positif
+        // seulement quand le micro-BIC fait vraiment gagner.
+        $advantageVs50 = $realResult - $microBic50;
+        $advantageVs30 = $realResult - $microBic30;
+
+        $recommended = ($available50 && $realResult >= $microBic50) ? 'micro-BIC (' . $classifiedRate . ' %)' : 'réel';
 
         $rows = [
             ['Régime', 'Base imposable', 'Avantage vs réel'],
-            ['Micro-BIC 50 % (classé)', $this->formatEuros($microBic50), $this->formatSignedEuros($advantageVs50)],
-            ['Micro-BIC 30 % (non classé)', $this->formatEuros($microBic30), $this->formatSignedEuros($advantageVs30)],
+            [
+                'Micro-BIC ' . $classifiedRate . ' % (classé)' . ($available50 ? '' : $unavailableLabel),
+                $this->formatEuros($microBic50),
+                $available50 ? $this->formatSignedEuros($advantageVs50) : 'non disponible',
+            ],
+            [
+                'Micro-BIC ' . $unclassifiedRate . ' % (non classé)' . ($available30 ? '' : $unavailableLabel),
+                $this->formatEuros($microBic30),
+                $available30 ? $this->formatSignedEuros($advantageVs30) : 'non disponible',
+            ],
             ['Régime réel simplifié', $this->formatEuros($realResult), '— référence —'],
         ];
 
@@ -742,7 +789,7 @@ class FiscalYearWizard extends Page
 
         $tableHtml .= '</tbody></table>';
 
-        $verdictColor = $realResult < $microBic50 ? 'wz-verdict-good' : 'wz-verdict-bad';
+        $verdictColor = (! $available50 || $realResult < $microBic50) ? 'wz-verdict-good' : 'wz-verdict-bad';
 
         return new HtmlString(
             '<div style="display:flex;flex-direction:column;gap:1rem">'

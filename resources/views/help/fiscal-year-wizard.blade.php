@@ -1,6 +1,7 @@
 <div class="ctx-help">
     <h3>Assistant de création d'exercice</h3>
     <p>Cet assistant vous aide à créer un nouvel exercice fiscal et vérifie la cohérence de vos données avant le calcul.</p>
+    <p>L'année proposée à l'ouverture est le premier exercice manquant de votre chaîne. Si vous avez repris un dossier tenu par un cabinet, c'est le premier exercice non clôturé qui suit votre dernière liasse : les années qu'elle couvre ne sont jamais proposées.</p>
 
     <h3>Vérifications automatiques</h3>
     <ul>

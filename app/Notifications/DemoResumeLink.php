@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\URL;
  * tard trouvait un bac à sable bien vivant, et définitivement inaccessible.
  *
  * ⚠️ Contenu volontairement NEUTRE : ce dépôt est public, il ne porte ni tarif ni
- * argumentaire. Le bloc commercial n'apparaît que si `demo.links.pro` est renseignée —
+ * argumentaire. Le bloc commercial n'apparaît que si `demo.links.pro` est renseignée -
  * vide par défaut, donc invisible en auto-hébergé. Même patron que `feedback.links.pro`.
  */
 class DemoResumeLink extends Notification
@@ -34,7 +34,7 @@ class DemoResumeLink extends Notification
      * ⚠️ Hors requête HTTP (la commande planifiée), `URL::forceRootUrl()` est indispensable :
      * sans lui le lien est bâti sur l'hôte interne du conteneur et arrive cassé.
      *
-     * Mais `forceRootUrl()` ne fixe que l'HÔTE — le schéma, lui, est repris de la requête
+     * Mais `forceRootUrl()` ne fixe que l'HÔTE - le schéma, lui, est repris de la requête
      * courante et vient donc écraser celui de `app.url`. Un lien émis derrière un proxy mal
      * configuré sortirait en `http://`. D'où le `forceScheme()` explicite : la garantie ne
      * doit pas reposer sur `TrustProxies`.
@@ -59,7 +59,7 @@ class DemoResumeLink extends Notification
     }
 
     /**
-     * ⚠️ Le destinataire ne se choisit PAS ici. `MailMessage` n'a pas de `->to()` — c'est une
+     * ⚠️ Le destinataire ne se choisit PAS ici. `MailMessage` n'a pas de `->to()` - c'est une
      * méthode de `Mailable`, et l'appeler lève une `Error` fatale AU MOMENT DE L'ENVOI, donc
      * après que la prolongation a déjà été écrite en base. Symptôme observé en production le
      * 2026-09-06 : le sandbox était bien prolongé de 7 jours et l'utilisateur voyait un écran

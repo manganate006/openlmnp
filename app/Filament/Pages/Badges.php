@@ -18,6 +18,16 @@ class Badges extends Page
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
     protected static string | UnitEnum | null $navigationGroup = null;
     protected static ?string $navigationLabel = 'Badges';
+
+    /**
+     * Masqué en mode simple : c'est un dispositif d'encouragement, pas un outil
+     * comptable. Le mode simple existe pour ne montrer que ce qui sert à tenir
+     * ses comptes — et trois utilisateurs sur quatre y sont.
+     */
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
     protected static ?string $title = 'Mes badges';
     protected static ?int $navigationSort = 99;
     protected static ?string $slug = 'badges';

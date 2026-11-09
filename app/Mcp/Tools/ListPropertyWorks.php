@@ -64,7 +64,7 @@ class ListPropertyWorks extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id' => $schema->integer('Filtrer par identifiant de bien (optionnel)'),
+            'property_id' => $schema->integer()->description('Filtrer par identifiant de bien (optionnel)'),
         ];
     }
 }

@@ -208,8 +208,8 @@ it('reports the three gaps that explain almost every ticket', function () {
 
     // 17 000 000 × 20 %
     expect($report['gaps']['base_moins_composants'])->toBe(3_400_000)
-        // L'invariant : `044 − 490` vaut exactement la part non ventilée.
-        ->and($report['gaps']['044_moins_490'])->toBe($report['gaps']['base_moins_composants'])
+        // L'invariant : `044 − 496` vaut exactement la part non ventilée.
+        ->and($report['gaps']['044_moins_496'])->toBe($report['gaps']['base_moins_composants'])
         // Et la dotation ne peut pas diverger entre les deux formulaires.
         ->and($report['gaps']['572_moins_254'])->toBe(0);
 });

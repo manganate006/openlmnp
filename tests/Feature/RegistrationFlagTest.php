@@ -60,3 +60,39 @@ it('accepts boolean values as well', function () {
     User::factory()->create();
     expect(RegistrationGate::allows())->toBeTrue();
 });
+
+// === RegistrationGate : mode invitation ===
+
+it('ne confond pas « invite » avec « false »', function () {
+    // ⚠️ L'ancre du piège central : filter_var('invite', FILTER_VALIDATE_BOOL) rend FALSE.
+    // Sans le court-circuit de RegistrationGate, le mode se comporterait exactement comme
+    // « false », la route /register ne serait pas enregistrée, et TOUS les liens
+    // d'invitation tomberaient en 404 — sans le moindre message.
+    config(['app.allow_registration' => RegistrationGate::MODE_INVITE]);
+    User::factory()->create();
+
+    expect(RegistrationGate::allows())->toBeFalse()
+        // ... mais la route doit exister quand même, c'est là qu'atterrit l'invité.
+        ->and(RegistrationGate::exposesRoute())->toBeTrue()
+        ->and(RegistrationGate::requiresInvitation())->toBeTrue();
+
+    config(['app.allow_registration' => false]);
+
+    expect(RegistrationGate::exposesRoute())->toBeFalse();
+});
+
+it('laisse l\'inscription ouverte en mode invitation tant qu\'aucun compte n\'existe', function () {
+    // Repli d'amorçage : sinon une instance neuve démarrée en « invite » n'a personne
+    // pour émettre la première invitation.
+    config(['app.allow_registration' => RegistrationGate::MODE_INVITE]);
+
+    expect(RegistrationGate::allows())->toBeTrue()
+        ->and(RegistrationGate::requiresInvitation())->toBeFalse();
+});
+
+it('ignore les comptes démo en mode invitation', function () {
+    config(['app.allow_registration' => RegistrationGate::MODE_INVITE]);
+    User::factory()->create(['is_demo' => true]);
+
+    expect(RegistrationGate::allows())->toBeTrue();
+});

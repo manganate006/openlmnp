@@ -327,7 +327,9 @@
                             </p>
                             <p class="dx-banner-sub">
                                 @if ($atRisk)
-                                    {{ $this->atRiskSentence() }} seront supprimés. Vous pouvez les garder.
+                                    {{-- Le verbe et le pronom appartiennent à la phrase : leur accord dépend
+                                         de ce qu'elle énumère (« votre exercice sera supprimé »). --}}
+                                    {{ $this->atRiskSentence() }}
                                 @else
                                     Tout ce que vous saisirez ici sera supprimé. Vous pouvez le garder.
                                 @endif
@@ -476,7 +478,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                                         </svg>
                                     </span>
-                                    <h2 id="dx-title">Gardez-les {{ config('demo.extended_ttl_days') }} jours de plus</h2>
+                                    <h2 id="dx-title">Gardez-les {{ \App\Support\Fr::accorde((int) config('demo.extended_ttl_days'), 'jour') }} de plus</h2>
                                     <p class="dx-lead">
                                         Laissez votre adresse : votre bac à sable est prolongé jusqu'au
                                         <strong>{{ now()->addDays((int) config('demo.extended_ttl_days'))->translatedFormat('j F') }}</strong>,
@@ -498,8 +500,28 @@
                                     </label>
                                     @error('consent') <p class="dx-error">Merci de cocher cette case pour recevoir le lien.</p> @enderror
 
+                                    @if (filled(config('demo.links.lead')))
+                                        {{--
+                                            ⚠️ Case FACULTATIVE et SÉPARÉE du consentement ci-dessus,
+                                            qui promet « aucune autre utilisation » : la fondre dedans
+                                            viderait cette promesse de son sens.
+
+                                            Elle ne transmet qu'une intention. Le consentement reste le
+                                            double opt-in du site — une demande de confirmation à
+                                            cliquer —, et rien ne part avant ce clic.
+                                        --}}
+                                        <label class="dx-consent">
+                                            <input type="checkbox" wire:model="newsletter">
+                                            <span>
+                                                Recevoir aussi les rappels fiscaux : liasse, CFE,
+                                                changements de règles. Quelques e-mails par an,
+                                                désinscription en un clic.
+                                            </span>
+                                        </label>
+                                    @endif
+
                                     <button type="submit" class="dx-btn dx-btn-primary" wire:loading.attr="disabled">
-                                        <span wire:loading.remove wire:target="extend">Prolonger de {{ config('demo.extended_ttl_days') }} jours</span>
+                                        <span wire:loading.remove wire:target="extend">Prolonger de {{ \App\Support\Fr::accorde((int) config('demo.extended_ttl_days'), 'jour') }}</span>
                                         <span wire:loading wire:target="extend">Envoi…</span>
                                     </button>
                                 </form>

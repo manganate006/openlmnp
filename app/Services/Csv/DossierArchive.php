@@ -6,6 +6,9 @@ use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Income;
 use App\Models\Loan;
+use App\Models\LoanPayment;
+use App\Services\LoanService;
+use Illuminate\Database\Eloquent\Model;
 use App\Models\Property;
 use App\Models\PropertyComponent;
 use App\Models\PropertyWork;
@@ -29,6 +32,12 @@ use Illuminate\Support\Facades\DB;
  *     reports. Les rejouer sur une autre instance produirait des exercices clôturés que
  *     personne n'a déclarés. Ils se recalculent après import.
  *   - les **écritures comptables** : dérivées, régénérées à la demande.
+ *   - le **tableau d'amortissement d'un emprunt CALCULÉ** : dérivé lui aussi, il est
+ *     RÉGÉNÉRÉ à l'import. Jusqu'au format 2, il ne l'était pas : un dossier importé
+ *     n'avait plus aucune échéance, donc plus d'intérêts (294) ni d'assurance (242), et la
+ *     liasse surévaluait le résultat sans rien signaler (constaté en rejouant un dossier
+ *     réel le 2026-10-29). Un tableau IMPORTÉ de la banque, lui, n'est pas recalculable :
+ *     ses échéances voyagent dans l'archive.
  *   - le **mot de passe** et les jetons : une archive n'est pas une sauvegarde de compte.
  */
 class DossierArchive
@@ -38,8 +47,22 @@ class DossierArchive
      *
      * 1 — format initial (2026-09-04) : biens, composants, travaux, mobilier, recettes,
      *     charges, emprunts. Toute évolution non rétrocompatible incrémente ce nombre.
+     * 2 — 2026-10-29 : origine du tableau d'amortissement (`schedule_source`) et, pour un
+     *     tableau importé de la banque, ses échéances (`payments`). Une version qui ne lit
+     *     que le format 1 les ignorerait en silence : d'où le changement de numéro.
+     * 3 — 2026-10-30 : première mise en location du bien (`activity_start_date`), distincte
+     *     du début du réel. Une version qui l'ignorerait perdrait les amortissements réputés
+     *     pratiqués des années au micro-BIC : le cumul (030) changerait sans rien signaler.
+     *     Même format : l'année couverte par un cumul repris (`opening_accumulated_year`), qui
+     *     manquait — sans elle, l'import recomptait les années déjà dans le cumul.
      */
-    public const SCHEMA_VERSION = 1;
+    public const SCHEMA_VERSION = 3;
+
+    /** Colonnes d'une échéance, pour un tableau importé (un tableau calculé se régénère). */
+    private const PAYMENT_COLUMNS = [
+        'payment_date', 'month_number', 'capital_amount', 'interest_amount',
+        'insurance_amount', 'remaining_capital',
+    ];
 
     /**
      * Colonnes exportées par table.
@@ -54,22 +77,23 @@ class DossierArchive
             'acquisition_date', 'acquisition_price', 'notary_fees', 'agency_fees',
             'acquisition_fees_treatment', 'acquisition_fees_duration',
             'market_value', 'market_value_date', 'land_percentage', 'rental_start_date',
-            'airbnb_commission_rate', 'rental_type', 'tva_regime', 'is_primary_residence', 'notes',
+            'activity_start_date', 'airbnb_commission_rate', 'rental_type', 'tva_regime', 'is_primary_residence',
+            'residence_situation', 'tourism_classification', 'notes',
         ],
         'components' => [
             'name', 'percentage', 'duration_years', 'base_amount', 'annual_depreciation',
             'base_source', 'depreciation_start_date', 'cerfa_category',
-            'opening_accumulated_depreciation', 'sort_order',
+            'opening_accumulated_depreciation', 'opening_accumulated_year', 'sort_order',
         ],
         'works' => [
             'description', 'amount', 'tva_rate', 'work_date', 'duration_years',
             'is_dedicated', 'annual_depreciation', 'depreciation_source',
-            'opening_accumulated_depreciation',
+            'opening_accumulated_depreciation', 'opening_accumulated_year',
         ],
         'furniture' => [
             'description', 'amount', 'tva_rate', 'purchase_date', 'duration_years',
             'is_dedicated', 'is_second_hand', 'annual_depreciation', 'depreciation_source',
-            'opening_accumulated_depreciation',
+            'opening_accumulated_depreciation', 'opening_accumulated_year',
         ],
         'incomes' => [
             'income_date', 'amount', 'tva_rate', 'platform_fee', 'tourist_tax', 'source',
@@ -77,11 +101,12 @@ class DossierArchive
         ],
         'expenses' => [
             'expense_date', 'amount', 'tva_rate', 'category', 'description',
-            'is_dedicated', 'recurring_type', 'notes',
+            'is_dedicated', 'business_use_bp', 'recurring_type', 'notes',
         ],
         'loans' => [
             'bank_name', 'amount', 'annual_rate', 'duration_months', 'start_date',
             'monthly_payment', 'insurance_monthly', 'insurance_type', 'insurance_rate',
+            'is_dedicated', 'schedule_source',
         ],
     ];
 
@@ -118,7 +143,10 @@ class DossierArchive
                 'furniture'  => $p->furniture->map(fn ($f) => $this->pick($f, self::COLUMNS['furniture']))->values()->all(),
                 'incomes'    => $p->incomes->map(fn ($i) => $this->pick($i, self::COLUMNS['incomes']))->values()->all(),
                 'expenses'   => $p->expenses->map(fn ($e) => $this->pick($e, self::COLUMNS['expenses']))->values()->all(),
-                'loans'      => $p->loans->map(fn ($l) => $this->pick($l, self::COLUMNS['loans']))->values()->all(),
+                'loans'      => $p->loans->map(fn (Loan $l) => $this->pick($l, self::COLUMNS['loans']) + ($l->hasImportedSchedule()
+                    ? ['payments' => $l->payments()->withoutGlobalScopes()->reorder()->orderBy('month_number')->get()
+                        ->map(fn ($payment) => $this->pick($payment, self::PAYMENT_COLUMNS))->values()->all()]
+                    : []))->values()->all(),
             ])->values()->all(),
         ];
     }
@@ -201,7 +229,8 @@ class DossierArchive
                 }
 
                 foreach ($row['loans'] ?? [] as $child) {
-                    $this->write(Loan::class, $property, $child, self::COLUMNS['loans']);
+                    $loan = $this->write(Loan::class, $property, $child, self::COLUMNS['loans']);
+                    $this->restoreSchedule($loan, $child['payments'] ?? []);
                     $counts['loans']++;
                 }
             }
@@ -218,9 +247,30 @@ class DossierArchive
      * silence par le `$fillable` rendrait l'aller-retour non identique — sans lever la
      * moindre erreur.
      */
-    private function write(string $model, Property $property, array $row, array $columns): void
+    private function write(string $model, Property $property, array $row, array $columns): Model
     {
-        $model::forceCreate(['property_id' => $property->id] + $this->only($row, $columns));
+        return $model::forceCreate(['property_id' => $property->id] + $this->only($row, $columns));
+    }
+
+    /**
+     * Le tableau d'amortissement d'un emprunt importé : celui de la banque s'il voyage dans
+     * l'archive, sinon recalculé — un emprunt sans échéance ne porte ni intérêts ni assurance.
+     *
+     * @param  list<array<string, mixed>>  $payments
+     */
+    private function restoreSchedule(Loan $loan, array $payments): void
+    {
+        if ($payments === []) {
+            // Sans échéances dans l'archive (format 1, ou tableau calculé), on le calcule.
+            $loan->forceFill(['schedule_source' => Loan::SCHEDULE_COMPUTED])->save();
+            app(LoanService::class)->generateSchedule($loan, force: true);
+
+            return;
+        }
+
+        foreach ($payments as $payment) {
+            LoanPayment::forceCreate(['loan_id' => $loan->id] + $this->only($payment, self::PAYMENT_COLUMNS));
+        }
     }
 
     /**

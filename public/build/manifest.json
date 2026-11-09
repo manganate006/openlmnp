@@ -1,9 +1,9 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-CavGoFJb.css",
-    "name": "app",
+    "file": "assets/app-css-C6Xh6bc2.css",
+    "name": "app-css",
     "names": [
-      "app.css"
+      "app-css.css"
     ],
     "src": "resources/css/app.css",
     "isEntry": true
@@ -12,6 +12,12 @@
     "file": "assets/app-34mOoJaZ.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/vault.js": {
+    "file": "assets/vault.js",
+    "name": "vault",
+    "src": "resources/js/vault.js",
     "isEntry": true
   }
 }

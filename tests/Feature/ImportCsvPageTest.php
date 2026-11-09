@@ -49,7 +49,7 @@ function importCsvProperty(User $user): Property
 function uploadedCsv(string $content, ?User $owner = null): array
 {
     // Dossier d'import de l'utilisateur du test : l'écran refuse tout autre chemin.
-    $path = 'imports/' . ($owner ?? test()->user)->id . '/' . uniqid('olmnp-page-') . '.csv';
+    $path = \App\Support\ImportUpload::directoryFor(($owner ?? test()->user)->id) . '/' . uniqid('olmnp-page-') . '.csv';
     Storage::disk()->put($path, $content);
 
     return [uniqid('u') => $path];

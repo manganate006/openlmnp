@@ -24,7 +24,9 @@ it('announces exactly the forms the document contains', function () {
     preg_match_all('/<h2>Formulaire ([^<—]+?)\s*—/u', $markup, $matches);
 
     $inDocument = array_values(array_unique(array_map('trim', $matches[1])));
-    $announced = TaxReturnService::FORMS;
+    // Le document peut contenir la 2031 bis-SD (dossier d'indivision seulement) : on compare
+    // donc à la réunion des deux listes, et `formsFor()` est vérifié séparément ci-dessous.
+    $announced = [...TaxReturnService::FORMS, ...TaxReturnService::FORMS_INDIVISION];
 
     sort($inDocument);
     sort($announced);
@@ -38,7 +40,15 @@ it('keeps the MCP tool announcement anchored to the same source', function () {
 
     // Pas de liste recopiée : l'outil lit la constante. Une copie se périme en silence, et
     // c'est exactement ce qui s'était produit.
-    expect($tool)->toContain('TaxReturnService::FORMS')
+    expect($tool)->toContain('TaxReturnService::formsFor(')
         ->and($tool)->not->toContain("'2033-G'")
         ->and($tool)->not->toContain("'2033-E'");
+});
+
+it('announces the 2031 bis-SD only for an indivision file', function () {
+    $single = \App\Models\User::factory()->make(['is_indivision' => false]);
+    $indivision = \App\Models\User::factory()->make(['is_indivision' => true]);
+
+    expect(TaxReturnService::formsFor($single))->toBe(TaxReturnService::FORMS)
+        ->and(TaxReturnService::formsFor($indivision))->toBe([...TaxReturnService::FORMS, '2031-bis-SD']);
 });

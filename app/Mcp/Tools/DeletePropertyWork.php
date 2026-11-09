@@ -43,7 +43,7 @@ class DeletePropertyWork extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'work_id' => $schema->integer('Identifiant des travaux à supprimer')->required(),
+            'work_id' => $schema->integer()->description('Identifiant des travaux à supprimer')->required(),
         ];
     }
 }

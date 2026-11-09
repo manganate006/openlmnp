@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\TvaHelper;
+use App\Models\Concerns\HasDocuments;
 use App\Models\Scopes\BelongsToUserThroughPropertyScope;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Income extends Model
 {
+    use HasDocuments;
+
     public const SOURCE_AIRBNB  = 'airbnb';
     public const SOURCE_BOOKING = 'booking';
     public const SOURCE_ABRITEL = 'abritel';

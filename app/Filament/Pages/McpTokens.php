@@ -3,8 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Models\LinkedDossier;
+use App\Models\User;
+use App\Support\DossierContext;
 use App\Support\McpDemo;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -13,6 +17,9 @@ use Filament\Support\Icons\Heroicon;
 class McpTokens extends Page
 {
     use NavigationAware;
+
+    /** Valeur du sélecteur « Pour » qui désigne le compte principal lui-même (jamais une clé vide, voir le formulaire ci-dessous). */
+    private const PERSONAL = 'personal';
 
     protected string $view = 'filament.pages.mcp-tokens';
 
@@ -30,7 +37,11 @@ class McpTokens extends Page
 
     public static function canAccess(): bool
     {
-        return config('mcp.enabled', false) && (auth()->user()?->mcp_enabled ?? false);
+        // Un dossier lié n'a jamais de jeton MCP qui lui soit propre (lots 1-4, voir
+        // le plan des dossiers liés) : la page est purement et simplement fermée.
+        return config('mcp.enabled', false)
+            && (auth()->user()?->mcp_enabled ?? false)
+            && ! (auth()->user()?->is_linked_dossier ?? false);
     }
 
     protected static function isHiddenInSimpleMode(): bool
@@ -69,13 +80,50 @@ class McpTokens extends Page
                 ->icon('heroicon-o-plus')
                 ->color('primary')
                 ->visible(fn () => auth()->user()->mcp_enabled && ! McpDemo::isDemoUser(auth()->user()))
-                ->form([
-                    TextInput::make('name')
-                        ->label('Nom du token')
-                        ->placeholder('Ex : Claude Desktop, Mon script…')
-                        ->required()
-                        ->maxLength(255),
-                ])
+                ->form(function () {
+                    $fields = [
+                        TextInput::make('name')
+                            ->label('Nom du token')
+                            ->placeholder('Ex : Claude Desktop, Mon script…')
+                            ->required()
+                            ->maxLength(255),
+                    ];
+
+                    // Lot 5 des dossiers liés : un jeton peut agir au nom d'un
+                    // dossier dont le principal est membre ACTIF, plutôt qu'en
+                    // son nom propre. Jamais pour la démo publique (jeton
+                    // partagé, lecture seule) — cette page lui ferme déjà
+                    // l'action elle-même, voir ->visible() ci-dessus ; la liste
+                    // reste vide par construction si ce garde-fou venait à
+                    // manquer.
+                    $dossiers = McpDemo::isDemoUser(auth()->user())
+                        ? collect()
+                        : DossierContext::dossiersFor(auth()->user());
+
+                    if ($dossiers->isNotEmpty()) {
+                        $fields[] = Select::make('dossier_public_id')
+                            ->label('Pour')
+                            ->native(false)
+                            // Défaut gênant n°9 du test de bout en bout (2026-10-15) :
+                            // le sélecteur s'ouvrait VIDE. Une clé d'option VIDE
+                            // ('') comme valeur par défaut ne s'affiche jamais comme
+                            // sélectionnée dans ce composant — un état vide/null est
+                            // ce que son rendu interprète comme « rien choisi »,
+                            // même si '' est techniquement une clé valide de
+                            // `options()`. D'où le jeton `self::PERSONAL`, non vide.
+                            ->default(self::PERSONAL)
+                            ->helperText('Un jeton « dossier » cesse de fonctionner dès que vous n\'avez plus accès à ce dossier.')
+                            ->options(
+                                collect([self::PERSONAL => 'Mon dossier personnel'])
+                                    ->merge($dossiers->mapWithKeys(
+                                        fn (LinkedDossier $dossier) => [$dossier->public_id => $dossier->user?->name ?? 'Dossier']
+                                    ))
+                                    ->toArray()
+                            );
+                    }
+
+                    return $fields;
+                })
                 ->modalWidth('md')
                 ->action(function (array $data) {
                     $user = auth()->user();
@@ -90,7 +138,32 @@ class McpTokens extends Page
                         return;
                     }
 
+                    // Revérifié ICI, jamais confié à la seule liste affichée par
+                    // le formulaire : appartenance ACTIVE au moment de la
+                    // création, pas au moment où le formulaire a été rendu.
+                    $dossierUserId = null;
+                    $dossierPublicId = $data['dossier_public_id'] ?? null;
+
+                    if (filled($dossierPublicId) && $dossierPublicId !== self::PERSONAL) {
+                        $dossier = DossierContext::dossiersFor($user)->firstWhere('public_id', $dossierPublicId);
+
+                        if ($dossier === null) {
+                            Notification::make()
+                                ->title('Dossier introuvable')
+                                ->body('Vous n\'êtes plus membre de ce dossier, ou son identifiant est invalide.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        $dossierUserId = $dossier->user_id;
+                    }
+
                     $token = $user->createToken($data['name']);
+
+                    if ($dossierUserId !== null) {
+                        $token->accessToken->update(['dossier_user_id' => $dossierUserId]);
+                    }
 
                     $this->newPlainToken = $token->plainTextToken;
 
@@ -125,12 +198,23 @@ class McpTokens extends Page
 
     public function getTokens(): array
     {
-        return auth()->user()->tokens()
+        $tokens = auth()->user()->tokens()
             ->orderByDesc('created_at')
-            ->get()
+            ->get();
+
+        // Un seul aller-retour pour nommer les dossiers de TOUS les jetons
+        // affichés, plutôt qu'une requête par ligne.
+        $dossierNames = User::query()
+            ->whereIn('id', $tokens->pluck('dossier_user_id')->filter()->unique())
+            ->pluck('name', 'id');
+
+        return $tokens
             ->map(fn ($token) => [
                 'id' => $token->id,
                 'name' => $token->name,
+                'dossier_name' => $token->dossier_user_id !== null
+                    ? ($dossierNames[$token->dossier_user_id] ?? 'Dossier supprimé')
+                    : null,
                 'last_used_at' => $token->last_used_at?->diffForHumans() ?? 'Jamais',
                 'created_at' => $token->created_at->format('d/m/Y H:i'),
             ])

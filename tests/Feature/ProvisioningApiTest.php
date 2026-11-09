@@ -1,8 +1,12 @@
 <?php
 
+use App\Enums\AccountKind;
+use App\Enums\DossierMemberRole;
+use App\Models\LinkedDossier;
 use App\Models\User;
 use App\Notifications\WelcomeSetPassword;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 const PROVISION_TOKEN = 'test-provision-token-0123456789abcdef';
 
@@ -174,6 +178,139 @@ it('sends the welcome link to the paying address, not to the one left during the
     Notification::assertSentTo($sandbox, WelcomeSetPassword::class);
 });
 
+// === Quota de dossiers liés (lot 4, provisioning) ===
+
+function createActiveLinkedDossier(User $owner): LinkedDossier
+{
+    // SIREN unique à l'échelle de l'instance (archives comprises) : chaque appel
+    // doit en forger un distinct, même au sein d'un seul test.
+    static $sequence = 0;
+    $sequence++;
+
+    return LinkedDossier::create([
+        'public_id' => (string) Str::ulid(),
+        'user_id' => User::factory()->create(['is_linked_dossier' => true])->id,
+        'owner_id' => $owner->id,
+        'kind' => 'indivision',
+        'siren' => str_pad((string) (100000000 + $sequence), 9, '0', STR_PAD_LEFT),
+    ]);
+}
+
+it('poses the linked dossier quota on an existing account', function () {
+    $user = User::factory()->create(['email' => 'client@example.com']);
+
+    $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'client@example.com',
+        'linked_dossier_quota' => 1,
+    ], provisionHeaders())
+        ->assertOk()
+        ->assertJson(['status' => 'updated']);
+
+    expect($user->fresh()->linked_dossier_quota)->toBe(1);
+});
+
+it('is idempotent when posing the same quota twice', function () {
+    $user = User::factory()->create(['email' => 'client@example.com']);
+
+    $payload = ['email' => 'client@example.com', 'linked_dossier_quota' => 1];
+    $this->postJson('/api/admin/users/entitlements', $payload, provisionHeaders())->assertOk();
+    $this->postJson('/api/admin/users/entitlements', $payload, provisionHeaders())->assertOk();
+
+    expect($user->fresh()->linked_dossier_quota)->toBe(1);
+});
+
+it('rejects a negative or non integer quota', function () {
+    $user = User::factory()->create(['email' => 'client@example.com']);
+
+    $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'client@example.com',
+        'linked_dossier_quota' => -1,
+    ], provisionHeaders())->assertUnprocessable();
+
+    $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'client@example.com',
+        'linked_dossier_quota' => 'un',
+    ], provisionHeaders())->assertUnprocessable();
+
+    expect($user->fresh()->linked_dossier_quota)->toBeNull();
+});
+
+it('responds identically (no enumeration oracle) for an unknown email', function () {
+    User::factory()->create(['email' => 'client@example.com']);
+
+    $known = $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'client@example.com',
+        'linked_dossier_quota' => 1,
+    ], provisionHeaders());
+
+    $unknown = $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'inconnu@example.com',
+        'linked_dossier_quota' => 1,
+    ], provisionHeaders());
+
+    expect($known->status())->toBe($unknown->status());
+    expect($known->json())->toBe($unknown->json());
+    expect(User::query()->where('email', 'inconnu@example.com')->exists())->toBeFalse();
+});
+
+it('returns 404 for entitlements when no provisioning token is configured', function () {
+    config(['services.provisioning.token' => null]);
+
+    $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'client@example.com',
+        'linked_dossier_quota' => 1,
+    ])->assertNotFound();
+});
+
+it('returns 401 for entitlements with an invalid or missing token', function () {
+    $payload = ['email' => 'client@example.com', 'linked_dossier_quota' => 1];
+
+    $this->postJson('/api/admin/users/entitlements', $payload, [
+        'Authorization' => 'Bearer wrong-token',
+    ])->assertUnauthorized();
+
+    $this->postJson('/api/admin/users/entitlements', $payload)->assertUnauthorized();
+});
+
+it('does not grant a quota to a demo account, with the same uniform response', function () {
+    User::factory()->create(['email' => 'demo-abc@demo.local', 'is_demo' => true]);
+
+    $response = $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'demo-abc@demo.local',
+        'linked_dossier_quota' => 1,
+    ], provisionHeaders());
+
+    $response->assertOk()->assertJson(['status' => 'updated']);
+    expect(User::where('email', 'demo-abc@demo.local')->first()->linked_dossier_quota)->toBeNull();
+});
+
+it('never lowers the quota below the number of dossiers already created', function () {
+    $user = User::factory()->create(['email' => 'client@example.com', 'linked_dossier_quota' => 3]);
+    createActiveLinkedDossier($user);
+    createActiveLinkedDossier($user);
+
+    $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'client@example.com',
+        'linked_dossier_quota' => 0,
+    ], provisionHeaders())->assertOk()->assertJson(['status' => 'updated']);
+
+    // Deux dossiers actifs déjà créés : le plancher les protège, même si la
+    // vitrine redemande un quota plus bas.
+    expect($user->fresh()->linked_dossier_quota)->toBe(2);
+});
+
+it('still raises the quota normally when above the floor of already created dossiers', function () {
+    $user = User::factory()->create(['email' => 'client@example.com', 'linked_dossier_quota' => 1]);
+    createActiveLinkedDossier($user);
+
+    $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'client@example.com',
+        'linked_dossier_quota' => 5,
+    ], provisionHeaders())->assertOk();
+
+    expect($user->fresh()->linked_dossier_quota)->toBe(5);
+});
+
 it('still routes a live sandbox to the address its visitor left', function () {
     // Le pendant du test précédent : sans lui, supprimer tout le routage passerait.
     $sandbox = User::factory()->create([
@@ -183,4 +320,75 @@ it('still routes a live sandbox to the address its visitor left', function () {
     ]);
 
     expect($sandbox->routeNotificationForMail())->toBe('visiteur@exemple.fr');
+});
+
+// === Promotion d'un compte membre au paiement (lot « dossiers membre », décision du 2026-10-15) ===
+
+it('promotes a member account to standard on payment, WITHOUT losing its dossier membership', function () {
+    Notification::fake();
+
+    $owner = User::factory()->create();
+    $dossierUser = User::factory()->create(['is_linked_dossier' => true]);
+    $dossier = LinkedDossier::create([
+        'public_id' => (string) Str::ulid(),
+        'user_id' => $dossierUser->id,
+        'owner_id' => $owner->id,
+        'kind' => 'indivision',
+        'siren' => '100000033',
+    ]);
+
+    $membre = User::factory()->create([
+        'email' => 'membre@example.com',
+        'account_kind' => AccountKind::Member,
+    ]);
+    $dossier->members()->create([
+        'user_id' => $membre->id,
+        'role' => DossierMemberRole::Member,
+        'accepted_at' => now(),
+    ]);
+
+    $this->postJson('/api/admin/users', ['email' => 'membre@example.com'], provisionHeaders())
+        ->assertOk()
+        ->assertJson(['status' => 'exists', 'id' => $membre->id]);
+
+    $membre->refresh();
+
+    expect($membre->account_kind)->toBe(AccountKind::Standard)
+        ->and($membre->isMemberAccount())->toBeFalse();
+
+    // L'appartenance au dossier n'a PAS bougé : même ligne, toujours acceptée.
+    $membership = $dossier->members()->where('user_id', $membre->id)->first();
+    expect($membership)->not->toBeNull()
+        ->and($membership->revoked_at)->toBeNull()
+        ->and(User::where('email', 'membre@example.com')->count())->toBe(1);
+
+    // `store()` sur un compte déjà existant n'envoie JAMAIS le courriel de
+    // bienvenue (comportement inchangé : c'est la branche `exists`).
+    Notification::assertNothingSent();
+});
+
+it('does not touch an ordinary (standard) existing account', function () {
+    $standard = User::factory()->create(['email' => 'standard@example.com']);
+
+    $this->postJson('/api/admin/users', ['email' => 'standard@example.com'], provisionHeaders())
+        ->assertOk()
+        ->assertJson(['status' => 'exists', 'id' => $standard->id]);
+
+    expect($standard->fresh()->account_kind)->toBe(AccountKind::Standard);
+});
+
+it('refuses to grant a quota to a member account, with the same uniform response', function () {
+    $membre = User::factory()->create([
+        'email' => 'membre-quota@example.com',
+        'account_kind' => AccountKind::Member,
+    ]);
+
+    $this->postJson('/api/admin/users/entitlements', [
+        'email' => 'membre-quota@example.com',
+        'linked_dossier_quota' => 3,
+    ], provisionHeaders())
+        ->assertOk()
+        ->assertJson(['status' => 'updated']);
+
+    expect($membre->fresh()->linked_dossier_quota)->toBeNull();
 });

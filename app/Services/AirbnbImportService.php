@@ -38,13 +38,43 @@ class AirbnbImportService
         'end_date'         => ['End date', 'Date de fin', 'Fin du séjour', 'Check-out'],
         'nights'           => ['Nights', 'nights', 'Nuits', 'Nombre de nuits', '# des nuits'],
         'guest'            => ['Guest', 'guest', 'Voyageur', 'Nom du voyageur'],
-        'listing'          => ['Listing', 'listing', 'Annonce', 'Nom de l\'annonce'],
+        'listing'          => ['Listing', 'listing', 'Annonce', 'Nom de l\'annonce', 'Logement'],
         'amount'           => ['Amount', 'amount', 'Montant', 'Montant brut', 'Gross earnings', 'Revenus'],
-        'host_fee'         => ['Host fee', 'host_fee', 'Frais de service hôte', 'Service fee', 'Host Fee Amount'],
+        // ⚠️ « Frais de service » (SANS « hôte ») est le libellé réel de l'export
+        // « Historique des transactions » en français (vérifié sur un export réel,
+        // voir `_admin/data/airbnb-csv/`) — absent de cette liste, il faisait
+        // conclure à tort au format « Réservations » (sans commission) sur un
+        // fichier qui l'a pourtant, et la commission ne se retrouvait donc dans
+        // aucune écriture.
+        'host_fee'         => ['Host fee', 'host_fee', 'Frais de service hôte', 'Frais de service', 'Service fee', 'Host Fee Amount'],
         'paid_out'         => ['Paid out', 'paid_out', 'Versé', 'Montant versé', 'Host Payout'],
         'currency'         => ['Currency', 'currency', 'Devise'],
-        'booked_date'      => ['Réservée', 'Booked'],
+        'booked_date'      => ['Réservée', 'Booked', 'Date de réservation'],
+        // « Taxes reversées par Airbnb » est le libellé réel de la colonne sur l'export
+        // « Historique des transactions » (vérifié sur un export réel, voir
+        // `_admin/data/airbnb-csv/airbnb_transactions_2023-2026.csv` : présente sur
+        // toutes les lignes `Réservation`, jamais sur les `Payout`). « Taxe de séjour »
+        // et « Taxes de séjour » reprennent le libellé déjà utilisé ailleurs dans
+        // l'application (IncomeForm, CsvProfile) à titre de repli, mais ne sont PAS
+        // confirmés sur un export Airbnb réel — contrairement au premier. Aucun
+        // équivalent anglais n'a été trouvé dans les exports, fixtures ou docs du
+        // dépôt : ne pas en inventer un (ex. « Occupancy Taxes ») sans échantillon réel.
+        'tourist_tax'      => ['Taxes reversées par Airbnb', 'Taxe de séjour', 'Taxes de séjour'],
     ];
+
+    /**
+     * Valeurs de la colonne `Type` de l'export « Historique des transactions ».
+     *
+     * ⚠️ Ce ne sont PAS des doublons les uns des autres : `Réservation` détaille
+     * le fait générateur d'une recette LMNP (montant brut + commission, séjour
+     * par séjour) ; `Payout` n'est que le VIREMENT bancaire qui en résulte —
+     * souvent un virement agrège plusieurs réservations, parfois à cheval sur
+     * deux exercices. Importer les deux compte la même recette deux fois. La
+     * ventilation est le fait générateur ; le virement n'en est que le règlement.
+     */
+    private const TYPE_RESERVATION = 'Réservation';
+
+    private const TYPE_PAYOUT = 'Payout';
 
     /**
      * Parse le CSV et retourne un aperçu des lignes sans les importer.
@@ -65,6 +95,7 @@ class AirbnbImportService
 
         [$lines, $columnIndexes] = $parsed;
         $isNetFormat = ! isset($columnIndexes['host_fee']);
+        $preferMonthFirst = $this->detectPreferMonthFirst($lines, $columnIndexes);
         $rows = [];
         $skipped = 0;
         $errors = [];
@@ -98,7 +129,7 @@ class AirbnbImportService
             $row = str_getcsv($line);
 
             try {
-                $data = $this->extractRowData($row, $columnIndexes, $property);
+                $data = $this->extractRowData($row, $columnIndexes, $property, $preferMonthFirst);
                 if ($data) {
                     $rows[] = $data;
                 } else {
@@ -131,6 +162,7 @@ class AirbnbImportService
         }
 
         [$lines, $columnIndexes] = $parsed;
+        $preferMonthFirst = $this->detectPreferMonthFirst($lines, $columnIndexes);
         $imported = 0;
         $skipped = 0;
         $errors = [];
@@ -144,7 +176,7 @@ class AirbnbImportService
             $row = str_getcsv($line);
 
             try {
-                $result = $this->processRow($row, $columnIndexes, $property);
+                $result = $this->processRow($row, $columnIndexes, $property, $preferMonthFirst);
                 if ($result) {
                     $imported++;
                 } else {
@@ -196,6 +228,37 @@ class AirbnbImportService
     }
 
     /**
+     * Un fichier doit-il être lu en `m/d/Y` plutôt qu'en `d/m/Y` ?
+     *
+     * Décision au niveau du FICHIER ENTIER, prise une fois avant la boucle de
+     * lignes : un cabinet exporte dans un seul format, jamais un mélange des deux
+     * dans le même CSV. Balaie les trois colonnes de date (paiement, début et fin
+     * de séjour) — une seule date hors des douze premiers jours du mois suffit à
+     * lever l'ambiguïté pour tout le fichier. Voir `CsvValues::detectPreferMonthFirst()`.
+     */
+    private function detectPreferMonthFirst(array $lines, array $indexes): bool
+    {
+        $rawDates = (function () use ($lines, $indexes): \Generator {
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if ($line === '') {
+                    continue;
+                }
+
+                $row = str_getcsv($line);
+
+                foreach (['date', 'start_date', 'end_date'] as $field) {
+                    if ($raw = $this->getField($row, $indexes, $field)) {
+                        yield $raw;
+                    }
+                }
+            }
+        })();
+
+        return CsvValues::detectPreferMonthFirst($rawDates);
+    }
+
+    /**
      * Normalise les caractères Unicode problématiques dans le contenu CSV.
      *
      * Délégué à `CsvValues`/`CsvReader` depuis le 2026-09-04 : la règle est la même pour
@@ -211,8 +274,34 @@ class AirbnbImportService
      *
      * @return array|null Données de la ligne ou null si ignorée
      */
-    private function extractRowData(array $row, array $indexes, Property $property): ?array
+    private function extractRowData(array $row, array $indexes, Property $property, bool $preferMonthFirst = false): ?array
     {
+        $type = $this->getField($row, $indexes, 'type');
+
+        // Format « Historique des transactions » seulement (colonne Type présente) :
+        // `Payout` est le virement qui RÈGLE une ou plusieurs lignes `Réservation`
+        // déjà comptées avec leur détail brut/commission — le compter en plus
+        // doublerait la recette. Visible dans l'aperçu, pas juste compté en creux :
+        // sinon l'écart entre lignes du fichier et lignes importées reste opaque.
+        if (isset($indexes['type']) && $type === self::TYPE_PAYOUT) {
+            $paidOutRaw = $this->getField($row, $indexes, 'paid_out');
+            $dateRaw = $this->getField($row, $indexes, 'date');
+
+            return [
+                'date' => $dateRaw ? $this->parseDate($dateRaw, $preferMonthFirst) : null,
+                'guest' => null,
+                'confirmation' => null,
+                'amount' => $paidOutRaw ? $this->parseMoney($paidOutRaw) : 0,
+                'host_fee' => 0,
+                'tourist_tax' => 0,
+                'checkin' => null,
+                'duplicate' => false,
+                'skipped' => true,
+                'skip_reason' => 'Virement (Payout) : règle une ou plusieurs lignes « Réservation » '
+                    . 'déjà comptées ci-dessus, avec leur détail brut/commission.',
+            ];
+        }
+
         $amountRaw = $this->getField($row, $indexes, 'amount')
             ?? $this->getField($row, $indexes, 'paid_out');
 
@@ -228,12 +317,17 @@ class AirbnbImportService
         if (! $dateRaw) {
             return null;
         }
-        $date = $this->parseDate($dateRaw);
+        $date = $this->parseDate($dateRaw, $preferMonthFirst);
 
         $confirmation = $this->getField($row, $indexes, 'confirmation');
         $guest = $this->getField($row, $indexes, 'guest');
         $startDate = $this->getField($row, $indexes, 'start_date');
+        $endDate = $this->getField($row, $indexes, 'end_date');
         $status = $this->getField($row, $indexes, 'status');
+        $checkin = $startDate ? $this->parseDate($startDate, $preferMonthFirst) : null;
+        $checkout = $endDate ? $this->parseDate($endDate, $preferMonthFirst) : null;
+
+        $this->assertStayOrder($checkin, $checkout);
 
         // Lignes ignorées (annulations, montant 0) : on les retourne quand même pour l'aperçu
         if ($amount <= 0) {
@@ -243,10 +337,11 @@ class AirbnbImportService
                 'confirmation' => $confirmation,
                 'amount' => $amount,
                 'host_fee' => 0,
-                'checkin' => $startDate ? $this->parseDate($startDate) : null,
+                'tourist_tax' => 0,
+                'checkin' => $checkin,
                 'duplicate' => false,
                 'skipped' => true,
-                'skip_reason' => $status ?? 'Montant nul ou négatif',
+                'skip_reason' => $status ?? ($type ? "{$type} (montant nul ou négatif)" : 'Montant nul ou négatif'),
             ];
         }
 
@@ -258,12 +353,15 @@ class AirbnbImportService
             [$amount, $hostFee] = $this->recalculateGross($amount, (float) $property->airbnb_commission_rate);
         }
 
-        $duplicate = false;
-        if ($confirmation) {
-            $duplicate = Income::where('property_id', $property->id)
-                ->where('reservation_ref', $confirmation)
-                ->exists();
-        }
+        // Taxe de séjour collectée et reversée par Airbnb pour le compte de la commune :
+        // une colonne à part, indépendante du calcul brut/commission ci-dessus — jamais
+        // mêlée à `amount` (la recette imposable), voir le commentaire de `tourist_tax`
+        // dans COLUMN_MAP et dans `processRow()`.
+        $touristTax = $this->extractTouristTax($row, $indexes);
+
+        $duplicate = $confirmation
+            ? $this->matchingIncomeExists($property, $confirmation, $amount, $date)
+            : false;
 
         return [
             'date' => $date,
@@ -271,7 +369,8 @@ class AirbnbImportService
             'confirmation' => $confirmation,
             'amount' => $amount,
             'host_fee' => $hostFee,
-            'checkin' => $startDate ? $this->parseDate($startDate) : null,
+            'tourist_tax' => $touristTax,
+            'checkin' => $checkin,
             'duplicate' => $duplicate,
             'skipped' => false,
             'skip_reason' => null,
@@ -302,8 +401,15 @@ class AirbnbImportService
     /**
      * Traite une ligne du CSV.
      */
-    private function processRow(array $row, array $indexes, Property $property): ?Income
+    private function processRow(array $row, array $indexes, Property $property, bool $preferMonthFirst = false): ?Income
     {
+        // Format « Historique des transactions » seulement : `Payout` règle une ou
+        // plusieurs lignes `Réservation` déjà importées avec leur détail brut/
+        // commission — voir le commentaire de TYPE_PAYOUT et `extractRowData()`.
+        if (isset($indexes['type']) && $this->getField($row, $indexes, 'type') === self::TYPE_PAYOUT) {
+            return null;
+        }
+
         // Récupérer le montant (brut ou versé)
         $amountRaw = $this->getField($row, $indexes, 'amount')
             ?? $this->getField($row, $indexes, 'paid_out');
@@ -324,7 +430,7 @@ class AirbnbImportService
         if (! $dateRaw) {
             return null;
         }
-        $date = $this->parseDate($dateRaw);
+        $date = $this->parseDate($dateRaw, $preferMonthFirst);
 
         // Commission host
         $hostFeeRaw = $this->getField($row, $indexes, 'host_fee');
@@ -335,20 +441,26 @@ class AirbnbImportService
             [$amount, $hostFee] = $this->recalculateGross($amount, (float) $property->airbnb_commission_rate);
         }
 
-        // Vérifier si déjà importé (par code de confirmation)
+        // Taxe de séjour collectée et reversée par Airbnb : voir le commentaire de
+        // `extractRowData()` — n'entre jamais dans le calcul de `$amount` ci-dessus.
+        $touristTax = $this->extractTouristTax($row, $indexes);
+
+        // Vérifier si déjà importé (par code de confirmation, montant ET date : voir
+        // le commentaire de matchingIncomeExists() — un même code de confirmation
+        // porte parfois plusieurs lignes « Réservation » légitimement distinctes,
+        // ex. acompte puis solde, ou un versement de résolution AirCover)
         $confirmation = $this->getField($row, $indexes, 'confirmation');
-        if ($confirmation) {
-            $existing = Income::where('property_id', $property->id)
-                ->where('reservation_ref', $confirmation)
-                ->first();
-            if ($existing) {
-                return null; // Déjà importé
-            }
+        if ($confirmation && $this->matchingIncomeExists($property, $confirmation, $amount, $date)) {
+            return null; // Déjà importé
         }
 
         // Dates de séjour
         $startDate = $this->getField($row, $indexes, 'start_date');
         $endDate = $this->getField($row, $indexes, 'end_date');
+        $checkin = $startDate ? $this->parseDate($startDate, $preferMonthFirst) : null;
+        $checkout = $endDate ? $this->parseDate($endDate, $preferMonthFirst) : null;
+
+        $this->assertStayOrder($checkin, $checkout);
 
         return Income::create([
             'property_id'     => $property->id,
@@ -356,12 +468,12 @@ class AirbnbImportService
             'amount'          => $amount,
             'tva_rate'        => $property->isTvaLiable() ? 1000 : 0,
             'platform_fee'    => $hostFee,
-            'tourist_tax'     => 0,
+            'tourist_tax'     => $touristTax,
             'source'          => 'airbnb',
             'reservation_ref' => $confirmation,
             'guest_name'      => $this->getField($row, $indexes, 'guest'),
-            'checkin_date'    => $startDate ? $this->parseDate($startDate) : null,
-            'checkout_date'   => $endDate ? $this->parseDate($endDate) : null,
+            'checkin_date'    => $checkin,
+            'checkout_date'   => $checkout,
         ]);
     }
 
@@ -383,6 +495,22 @@ class AirbnbImportService
         return [$grossCents, $feeCents];
     }
 
+    /**
+     * Taxe de séjour collectée et reversée par Airbnb pour le compte de la commune.
+     *
+     * Non imposable (voir `incomes.tourist_tax`, non lu par `AccountingEntryService`,
+     * `FiscalYearService` ni `TaxReturnService`) : une colonne lue en plus de `amount`,
+     * jamais à sa place ni en complément. Un libellé absent de l'export (ancien CSV,
+     * ou export « Réservations » qui n'a jamais cette colonne) vaut 0 — même
+     * comportement qu'avant ce champ, voir COLUMN_MAP.
+     */
+    private function extractTouristTax(array $row, array $indexes): int
+    {
+        $raw = $this->getField($row, $indexes, 'tourist_tax');
+
+        return $raw ? abs($this->parseMoney($raw)) : 0;
+    }
+
     private function getField(array $row, array $indexes, string $field): ?string
     {
         if (! isset($indexes[$field])) {
@@ -392,6 +520,38 @@ class AirbnbImportService
         $value = $row[$indexes[$field]] ?? null;
 
         return $value !== null && $value !== '' ? trim($value) : null;
+    }
+
+    /**
+     * Un revenu correspondant à cette ligne existe-t-il déjà ?
+     *
+     * ⚠️ Le code de confirmation SEUL ne suffit pas : sur l'export « Historique des
+     * transactions », le même code peut porter PLUSIEURS lignes `Réservation`
+     * légitimement distinctes — un acompte puis un solde, ou un « Versement de
+     * résolution » AirCover réglé sous le code de la réservation d'origine.
+     * Vérifié sur un export réel : un même code de confirmation porte deux
+     * lignes `Réservation` de montants différents (à quelques semaines
+     * d'intervalle). Dédoublonner sur le seul code aurait perdu la seconde.
+     *
+     * Le montant ET la date entrent donc dans la clé — jamais SEULS (voir le
+     * commentaire sur le filtrage par `Type` : deux versements identiques le
+     * même jour, pour des biens ou réservations différents, restent distincts
+     * dès que leur code de confirmation diffère).
+     */
+    private function matchingIncomeExists(Property $property, string $confirmation, int $amount, string $date): bool
+    {
+        // ⚠️ `income_date` porte le cast `date` : Laravel la PERSISTE en
+        // `Y-m-d H:i:s` (minuit), jamais en date nue. Un `where('income_date',
+        // $date)` sur une chaîne « Y-m-d » ne trouve donc JAMAIS rien — même
+        // scénario que `expense_date` ailleurs dans l'application — et aurait
+        // rendu ce garde-fou anti-doublon totalement inopérant : un second
+        // import du même fichier aurait recréé toutes les lignes. `whereDate()`
+        // compare la date seule, quel que soit le format de stockage.
+        return Income::where('property_id', $property->id)
+            ->where('reservation_ref', $confirmation)
+            ->where('amount', $amount)
+            ->whereDate('income_date', $date)
+            ->exists();
     }
 
     /**
@@ -415,10 +575,36 @@ class AirbnbImportService
      * Parse une date depuis divers formats.
      *
      * ⚠️ La règle vit dans `CsvValues::date()`, partagée avec l'import générique
-     * (`d/m/Y` avant `m/d/Y` : les exports français sont majoritaires).
+     * (`d/m/Y` avant `m/d/Y` : les exports français sont majoritaires, sauf
+     * `$preferMonthFirst` — établi une fois pour tout le fichier par
+     * `detectPreferMonthFirst()`, jamais ligne à ligne).
      */
-    private function parseDate(string $raw): string
+    private function parseDate(string $raw, bool $preferMonthFirst = false): string
     {
-        return CsvValues::date($raw);
+        return CsvValues::date($raw, $preferMonthFirst);
+    }
+
+    /**
+     * Refuse un séjour dont la date de fin précède la date de début.
+     *
+     * Rien ne le faisait avant ce correctif : une inversion de format sur une
+     * seule des deux dates (le prix d'une ambiguïté que ni l'aller-retour ni la
+     * détection de fichier ne peuvent lever pour un jour isolé dans les douze
+     * premiers du mois) produisait silencieusement un séjour qui se termine avant
+     * de commencer, sans qu'aucun contrôle ne le remonte.
+     *
+     * @throws \RuntimeException
+     */
+    private function assertStayOrder(?string $checkinIso, ?string $checkoutIso): void
+    {
+        if ($checkinIso === null || $checkoutIso === null) {
+            return;
+        }
+
+        if ($checkoutIso < $checkinIso) {
+            throw new \RuntimeException(
+                "Date de fin de séjour ({$checkoutIso}) antérieure à la date de début ({$checkinIso})."
+            );
+        }
     }
 }

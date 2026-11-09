@@ -15,7 +15,7 @@ use App\Services\TaxReturnService;
  * 2033-C, et demandé un contrôle. Le calcul a été corrigé par `328fe3a3` ; ce fichier
  * couvre le contrôle lui-même.
  *
- * ⚠️ Le point qui rend ces tests non triviaux : l'écart 044 − 490 vaut EXACTEMENT le
+ * ⚠️ Le point qui rend ces tests non triviaux : l'écart 044 − 496 vaut EXACTEMENT le
  * reliquat de ventilation, et le produit accepte délibérément un reliquat positif. Le
  * contrôle a donc trois états, et une tolérance — sans laquelle un bien tout neuf serait
  * signalé en défaut, `generateDefaultComponents()` tronquant chaque part séparément.
@@ -111,7 +111,7 @@ it('states the equality when the ventilation covers the base exactly', function 
 
     expect($check['delta'])->toBe(0);
     expect($check['status'])->toBe(TaxReturnService::CHECK_OK);
-    expect($check['message'])->toContain('case 044 du 2033-A = ligne 490 du 2033-C');
+    expect($check['message'])->toContain('case 044 du 2033-A = case 496 du 2033-C');
 });
 
 // --- Les trois états ------------------------------------------------------------------
@@ -257,7 +257,7 @@ it('gives the screen and the PDF the same verdict on the same fiscal year', func
 });
 
 /**
- * Rend la vue du PDF en HTML, avec exactement les données que `generatePdf()` lui passe.
+ * Rend la vue du PDF en HTML, avec exactement les données que `renderPdf()` lui passe.
  *
  * Passe par `pdfData()` au lieu d'en recopier la liste : la copie qui vivait ici a cassé dès
  * que la vue a reçu une donnée de plus (le détail du résultat, issue #13).

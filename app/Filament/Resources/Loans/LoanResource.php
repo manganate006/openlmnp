@@ -8,6 +8,7 @@ use App\Filament\Resources\Loans\Pages\ListLoans;
 use App\Filament\Resources\Loans\Schemas\LoanForm;
 use App\Filament\Resources\Loans\Tables\LoansTable;
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Resources\Concerns\BlocksMemberPrincipal;
 use App\Models\Loan;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -17,6 +18,7 @@ use Filament\Tables\Table;
 
 class LoanResource extends Resource
 {
+    use BlocksMemberPrincipal;
     use NavigationAware;
 
     protected static ?string $model = Loan::class;

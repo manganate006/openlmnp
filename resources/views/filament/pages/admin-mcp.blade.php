@@ -50,7 +50,7 @@
             <div class="am-card">
                 <div class="am-card-label">Utilisateurs MCP actifs</div>
                 <div class="am-card-value am-highlight">{{ $stats['users_with_mcp'] }}</div>
-                <div class="am-card-sub">sur {{ count($users) }} utilisateurs</div>
+                <div class="am-card-sub">sur {{ \App\Support\Fr::accorde(count($users), 'utilisateur') }}</div>
             </div>
             <div class="am-card">
                 <div class="am-card-label">Tokens actifs</div>
@@ -65,7 +65,7 @@
             <div class="am-card">
                 <div class="am-card-label">Total appels</div>
                 <div class="am-card-value">{{ number_format($stats['total_calls'], 0, ',', ' ') }}</div>
-                <div class="am-card-sub">{{ $stats['errors_month'] }} erreurs ce mois</div>
+                <div class="am-card-sub">{{ \App\Support\Fr::accorde((int) $stats['errors_month'], 'erreur') }} ce mois</div>
             </div>
         </div>
 
@@ -151,6 +151,7 @@
                         <tr>
                             <th>Token</th>
                             <th>Utilisateur</th>
+                            <th>Dossier</th>
                             <th>Dernière utilisation</th>
                             <th>Créé le</th>
                             <th>Action</th>
@@ -164,6 +165,7 @@
                                     <div style="font-weight:500;">{{ $token['user_name'] }}</div>
                                     <div class="am-muted">{{ $token['user_email'] }}</div>
                                 </td>
+                                <td class="am-muted">{{ $token['dossier_name'] ?? '—' }}</td>
                                 <td class="am-muted">{{ $token['last_used_at'] }}</td>
                                 <td class="am-muted">{{ $token['created_at'] }}</td>
                                 <td>
@@ -225,6 +227,7 @@
                         <tr>
                             <th>Date</th>
                             <th>Utilisateur</th>
+                            <th>Dossier</th>
                             <th>Token</th>
                             <th>Outil</th>
                             <th>Statut</th>
@@ -239,6 +242,7 @@
                                 <td>
                                     <div style="font-weight:500;font-size:12px;">{{ $entry['user_name'] }}</div>
                                 </td>
+                                <td class="am-muted">{{ $entry['dossier_name'] ?? '—' }}</td>
                                 <td class="am-muted am-mono">{{ $entry['token_name'] }}</td>
                                 <td class="am-mono">{{ $entry['tool_name'] }}</td>
                                 <td>

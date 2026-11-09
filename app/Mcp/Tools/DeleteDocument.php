@@ -55,7 +55,7 @@ class DeleteDocument extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'document_id' => $schema->integer('Identifiant du document à supprimer')->required(),
+            'document_id' => $schema->integer()->description('Identifiant du document à supprimer')->required(),
         ];
     }
 }

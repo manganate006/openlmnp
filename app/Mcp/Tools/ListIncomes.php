@@ -86,9 +86,9 @@ class ListIncomes extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id' => $schema->integer('Filtrer par identifiant de bien (optionnel)'),
-            'year'        => $schema->integer('Filtrer par année fiscale, ex: 2024 (optionnel)'),
-            'source'      => $schema->string('Filtrer par plateforme : airbnb, booking, abritel, direct, other (optionnel)'),
+            'property_id' => $schema->integer()->description('Filtrer par identifiant de bien (optionnel)'),
+            'year'        => $schema->integer()->description('Filtrer par année fiscale, ex: 2024 (optionnel)'),
+            'source'      => $schema->string()->description('Filtrer par plateforme : airbnb, booking, abritel, direct, other (optionnel)'),
         ];
     }
 }

@@ -4,7 +4,6 @@ use App\Models\AccountingEntry;
 use App\Models\FiscalYear;
 use App\Models\User;
 use App\Services\FecService;
-use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->user = User::factory()->create(['siren' => '123456789']);
@@ -29,13 +28,11 @@ it('generates a valid fec file with correct column names', function () {
         'journal' => 'VE',
     ]);
 
-    $path = $this->service->generate($fiscalYear);
+    $content = $this->service->render($fiscalYear);
 
     // File naming: {SIREN}FEC{YYYYMMDD}.txt
-    expect($path)->toContain('123456789FEC20241231')
-        ->toStartWith("fec/{$this->user->id}/2024/");
+    expect($this->service->filename($fiscalYear))->toBe('123456789FEC20241231.txt');
 
-    $content = Storage::get($path);
     $lines = explode("\r\n", trim($content));
 
     expect(count($lines))->toBe(2);
@@ -67,8 +64,7 @@ it('formats amounts with comma decimal separator', function () {
         'journal' => 'OD',
     ]);
 
-    $path = $this->service->generate($fiscalYear);
-    $content = Storage::get($path);
+    $content = $this->service->render($fiscalYear);
     $lines = explode("\r\n", trim($content));
     $entry = explode("\t", $lines[1]);
     // Ensure we have 18 columns (trailing empty fields may be trimmed)

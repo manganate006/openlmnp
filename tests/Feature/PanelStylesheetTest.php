@@ -330,7 +330,10 @@ it('only spells out colours in the theme token view', function () {
         // Une couleur en dur ne peut pas se décliner en thème sombre : elle doit passer par
         // un jeton. Seules exceptions : les rgba NEUTRES (ombres, voiles blancs des règles
         // `.dark`), qui se comportent correctement sur les deux fonds.
-        preg_match_all('/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/', $scanned, $hex);
+        //
+        // Le `(?<!&)` écarte les entités HTML numériques : `&#128077;` (👍) n'est pas une
+        // couleur, et une couleur n'est jamais précédée d'une esperluette.
+        preg_match_all('/(?<!&)#[0-9a-fA-F]{6}\b|(?<!&)#[0-9a-fA-F]{3}\b/', $scanned, $hex);
 
         foreach (array_unique($hex[0]) as $colour) {
             $offenders[] = "{$relative} → {$colour}";

@@ -80,7 +80,10 @@
     .olmnp-login-demo-arrow svg { width: 1rem; height: 1rem; }
     .olmnp-login-demo:hover .olmnp-login-demo-arrow { transform: translateX(0.125rem); }
 
-    /* Ligne « Pas encore de compte ? » */
+    /* Ligne d'invitation à ouvrir un compte, sous le formulaire.
+       ⚠️ Ne pas y recopier le texte rendu : un commentaire CSS part dans le HTML (ce n'est
+       pas un commentaire Blade), et un assertDontSee sur cette phrase échouerait alors
+       même que le bloc n'est pas rendu. Déjà arrivé ici, et pour `wire:init`. */
     .olmnp-login-signup { margin-top: 1.5rem; text-align: center; font-size: 0.875rem; color: var(--olmnp-fg-muted); }
     .olmnp-login-signup-link {
         font-weight: 600;
@@ -149,16 +152,49 @@
     </div>
 @endif
 
-@if ($websiteUrl = config('services.website.url'))
+@php
+    // Deux liens possibles sous « Pas encore de compte ? ».
+    //
+    // « Créer un compte » n'apparaît QUE si l'inscription est fermée : quand elle est
+    // ouverte, Filament affiche déjà son propre « ou créer un compte » au-dessus du
+    // formulaire, et la page proposerait deux chemins contradictoires — l'un vers
+    // /register, l'autre vers l'extérieur.
+    //
+    // hasRegistration() et non RegistrationGate::allows() : le panel est déjà construit à
+    // ce stade, la réponse est gratuite ; le gate, lui, est une requête SQL en mode auto.
+    $panelHasRegistration = \Filament\Facades\Filament::getCurrentOrDefaultPanel()?->hasRegistration() ?? false;
+
+    // trim((string) …) sur les deux : la valeur peut être null (config vidée) autant que
+    // '' (défaut du dépôt public, qui ne porte aucune URL commerciale).
+    $signupUrl = $panelHasRegistration ? '' : trim((string) config('services.website.signup_url'));
+    $websiteUrl = trim((string) config('services.website.url'));
+@endphp
+
+@if ($signupUrl !== '' || $websiteUrl !== '')
     <p class="olmnp-login-signup">
         Pas encore de compte ?
-        <a
-            href="{{ $websiteUrl }}"
-            target="_blank"
-            rel="noopener"
-            class="olmnp-login-signup-link"
-        >
-            Découvrir OpenLMNP
-        </a>
+        @if ($signupUrl !== '')
+            <a
+                href="{{ $signupUrl }}"
+                target="_blank"
+                rel="noopener"
+                class="olmnp-login-signup-link"
+            >
+                Créer un compte
+            </a>
+        @endif
+        @if ($signupUrl !== '' && $websiteUrl !== '')
+            ·
+        @endif
+        @if ($websiteUrl !== '')
+            <a
+                href="{{ $websiteUrl }}"
+                target="_blank"
+                rel="noopener"
+                class="olmnp-login-signup-link"
+            >
+                Découvrir OpenLMNP
+            </a>
+        @endif
     </p>
 @endif

@@ -14,7 +14,10 @@
 use App\Models\Expense;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\Vault\DocumentCipher;
+use App\Services\Vault\VaultKeyManager;
 use App\Support\DocumentStorage;
+use App\Support\VaultSession;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -164,6 +167,70 @@ it('leaves the rest of storage/app alone', function () {
     expect($legacy->get('.app_key'))->toBe('base64:cle-d-instance')
         ->and($legacy->get('public/photo.jpg'))->toBe('photo publique')
         ->and($legacy->exists('private/documents/1/expenses/deja-la.pdf'))->toBeTrue();
+});
+
+// === Repli de lecture × coffre-fort ===
+//
+// Les deux fonctionnalités se croisent sur le même chemin de lecture, et chacune
+// peut annuler l'autre en silence : sans repli, un justificatif d'avant Laravel 11
+// rend 404 ; avec un repli qui court-circuite le coffre, c'est du binaire chiffré
+// qui part au navigateur sous « Content-Type: application/pdf ». `VaultMigrator` ne
+// balaie que la racine courante — il COMPTE les fichiers restés à l'ancienne sans
+// les toucher — mais rien ne garantit qu'ils y resteront en clair : une sauvegarde
+// restaurée, un rapatriement partiel ou un chiffrement fait hors de l'application
+// suffisent à mettre un fichier chiffré à l'ancienne racine.
+
+/** Le cookie porteur de clé, tel que `VaultSession` le pose. Nom distinct : les
+ *  fonctions déclarées dans un fichier Pest vivent dans l'espace global. */
+function legacyVaultCookie(User $user, string $dek, int $keyVersion = 1): array
+{
+    return [app(VaultSession::class)->cookieNameFor($user) => json_encode([
+        'u' => $user->id,
+        'k' => base64_encode($dek),
+        'v' => $keyVersion,
+        'e' => now()->addHour()->getTimestamp(),
+    ])];
+}
+
+it('decrypts a legacy document instead of serving its ciphertext', function () {
+    $user = User::factory()->create();
+    [, $dek] = app(VaultKeyManager::class)->create($user, 'une phrase de passe solide');
+
+    $path = "documents/{$user->id}/expenses/facture.pdf";
+    putLegacyFile($path, '%PDF-1.4 facture héritée');
+    app(DocumentCipher::class)->encryptFileInPlace(
+        DocumentStorage::legacyDisk()->path($path),
+        $dek,
+    );
+
+    // Le fichier chiffré est bien resté à l'ANCIENNE racine.
+    expect(Storage::disk('local')->exists($path))->toBeFalse()
+        ->and(DocumentStorage::legacyDisk()->get($path))->toStartWith(DocumentCipher::MAGIC);
+
+    $response = $this->actingAs($user)
+        ->withCookies(legacyVaultCookie($user, $dek))
+        ->get(signedDocumentUrl($path));
+
+    $response->assertOk();
+
+    expect($response->streamedContent())->toBe('%PDF-1.4 facture héritée')
+        ->and($response->headers->get('Content-Type'))->toBe('application/pdf');
+});
+
+it('answers 423 for a locked legacy document rather than 404 or ciphertext', function () {
+    // Sans repli, ce serait un 404 — indiscernable d'une pièce perdue. Le 423 dit à
+    // l'utilisateur que le fichier est là et qu'il lui manque sa phrase de passe.
+    $user = User::factory()->create();
+    [, $dek] = app(VaultKeyManager::class)->create($user, 'une phrase de passe solide');
+
+    $path = "documents/{$user->id}/expenses/facture.pdf";
+    putLegacyFile($path, '%PDF-1.4 facture héritée');
+    app(DocumentCipher::class)->encryptFileInPlace(
+        DocumentStorage::legacyDisk()->path($path),
+        $dek,
+    );
+
+    $this->actingAs($user)->get(signedDocumentUrl($path))->assertStatus(423);
 });
 
 // === Repli de lecture × export ZIP (issue #12) ===

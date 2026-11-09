@@ -8,6 +8,7 @@ use App\Filament\Resources\Furniture\Pages\ListFurniture;
 use App\Filament\Resources\Furniture\Schemas\FurnitureForm;
 use App\Filament\Resources\Furniture\Tables\FurnitureTable;
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Resources\Concerns\BlocksMemberPrincipal;
 use App\Models\Furniture;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -17,6 +18,7 @@ use Filament\Tables\Table;
 
 class FurnitureResource extends Resource
 {
+    use BlocksMemberPrincipal;
     use NavigationAware;
 
     protected static ?string $model = Furniture::class;

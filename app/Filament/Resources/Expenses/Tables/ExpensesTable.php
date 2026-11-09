@@ -42,6 +42,11 @@ class ExpensesTable
                 IconColumn::make('is_dedicated')
                     ->label('100%')
                     ->boolean(),
+                TextColumn::make('business_use_bp')
+                    ->label('Usage')
+                    ->formatStateUsing(fn ($state) => Expense::formatUsagePercent((int) $state) . ' %')
+                    ->placeholder('—')
+                    ->toggleable(),
                 TextColumn::make('recurring_type')
                     ->label('Récurrence')
                     ->formatStateUsing(fn ($state) => Expense::recurringLabels()[$state] ?? $state),

@@ -66,7 +66,10 @@ class ListFurniture extends ListRecords
                 ->label('Import CSV')
                 ->icon('heroicon-o-table-cells')
                 ->color('gray')
-                ->url('/import-csv'),
+                // La nature des lignes vient de l'écran d'où l'on part, et de nulle part
+                // ailleurs : l'import proposait « Charges » à tout le monde, y compris à
+                // qui arrivait d'ici. Elle reste modifiable sur l'écran d'import.
+                ->url('/import-csv?target=furniture'),
             CreateAction::make(),
         ];
     }

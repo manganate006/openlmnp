@@ -24,7 +24,7 @@ class OnboardingChecklistService
         );
         $fiscalYear = $user->fiscalYears()->where('year', $year)->first();
         $isFiscalYearClosed = $fiscalYear !== null && $fiscalYear->status === FiscalYear::STATUS_CLOSED;
-        $hasPdf = $fiscalYear !== null && $fiscalYear->pdf_path !== null;
+        $hasPdf = $fiscalYear !== null && $fiscalYear->tax_return_generated_at !== null;
 
         $steps = [
             [

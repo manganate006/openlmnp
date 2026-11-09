@@ -7,6 +7,7 @@ use App\Services\BadgeService;
 use App\Services\Csv\CsvImportService;
 use App\Services\Csv\CsvProfile;
 use App\Support\DocumentStorage;
+use App\Support\ImportUpload;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -26,10 +27,19 @@ use UnitEnum;
 /**
  * Import CSV générique : recettes, charges, mobilier, travaux.
  *
- * Dépôt → aperçu de dix lignes → mappage des colonnes → doublons → import. Le mappage
- * est PROPOSÉ et non appliqué : un tableur de cabinet ne porte jamais deux fois les
- * mêmes intitulés, et deviner en silence transforme un import réussi en comptabilité
- * fausse que personne ne relit.
+ * Dépôt → aperçu BRUT de dix lignes → mappage des colonnes → aperçu converti, doublons
+ * repérés → import.
+ *
+ * ⚠️ Ce docblock décrivait déjà ce parcours ; le code n'en faisait qu'une partie. Les
+ * lignes montrées étaient construites APRÈS application du mappage, et l'en-tête réel du
+ * fichier ne servait qu'à deviner la correspondance — il n'était jamais affiché. On
+ * demandait donc de vérifier un mappage sans rien donner à vérifier, et la doc et le code
+ * se contredisaient depuis le premier jour. C'est le code qui a été recalé sur la doc :
+ * l'aperçu brut existe désormais, et il vient AVANT le bloc de correspondance.
+ *
+ * Le mappage reste PROPOSÉ et non appliqué : un tableur de cabinet ne porte jamais deux
+ * fois les mêmes intitulés, et deviner en silence transforme un import réussi en
+ * comptabilité fausse que personne ne relit.
  *
  * ⚠️ `ImportAirbnb` reste le chemin recommandé pour un export Airbnb : lui seul
  * reconstitue le montant brut depuis le net quand l'export ne détaille pas la
@@ -66,6 +76,56 @@ class ImportCsv extends Page implements HasForms
         $this->form->fill();
     }
 
+    /**
+     * Nature des lignes présélectionnée, d'après l'écran d'où l'on arrive.
+     *
+     * ⚠️ La valeur était `TARGET_EXPENSE` EN DUR. Arriver depuis *Recettes* proposait donc
+     * « Charges », et la méprise est silencieuse et coûteuse : importer des recettes en
+     * charges INVERSE le signe du résultat fiscal, sans qu'aucun écran ne s'en étonne.
+     *
+     * La présélection vient de l'appelant — un paramètre d'URL posé par les quatre écrans
+     * de liste — et JAMAIS d'une devinette sur le contenu du fichier : à ce stade il n'est
+     * même pas déposé. Un contenu qui contredit le choix fait l'objet d'une question à
+     * l'aperçu (`suspected_target`), ce qui n'est pas la même chose que décider à la place
+     * de l'utilisateur. Le champ reste modifiable dans tous les cas.
+     */
+    public function defaultTarget(): string
+    {
+        $requested = (string) request()->query('target', '');
+
+        return array_key_exists($requested, CsvProfile::targetLabels())
+            ? $requested
+            : CsvProfile::TARGET_EXPENSE;
+    }
+
+    /**
+     * Exemple de valeur tiré du fichier pour la colonne associée à ce champ.
+     *
+     * Rend `null` quand le champ est laissé à « ignorer », ou quand la colonne choisie est
+     * vide sur toutes les lignes lues — dire « aucune valeur » vaut mieux qu'afficher un
+     * blanc qu'on prendrait pour un défaut d'affichage.
+     */
+    public function sampleFor(string $field): ?string
+    {
+        $index = $this->mapping[$field] ?? '';
+
+        if ($index === '' || $index === null) {
+            return null;
+        }
+
+        $sample = $this->previewData['samples'][(int) $index] ?? null;
+
+        return ($sample === null || $sample === '') ? null : \Illuminate\Support\Str::limit($sample, 60);
+    }
+
+    /** Libellé de la nature que les intitulés du fichier suggèrent, s'il y a lieu. */
+    public function suspectedTargetLabel(): ?string
+    {
+        $suspected = $this->previewData['suspected_target'] ?? null;
+
+        return $suspected ? (CsvProfile::targetLabels()[$suspected] ?? null) : null;
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
@@ -84,12 +144,15 @@ class ImportCsv extends Page implements HasForms
                             ->label('Nature des lignes')
                             ->options(CsvProfile::targetLabels())
                             ->required()
-                            ->default(CsvProfile::TARGET_EXPENSE)
+                            ->default(fn () => $this->defaultTarget())
                             ->helperText('Un fichier, une nature. Un inventaire de cabinet mélange rarement le mobilier et les charges.'),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV')
-                            ->directory(DocumentStorage::importDirectory())
                             ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel', '.csv'])
+                            // ⚠️ Même défaut que l'import Airbnb : sans `directory()`, le tableau
+                            // atterrissait à la racine du disque privé, définitivement. Voir
+                            // `ImportUpload`.
+                            ->directory(DocumentStorage::directory(ImportUpload::SUBDIRECTORY))
                             ->maxSize(10240),
                     ])
                     ->footerActions([
@@ -214,6 +277,9 @@ class ImportCsv extends Page implements HasForms
             'rows_bucket' => \App\Support\Analytics::rowsBucket((int) $result['imported']),
         ]);
 
+        // Le tableau a fini son office : il ne survit pas à l'import (cf. `ImportUpload`).
+        ImportUpload::discard($this->previewFilePath);
+
         $this->lastResult = $result + ['target' => $this->previewTarget];
         $this->cancelPreview();
         $this->form->fill();
@@ -225,7 +291,12 @@ class ImportCsv extends Page implements HasForms
                 ->title("{$result['imported']} ligne(s) importée(s)")
                 ->body(trim(
                     ($result['duplicates'] > 0 ? "{$result['duplicates']} doublon(s) ignoré(s). " : '')
-                    . ($result['skipped'] > 0 ? "{$result['skipped']} ligne(s) illisible(s)." : '')
+                    // ⚠️ `skipped` agrège les lignes illisibles ET les lignes vides : les
+                    // annoncer toutes comme « illisibles » ferait chercher une erreur dans
+                    // une ligne qui n'en porte aucune. Même exigence que les compteurs de
+                    // l'aperçu — chaque chiffre nomme ce qu'il compte.
+                    . ($result['errors_total'] > 0 ? "{$result['errors_total']} ligne(s) illisible(s). " : '')
+                    . ($result['empty'] > 0 ? "{$result['empty']} ligne(s) vide(s) ignorée(s)." : '')
                 ))
                 ->send();
         } else {

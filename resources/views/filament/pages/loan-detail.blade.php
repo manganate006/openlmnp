@@ -328,10 +328,65 @@
             </div>
         </div>
 
+        {{-- Origine du tableau : calculé par nous, ou importé de la banque --}}
+        @if($loan->hasImportedSchedule())
+            {{-- Forme bloc obligatoire : @php(...) en ligne serait avalé jusqu'au
+                 prochain @endphp du fichier (extraction des blocs bruts de Blade). --}}
+            @php $ecart = $this->theoreticalGap; @endphp
+            <div class="ld-card" style="border-left:4px solid var(--olmnp-success-accent);">
+                <h3 style="font-size:15px;font-weight:700;margin-bottom:6px;">
+                    Échéances importées de votre banque
+                </h3>
+                <p style="font-size:13px;color:var(--olmnp-fg-muted);margin:0;">
+                    Ce tableau porte les montants réels de votre établissement (différé, assurance
+                    dégressive, modulation) et non une estimation. Ce sont eux qui alimentent vos
+                    intérêts déductibles.
+                </p>
+
+                @if($ecart && $ecart['theoretical'] > 0)
+                    <table class="ld-table" style="margin-top:12px;">
+                        <thead>
+                            <tr>
+                                <th>Intérêts {{ $ecart['year'] }}</th>
+                                <th style="text-align:right;">Tableau importé</th>
+                                <th style="text-align:right;">Tableau théorique</th>
+                                <th style="text-align:right;">Écart</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Année en cours</td>
+                                <td style="text-align:right;">{{ number_format($ecart['imported'] / 100, 2, ',', "\u{202F}") }} €</td>
+                                <td style="text-align:right;">{{ number_format($ecart['theoretical'] / 100, 2, ',', "\u{202F}") }} €</td>
+                                <td style="text-align:right;font-weight:600;color:{{ $ecart['gap'] >= 0 ? 'var(--olmnp-success-accent)' : 'var(--olmnp-danger-accent)' }};">
+                                    {{ $ecart['gap'] >= 0 ? '+' : '' }}{{ number_format($ecart['gap'] / 100, 2, ',', "\u{202F}") }} €
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                @endif
+
+                @if($loan->documents->isNotEmpty())
+                    <p style="font-size:13px;margin-top:12px;">
+                        Justificatif :
+                        @foreach($loan->documents as $document)
+                            <a href="{{ $document->file_url }}" target="_blank" style="text-decoration:underline;">
+                                {{ $document->label }}</a>{{ ! $loop->last ? ',' : '' }}
+                        @endforeach
+                    </p>
+                @endif
+            </div>
+        @endif
+
         {{-- Tableau d'amortissement complet avec pagination --}}
         <div class="ld-card" x-data="{ page: 1, perPage: 12, total: {{ $data['total_months'] }} }">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:600;">Tableau d'amortissement ({{ $data['total_months'] }} mois)</h3>
+                <h3 style="font-size:16px;font-weight:600;">
+                    Tableau d'amortissement ({{ $data['total_months'] }} mois)
+                    <span style="font-size:12px;font-weight:400;color:var(--olmnp-fg-muted);">
+                        — {{ $loan->hasImportedSchedule() ? 'importé de la banque' : 'calculé' }}
+                    </span>
+                </h3>
                 <select x-model="perPage" @change="page=1" style="padding:4px 8px;border:1px solid var(--olmnp-border-strong);border-radius:6px;font-size:12px;">
                     <option value="12">12/page</option>
                     <option value="24">24/page</option>

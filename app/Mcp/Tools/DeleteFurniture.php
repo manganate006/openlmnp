@@ -43,7 +43,7 @@ class DeleteFurniture extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'furniture_id' => $schema->integer('Identifiant du mobilier à supprimer')->required(),
+            'furniture_id' => $schema->integer()->description('Identifiant du mobilier à supprimer')->required(),
         ];
     }
 }

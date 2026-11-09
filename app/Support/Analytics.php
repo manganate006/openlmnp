@@ -20,4 +20,19 @@ class Analytics
             default => '50+',
         };
     }
+
+    /**
+     * Tranche de confiance d'une analyse IA.
+     *
+     * Une tranche, jamais le score exact : associé au type de document, un
+     * score continu identifierait des documents précis d'un compte précis.
+     */
+    public static function confidenceBucket(float $confidence): string
+    {
+        return match (true) {
+            $confidence >= 0.85 => 'high',
+            $confidence >= 0.6 => 'medium',
+            default => 'low',
+        };
+    }
 }

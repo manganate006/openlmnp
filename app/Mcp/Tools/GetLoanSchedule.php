@@ -70,8 +70,8 @@ class GetLoanSchedule extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'loan_id' => $schema->integer('Identifiant de l\'emprunt')->required(),
-            'year'    => $schema->integer('Filtrer par année, ex: 2024 (optionnel — retourne tout le tableau si absent)'),
+            'loan_id' => $schema->integer()->description('Identifiant de l\'emprunt')->required(),
+            'year'    => $schema->integer()->description('Filtrer par année, ex: 2024 (optionnel — retourne tout le tableau si absent)'),
         ];
     }
 }

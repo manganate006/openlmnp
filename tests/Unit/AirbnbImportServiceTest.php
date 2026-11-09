@@ -30,9 +30,13 @@ beforeEach(function () {
 });
 
 it('imports airbnb csv with english headers', function () {
+    // ⚠️ « Reservation », pas « Payout » : un `Payout` n'a jamais de Amount/Host fee
+    // détaillés dans un export réel (c'est le virement qui RÈGLE des réservations déjà
+    // détaillées ailleurs) — l'utiliser ici testait un cas qui n'existe pas, et masquait
+    // le vrai défaut de double comptage (voir AirbnbImportTransactionTypesTest).
     $csv = "Date,Type,Confirmation code,Start date,Nights,Guest,Listing,Amount,Host fee,Paid out\n";
-    $csv .= "2024-06-15,Payout,ABC123,2024-06-10,3,John Doe,My Listing,150.00,4.50,145.50\n";
-    $csv .= "2024-07-20,Payout,DEF456,2024-07-18,2,Jane Smith,My Listing,200.00,6.00,194.00\n";
+    $csv .= "2024-06-15,Reservation,ABC123,2024-06-10,3,John Doe,My Listing,150.00,4.50,145.50\n";
+    $csv .= "2024-07-20,Reservation,DEF456,2024-07-18,2,Jane Smith,My Listing,200.00,6.00,194.00\n";
 
     $file = UploadedFile::fake()->createWithContent('airbnb.csv', $csv);
     $result = $this->service->import($file, $this->property);
@@ -91,6 +95,106 @@ it('handles french column headers', function () {
     $income = $this->property->incomes()->first();
     expect($income->guest_name)->toBe('Pierre Dupont');
     expect($income->platform_fee)->toBe(750); // 7.50€
+});
+
+/**
+ * « Taxes reversées par Airbnb » est le libellé réel de la colonne sur l'export
+ * « Historique des transactions » (vérifié sur un export réel, voir le commentaire de
+ * COLUMN_MAP dans AirbnbImportService). Décision de Jérémie du 06/11 : elle doit être
+ * captée dans `incomes.tourist_tax`, sans jamais gonfler `amount` — ce n'est pas une
+ * recette imposable, Airbnb ne fait que la reverser à la commune.
+ */
+it('captures the tourist tax from the real "Taxes reversées par Airbnb" column without inflating the rent amount', function () {
+    $csv = "Date,Code de confirmation,Montant,Frais de service,Taxes reversées par Airbnb\n";
+    $csv .= "2026-11-04,TAX001,200.00,7.20,3.30\n";
+
+    $file = UploadedFile::fake()->createWithContent('airbnb.csv', $csv);
+    $result = $this->service->import($file, $this->property);
+
+    expect($result['imported'])->toBe(1);
+
+    $income = Income::where('reservation_ref', 'TAX001')->firstOrFail();
+    expect($income->amount)->toBe(20000)       // 200,00 € — inchangé par la taxe
+        ->and($income->platform_fee)->toBe(720)
+        ->and($income->tourist_tax)->toBe(330); // 3,30 €
+});
+
+it('also recognises the "Taxe de séjour" fallback header, in-house convention but unconfirmed on a real Airbnb export', function () {
+    $csv = "Date,Code de confirmation,Montant,Taxe de séjour\n";
+    $csv .= "2026-11-04,TAX002,150.00,2.20\n";
+
+    $file = UploadedFile::fake()->createWithContent('airbnb.csv', $csv);
+    $result = $this->service->import($file, $this->property);
+
+    expect($result['imported'])->toBe(1);
+
+    $income = Income::where('reservation_ref', 'TAX002')->firstOrFail();
+    expect($income->tourist_tax)->toBe(220);
+});
+
+it('parses a european-formatted tourist tax amount', function () {
+    $csv = "Date,Code de confirmation,Montant,Taxes reversées par Airbnb\n";
+    $csv .= "2026-11-04,TAXEUR1,\"1.234,56\",\"12,34\"\n";
+
+    $file = UploadedFile::fake()->createWithContent('airbnb.csv', $csv);
+    $result = $this->service->import($file, $this->property);
+
+    expect($result['imported'])->toBe(1);
+
+    $income = Income::where('reservation_ref', 'TAXEUR1')->firstOrFail();
+    expect($income->amount)->toBe(123456)
+        ->and($income->tourist_tax)->toBe(1234);
+});
+
+it('leaves tourist tax at zero when the csv has no tax column at all, amount unchanged (regression)', function () {
+    $csv = "Date,Code de confirmation,Montant,Frais de service\n";
+    $csv .= "2026-11-04,NOTAX1,180.00,6.50\n";
+
+    $file = UploadedFile::fake()->createWithContent('airbnb.csv', $csv);
+    $result = $this->service->import($file, $this->property);
+
+    expect($result['imported'])->toBe(1);
+
+    $income = Income::where('reservation_ref', 'NOTAX1')->firstOrFail();
+    expect($income->amount)->toBe(18000)
+        ->and($income->platform_fee)->toBe(650)
+        ->and($income->tourist_tax)->toBe(0);
+});
+
+it('does not duplicate the tourist tax when the same file is imported twice', function () {
+    $csv = "Date,Code de confirmation,Montant,Taxes reversées par Airbnb\n";
+    $csv .= "2026-11-04,TAXDUP1,90.00,1.50\n";
+
+    $first = UploadedFile::fake()->createWithContent('airbnb1.csv', $csv);
+    $this->service->import($first, $this->property);
+
+    $second = UploadedFile::fake()->createWithContent('airbnb2.csv', $csv);
+    $result = $this->service->import($second, $this->property);
+
+    expect($result['imported'])->toBe(0)
+        ->and($result['skipped'])->toBe(1)
+        ->and(Income::where('reservation_ref', 'TAXDUP1')->count())->toBe(1);
+});
+
+it('reconstructs gross and commission at the host-only fee rate without touching the tourist tax reported in the preview', function () {
+    // Format « Réservations » : jamais de colonne de taxe (confirmée absente des deux
+    // échantillons réels `_admin/data/airbnb-csv/reservations_futures_*.csv`) — la taxe
+    // reste à 0 même quand le brut est reconstitué depuis le net.
+    $this->property->update(['airbnb_commission_rate' => 18.6]);
+
+    $csv = "Date,Code de confirmation,Montant,Voyageur\n";
+    $csv .= "2026-11-04,HOSTONLYTAX,814.00,Marie Durand\n";
+
+    $file = UploadedFile::fake()->createWithContent('reservations.csv', $csv);
+    $preview = $this->service->preview($file, $this->property);
+
+    expect($preview['rows'][0]['tourist_tax'])->toBe(0);
+
+    $this->service->import($file, $this->property);
+
+    $income = Income::where('reservation_ref', 'HOSTONLYTAX')->firstOrFail();
+    expect($income->amount)->toBe(100000)
+        ->and($income->tourist_tax)->toBe(0);
 });
 
 it('rejects csv files exceeding the maximum import size', function () {

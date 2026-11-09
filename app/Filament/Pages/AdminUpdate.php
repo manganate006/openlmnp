@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\RequiresAdmin;
+use App\Filament\Pages\Concerns\ShowsVersionInfo;
 use App\Models\Setting;
 use App\Services\UpdateService;
 use BackedEnum;
@@ -14,6 +15,7 @@ use UnitEnum;
 class AdminUpdate extends Page
 {
     use RequiresAdmin;
+    use ShowsVersionInfo;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPath;
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
@@ -25,9 +27,7 @@ class AdminUpdate extends Page
     // Auto-update
     public bool $autoUpdateEnabled = false;
 
-    // Releases
-    public ?array $updateInfo = null;
-    public ?array $changelog = null;
+    // Releases — $updateInfo et $changelog viennent de ShowsVersionInfo
     public ?array $updateResult = null;
 
     // Branche (dev)
@@ -38,12 +38,40 @@ class AdminUpdate extends Page
     public string $githubToken = '';
     public string $githubRepo = '';
 
+    /**
+     * ⚠️ Aucun appel réseau ici : le montage ne lit que le cache.
+     *
+     * Jusqu'au 2026-09-05, `mount()` appelait `checkBranchUpdates()`, donc GitHub, à chaque
+     * affichage de la page : 10 s d'attente sur une instance hors ligne, et trois requêtes
+     * prélevées sur les 60/h de l'API non authentifiée. Le relevé part désormais du
+     * navigateur (`wire:init`), et seulement si le cache est froid.
+     */
     public function mount(): void
     {
         $this->githubToken = Setting::get('github_token', '') ?? '';
         $this->githubRepo = Setting::get('github_repo', '') ?? '';
         $this->autoUpdateEnabled = Setting::get('auto_update_enabled') === '1';
-        $this->checkBranch();
+
+        $this->mountVersionInfo();
+        $this->branchInfo = (new UpdateService())->cached(UpdateService::KIND_BRANCH);
+    }
+
+    /** Vrai si l'un des trois relevés manque — la vue déclenche alors un `wire:init`. */
+    public function needsVersionFetch(): bool
+    {
+        return $this->updateInfo === null || $this->changelog === null || $this->branchInfo === null;
+    }
+
+    /** Relève les releases ET la branche, en un seul aller-retour. */
+    public function refreshVersionInfo(bool $force = false): void
+    {
+        $service = new UpdateService();
+
+        $this->updateInfo = $service->checkForUpdates($force);
+        $this->changelog = $service->getChangelog(5, $force);
+
+        $this->branchInfo = $service->checkBranchUpdates('main', $force);
+        $this->cacheBranchBadge();
     }
 
     public function toggleAutoUpdate(): void
@@ -72,18 +100,20 @@ class AdminUpdate extends Page
             ->title('Configuration sauvegardée')
             ->send();
 
-        // Re-check avec les nouveaux paramètres
-        $this->checkBranch();
+        // Re-check avec les nouveaux paramètres. Le cache est indexé par dépôt : changer de
+        // dépôt repart d'un relevé neuf sans qu'on ait à l'invalider.
+        $this->refreshVersionInfo(true);
     }
 
     // -------------------------------------------------------------------------
     // Branche (développement)
     // -------------------------------------------------------------------------
 
+    /** Bouton « Vérifier » : force un relevé neuf, cache chaud ou non. */
     public function checkBranch(): void
     {
         $service = new UpdateService();
-        $this->branchInfo = $service->checkBranchUpdates();
+        $this->branchInfo = $service->checkBranchUpdates('main', fresh: true);
         $this->deployResult = null;
         $this->cacheBranchBadge();
     }
@@ -94,8 +124,9 @@ class AdminUpdate extends Page
         $this->deployResult = $service->applyBranchUpdate();
 
         if ($this->deployResult['success'] ?? false) {
-            $this->branchInfo = $service->checkBranchUpdates();
-            $this->cacheBranchBadge();
+            // Le déploiement a invalidé le cache : on repart d'un relevé neuf, sinon la page
+            // continuerait d'annoncer les commits qu'elle vient d'appliquer.
+            $this->refreshVersionInfo(true);
         }
     }
 
@@ -123,11 +154,12 @@ class AdminUpdate extends Page
     // Releases (production)
     // -------------------------------------------------------------------------
 
+    /** Bouton « Vérifier les releases » : force un relevé neuf, cache chaud ou non. */
     public function checkUpdate(): void
     {
         $service = new UpdateService();
-        $this->updateInfo = $service->checkForUpdates();
-        $this->changelog = $service->getChangelog();
+        $this->updateInfo = $service->checkForUpdates(fresh: true);
+        $this->changelog = $service->getChangelog(5, fresh: true);
     }
 
     public function applyUpdate(): void

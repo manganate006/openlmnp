@@ -2,11 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\McpPersonalAccessToken;
 use App\Models\User;
 use App\Support\ConsentState;
+use App\Support\VaultSession;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Cookie\Middleware\EncryptCookies;
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -15,6 +20,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use App\Models\Property;
 use App\Observers\PropertyObserver;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,7 +29,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // La clé du coffre-fort est résolue une seule fois par requête, puis
+        // mémorisée : sans cette instance partagée, chaque lecture relirait le
+        // cookie et referait la vérification d'empreinte.
+        $this->app->scoped(VaultSession::class);
     }
 
     /**
@@ -52,6 +61,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         self::exemptThirdPartyCookiesFromEncryption();
+
+        // Lot 5 des dossiers liés : le modèle de jeton Sanctum porte en plus
+        // `dossier_user_id` (voir App\Models\McpPersonalAccessToken). Enregistré
+        // ici pour que `createToken()`, `findToken()` etc. hydratent bien CE
+        // modèle, lu ensuite par App\Http\Middleware\McpGuard.
+        Sanctum::usePersonalAccessTokenModel(McpPersonalAccessToken::class);
 
         // Les composants ventilés en pourcentage suivent la valeur du bien (issue #11).
         Property::observe(PropertyObserver::class);
@@ -96,6 +111,33 @@ class AppServiceProvider extends ServiceProvider
                 'method' => ($event->user->is_demo ?? false) ? 'demo' : 'email',
             ]);
         });
+
+        // Le coffre-fort se referme à la déconnexion : le cookie porteur de la clé
+        // est effacé. Le même événement est levé par AuthenticateSession quand la
+        // session est invalidée ailleurs, ce qui referme aussi les autres onglets.
+        //
+        // ⚠️ `$event->user` (PAS `Auth::user()`) : `SessionGuard::logout()` lève cet
+        // événement AVANT de mettre `$this->user` à `null`, mais seul le payload de
+        // l'événement garantit de viser le BON cookie depuis le lot 3 des dossiers
+        // liés (un cookie par utilisateur, voir App\Support\VaultSession) — se fier
+        // au garde authentifié courant resterait correct ici, mais le payload de
+        // l'événement est la source explicite, documentée par Laravel pour ça.
+        Event::listen(Logout::class, function (Logout $event): void {
+            if ($event->user instanceof User) {
+                app(VaultSession::class)->lock($event->user);
+            }
+        });
+        // Conversion HEIC → JPEG dans le navigateur (photos iPhone) : le script
+        // d'accroche est chargé sur toutes les pages du panel (quelques Ko), la
+        // bibliothèque heic2any (WebAssembly, ~1,3 Mo) uniquement à la demande,
+        // quand un fichier HEIC est déposé. Rien n'est décodé côté serveur.
+        FilamentAsset::register([
+            Js::make('heic-upload', resource_path('js/heic-upload.js')),
+            Js::make('heic2any', resource_path('js/lib/heic2any/heic2any.min.js'))->loadedOnRequest(),
+        ], package: 'openlmnp');
+        FilamentAsset::registerScriptData([
+            'heic2anySrc' => FilamentAsset::getScriptSrc('heic2any', 'openlmnp'),
+        ], package: 'openlmnp');
 
         // Allow private disk to generate temporary signed URLs for file previews
         Storage::disk('local')->buildTemporaryUrlsUsing(

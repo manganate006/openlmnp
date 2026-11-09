@@ -12,5 +12,9 @@
         "laravel-vite-plugin": "^3.0.0",
         "tailwindcss": "^4.0.0",
         "vite": "^8.0.0"
+    },
+    "dependencies": {
+        "fflate": "^0.8.3",
+        "libsodium-wrappers-sumo": "^0.8.4"
     }
 }

@@ -6,7 +6,6 @@ use App\Models\Property;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -50,9 +49,15 @@ class PropertiesTable
                     ->badge()
                     ->color(fn ($state) => $state === 'liable' ? 'warning' : 'gray')
                     ->visible(fn () => Property::where('tva_regime', 'liable')->exists()),
-                IconColumn::make('is_primary_residence')
-                    ->label('RP')
-                    ->boolean(),
+                TextColumn::make('residence_situation')
+                    ->label('Situation')
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        Property::RESIDENCE_PART_OF_RESIDENCE => 'Pièce(s) de la RP',
+                        Property::RESIDENCE_INDEPENDENT_UNIT => 'Logement indépendant',
+                        default => 'Distinct',
+                    })
+                    ->badge()
+                    ->color(fn ($state) => $state === Property::RESIDENCE_SEPARATE ? 'gray' : 'info'),
             ])
             ->reorderableColumns()
             ->filters([])

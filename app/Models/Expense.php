@@ -8,11 +8,19 @@ use App\Models\Scopes\BelongsToUserThroughPropertyScope;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Facades\DB;
 
 #[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Expense extends Model
 {
     use HasDocuments;
+
+    /**
+     * Part d'usage pour la location, en centièmes de pour cent (10000 = 100 %).
+     * NULL vaut 100 % : la charge sert entièrement à la location.
+     */
+    public const FULL_USE_BP = 10000;
 
     public const CATEGORY_PROPERTY_TAX = 'property_tax';
     public const CATEGORY_INSURANCE    = 'insurance';
@@ -36,6 +44,7 @@ class Expense extends Model
         'category',
         'description',
         'is_dedicated',
+        'business_use_bp',
         'recurring_type',
         'notes',
     ];
@@ -54,6 +63,7 @@ class Expense extends Model
         return [
             'expense_date' => 'date',
             'is_dedicated' => 'boolean',
+            'business_use_bp' => 'integer',
         ];
     }
 
@@ -119,16 +129,88 @@ class Expense extends Model
     }
 
     /**
-     * Montant effectif après application de la quote-part.
+     * Montant effectif : part d'usage pour la location (#17), puis quote-part surface si la
+     * charge n'est pas dédiée au bien.
      */
     public function getEffectiveAmountAttribute(): string
     {
+        $amount = $this->usageAdjusted('amount');
+
         if ($this->is_dedicated) {
-            return (string) $this->amount;
+            return (string) $amount;
         }
 
         $quotaShare = $this->property->quota_share;
-        return bcmul((string) $this->amount, $quotaShare, 0);
+        return bcmul((string) $amount, $quotaShare, 0);
+    }
+
+    /**
+     * Un montant de la charge (`amount`, `amount_ht` ou `amount_tva`, en centimes) réduit à
+     * sa part d'usage pour la location. La quote-part surface s'applique ENSUITE, au total
+     * des charges partagées, comme avant l'introduction de la part d'usage.
+     */
+    public function usageAdjusted(string $column = 'amount'): int
+    {
+        return self::applyUsage((int) $this->{$column}, $this->business_use_bp);
+    }
+
+    /**
+     * Arrondi au centime le plus proche, en entiers : `(montant × part + 5000) / 10000`.
+     * Formule identique à usageAdjustedSql(), pour qu'une somme SQL et une somme ligne à
+     * ligne en PHP tombent au même centime (division entière tronquée vers zéro des deux
+     * côtés, en SQLite comme en PostgreSQL).
+     */
+    public static function applyUsage(int $cents, ?int $bp): int
+    {
+        if ($bp === null) {
+            return $cents;
+        }
+
+        return intdiv($cents * $bp + intdiv(self::FULL_USE_BP, 2), self::FULL_USE_BP);
+    }
+
+    /**
+     * Expression SQL d'une colonne réduite à la part d'usage, ligne par ligne, à passer à
+     * `->sum()` : `$property->expenses()->where('is_dedicated', false)->sum(Expense::usageAdjustedSql())`.
+     */
+    public static function usageAdjustedSql(string $column = 'amount'): Expression
+    {
+        return DB::raw(self::usageAdjustedSqlFragment($column));
+    }
+
+    /** Le même calcul en fragment SQL brut, pour un `selectRaw()` groupé. */
+    public static function usageAdjustedSqlFragment(string $column = 'amount'): string
+    {
+        if (! in_array($column, ['amount', 'amount_ht', 'amount_tva'], true)) {
+            throw new \InvalidArgumentException("Colonne de montant inconnue : {$column}");
+        }
+
+        $full = self::FULL_USE_BP;
+        $half = intdiv($full, 2);
+
+        return "CASE WHEN business_use_bp IS NULL THEN {$column} ELSE ({$column} * business_use_bp + {$half}) / {$full} END";
+    }
+
+    /** Saisie en pourcentage (« 30 », « 12,5 ») vers centièmes de pour cent ; vide ou 100 = NULL. */
+    public static function percentToBp(mixed $percent): ?int
+    {
+        if ($percent === null || trim((string) $percent) === '') {
+            return null;
+        }
+
+        $bp = (int) round(((float) str_replace(',', '.', (string) $percent)) * 100);
+
+        return $bp >= self::FULL_USE_BP ? null : max(0, $bp);
+    }
+
+    /** Centièmes de pour cent vers pourcentage lisible, sans zéros inutiles (« 30 », « 12,5 »). */
+    public static function formatUsagePercent(?int $bp, string $decimalSeparator = ','): ?string
+    {
+        if ($bp === null) {
+            return null;
+        }
+
+        return rtrim(rtrim(number_format($bp / 100, 2, $decimalSeparator, ''), '0'), $decimalSeparator);
     }
 
     public function getAmountEurosAttribute(): string

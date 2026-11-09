@@ -74,11 +74,46 @@ class ListFiscalYears extends ListRecords
                 ])
                 ->action(function (array $data) {
                     $service = app(DocumentExportService::class);
-                    $result = $service->exportZip(
-                        auth()->user(),
-                        $data['year'] ? (int) $data['year'] : null,
-                        $data['type'] ?? null,
-                    );
+
+                    // Coffre-fort actif : le serveur n'a plus les clés, donc plus
+                    // moyen d'assembler l'archive. Il rend la liste, le navigateur
+                    // déchiffre et zippe. C'est le prix de « la clé ne quitte pas
+                    // le poste », et il est payé ici.
+                    if (\App\Support\Vault::isEnabledFor(auth()->user())) {
+                        $entrees = $service->manifest(
+                            auth()->user(),
+                            $data['year'] ? (int) $data['year'] : null,
+                            $data['type'] ?? null,
+                        );
+
+                        if ($entrees === []) {
+                            Notification::make()->title('Aucun justificatif à exporter')->warning()->send();
+
+                            return;
+                        }
+
+                        $this->dispatch('coffre-archiver', entrees: $entrees);
+
+                        return;
+                    }
+
+                    try {
+                        $result = $service->exportZip(
+                            auth()->user(),
+                            $data['year'] ? (int) $data['year'] : null,
+                            $data['type'] ?? null,
+                        );
+                    } catch (\App\Services\Vault\VaultException $e) {
+                        // Coffre-fort verrouillé : refuser plutôt que d'exporter
+                        // une archive amputée sans le dire.
+                        Notification::make()
+                            ->title('Export impossible')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
 
                     if ($result['path'] === null) {
                         Notification::make()

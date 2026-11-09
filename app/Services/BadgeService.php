@@ -148,18 +148,24 @@ class BadgeService
     {
         if ($badge->is_yearly) {
             $year = $context['fiscal_year'] ?? (int) date('Y');
-            if ($this->checkConditions($user, $badge, $year) && !$user->hasBadge($badge->code, $year)) {
+            if ($this->checkConditions($user, $badge, $year, $trigger) && !$user->hasBadge($badge->code, $year)) {
                 $this->award($user, $badge, $year, $context);
             }
             $this->updateProgress($user, $badge, $year);
         } else {
-            if ($this->checkConditions($user, $badge) && !$user->hasBadge($badge->code)) {
+            if ($this->checkConditions($user, $badge, null, $trigger) && !$user->hasBadge($badge->code)) {
                 $this->award($user, $badge, null, $context);
             }
         }
     }
 
-    private function checkConditions(User $user, BadgeDefinition $badge, ?int $year = null): bool
+    /**
+     * @param  string|null  $trigger  Contexte d'appel. Nécessaire pour les badges
+     *                                dont l'action ne laisse aucune trace en base :
+     *                                sans lui, ils seraient décernés à la première
+     *                                évaluation venue, quelle qu'en soit la cause.
+     */
+    private function checkConditions(User $user, BadgeDefinition $badge, ?int $year = null, ?string $trigger = null): bool
     {
         $conditions = $badge->unlock_conditions;
         $type = $conditions['type'] ?? '';
@@ -178,8 +184,16 @@ class BadgeService
             'fec_generated' => $this->checkFecGenerated($user, $year),
             'tax_return_generated' => $this->checkTaxReturnGenerated($user, $year),
             'all_incomes_imported' => $this->checkAllIncomesImported($user, $year),
-            'simulator_used' => true, // Triggered directly from the page
-            'projection_used' => true, // Triggered directly from the page
+            // Même cas que `ai_import_used` ci-dessous : consulter le simulateur ou la
+            // projection ne laisse aucune trace en base. Ces conditions valaient `true`
+            // sans condition, si bien que N'IMPORTE QUELLE évaluation de badges — depuis
+            // n'importe quelle page, avec n'importe quel déclencheur — les décernait, et
+            // que `evaluateAll()` les offrait à tout le monde. Seul le déclencheur fait foi.
+            'simulator_used' => $trigger === 'simulator_used',
+            'projection_used' => $trigger === 'projection_used',
+            // Aucune trace en base d'une analyse IA (rien n'est stocké du document) :
+            // seul le déclencheur fait foi.
+            'ai_import_used' => $trigger === 'ai_import_used',
             'deferred_depreciation' => $this->checkDeferredDepreciation($user),
             'closed_fiscal_years' => $this->checkClosedFiscalYears($user, $conditions['min'] ?? 3),
             default => false,
@@ -379,7 +393,7 @@ class BadgeService
 
         return $user->fiscalYears()
             ->where('year', $year)
-            ->whereNotNull('fec_path')
+            ->whereNotNull('fec_generated_at')
             ->exists();
     }
 
@@ -391,7 +405,7 @@ class BadgeService
 
         return $user->fiscalYears()
             ->where('year', $year)
-            ->whereNotNull('pdf_path')
+            ->whereNotNull('tax_return_generated_at')
             ->exists();
     }
 

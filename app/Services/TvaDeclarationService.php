@@ -108,9 +108,10 @@ class TvaDeclarationService
             ->get();
 
         foreach ($expenses as $expense) {
+            // Part d'usage (#17) puis quote-part surface.
             $effectiveTva = $expense->is_dedicated
-                ? $expense->amount_tva
-                : (int) bcmul((string) $expense->amount_tva, $property->quota_share, 0);
+                ? $expense->usageAdjusted('amount_tva')
+                : (int) bcmul((string) $expense->usageAdjusted('amount_tva'), $property->quota_share, 0);
 
             $deductible += $effectiveTva;
             $rate = $expense->tva_rate;

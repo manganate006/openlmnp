@@ -36,8 +36,8 @@ class ListFiscalYears extends Tool
                 'deferred_depreciation_eur' => bcdiv((string) $fy->deferred_depreciation, '100', 2),
                 'previous_deferred_eur'     => bcdiv((string) $fy->previous_deferred, '100', 2),
                 'fiscal_result_eur'         => $fy->fiscal_result_euros,
-                'has_pdf'                   => $fy->pdf_path !== null,
-                'has_fec'                   => $fy->fec_path !== null,
+                'has_pdf'                   => $fy->tax_return_generated_at !== null,
+                'has_fec'                   => $fy->fec_generated_at !== null,
                 'transmitted_at'            => $fy->transmitted_at?->toDateTimeString(),
                 'ack_number'                => $fy->ack_number ?? null,
             ];

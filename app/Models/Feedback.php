@@ -36,8 +36,44 @@ class Feedback extends Model
 
     public const TRIGGER_RETURN = 'return';
 
+    /**
+     * Les freins proposés au visiteur de la démonstration, dans l'ordre d'affichage.
+     *
+     * ⚠️ **La clé est stockée en base, jamais le libellé.** Reformuler une case ne doit ni
+     * casser l'historique ni fausser les comptages du rapport hebdomadaire.
+     *
+     * Chaque entrée vient d'une source constatée, pas d'une intuition :
+     *  - `reprise`          issue GitHub #8, verbatim : « quasi impossible de basculer une
+     *                       comptabilité LMNP existante », suivie d'une 2ᵉ demande le lendemain
+     *  - `prix`             notre propre comparatif l'admet : plus cher sur l'année qu'une
+     *                       offre payée en une fois
+     *  - `confiance`        FAQ « faut-il un expert-comptable » + persona « peur de faire une
+     *                       erreur fiscale »
+     *  - `avis`             constat interne : 1 abonné actif, 0 témoignage publié
+     *  - `teletransmission` la page tarifs annonce « bientôt disponible »
+     *  - `fonctionnalite`   regroupe accès comptable, import bancaire et confort mobile :
+     *                       trois hypothèses trop spéculatives pour trois cases séparées
+     *
+     * Volontairement ABSENTS faute de source : la TVA (le produit la couvre), la
+     * para-hôtellerie (aucune trace), la SCI/indivision et « pas les compétences pour
+     * auto-héberger » — ces deux derniers sont déduits du modèle de données et de la structure
+     * de l'offre, jamais formulés par un prospect. Les proposer reviendrait à souffler la
+     * réponse.
+     *
+     * @var array<string, string>
+     */
+    public const BLOCKERS = [
+        'reprise' => 'Reprendre une comptabilité déjà commencée ailleurs',
+        'prix' => 'Le coût de l\'abonnement',
+        'confiance' => 'Ne pas avoir de professionnel qui engage sa responsabilité',
+        'avis' => 'Le manque d\'avis d\'autres utilisateurs',
+        'teletransmission' => 'Ne pas pouvoir télétransmettre la liasse aux impôts',
+        'fonctionnalite' => 'Une fonctionnalité dont j\'ai besoin manque',
+    ];
+
     protected $fillable = [
         'sentiment',
+        'blockers',
         'variant',
         'dismissed_at',
         'message',
@@ -55,6 +91,7 @@ class Feedback extends Model
         return [
             'can_publish' => 'boolean',
             'context' => 'array',
+            'blockers' => 'array',
             'dismissed_at' => 'datetime',
         ];
     }

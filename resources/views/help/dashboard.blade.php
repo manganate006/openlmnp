@@ -23,7 +23,7 @@
     @if (auth()->user()?->is_demo && ! auth()->user()?->demo_promoted_at)
         @php($demoProlonge = filled(auth()->user()?->demo_extended_at))
         <h3>Votre bac à sable de démonstration</h3>
-        <p>Vous n'êtes pas sur un compte ordinaire&nbsp;: vous explorez un <strong>bac à sable</strong>, rempli de données fictives, qui n'appartient qu'à vous et que personne d'autre ne voit. Il est <strong>effacé automatiquement</strong> au bout de {{ $demoProlonge ? config('demo.extended_ttl_days') : config('demo.ttl_hours') }}&nbsp;{{ $demoProlonge ? 'jours' : 'h' }}.</p>
+        <p>Vous n'êtes pas sur un compte ordinaire&nbsp;: vous explorez un <strong>bac à sable</strong>, rempli de données fictives, qui n'appartient qu'à vous et que personne d'autre ne voit. Il est <strong>effacé automatiquement</strong> au bout de {{ $demoProlonge ? \App\Support\Fr::accorde((int) config('demo.extended_ttl_days'), 'jour') : config('demo.ttl_hours').' h' }}.</p>
 
         <h3>Ce que le compte à rebours vous dit</h3>
         <ul>
@@ -35,14 +35,18 @@
 
         <h3>Garder votre travail</h3>
         <p>Deux sorties, proposées quand le temps se réduit&nbsp;:</p>
-        <div class="ctx-step"><span class="ctx-step-num">1</span><span class="ctx-step-text"><strong>Prolonger</strong> &mdash; laissez une adresse e-mail et cochez le consentement&nbsp;: le bac à sable vit {{ config('demo.extended_ttl_days') }} jours de plus. Gratuit, sans carte bancaire, et <strong>une seule fois</strong>.</span></div>
+        <div class="ctx-step"><span class="ctx-step-num">1</span><span class="ctx-step-text"><strong>Prolonger</strong> &mdash; laissez une adresse e-mail et cochez le consentement&nbsp;: le bac à sable vit {{ \App\Support\Fr::accorde((int) config('demo.extended_ttl_days'), 'jour') }} de plus. Gratuit, sans carte bancaire, et <strong>une seule fois</strong>.</span></div>
         @if (filled(config('demo.links.pro')))
             <div class="ctx-step"><span class="ctx-step-num">2</span><span class="ctx-step-text"><strong>Garder mes données</strong> &mdash; votre dossier devient un vrai compte, repris tel quel. Rien à ressaisir, rien à réimporter.</span></div>
         @endif
         <p>Choisir <strong>Continuer la démonstration</strong> ne fait que repousser la question&nbsp;: le compte à rebours continue de tourner.</p>
 
+        @if (filled(config('demo.links.lead')))
+            <p>Le formulaire de prolongation propose une <strong>seconde case, facultative</strong>&nbsp;: recevoir les rappels d'échéances fiscales. Elle est <em>indépendante</em> du consentement au-dessus, qui ne sert qu'à vous renvoyer votre lien de reprise. La laisser décochée ne change rien à votre prolongation, et la cocher ne vous inscrit pas encore&nbsp;: vous recevez d'abord un e-mail de confirmation, et <strong>rien ne part tant que vous ne l'avez pas cliqué</strong>.</p>
+        @endif
+
         <div class="ctx-warning">
-            <strong>Vous risquez de vous croire effacé alors que tout est là.</strong> Votre session ne dure que {{ config('session.lifetime') }}&nbsp;minutes, alors que le bac à sable, lui, vit {{ $demoProlonge ? config('demo.extended_ttl_days') : config('demo.ttl_hours') }}&nbsp;{{ $demoProlonge ? 'jours' : 'h' }}. Revenez trois heures plus tard&nbsp;: vous serez déconnecté devant un dossier parfaitement vivant, sans moyen d'y rentrer. C'est le <strong>lien de reprise</strong>, envoyé quand vous prolongez, qui vous y ramène depuis n'importe quel appareil.
+            <strong>Vous risquez de vous croire effacé alors que tout est là.</strong> Votre session ne dure que {{ config('session.lifetime') }}&nbsp;minutes, alors que le bac à sable, lui, vit {{ $demoProlonge ? \App\Support\Fr::accorde((int) config('demo.extended_ttl_days'), 'jour') : config('demo.ttl_hours').' h' }}. Revenez trois heures plus tard&nbsp;: vous serez déconnecté devant un dossier parfaitement vivant, sans moyen d'y rentrer. C'est le <strong>lien de reprise</strong>, envoyé quand vous prolongez, qui vous y ramène depuis n'importe quel appareil.
         </div>
 
         <div class="ctx-tip">

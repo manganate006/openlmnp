@@ -35,7 +35,7 @@ class DeleteIncome extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'income_id' => $schema->integer('Identifiant du revenu à supprimer')->required(),
+            'income_id' => $schema->integer()->description('Identifiant du revenu à supprimer')->required(),
         ];
     }
 }

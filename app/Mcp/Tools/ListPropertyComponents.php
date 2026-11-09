@@ -77,7 +77,7 @@ class ListPropertyComponents extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id' => $schema->integer('Identifiant du bien immobilier')->required(),
+            'property_id' => $schema->integer()->description('Identifiant du bien immobilier')->required(),
         ];
     }
 }

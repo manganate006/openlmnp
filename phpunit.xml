@@ -21,6 +21,10 @@
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
+        <!-- Même motif que BCRYPT_ROUNDS : Argon2id en profil « moderate » coûte
+             500 ms par dérivation, ce qui rendrait la suite inexploitable. Le
+             profil de test reste un vrai Argon2id, au plancher de ses paramètres. -->
+        <env name="DOCUMENTS_VAULT_KDF" value="test"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>

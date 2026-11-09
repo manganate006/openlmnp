@@ -32,11 +32,11 @@
 @if ($step === 'positive')
     <div class="fb-head">
         <div>
-            @if ($this->showsProCta)
+            @if ($this->isDemo)
                 {{-- En démonstration, la personne n'est pas encore utilisatrice : lui demander
                      de soutenir le projet avant même qu'elle l'ait adopté serait à l'envers. --}}
-                <p class="fb-title">Merci ! Voici comment aller plus loin</p>
-                <p class="fb-subtitle">Cette démonstration s'efface dans {{ $this->demoHours }} heures.</p>
+                <p class="fb-title">Merci ! Une dernière chose</p>
+                <p class="fb-subtitle">Cette démonstration s'efface dans {{ $this->demoDelay }}.</p>
             @else
                 <p class="fb-title">Merci ! Voici comment nous aider</p>
                 <p class="fb-subtitle">OpenLMNP est développé sur du temps libre. Trois gestes qui changent tout :</p>
@@ -50,6 +50,27 @@
     </div>
 
     <div class="fb-body">
+        @if ($this->showsKeepSandbox)
+            {{--
+                Le seul geste utile à 4 minutes : à ce stade le parcours d'expiration n'a
+                encore rien affiché (ses paliers se comptent en HEURES restantes), et c'est
+                donc ici que se joue tout le contact avec un prospect de session courte.
+
+                Rien n'est réimplémenté : le bouton passe la main à `DemoExpiryPrompt`, qui
+                porte déjà la validation, le consentement, la prolongation et l'envoi du
+                lien de reprise.
+            --}}
+            <button type="button" class="fb-cta-pro" wire:click="keepSandbox">
+                <span class="fb-cta-pro-text">
+                    <span class="fb-cta-pro-title">Gardez votre travail 7 jours</span>
+                    <span class="fb-cta-pro-sub">Laissez votre adresse : on vous renvoie le lien pour revenir, depuis n'importe quel appareil</span>
+                </span>
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true">
+                    <path d="M7 4l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+        @endif
+
         @if ($this->showsProCta)
             {{--
                 Nouvel onglet : le bac à sable reste vivant derrière. Quelqu'un qui va lire les
@@ -78,6 +99,14 @@
             <p class="fb-separator">Ou, si vous préférez l'héberger vous-même</p>
         @endif
 
+        {{--
+            ⚠️ Jamais en démonstration. Un visiteur qui découvre le produit depuis quatre
+            minutes n'est pas un contributeur : lui proposer une étoile, un parrainage et les
+            Discussions, c'est ouvrir trois portes qui ne le concernent pas et diluer la seule
+            qui compte. Ces gestes gardent tout leur sens pour un compte réel, souvent
+            auto-hébergé — d'où la condition, et non la suppression.
+        --}}
+        @unless ($this->isDemo)
         <div class="fb-links">
             <a class="fb-link" href="{{ config('feedback.links.star') }}" target="_blank" rel="noopener noreferrer">
                 <span class="fb-link-icon">
@@ -115,31 +144,73 @@
                 </span>
             </a>
         </div>
+        @endunless
 
         <div class="fb-form">
-            <p class="fb-separator">Ou dites-le-nous en une phrase</p>
+            @if ($this->isDemo)
+                {{--
+                    La question la plus actionnable de tout l'entonnoir : 42 personnes démarrent
+                    la démonstration, 6 atteignent le paiement. Ce sont ces trente-six-là qui
+                    répondent ici.
 
-            <textarea class="fb-textarea" rows="3" wire:model="message"
-                      placeholder="Ce qui vous a plu, en une phrase…"></textarea>
+                    ⚠️ Chaque case est enregistrée DÈS LE CLIC (`wire:model.live`), sans attendre
+                    le bouton d'envoi : quelqu'un qui coche puis referme a quand même répondu.
+                    C'est une COLLECTE, pas un réglage d'affichage — la politique de
+                    confidentialité le dit, et on ne stocke que des identifiants non nominatifs.
+                --}}
+                <p class="fb-separator">Qu'est-ce qui vous manque pour franchir le pas ?</p>
+
+                <div class="fb-blockers">
+                    @foreach (\App\Models\Feedback::BLOCKERS as $key => $label)
+                        <label class="fb-blocker">
+                            <input type="checkbox" class="fb-checkbox"
+                                   value="{{ $key }}" wire:model.live="blockers">
+                            <span>{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <textarea class="fb-textarea" rows="2" wire:model="message"
+                          placeholder="Dites-nous en plus, si vous voulez…"></textarea>
+            @else
+                <p class="fb-separator">Ou dites-le-nous en une phrase</p>
+
+                <textarea class="fb-textarea" rows="3" wire:model="message"
+                          placeholder="Ce qui vous a plu, en une phrase…"></textarea>
+            @endif
             @error('message') <p class="fb-error">{{ $message }}</p> @enderror
 
-            <div class="fb-fields">
+            @if ($this->isDemo)
+                {{--
+                    Ni « Prénom » ni consentement à publication en démonstration : les deux
+                    n'existaient que pour signer un témoignage, et `isPublishableAsTestimonial()`
+                    refuse par construction tout retour venu de la démonstration — on demandait
+                    un accord qu'on avait décidé de ne jamais honorer.
+                --}}
                 <label class="fb-field">
-                    <span class="fb-label">Prénom</span>
-                    <input type="text" class="fb-input" wire:model="authorName" autocomplete="given-name">
-                </label>
-                <label class="fb-field">
-                    <span class="fb-label">E-mail (facultatif)</span>
+                    <span class="fb-label">E-mail (facultatif, si vous voulez une réponse)</span>
                     <input type="email" class="fb-input" wire:model="authorEmail" autocomplete="email">
                 </label>
-            </div>
-            @error('authorName') <p class="fb-error">{{ $message }}</p> @enderror
-            @error('authorEmail') <p class="fb-error">{{ $message }}</p> @enderror
+                @error('authorEmail') <p class="fb-error">{{ $message }}</p> @enderror
+            @else
+                <div class="fb-fields">
+                    <label class="fb-field">
+                        <span class="fb-label">Prénom</span>
+                        <input type="text" class="fb-input" wire:model="authorName" autocomplete="given-name">
+                    </label>
+                    <label class="fb-field">
+                        <span class="fb-label">E-mail (facultatif)</span>
+                        <input type="email" class="fb-input" wire:model="authorEmail" autocomplete="email">
+                    </label>
+                </div>
+                @error('authorName') <p class="fb-error">{{ $message }}</p> @enderror
+                @error('authorEmail') <p class="fb-error">{{ $message }}</p> @enderror
 
-            <label class="fb-consent">
-                <input type="checkbox" class="fb-checkbox" wire:model="canPublish">
-                <span>J'autorise OpenLMNP à publier ce message avec mon prénom.</span>
-            </label>
+                <label class="fb-consent">
+                    <input type="checkbox" class="fb-checkbox" wire:model="canPublish">
+                    <span>J'autorise OpenLMNP à publier ce message avec mon prénom.</span>
+                </label>
+            @endif
 
             <button type="button" class="fb-submit" wire:click="submit">Envoyer</button>
         </div>

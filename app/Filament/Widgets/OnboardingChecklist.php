@@ -33,6 +33,16 @@ class OnboardingChecklist extends Widget
             return false;
         }
 
+        // Compte membre dans SON PROPRE principal (pas encore basculé dans un
+        // dossier) : la saisie d'un bien lui est fermée (App\Support\
+        // DossierContext::isMemberActingAsPrincipal(), `BlocksMemberPrincipal`) —
+        // un guide qui propose « Créer votre bien — Commencer » lui montrerait un
+        // bouton qui échoue. Une fois basculé DANS le dossier, ce guide redevient
+        // pertinent (ce sont alors les données du dossier qui sont guidées).
+        if (\App\Support\DossierContext::isMemberActingAsPrincipal($user)) {
+            return false;
+        }
+
         return true;
     }
 

@@ -71,6 +71,7 @@ class ListExpenses extends Tool
                 'tva_rate'         => $expense->tva_rate,
                 'amount_tva_eur'   => $expense->amount_tva_euros,
                 'is_dedicated'     => $expense->is_dedicated,
+                'business_use_percent' => $expense->business_use_bp === null ? null : $expense->business_use_bp / 100,
                 'recurring_type'   => $expense->recurring_type,
             ];
         });
@@ -87,9 +88,9 @@ class ListExpenses extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id' => $schema->integer('Filtrer par identifiant de bien (optionnel)'),
-            'year'        => $schema->integer('Filtrer par année fiscale, ex: 2024 (optionnel)'),
-            'category'    => $schema->string('Filtrer par catégorie : property_tax, insurance, energy, maintenance, supplies, platform_fees, accounting, telecom, travel, cleaning, other (optionnel)'),
+            'property_id' => $schema->integer()->description('Filtrer par identifiant de bien (optionnel)'),
+            'year'        => $schema->integer()->description('Filtrer par année fiscale, ex: 2024 (optionnel)'),
+            'category'    => $schema->string()->description('Filtrer par catégorie : property_tax, insurance, energy, maintenance, supplies, platform_fees, accounting, telecom, travel, cleaning, other (optionnel)'),
         ];
     }
 }

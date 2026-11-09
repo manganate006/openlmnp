@@ -8,6 +8,7 @@ use App\Filament\Resources\Incomes\Pages\ListIncomes;
 use App\Filament\Resources\Incomes\Schemas\IncomeForm;
 use App\Filament\Resources\Incomes\Tables\IncomesTable;
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Resources\Concerns\BlocksMemberPrincipal;
 use App\Models\Income;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -17,6 +18,7 @@ use Filament\Tables\Table;
 
 class IncomeResource extends Resource
 {
+    use BlocksMemberPrincipal;
     use NavigationAware;
 
     protected static ?string $model = Income::class;

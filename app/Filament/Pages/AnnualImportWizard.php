@@ -8,6 +8,8 @@ use App\Models\Income;
 use App\Models\Property;
 use App\Services\AirbnbImportService;
 use App\Support\DocumentStorage;
+use App\Support\DossierContext;
+use App\Support\ImportUpload;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -27,6 +29,7 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use Livewire\WithFileUploads;
 use UnitEnum;
@@ -51,6 +54,15 @@ class AnnualImportWizard extends Page implements HasForms
         return 'Déclaration annuelle';
     }
     protected string $view = 'filament.pages.annual-import-wizard';
+
+    /**
+     * Un compte « membre » n'a jamais de biens à lui : cet assistant importe des
+     * revenus/charges sur les SIENS (lot « dossiers membre », décision du 2026-10-15).
+     */
+    public static function canAccess(): bool
+    {
+        return parent::canAccess() && ! DossierContext::isMemberActingAsPrincipal();
+    }
 
     public ?array $data = [];
     public ?array $importResult = null;
@@ -184,8 +196,11 @@ class AnnualImportWizard extends Page implements HasForms
                             )),
                         FileUpload::make('csv_file')
                             ->label('Fichier CSV Airbnb')
-                            ->directory(DocumentStorage::importDirectory())
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', '.csv'])
+                            // ⚠️ Sans `directory()`, Filament dépose à la RACINE du disque privé :
+                            // un export Airbnb, avec les noms des voyageurs, y restait pour
+                            // toujours, hors du périmètre du coffre-fort. Voir `ImportUpload`.
+                            ->directory(DocumentStorage::directory(ImportUpload::SUBDIRECTORY))
                             ->maxSize(10240),
                     ]),
             ]);
@@ -321,7 +336,7 @@ class AnnualImportWizard extends Page implements HasForms
             $tempFile = is_string($state = $csvField?->getState()) ? $state : null;
 
             if ($tempFile !== null && DocumentStorage::isImportUpload($tempFile)) {
-                $disk = \Illuminate\Support\Facades\Storage::disk('local');
+                $disk = Storage::disk('local');
 
                 if ($disk->exists($tempFile)) {
                     $uploadedFile = new UploadedFile($disk->path($tempFile), basename($tempFile));
@@ -340,6 +355,11 @@ class AnnualImportWizard extends Page implements HasForms
                         'rows_bucket' => \App\Support\Analytics::rowsBucket((int) $result['imported']),
                     ]);
                 }
+
+                // Le CSV a fini son office : il ne survit pas à l'assistant (cf. `ImportUpload`).
+                // Hors du `if (exists)` : un chemin qui ne mène nulle part n'a rien à supprimer,
+                // mais un fichier illisible n'a pas plus vocation à rester.
+                ImportUpload::discard($tempFile);
             }
         }
 

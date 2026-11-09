@@ -9,9 +9,11 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 #[Description('Met à jour un élément de mobilier existant. Seuls les champs fournis sont modifiés (mise à jour partielle). Le montant est en euros. L\'amortissement annuel est recalculé automatiquement si le montant ou la durée changent.')]
+#[IsDestructive]
 #[IsIdempotent]
 class UpdateFurniture extends Tool
 {
@@ -87,14 +89,14 @@ class UpdateFurniture extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'furniture_id'   => $schema->integer('Identifiant du mobilier à mettre à jour')->required(),
-            'description'    => $schema->string('Nouvelle description')->nullable(),
-            'amount'         => $schema->number('Montant TTC en euros')->nullable(),
-            'purchase_date'  => $schema->string('Date d\'achat au format Y-m-d')->nullable(),
-            'duration_years' => $schema->integer('Durée d\'amortissement en années')->nullable(),
-            'is_dedicated'   => $schema->boolean('Mobilier 100% dédié à la location')->nullable(),
-            'is_second_hand' => $schema->boolean('Mobilier d\'occasion')->nullable(),
-            'tva_rate'       => $schema->number('Taux de TVA en pourcentage (ex: 20 pour 20%)')->nullable(),
+            'furniture_id'   => $schema->integer()->description('Identifiant du mobilier à mettre à jour')->required(),
+            'description'    => $schema->string()->description('Nouvelle description')->nullable(),
+            'amount'         => $schema->number()->description('Montant TTC en euros')->nullable(),
+            'purchase_date'  => $schema->string()->description('Date d\'achat au format Y-m-d')->nullable(),
+            'duration_years' => $schema->integer()->description('Durée d\'amortissement en années')->nullable(),
+            'is_dedicated'   => $schema->boolean()->description('Mobilier 100% dédié à la location')->nullable(),
+            'is_second_hand' => $schema->boolean()->description('Mobilier d\'occasion')->nullable(),
+            'tva_rate'       => $schema->number()->description('Taux de TVA en pourcentage (ex: 20 pour 20%)')->nullable(),
         ];
     }
 }

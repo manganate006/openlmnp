@@ -100,14 +100,14 @@ it('ignores capitalised fees when a market value takes over as the reference', f
 // ─────────────────────────────────────────────────────────────────────
 
 /**
- * ⚠️ `044 − 490` n'est pas un écart quelconque : c'est EXACTEMENT le reliquat de ventilation,
+ * ⚠️ `044 − 496` n'est pas un écart quelconque : c'est EXACTEMENT le reliquat de ventilation,
  * `depreciable_base − Σ base_amount`. Tous les autres termes des deux sommes viennent des
  * mêmes expressions et s'annulent au centime — à condition que la valeur de référence du bien
  * soit la même des deux côtés. Elle était recalculée à trois endroits indépendants jusqu'au
  * 2026-09-08 ; faire entrer les frais dans l'un des trois seulement aurait fait diverger le
  * bilan de l'état des immobilisations, sans qu'aucun des deux paraisse faux isolément.
  */
-it('keeps 044 − 490 equal to the unallocated share under every treatment', function (string $treatment) {
+it('keeps 044 − 496 equal to the unallocated share under every treatment', function (string $treatment) {
     $property = feesProperty($this->user, ['acquisition_fees_treatment' => $treatment]);
     $this->depreciation->generateDefaultComponents($property);
 

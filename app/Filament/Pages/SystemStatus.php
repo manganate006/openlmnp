@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\RequiresAdmin;
+use App\Services\UpdateService;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -29,6 +30,9 @@ class SystemStatus extends Page
     public function getSystemInfo(): array
     {
         return [
+            // Version réelle, lue dans version.json : le pied de page de cette vue annonçait
+            // « OpenLMNP v0.1 » en dur, sur l'écran même où un administrateur vient la chercher.
+            'openlmnp_version' => (new UpdateService())->getCurrentVersion(),
             'php_version' => PHP_VERSION,
             'laravel_version' => app()->version(),
             'filament_version' => \Composer\InstalledVersions::getVersion('filament/filament') ?? 'N/A',

@@ -8,6 +8,7 @@ use App\Filament\Resources\Properties\Pages\ListProperties;
 use App\Filament\Resources\Properties\Schemas\PropertyForm;
 use App\Filament\Resources\Properties\Tables\PropertiesTable;
 use App\Filament\Pages\Concerns\NavigationAware;
+use App\Filament\Resources\Concerns\BlocksMemberPrincipal;
 use App\Models\Property;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -17,6 +18,7 @@ use Filament\Tables\Table;
 
 class PropertyResource extends Resource
 {
+    use BlocksMemberPrincipal;
     use NavigationAware;
 
     protected static ?string $model = Property::class;

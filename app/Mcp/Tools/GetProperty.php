@@ -39,13 +39,23 @@ class GetProperty extends Tool
             'agency_fees_eur'       => $property->agency_fees_euros,
             'market_value_eur'      => $property->market_value_euros,
             'market_value_date'     => $property->market_value_date?->toDateString(),
+            'dpe_number'            => $property->dpe_number,
+            'dpe_class'             => $property->dpe_class,
+            'dpe_established_at'    => $property->dpe_established_at?->toDateString(),
+            'dpe_valid_until'       => $property->dpe_valid_until?->toDateString(),
             'land_percentage'       => $property->land_percentage,
             'depreciable_base_eur'  => $property->depreciable_base_euros,
             'rental_start_date'     => $property->rental_start_date?->toDateString(),
+            // Première mise en location (micro-BIC compris) ; null = début du réel.
+            'activity_start_date'   => $property->activity_start_date?->toDateString(),
             'rental_type'           => $property->rental_type,
             'rental_type_label'     => $property->getRentalTypeLabel(),
+            'tourism_classification' => $property->tourism_classification,
+            'tourism_classification_label' => $property->getTourismClassificationLabel(),
             'tva_regime'            => $property->tva_regime,
             'tva_regime_label'      => (Property::tvaRegimeLabels()[$property->tva_regime] ?? $property->tva_regime),
+            'residence_situation'   => $property->residence_situation,
+            'residence_situation_label' => $property->getResidenceSituationLabel(),
             'is_primary_residence'  => $property->is_primary_residence,
             'notes'                 => $property->notes,
             'listing_urls'          => $property->listing_urls ?? [],
@@ -65,7 +75,7 @@ class GetProperty extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id' => $schema->integer('Identifiant du bien immobilier')->required(),
+            'property_id' => $schema->integer()->description('Identifiant du bien immobilier')->required(),
         ];
     }
 }

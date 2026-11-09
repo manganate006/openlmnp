@@ -23,7 +23,7 @@
     {{-- UTILISATEURS --}}
     <div class="as-section">
         <div class="as-section-title">Utilisateurs</div>
-        <div class="as-grid as-grid-3">
+        <div class="as-grid as-grid-4">
             <div class="as-card">
                 <div class="as-card-label">Total inscrits</div>
                 <div class="as-card-value">{{ $stats['users']['total'] }}</div>
@@ -37,6 +37,11 @@
                 <div class="as-card-value" style="font-size:14px;">
                     {{ $stats['users']['last_registered'] ? \Carbon\Carbon::parse($stats['users']['last_registered'])->format('d/m/Y H:i') : '-' }}
                 </div>
+            </div>
+            <div class="as-card">
+                <div class="as-card-label">Dont comptes membres (indivisaires)</div>
+                <div class="as-card-value">{{ $stats['users']['members'] }}</div>
+                <div class="as-card-sub">Accès gratuit, jamais des abonnés</div>
             </div>
         </div>
     </div>
@@ -116,7 +121,7 @@
 
         @if(!empty($stats['financial']['expense_by_category']))
             <div class="as-card" style="margin-top:12px;">
-                <div class="as-card-label" style="margin-bottom:8px;">Charges par categorie</div>
+                <div class="as-card-label" style="margin-bottom:8px;">Charges par catégorie</div>
                 <table class="as-table">
                     <thead><tr><th>Categorie</th><th>Nombre</th><th>Montant</th></tr></thead>
                     <tbody>
@@ -135,14 +140,14 @@
 
     {{-- ACTIVITE / DONNEES --}}
     <div class="as-section">
-        <div class="as-section-title">Volume de donnees</div>
+        <div class="as-section-title">Volume de données</div>
         <div class="as-grid as-grid-4">
             <div class="as-card">
-                <div class="as-card-label">Recettes enregistrees</div>
+                <div class="as-card-label">Recettes enregistrées</div>
                 <div class="as-card-value">{{ $stats['activity']['total_incomes'] }}</div>
             </div>
             <div class="as-card">
-                <div class="as-card-label">Charges enregistrees</div>
+                <div class="as-card-label">Charges enregistrées</div>
                 <div class="as-card-value">{{ $stats['activity']['total_expenses'] }}</div>
             </div>
             <div class="as-card">
@@ -165,6 +170,12 @@
                 <div class="as-card-label">Ecritures comptables</div>
                 <div class="as-card-value">{{ $stats['activity']['total_accounting_entries'] }}</div>
             </div>
+            @if(config('ai.enabled'))
+                <div class="as-card">
+                    <div class="as-card-label">Justificatifs analyses (IA)</div>
+                    <div class="as-card-value">{{ $stats['activity']['total_ai_documents'] }}</div>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -192,7 +203,7 @@
         <div class="as-card" style="margin-top:12px;">
             <div class="as-card-label">Amortissements differes cumules (toutes annees)</div>
             <div class="as-card-value">{{ number_format(($stats['fiscal']['total_deferred_cents'] ?? 0) / 100, 0, ',', ' ') }} &euro;</div>
-            <div class="as-card-sub">Report d'amortissements non imputes, utilisable sur les exercices futurs</div>
+            <div class="as-card-sub">Report d'amortissements non imputés, utilisable sur les exercices futurs</div>
         </div>
     </div>
 </x-filament-panels::page>

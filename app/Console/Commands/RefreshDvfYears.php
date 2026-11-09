@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
  * voyait pas : l'estimation continuait de répondre, avec des données périmées.
  *
  * ⚠️ Le relevé se fait ICI, hors requête. `DvfClient::years()` ne doit jamais appeler le
- * réseau : c'est ce qui garantit que le seul appel sortant du logiciel reste déclenché par un
+ * réseau : c'est ce qui garantit que l'appel sortant de l'estimation DVF reste déclenché par un
  * clic explicite de l'utilisateur.
  *
  * Ne fait rien si `DVF_ENABLED=false` : couper la fonctionnalité doit tout couper, y compris

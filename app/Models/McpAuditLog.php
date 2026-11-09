@@ -28,6 +28,10 @@ class McpAuditLog extends Model
 
     protected $fillable = [
         'user_id',
+        // Lot 5 des dossiers liés : NULL pour un jeton personnel ; sinon le
+        // `User` du dossier pour lequel ce jeton a agi (`user_id` reste TOUJOURS
+        // le PRINCIPAL — voir App\Http\Middleware\McpGuard::audit()).
+        'dossier_user_id',
         'token_name',
         'tool_name',
         'parameters',
@@ -48,5 +52,11 @@ class McpAuditLog extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** Le `User` du dossier pour lequel ce jeton a agi, si c'en était un. */
+    public function dossier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dossier_user_id');
     }
 }

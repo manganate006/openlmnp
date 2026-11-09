@@ -87,18 +87,18 @@ class CreateIncome extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'property_id'     => $schema->integer('Identifiant du bien immobilier')->required(),
-            'income_date'     => $schema->string('Date du revenu au format Y-m-d (ex: 2025-03-15)')->required(),
-            'amount'          => $schema->number('Montant TTC en euros (ex: 125.50)')->required(),
-            'source'          => $schema->string('Plateforme source : airbnb, booking, abritel, direct, other')->required(),
-            'guest_name'      => $schema->string('Nom du voyageur')->nullable(),
-            'reservation_ref' => $schema->string('Référence de réservation')->nullable(),
-            'checkin_date'    => $schema->string('Date d\'arrivée au format Y-m-d')->nullable(),
-            'checkout_date'   => $schema->string('Date de départ au format Y-m-d')->nullable(),
-            'platform_fee'    => $schema->number('Commission plateforme en euros')->nullable(),
-            'tourist_tax'     => $schema->number('Taxe de séjour en euros (ex: 2.50)')->nullable(),
-            'tva_rate'        => $schema->number('Taux de TVA en pourcentage (ex: 20 pour 20%, 0 pour exonéré)')->nullable(),
-            'notes'           => $schema->string('Notes libres')->nullable(),
+            'property_id'     => $schema->integer()->description('Identifiant du bien immobilier')->required(),
+            'income_date'     => $schema->string()->description('Date du revenu au format Y-m-d (ex: 2025-03-15)')->required(),
+            'amount'          => $schema->number()->description('Montant TTC en euros (ex: 125.50)')->required(),
+            'source'          => $schema->string()->description('Plateforme source : airbnb, booking, abritel, direct, other')->required(),
+            'guest_name'      => $schema->string()->description('Nom du voyageur')->nullable(),
+            'reservation_ref' => $schema->string()->description('Référence de réservation')->nullable(),
+            'checkin_date'    => $schema->string()->description('Date d\'arrivée au format Y-m-d')->nullable(),
+            'checkout_date'   => $schema->string()->description('Date de départ au format Y-m-d')->nullable(),
+            'platform_fee'    => $schema->number()->description('Commission plateforme en euros')->nullable(),
+            'tourist_tax'     => $schema->number()->description('Taxe de séjour en euros (ex: 2.50)')->nullable(),
+            'tva_rate'        => $schema->number()->description('Taux de TVA en pourcentage (ex: 20 pour 20%, 0 pour exonéré)')->nullable(),
+            'notes'           => $schema->string()->description('Notes libres')->nullable(),
         ];
     }
 }
