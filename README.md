@@ -17,7 +17,7 @@ et produisez votre liasse fiscale au régime réel, sans abonnement et chez vous
 
 **[🌐 Site officiel](https://openlmnp.fr)** · **[🚀 Démo live](https://app.openlmnp.fr)** · **[📦 Installation](#installation-rapide-docker)** · **[📚 Documentation](#documentation)** · **[🇬🇧 English](README.en.md)**
 
-![Démonstration d'OpenLMNP : tableau de bord, simulateur, projection et télédéclaration](docs/screenshots/demo.gif)
+![Démonstration d'OpenLMNP 2.0 : tableau de bord, biens, charges, import de justificatif par IA, coffre-fort, simulateur, projection et télédéclaration avec la 2031 bis](docs/screenshots/demo.gif)
 
 </div>
 
@@ -38,9 +38,7 @@ et produisez votre liasse fiscale au régime réel, sans abonnement et chez vous
 - [Documentation](#documentation)
 - [Installation rapide (Docker)](#installation-rapide-docker)
 - [Mettre à jour vers la 2.0](#mettre-à-jour-vers-la-20)
-- [Déploiement sur un PaaS](#déploiement-sur-un-paas-coolify-dokploy-easypanel)
-- [Installation LXC Proxmox](#installation-lxc-proxmox-script-communautaire)
-- [Installation développement](#installation-développement)
+- [Autres installations](#autres-installations)
 - [Configuration](#configuration)
 - [Sauvegarde](#sauvegarde)
 - [Tests](#tests)
@@ -114,9 +112,7 @@ Chaque service se coupe par une variable, et chacun dit ce qu'il envoie :
 - **Assistants guidés** : onboarding, création de bien, clôture fiscale, emprunt, import annuel
 - **Justificatifs** : pièces jointes aux charges, travaux et mobilier, export ZIP
 - **Guide intégré & badges de progression** : mise en route, suivi régulier, déclaration annuelle
-- **Rapport de diagnostic** : tout ce qui produit vos amortissements et votre liasse, en un texte, pour signaler un problème de calcul
-- **Dark mode** : natif Filament
-- **Tests automatisés** : suite Pest PHP rejouée à chaque push ([détail](docs/TESTS.md))
+- **Rapport de diagnostic** pour signaler un problème de calcul, **mode sombre**, suite de [tests automatisés](docs/TESTS.md) rejouée à chaque push
 
 ## Captures d'écran
 
@@ -128,19 +124,10 @@ D'autres captures : [simulateur](docs/screenshots/simulateur.png) · [projection
 
 ## Documentation
 
-| Document | Contenu |
-|----------|---------|
-| [Installation](docs/INSTALLATION.md) | Auto-hébergement via Docker : build, run, volumes de persistance, variables d'environnement, mise à jour et sauvegarde |
-| [Fonctionnalités](docs/FONCTIONNALITES.md) | Amortissement par composant, FEC, liasse fiscale 2031/2033, import CSV, simulateur, multi-biens, emprunts, justificatifs |
-| [Mode démonstration](docs/DEMO.md) | Activer et utiliser le mode démo multi-utilisateurs (sandbox éphémère isolé par visiteur) |
-| [FAQ](docs/FAQ.md) | Questions courantes : gratuité, confidentialité des données, régime réel vs micro-BIC, sauvegardes... |
-| [Guide fiscal LMNP / Airbnb](docs/fiscalite-lmnp-airbnb.md) | Règles fiscales du régime réel : amortissements, abattements, plafonds, réforme 2026 |
-| [Couverture de tests](docs/TESTS.md) | Détail des tests automatisés, suite par suite |
-| [Guide de conception UI](docs/ui-design-openlmnp.md) | Choix de design de l'interface Filament |
-| [Journal des versions](CHANGELOG.md) | Nouveautés et corrections, version par version |
-| [Sécurité](SECURITY.md) | Signaler une faille en privé |
-
-Pour contribuer au projet, voir [CONTRIBUTING.md](CONTRIBUTING.md).
+[Installation](docs/INSTALLATION.md) · [Fonctionnalités](docs/FONCTIONNALITES.md) · [FAQ](docs/FAQ.md) ·
+[Guide fiscal LMNP / Airbnb](docs/fiscalite-lmnp-airbnb.md) · [Mode démonstration](docs/DEMO.md) ·
+[Tests](docs/TESTS.md) · [Conception de l'interface](docs/ui-design-openlmnp.md) ·
+[Journal des versions](CHANGELOG.md) · [Sécurité](SECURITY.md) · [Contribuer](CONTRIBUTING.md)
 
 ## Stack technique
 
@@ -172,65 +159,39 @@ administrateur, et l'inscription se referme ensuite d'elle-même.
 
 ## Mettre à jour vers la 2.0
 
-```bash
-docker pull manganate06/openlmnp:latest
-docker rm -f openlmnp
-# puis la même commande docker run, sur les mêmes volumes
-```
+**Sauvegardez d'abord** (voir [Sauvegarde](#sauvegarde)), puis `docker pull
+manganate06/openlmnp:latest` et relancez le conteneur sur les mêmes volumes.
 
-- **Sauvegardez d'abord** la base et le dossier `storage/` (voir [Sauvegarde](#sauvegarde)).
-- Le conteneur tourne désormais sous `www-data` : les droits des volumes sont repris
-  automatiquement au premier démarrage.
-- **Retour en 1.6.11 possible** sur les mêmes volumes, sans restaurer la base. Mais un
-  **coffre-fort activé** rend alors les justificatifs illisibles : déchiffrez-les avant
-  (`docker exec openlmnp php artisan openlmnp:vault-migrate <email> --decrypt`).
+- Le conteneur tourne sous `www-data` : les droits des volumes sont repris au démarrage.
+- **Retour en 1.6.11 possible** sans restaurer la base, mais un **coffre-fort activé** doit
+  être déchiffré avant : `php artisan openlmnp:vault-migrate <email> --decrypt`.
 - L'IA reste éteinte (`AI_ENABLED=false`) tant que vous ne l'avez pas configurée.
-- Exercices clôturés avant la 2.0 : leur FEC comptait deux fois la commission de la
-  plateforme. `docker exec openlmnp php artisan openlmnp:repair-accounting-entries` les
-  repère, puis les refait avec `--fix --closed`.
+- Le FEC des exercices clôturés avant la 2.0 comptait deux fois la commission de plateforme :
+  `php artisan openlmnp:repair-accounting-entries` les repère (`--fix --closed` pour refaire).
 
-Le détail (y compris ce qui disparaît pendant un retour en 1.6.11) est dans le
-[journal des versions](CHANGELOG.md#200---2026-11-09) et dans
+Détail : [journal des versions](CHANGELOG.md#200---2026-11-09) et
 [docs/INSTALLATION.md](docs/INSTALLATION.md#mise-à-jour).
 
-## Déploiement sur un PaaS (Coolify, Dokploy, Easypanel)
+## Autres installations
 
-Sur un PaaS auto-hébergé, le fichier [`docker-compose.coolify.yml`](docker-compose.coolify.yml)
-donne un déploiement prêt à l'emploi : domaine, certificat TLS et reverse proxy sont câblés
-par la plateforme. Sur Coolify : *New Resource* → *Docker Compose (Empty)*, coller le fichier,
-*Deploy*. Détails et points de vigilance dans
-[docs/INSTALLATION.md](docs/INSTALLATION.md#déploiement-sur-un-paas-coolify-dokploy-easypanel).
-
-## Installation LXC Proxmox (script communautaire)
-
-Sur un hôte Proxmox VE, crée un conteneur LXC prêt à l'emploi en une seule commande :
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/manganate006/openlmnp/main/community-scripts/ct/openlmnp.sh)"
-```
-
-Debian 13 · nginx + PHP 8.4-FPM · SQLite. Un mot de passe admin **aléatoire** est généré à
-l'installation et enregistré dans `/opt/openlmnp/admin_credentials.txt`.
-
-## Installation développement
-
-```bash
-git clone https://github.com/manganate006/openlmnp.git
-cd openlmnp
-composer install
-cp .env.docker .env
-php artisan key:generate
-touch database/database.sqlite
-php artisan migrate:fresh --seed
-php artisan serve
-```
+- **PaaS (Coolify, Dokploy, Easypanel)** : [`docker-compose.coolify.yml`](docker-compose.coolify.yml)
+  est prêt à l'emploi ([détails](docs/INSTALLATION.md#déploiement-sur-un-paas-coolify-dokploy-easypanel)).
+- **LXC Proxmox** (Debian 13, nginx, PHP 8.4-FPM ; mot de passe admin aléatoire dans
+  `/opt/openlmnp/admin_credentials.txt`) :
+  ```bash
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/manganate006/openlmnp/main/community-scripts/ct/openlmnp.sh)"
+  ```
+- **Développement** :
+  ```bash
+  git clone https://github.com/manganate006/openlmnp.git && cd openlmnp
+  composer install && cp .env.docker .env && php artisan key:generate
+  touch database/database.sqlite && php artisan migrate:fresh --seed && php artisan serve
+  ```
 
 ## Configuration
 
-À la première visite, créez votre compte sur `/register` : il devient
-**administrateur**, puis la page d'inscription **se referme automatiquement**
-(instance personnelle par défaut, réglable via `ALLOW_REGISTRATION`).
-Ajoutez ensuite votre SIREN dans votre profil pour les documents fiscaux.
+Après la création du compte administrateur, ajoutez votre SIREN dans votre profil pour les
+documents fiscaux. Variables principales :
 
 | Variable | Description | Défaut |
 |----------|-------------|--------|
@@ -243,51 +204,27 @@ Ajoutez ensuite votre SIREN dans votre profil pour les documents fiscaux.
 | `AI_ENABLED` / `AI_PROVIDER` | Fonctions d'IA et fournisseur (`openrouter`, `anthropic`, `gemini`, `mistral`, `openai`, `local`) ; voir [le guide](docs/INSTALLATION.md#intelligence-artificielle-optionnel) | `false` / `auto` |
 | `DOCUMENTS_VAULT_ENABLED` | Propose le coffre-fort des justificatifs (chaque utilisateur l'active ou non) | `true` |
 | `LINKED_DOSSIERS_ENABLED` | Dossiers liés, partagés entre indivisaires | `false` |
-| `FEEDBACK_ENABLED` | Invitation ponctuelle à donner son avis sur le logiciel (voir ci-dessous) | `true` |
+| `FEEDBACK_ENABLED` | Invitation unique à donner son avis ; le retour reste dans votre base, rien n'est envoyé sans vous | `true` |
 | `TELEMETRY_ENABLED` | Signal quotidien anonyme (identifiant aléatoire + version) pour compter les instances installées ; aucune donnée comptable ni personnelle | `true` |
 | `DVF_ENABLED`, `SIRENE_ENABLED`, `DPE_ENABLED`, `RENT_MAP_ENABLED`, `ADDRESS_LOOKUP_ENABLED` | Services de données publiques (voir [Fonctionnalités](#fonctionnalités)), un interrupteur chacun | `true` |
 
-### Donner son avis (et comment l'éteindre)
-
-Après un moment d'utilisation réelle, l'application propose **une fois** de dire ce que vous
-pensez du logiciel. **Rien ne quitte votre instance** : le retour est enregistré dans votre
-base, et c'est vous qui choisissez de nous l'envoyer par votre client mail. Pour ne plus
-jamais voir l'invitation : `FEEDBACK_ENABLED=false`.
-
 ### Emails (optionnel)
 
-Aucun email ne part par défaut (`MAIL_MAILER=log`), et l'application fonctionne très
-bien sans. Pour activer le lien « Mot de passe oublié », branchez le SMTP de votre
-choix via les variables `MAIL_*` (l'expéditeur est votre propre adresse ; SPF/DKIM
-sont gérés par votre fournisseur). Et en cas d'oubli sans SMTP, depuis le serveur :
-
-```bash
-php artisan openlmnp:reset-password vous@exemple.fr
-```
-
-📖 **Référence complète** : toutes les variables, volumes de persistance, comptes,
-SMTP pas à pas, sauvegarde : [docs/INSTALLATION.md](docs/INSTALLATION.md)
+Aucun email ne part par défaut. Le lien « Mot de passe oublié » s'active avec les variables
+`MAIL_*` ; sans SMTP, `php artisan openlmnp:reset-password vous@exemple.fr` depuis le serveur.
+Toutes les variables : [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ## Sauvegarde
 
-Tout tient dans deux volumes : `database` (la base SQLite) et `storage` (vos justificatifs).
-La base est en mode WAL : **ne copiez pas `database.sqlite` pendant que l'instance tourne**,
-la copie perdrait ses dernières écritures sans le moindre message. Prenez un instantané
-cohérent avec `sqlite3 database.sqlite ".backup 'instantane.sqlite'"`, ou arrêtez le
-conteneur avant de copier. Procédure complète et restauration :
-[docs/INSTALLATION.md](docs/INSTALLATION.md#sauvegarde-et-restauration).
+Deux volumes : `database` (SQLite, en mode WAL) et `storage` (justificatifs). Ne copiez pas
+`database.sqlite` à chaud : utilisez `sqlite3 database.sqlite ".backup 'instantane.sqlite'"`
+ou arrêtez le conteneur. [Procédure complète](docs/INSTALLATION.md#sauvegarde-et-restauration).
 
 ## Tests
 
-[![Tests](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml/badge.svg)](https://github.com/manganate006/openlmnp/actions/workflows/tests.yml)
-
-Suite Pest PHP rejouée à chaque push : services de calcul, liasse et FEC, pages Filament,
-isolation multi-utilisateurs, mode démo. Détail suite par suite : [docs/TESTS.md](docs/TESTS.md).
-
-```bash
-vendor/bin/pest                          # toute la suite
-vendor/bin/pest --filter="Depreciation"  # un groupe
-```
+Suite Pest PHP rejouée à chaque push (calculs, liasse et FEC, pages, isolation multi-utilisateurs) :
+`vendor/bin/pest`, ou `vendor/bin/pest --filter="Depreciation"` pour un groupe.
+Détail : [docs/TESTS.md](docs/TESTS.md).
 
 ## Contribution
 
@@ -297,15 +234,9 @@ jamais dans une issue publique : voir [SECURITY.md](SECURITY.md). Avant de propo
 
 ## 💛 Comment nous soutenir ?
 
-OpenLMNP est développé sur mon temps libre. Si l'outil vous rend service, voici comment
-m'aider à continuer :
-
-- ⭐ **Mettez une étoile** sur le dépôt, ça aide d'autres loueurs meublés à découvrir le projet
-- 💛 **Devenez sponsor** via [GitHub Sponsors](https://github.com/sponsors/manganate006) : quelques euros par mois financent le temps de développement
-- 🐛 **Signalez un bug** ou proposez une fonctionnalité via les [issues](https://github.com/manganate006/openlmnp/issues)
-- 🔧 **Contribuez du code** : voir [CONTRIBUTING.md](CONTRIBUTING.md)
-
-Merci à toutes celles et ceux qui soutiennent le projet !
+OpenLMNP est développé sur mon temps libre. Si l'outil vous rend service : ⭐ une étoile sur
+le dépôt, 💛 [GitHub Sponsors](https://github.com/sponsors/manganate006), ou 🐛 un bug ou une
+idée dans les [issues](https://github.com/manganate006/openlmnp/issues). Merci !
 
 ## Remerciements
 
