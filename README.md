@@ -25,6 +25,11 @@ et produisez votre liasse fiscale au régime réel, sans abonnement et chez vous
 > éphémère et isolé pour chaque visiteur, pré-rempli avec plusieurs exercices de comptabilité fictive (depuis 2022).
 > Connexion : `demo@openlmnp.fr` / `demo2026`.
 
+> **🆕 Nouveau en 2.0** : coffre-fort chiffré pour vos justificatifs, analyse de justificatifs
+> par IA (optionnelle, votre clé ou un modèle local), dossiers en indivision avec l'annexe
+> 2031 bis. Détail dans le [journal des versions](CHANGELOG.md#200---2026-11-09) ; avant de
+> mettre à jour, lisez [Mettre à jour vers la 2.0](#mettre-à-jour-vers-la-20).
+
 ## Sommaire
 
 - [Pourquoi OpenLMNP ?](#pourquoi-openlmnp-)
@@ -32,6 +37,7 @@ et produisez votre liasse fiscale au régime réel, sans abonnement et chez vous
 - [Captures d'écran](#captures-décran)
 - [Documentation](#documentation)
 - [Installation rapide (Docker)](#installation-rapide-docker)
+- [Mettre à jour vers la 2.0](#mettre-à-jour-vers-la-20)
 - [Déploiement sur un PaaS](#déploiement-sur-un-paas-coolify-dokploy-easypanel)
 - [Installation LXC Proxmox](#installation-lxc-proxmox-script-communautaire)
 - [Installation développement](#installation-développement)
@@ -58,8 +64,8 @@ conforme. Les options habituelles ont chacune leur défaut :
 | **Calculs au centime (bcmath)** | ✅ | ⚠️ Arrondis flottants | ✅ | ✅ |
 
 OpenLMNP automatise le régime réel de bout en bout et reste un **outil d'aide** : pour les
-situations complexes (indivision, TVA para-hôtelière, passage en LMP...), un expert-comptable
-reste recommandé.
+situations complexes (TVA para-hôtelière, passage en LMP, indivision gérée en commun...),
+un expert-comptable reste recommandé.
 
 ## Fonctionnalités
 
@@ -69,12 +75,14 @@ reste recommandé.
 - **Emprunts** : tableau d'amortissement automatique, intérêts déductibles
 - **Charges récurrentes** : génération des échéances mensuelles ou trimestrielles, duplication d'une charge
 - **Écritures comptables** : génération automatique selon le plan comptable LMNP
-- **Multi-biens** : adresse, surfaces, quote-part, situation (logement distinct, pièce ou logement indépendant de la résidence principale), valeur vénale estimée d'après les ventes réelles de la commune (données DVF)
+- **Multi-biens** : adresse, surfaces, quote-part, situation (logement distinct, pièce ou logement indépendant de la résidence principale), classement micro-BIC
+- **Emprunt dédié** : un prêt qui ne finance que le logement loué se déduit à 100 %, sans quote-part
+- **Indivision** : dossier au nom de l'indivision, quotes-parts des indivisaires, annexe **2031 bis-SD** et montant de chacun à reporter sur sa 2042-C-PRO
 - **Reprise d'un dossier existant** : assistant en 5 étapes à partir de la dernière liasse de votre cabinet, contrôlée chiffre à chiffre
 
 ### 📋 Fiscal & déclarations
 - **Exercices chaînés** : reports N-1, amortissements différés, plafonnement, suivi des déficits reportables
-- **Simulateur micro-BIC vs régime réel** : avec verdict chiffré
+- **Simulateur micro-BIC vs régime réel** : avec verdict chiffré, taux et plafonds officiels (au-delà du plafond, le micro-BIC est déclaré indisponible)
 - **Projection pluriannuelle** : tableau sur 5 à 20 ans, année de bascule des régimes
 - **Télédéclaration interactive** : lignes Cerfa 2031, 2033-A/B/C/D, 2042-C-PRO avec boutons « Copier », date et numéro de dépôt notés
 - **Liasse fiscale PDF** : 2031-SD et 2033-A à D, annexes « détail du résultat » et « détail des immobilisations », contrôles de cohérence entre formulaires
@@ -83,14 +91,26 @@ reste recommandé.
 
 ### 🔌 Import & intégrations
 - **Import CSV Airbnb / Booking** : formats FR/EN, détection des doublons ; import CSV générique des recettes, charges, mobilier et travaux
-- **Analyse de justificatifs par IA** *(optionnel)* — déposez une facture, un avis de taxe foncière, un tableau d'amortissement ou un relevé : les champs sont proposés, vous relisez avant d'enregistrer. Clé OpenRouter, Anthropic ou Google — ou un modèle installé chez vous, et rien n'en sort
+- **Analyse de justificatifs par IA** *(optionnelle, désactivée par défaut)* : déposez une facture, un avis de taxe foncière, un tableau d'amortissement bancaire, un relevé de compte ou le relevé annuel Airbnb, Booking ou Abritel. Les champs sont proposés, vous relisez avant d'enregistrer
+- **Lecture IA de la liasse** dans l'assistant de reprise : le tableau 2033-C et les cases de report sont pré-remplis depuis la liasse de votre cabinet, à relire
+- **Fournisseurs d'IA au choix** : OpenRouter, Anthropic, Google, OpenAI, Mistral (justificatifs traités en Europe), ou un modèle installé chez vous, et alors rien ne sort
 - **Export CSV** : recettes, charges, télédéclaration
-- **API MCP (46 outils)** : pilotez votre comptabilité depuis un assistant IA (Claude, etc.)
+- **API MCP (46 outils)** : pilotez votre comptabilité depuis un assistant IA (Claude, etc.), y compris un dossier d'indivision partagé
 - **Assistant intégré (optionnel)** : répond à vos questions d'utilisation, sans jamais donner de conseil fiscal ni toucher à vos données
 - **Nouvelles versions signalées** : dans l'application, d'après les releases GitHub (mise à jour d'une instance Docker par `docker pull`)
 
+### 🏛️ Données publiques
+Chaque service se coupe par une variable, et chacun dit ce qu'il envoie :
+- **Valeur vénale (DVF)** : estimée d'après les ventes réelles de la commune ; au clic, seule la commune part vers data.gouv.fr
+- **Sirene** : entreprise active ou cessée, forme juridique et code APE de votre SIREN ; au clic, seul le SIREN part
+- **DPE (ADEME)** : diagnostic retrouvé à l'adresse du bien et ce que sa classe permet ; au clic, l'adresse part vers l'IGN et l'ADEME
+- **Carte des loyers (ANIL)** : repère de loyer au m² dans le simulateur, importé chaque année sans aucune donnée du bien
+- **Autocomplétion d'adresse (BAN)** : le début d'adresse part vers l'IGN pendant la frappe
+
 ### 🛡️ Confort & sécurité
-- **Multi-utilisateurs** : chaque propriétaire voit uniquement ses données
+- **Coffre-fort des justificatifs** *(optionnel)* : fichiers chiffrés avec une phrase de passe que l'instance ne connaît pas. Perdue, elle ne se récupère pas
+- **Multi-utilisateurs** : chaque propriétaire voit uniquement ses données ; inscription ouverte, fermée ou **sur invitation**
+- **Dossiers liés** *(optionnel)* : un dossier d'indivision partagé entre indivisaires, ouvert d'un clic depuis son propre compte
 - **Assistants guidés** : onboarding, création de bien, clôture fiscale, emprunt, import annuel
 - **Justificatifs** : pièces jointes aux charges, travaux et mobilier, export ZIP
 - **Guide intégré & badges de progression** : mise en route, suivi régulier, déclaration annuelle
@@ -100,11 +120,11 @@ reste recommandé.
 
 ## Captures d'écran
 
-| Simulateur | Projection | Télédéclaration |
+| Import d'un justificatif (IA) | Coffre-fort | Indivision et 2031 bis |
 |---|---|---|
-| [![Simulateur micro-BIC vs réel](docs/screenshots/simulateur.png)](docs/screenshots/simulateur.png) | [![Projection pluriannuelle](docs/screenshots/projection.png)](docs/screenshots/projection.png) | [![Aide à la télédéclaration](docs/screenshots/teledeclaration.png)](docs/screenshots/teledeclaration.png) |
+| [![Importer un justificatif : ce qui est envoyé au service d'IA](docs/screenshots/import-justificatif.png)](docs/screenshots/import-justificatif.png) | [![Coffre-fort des justificatifs](docs/screenshots/coffre-fort.png)](docs/screenshots/coffre-fort.png) | [![Télédéclaration d'un dossier en indivision avec l'annexe 2031 bis](docs/screenshots/indivision-2031bis.png)](docs/screenshots/indivision-2031bis.png) |
 
-D'autres captures : [tableau de bord](docs/screenshots/dashboard.png) · [charges](docs/screenshots/charges.png)
+D'autres captures : [simulateur](docs/screenshots/simulateur.png) · [projection](docs/screenshots/projection.png) · [télédéclaration](docs/screenshots/teledeclaration.png) · [tableau de bord](docs/screenshots/dashboard.png) · [charges](docs/screenshots/charges.png)
 
 ## Documentation
 
@@ -124,16 +144,8 @@ Pour contribuer au projet, voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Stack technique
 
-| Composant | Technologie |
-|-----------|-------------|
-| Framework | Laravel 13 |
-| Admin UI | Filament 5 |
-| Interactivité | Livewire 4 |
-| Base de données | SQLite (PostgreSQL en option) |
-| PDF | DomPDF |
-| Calculs financiers | PHP bcmath (précision décimale) |
-| Tests | Pest PHP |
-| Déploiement | Docker |
+Laravel 13 · Filament 5 · Livewire 4 · SQLite (PostgreSQL en option) · DomPDF · calculs en
+PHP bcmath (précision décimale) · Pest PHP · Docker (amd64 et arm64).
 
 ## Installation rapide (Docker)
 
@@ -157,6 +169,29 @@ docker compose up -d
 Accès : `http://localhost:8090`
 Première connexion : créez votre compte sur `/register` : le premier compte devient
 administrateur, et l'inscription se referme ensuite d'elle-même.
+
+## Mettre à jour vers la 2.0
+
+```bash
+docker pull manganate06/openlmnp:latest
+docker rm -f openlmnp
+# puis la même commande docker run, sur les mêmes volumes
+```
+
+- **Sauvegardez d'abord** la base et le dossier `storage/` (voir [Sauvegarde](#sauvegarde)).
+- Le conteneur tourne désormais sous `www-data` : les droits des volumes sont repris
+  automatiquement au premier démarrage.
+- **Retour en 1.6.11 possible** sur les mêmes volumes, sans restaurer la base. Mais un
+  **coffre-fort activé** rend alors les justificatifs illisibles : déchiffrez-les avant
+  (`docker exec openlmnp php artisan openlmnp:vault-migrate <email> --decrypt`).
+- L'IA reste éteinte (`AI_ENABLED=false`) tant que vous ne l'avez pas configurée.
+- Exercices clôturés avant la 2.0 : leur FEC comptait deux fois la commission de la
+  plateforme. `docker exec openlmnp php artisan openlmnp:repair-accounting-entries` les
+  repère, puis les refait avec `--fix --closed`.
+
+Le détail (y compris ce qui disparaît pendant un retour en 1.6.11) est dans le
+[journal des versions](CHANGELOG.md#200---2026-11-09) et dans
+[docs/INSTALLATION.md](docs/INSTALLATION.md#mise-à-jour).
 
 ## Déploiement sur un PaaS (Coolify, Dokploy, Easypanel)
 
@@ -204,30 +239,20 @@ Ajoutez ensuite votre SIREN dans votre profil pour les documents fiscaux.
 | `APP_URL` | Adresse publique de l'instance, schéma compris (`https://lmnp.exemple.fr`) | `http://localhost` |
 | `TRUSTED_HOSTS` | Autres noms d'hôte acceptés quand `APP_URL` porte un domaine (IP, alias), séparés par des virgules (sinon erreur 400) | vide |
 | `APP_LOCALE` | Langue | `fr` |
-| `ALLOW_REGISTRATION` | Inscription : `auto` (jusqu'au premier compte), `true` (toujours), `false` (jamais) | `auto` |
+| `ALLOW_REGISTRATION` | Inscription : `auto` (jusqu'au premier compte), `true` (toujours), `false` (jamais), `invite` (sur invitation d'un administrateur) | `auto` |
+| `AI_ENABLED` / `AI_PROVIDER` | Fonctions d'IA et fournisseur (`openrouter`, `anthropic`, `gemini`, `mistral`, `openai`, `local`) ; voir [le guide](docs/INSTALLATION.md#intelligence-artificielle-optionnel) | `false` / `auto` |
+| `DOCUMENTS_VAULT_ENABLED` | Propose le coffre-fort des justificatifs (chaque utilisateur l'active ou non) | `true` |
+| `LINKED_DOSSIERS_ENABLED` | Dossiers liés, partagés entre indivisaires | `false` |
 | `FEEDBACK_ENABLED` | Invitation ponctuelle à donner son avis sur le logiciel (voir ci-dessous) | `true` |
 | `TELEMETRY_ENABLED` | Signal quotidien anonyme (identifiant aléatoire + version) pour compter les instances installées ; aucune donnée comptable ni personnelle | `true` |
-| `DVF_ENABLED` | Bouton d'estimation de la valeur vénale ; au clic seulement, il interroge data.gouv.fr avec la commune du bien | `true` |
+| `DVF_ENABLED`, `SIRENE_ENABLED`, `DPE_ENABLED`, `RENT_MAP_ENABLED`, `ADDRESS_LOOKUP_ENABLED` | Services de données publiques (voir [Fonctionnalités](#fonctionnalités)), un interrupteur chacun | `true` |
 
 ### Donner son avis (et comment l'éteindre)
 
 Après un moment d'utilisation réelle, l'application propose **une fois** de dire ce que vous
-pensez du logiciel : un pouce, et si vous le souhaitez un mot. C'est le seul retour que reçoit
-un projet développé sur du temps libre.
-
-**Rien ne quitte votre instance.** Sans `FEEDBACK_FORWARD_EMAIL`, votre retour est simplement
-enregistré dans votre propre base ; l'écran de confirmation vous propose alors de l'envoyer
-vous-même, par votre client mail, si vous en avez envie. Aucun envoi automatique, aucun appel
-sortant.
-
-Pour la désactiver complètement :
-
-```bash
-FEEDBACK_ENABLED=false
-```
-
-Les seuils sont réglables sans toucher au code : `FEEDBACK_MIN_SECONDS` (240),
-`FEEDBACK_MIN_ACTIONS` (1), `FEEDBACK_COOLDOWN_DAYS` (30), `FEEDBACK_AUDIENCES`.
+pensez du logiciel. **Rien ne quitte votre instance** : le retour est enregistré dans votre
+base, et c'est vous qui choisissez de nous l'envoyer par votre client mail. Pour ne plus
+jamais voir l'invitation : `FEEDBACK_ENABLED=false`.
 
 ### Emails (optionnel)
 
@@ -260,30 +285,15 @@ Suite Pest PHP rejouée à chaque push : services de calcul, liasse et FEC, page
 isolation multi-utilisateurs, mode démo. Détail suite par suite : [docs/TESTS.md](docs/TESTS.md).
 
 ```bash
-# Lancer tous les tests
-vendor/bin/pest
-
-# Par catégorie
-vendor/bin/pest --filter="Depreciation"
-vendor/bin/pest --filter="FiscalYear"
-vendor/bin/pest --filter="Filament"
+vendor/bin/pest                          # toute la suite
+vendor/bin/pest --filter="Depreciation"  # un groupe
 ```
 
 ## Contribution
 
 Les contributions sont les bienvenues ! Merci d'ouvrir une issue avant de soumettre une PR,
 et de lire [CONTRIBUTING.md](CONTRIBUTING.md). Une faille de sécurité se signale **en privé**,
-jamais dans une issue publique : voir [SECURITY.md](SECURITY.md).
-
-```bash
-# Fork + clone
-git checkout -b feature/ma-fonctionnalite
-# ... modifier ...
-vendor/bin/pest  # vérifier que les tests passent
-git commit -m "feat: description"
-git push origin feature/ma-fonctionnalite
-# Ouvrir une PR
-```
+jamais dans une issue publique : voir [SECURITY.md](SECURITY.md). Avant de proposer une PR, lancez `vendor/bin/pest`.
 
 ## 💛 Comment nous soutenir ?
 
@@ -312,9 +322,7 @@ signalements, sécurité) est sur la page [Remerciements](https://openlmnp.fr/re
 
 ## Crédits
 
-- [Laravel](https://laravel.com) : framework PHP
-- [Filament](https://filamentphp.com) : panneau d'administration
-- [Pest PHP](https://pestphp.com) : framework de tests
+Construit avec [Laravel](https://laravel.com), [Filament](https://filamentphp.com) et [Pest PHP](https://pestphp.com).
 
 ---
 
