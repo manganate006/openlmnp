@@ -6,6 +6,7 @@
         ['key' => 'works',      'label' => 'Travaux',     'icon' => 'heroicon-o-wrench-screwdriver',  'url' => "/property-works/{$propertyId}"],
         ['key' => 'furniture',  'label' => 'Mobilier',    'icon' => 'heroicon-o-shopping-bag',        'url' => "/furniture/{$propertyId}"],
         ['key' => 'components', 'label' => 'Composants',  'icon' => 'heroicon-o-cube',                'url' => "/depreciation-editor/{$propertyId}"],
+        ['key' => 'plan',       'label' => 'Plan d\'amortissement', 'icon' => 'heroicon-o-table-cells', 'url' => "/depreciation-plan/{$propertyId}"],
     ];
 @endphp
 

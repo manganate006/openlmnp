@@ -56,6 +56,10 @@ intérieurs, plomberie/sanitaire…), chacun avec sa propre durée d'amortisseme
   l'année de l'acquisition, ou non repris
 - **Ligne du 2033-C** paramétrable sur chaque composant, travail et meuble, pour reproduire la
   présentation d'un cabinet
+- **Plan d'amortissement vérifiable** : un onglet par bien déroule le plan de chaque élément,
+  année par année (dotation, cumul, reste à amortir), et l'annexe « Détail des immobilisations »
+  de la liasse donne pour chaque actif sa mise en service, sa durée, le prorata de sa première
+  année en jours et son reste à amortir : de quoi refaire chaque dotation à la main
 - **Rapport de diagnostic** : un texte reprenant tout ce qui produit vos amortissements et
   votre liasse — valeurs saisies, base amortissable, composants, travaux, mobilier, passage
   au résultat (totaux par bien, plafonnement, déficits), lignes obtenues, écarts. À joindre à une demande d'aide. Aucune donnée nominative, aucun envoi

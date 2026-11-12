@@ -338,9 +338,13 @@
                                 <th>Immobilisation</th>
                                 <th>Origine</th>
                                 <th>Ligne 2033-C</th>
+                                <th>Mise en service</th>
+                                <th>Durée</th>
+                                <th>Prorata 1re année</th>
                                 <th style="text-align:right;">Valeur brute</th>
                                 <th style="text-align:right;">Dotation</th>
                                 <th style="text-align:right;">Amort. cumulé</th>
+                                <th style="text-align:right;">Reste à amortir</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -349,9 +353,21 @@
                                     <td>{{ $row['name'] }}</td>
                                     <td>{{ $row['origin'] }}</td>
                                     <td class="line-cell">{{ $row['cerfa'] }}</td>
+                                    <td>{{ $row['in_service'] ? \Carbon\Carbon::parse($row['in_service'])->format('d/m/Y') : '—' }}</td>
+                                    <td>{{ $row['duration'] ? $row['duration'].' ans' : '—' }}</td>
+                                    <td>
+                                        @if($row['prorata'] === null)
+                                            —
+                                        @elseif($row['prorata']['days'] === $row['prorata']['of'])
+                                            année pleine
+                                        @else
+                                            {{ $row['prorata']['days'] }}/{{ $row['prorata']['of'] }} jours
+                                        @endif
+                                    </td>
                                     <td class="value-cell">{{ number_format($row['base'] / 100, 2, ',', ' ') }} €</td>
                                     <td class="value-cell">{{ number_format($row['annual'] / 100, 2, ',', ' ') }} €</td>
                                     <td class="value-cell">{{ number_format($row['cumul'] / 100, 2, ',', ' ') }} €</td>
+                                    <td class="value-cell">{{ $row['remaining'] === null ? '—' : number_format($row['remaining'] / 100, 2, ',', ' ').' €' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

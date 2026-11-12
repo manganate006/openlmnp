@@ -99,7 +99,9 @@
         tôt, ne s'y ajoutent pas. Le formulaire vous le signale si la combinaison se présente.</p>
         <p>Pour retrouver d'où vient chaque montant de votre liasse, l'annexe
         <strong>« Détail des immobilisations »</strong> &mdash; dans le PDF et sur l'écran de
-        télédéclaration &mdash; donne la ligne du 2033-C de chaque actif.</p>
+        télédéclaration &mdash; donne la ligne du 2033-C de chaque actif, avec sa mise en service, sa durée,
+        son prorata et son reste à amortir. L'onglet <strong>« Plan d'amortissement »</strong> du bien
+        déroule le plan de chaque élément, année par année.</p>
 
         <h3>Si vous changez le prix ou la part du terrain</h3>
     <p>Ces deux champs déterminent la <strong>base amortissable</strong> : ce qui s'amortit, une fois

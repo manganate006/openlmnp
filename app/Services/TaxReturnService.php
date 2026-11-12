@@ -9,6 +9,7 @@ use App\Models\PropertyComponent;
 use App\Models\User;
 use App\Support\Indivision;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 /**
  * Génération de la liasse fiscale LMNP structurée selon les lignes Cerfa.
@@ -980,7 +981,12 @@ class TaxReturnService
      * tableaux qu'elle prétend expliquer — c'est le défaut qu'avait le contrôle 572 = 254
      * avant qu'il n'ait une source unique.
      *
-     * @return list<array{name: string, origin: string, cerfa: string, base: int, annual: int, cumul: int}>
+     * Depuis l'issue #13, chaque ligne porte aussi de quoi REFAIRE sa dotation à la main : la
+     * date de mise en service, la durée, le prorata de la première année (en jours, tel que le
+     * calcul l'applique) et le reste à amortir à la clôture. Sur le terrain, ces champs valent
+     * null : il ne s'amortit pas.
+     *
+     * @return list<array{name: string, origin: string, cerfa: string, base: int, annual: int, cumul: int, in_service: ?string, duration: ?int, prorata: ?array{days: int, of: int}, remaining: ?int}>
      */
     public function assetBreakdown($properties, int $year): array
     {
@@ -1025,6 +1031,10 @@ class TaxReturnService
                     'base'   => $land,
                     'annual' => 0,
                     'cumul'  => 0,
+                    'in_service' => null,
+                    'duration' => null,
+                    'prorata' => null,
+                    'remaining' => null,
                 ];
             }
 
@@ -1041,6 +1051,12 @@ class TaxReturnService
                     'base'   => (int) $line['base'],
                     'annual' => (int) $line['annual'],
                     'cumul'  => (int) $line['cumul'],
+                    'in_service' => $line['in_service'],
+                    'duration' => (int) $line['duration'],
+                    'prorata' => $this->depreciationService->firstYearProrata(Carbon::parse($line['in_service'])),
+                    // Négatif seulement si un cumul repris dépasse la base : on l'imprime tel
+                    // quel, c'est précisément ce que l'annexe doit laisser voir.
+                    'remaining' => (int) $line['base'] - (int) $line['cumul'],
                 ];
             }
         }

@@ -1,5 +1,5 @@
 @php
-    $tabLabels = ['general' => 'Général', 'works' => 'Travaux', 'furniture' => 'Mobilier', 'components' => 'Composants'];
+    $tabLabels = ['general' => 'Général', 'works' => 'Travaux', 'furniture' => 'Mobilier', 'components' => 'Composants', 'plan' => 'Plan d\'amortissement'];
     $currentLabel = $tabLabels[$active] ?? $heading;
     $properties = $properties ?? null;
     $currentUrl = $currentUrl ?? null;

@@ -18,6 +18,7 @@ class HelpContentRegistry
         'filament.admin.pages.teledeclaration' => ['view' => 'teledeclaration', 'title' => 'Télédéclaration'],
         'filament.admin.pages.badges' => ['view' => 'badges', 'title' => 'Badges'],
         'filament.admin.pages.depreciation-editor' => ['view' => 'property-components', 'title' => 'Composants'],
+        'filament.admin.pages.depreciation-plan' => ['view' => 'depreciation-plan', 'title' => 'Plan d\'amortissement'],
         'filament.admin.pages.vault' => ['view' => 'vault', 'title' => 'Coffre-fort'],
         'filament.admin.pages.help-page' => ['view' => 'help-page', 'title' => 'Aide'],
         'filament.admin.pages.import-document' => ['view' => 'import-document', 'title' => 'Importer un justificatif'],

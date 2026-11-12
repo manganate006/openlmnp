@@ -653,7 +653,10 @@ class DepreciationService
      *     base est comprise dans la valeur de référence que le 2033-A porte en 028 dès la
      *     mise en location ; les retirer du seul 2033-C ferait diverger 044 et 496.
      *
-     * @return list<array{type: string, name: string, base: string, annual: string, cumul: string, cerfa_category: string, in_service: string}>
+     * `duration` (années) accompagne la date pour que l'annexe permette de refaire la
+     * dotation à la main (issue #13) ; elle ne sert à aucun calcul.
+     *
+     * @return list<array{type: string, name: string, base: string, annual: string, cumul: string, cerfa_category: string, in_service: string, duration: int}>
      */
     public function depreciationDetailForYear(Property $property, int $year): array
     {
@@ -683,6 +686,7 @@ class DepreciationService
                 )),
                 'cerfa_category' => $component->cerfaCategory(),
                 'in_service' => $start->format('Y-m-d'),
+                'duration' => (int) $component->duration_years,
             ];
         }
 
@@ -705,6 +709,7 @@ class DepreciationService
                 )),
                 'cerfa_category' => $work->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_FITTINGS,
                 'in_service' => $start->format('Y-m-d'),
+                'duration' => (int) $work->duration_years,
             ];
         }
 
@@ -727,6 +732,7 @@ class DepreciationService
                 )),
                 'cerfa_category' => $item->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_OTHER,
                 'in_service' => $start->format('Y-m-d'),
+                'duration' => (int) $item->duration_years,
             ];
         }
 
@@ -776,6 +782,7 @@ class DepreciationService
                 // exactement l'issue #11.
                 'cerfa_category' => PropertyComponent::CERFA_CATEGORY_CONSTRUCTIONS,
                 'in_service' => $this->planStart(null, $property)->format('Y-m-d'),
+                'duration' => $property->acquisitionFeesDurationYears(),
             ];
         }
 
@@ -1068,9 +1075,171 @@ class DepreciationService
      */
     private function prorateFirstYear(string $annual, CarbonInterface $start): string
     {
-        $daysInYear = $start->isLeapYear() ? 366 : 365;
-        $remainingDays = $daysInYear - $start->dayOfYear + 1;
+        ['days' => $remainingDays, 'of' => $daysInYear] = $this->firstYearProrata($start);
 
         return bcmul($annual, bcdiv((string) $remainingDays, (string) $daysInYear, 10), 0);
+    }
+
+    /**
+     * Prorata de la première année d'un plan : jours restants, journée de départ comprise,
+     * sur le nombre de jours de l'année. Un plan qui démarre un 1er janvier rend 365/365.
+     *
+     * Public pour que l'annexe de la liasse et l'onglet « Plan d'amortissement » impriment la
+     * fraction que le calcul applique réellement (issue #13), et pas une seconde formule.
+     *
+     * @return array{days: int, of: int}
+     */
+    public function firstYearProrata(CarbonInterface $start): array
+    {
+        $daysInYear = $start->isLeapYear() ? 366 : 365;
+
+        return ['days' => $daysInYear - $start->dayOfYear + 1, 'of' => $daysInYear];
+    }
+
+    /**
+     * Plan d'amortissement complet de chaque actif du bien, année par année, de la mise en
+     * service au terme (issue #13, OpenProject n° 1171).
+     *
+     * ⚠️ Aucune règle de calcul ici : chaque annuité vient des MÊMES méthodes que la liasse
+     * (`calculate*ForYear()`), et chaque cumul de la même somme que
+     * `depreciationDetailForYear()` (`withOpening()` + `replay()` borné par `replayFrom()`).
+     * `DepreciationPlanTest` vérifie l'égalité des cumuls année par année : un plan qui
+     * dirait autre chose que l'annexe du PDF serait pire que pas de plan.
+     *
+     * Contrairement à `depreciationDetailForYear()`, les actifs pas encore en service sont
+     * rendus : un plan se lit aussi vers l'avenir.
+     *
+     * Par année : `annual` est l'annuité du PLAN ; `deducted` ce qui en est déductible, soit
+     * 0 avant le début du réel, où l'annuité est réputée pratiquée (`isDeductibleYear()`).
+     * Le plafonnement de l'art. 39 C, global au bien, n'est pas réparti par actif : il se lit
+     * au 2033-B (ligne 318) et dans le suivi des amortissements différés.
+     *
+     * @return list<array{
+     *     type: string, name: string, cerfa_category: string, base: int, duration: int,
+     *     in_service: string, full_annual: int, prorata: array{days: int, of: int},
+     *     opening: int, opening_year: ?int, last_year: int,
+     *     years: list<array{year: int, annual: int, deducted: int, cumul: int, remaining: int}>
+     * }>
+     */
+    public function planForProperty(Property $property): array
+    {
+        $assets = [];
+
+        foreach ($property->components as $component) {
+            $assets[] = [
+                'type' => 'building',
+                'name' => $component->name,
+                'cerfa_category' => $component->cerfaCategory(),
+                'base' => (string) $component->base_amount,
+                'duration' => (int) $component->duration_years,
+                'full_annual' => (string) $component->annual_depreciation,
+                'start' => $this->planStart($component, $property),
+                'opening' => (int) $component->opening_accumulated_depreciation,
+                'opening_year' => $component->opening_accumulated_year,
+                'for' => fn (int $y) => $this->calculateComponentForYear($component, $property, $y),
+            ];
+        }
+
+        foreach ($property->works as $work) {
+            $assets[] = [
+                'type' => 'work',
+                'name' => $work->description,
+                'cerfa_category' => $work->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_FITTINGS,
+                'base' => $this->grossAmount($this->amortizableAmount($work, $property), $work->is_dedicated, $property),
+                'duration' => (int) $work->duration_years,
+                'full_annual' => (string) $work->annual_depreciation,
+                'start' => $this->planStart($work, $property),
+                'opening' => (int) $work->opening_accumulated_depreciation,
+                'opening_year' => $work->opening_accumulated_year,
+                'for' => fn (int $y) => $this->calculateWorkForYear($work, $property, $y),
+            ];
+        }
+
+        foreach ($property->furniture as $item) {
+            $assets[] = [
+                'type' => 'furniture',
+                'name' => $item->description,
+                'cerfa_category' => $item->cerfa_category ?: PropertyComponent::CERFA_CATEGORY_OTHER,
+                'base' => $this->grossAmount($this->amortizableAmount($item, $property), $item->is_dedicated, $property),
+                'duration' => (int) $item->duration_years,
+                'full_annual' => (string) $item->annual_depreciation,
+                'start' => $this->planStart($item, $property),
+                'opening' => (int) $item->opening_accumulated_depreciation,
+                'opening_year' => $item->opening_accumulated_year,
+                'for' => fn (int $y) => $this->calculateFurnitureForYear($item, $property, $y),
+            ];
+        }
+
+        if ($property->emitsSeparateAcquisitionFeeLine()) {
+            $duration = $property->acquisitionFeesDurationYears();
+
+            foreach (['notary_fees' => 'Frais de notaire', 'agency_fees' => 'Honoraires agence'] as $field => $label) {
+                if ((int) $property->$field <= 0) {
+                    continue;
+                }
+
+                $assets[] = [
+                    'type' => 'notary',
+                    'name' => $label,
+                    'cerfa_category' => PropertyComponent::CERFA_CATEGORY_CONSTRUCTIONS,
+                    'base' => bcmul((string) $property->$field, $property->quota_share, 0),
+                    'duration' => $duration,
+                    // Même arrondi que `calculateAcquisitionFeesForYear()` : division, puis quote-part.
+                    'full_annual' => $duration > 0
+                        ? bcmul(bcdiv((string) $property->$field, (string) $duration, 0), $property->quota_share, 0)
+                        : '0',
+                    'start' => $this->planStart(null, $property),
+                    'opening' => 0,
+                    'opening_year' => null,
+                    'for' => fn (int $y) => $this->calculateAcquisitionFeesForYear($property, $field, $y),
+                ];
+            }
+        }
+
+        return array_map(fn (array $asset) => $this->planRows($property, $asset), $assets);
+    }
+
+    /** Déroule le plan d'un actif préparé par `planForProperty()`. */
+    private function planRows(Property $property, array $asset): array
+    {
+        $start = $asset['start'];
+        $startYear = (int) $start->format('Y');
+        $prorata = $this->firstYearProrata($start);
+
+        // Un plan qui ne démarre pas un 1er janvier dure `duration + 1` exercices
+        // (voir `planAnnuityForYear()`).
+        $lastYear = $startYear + max(0, $asset['duration']) - ($prorata['days'] === $prorata['of'] ? 1 : 0);
+        $from = $this->replayFrom($asset['opening_year'], $startYear);
+        $base = (int) $asset['base'];
+        $cumul = max(0, $asset['opening']);
+        $years = [];
+
+        for ($y = $from; $y <= $lastYear; $y++) {
+            $annual = (int) ($asset['for'])($y);
+            $cumul += $annual;
+
+            $years[] = [
+                'year' => $y,
+                'annual' => $annual,
+                'deducted' => $this->isDeductibleYear($property, $y) ? $annual : 0,
+                'cumul' => $cumul,
+                'remaining' => $base - $cumul,
+            ];
+        }
+
+        return [
+            'type' => $asset['type'],
+            'name' => $asset['name'],
+            'cerfa_category' => $asset['cerfa_category'],
+            'base' => $base,
+            'duration' => $asset['duration'],
+            'in_service' => $start->format('Y-m-d'),
+            'full_annual' => (int) $asset['full_annual'],
+            'prorata' => $prorata,
+            'opening' => max(0, $asset['opening']),
+            'opening_year' => $asset['opening_year'],
+            'last_year' => $lastYear,
+            'years' => $years,
+        ];
     }
 }

@@ -411,26 +411,53 @@
         ligne du cadre I ci-dessus. Les composants d'immeuble ventilent la valeur du bien, ils
         ne s'y ajoutent pas — la colonne « Valeur brute » ne se totalise donc pas.
     </p>
-    <table>
+    {{-- Issue #13 : de quoi refaire chaque dotation à la main. Annuité pleine = valeur brute
+         / durée ; la première année, elle est multipliée par le prorata en jours ; l'année qui
+         suit le terme reprend ce que ce prorata avait retiré ; entre les deux, annuité pleine.
+         Le prorata vient de DepreciationService::firstYearProrata(), celui du calcul. --}}
+    <table style="font-size:8px;">
         <tr>
             <th>Immobilisation</th>
-            <th>Origine</th>
             <th class="line-num">Ligne 2033-C</th>
+            <th class="c">Mise en service</th>
+            <th class="c">Durée</th>
+            <th class="c">Prorata 1re année</th>
             <th class="r">Valeur brute</th>
             <th class="r">Dotation {{ $year }}</th>
             <th class="r">Amort. cumulé</th>
+            <th class="r">Reste à amortir</th>
         </tr>
         @foreach($assetBreakdown as $row)
             <tr>
-                <td>{{ $row['name'] }}</td>
-                <td>{{ $row['origin'] }}</td>
+                <td>{{ $row['name'] }}<br><span class="small">{{ $row['origin'] }}</span></td>
                 <td class="c">{{ $row['cerfa'] }}</td>
+                <td class="c">{{ $row['in_service'] ? \Carbon\Carbon::parse($row['in_service'])->format('d/m/Y') : '—' }}</td>
+                <td class="c">{{ $row['duration'] ? $row['duration'].' ans' : '—' }}</td>
+                <td class="c">
+                    @if($row['prorata'] === null)
+                        —
+                    @elseif($row['prorata']['days'] === $row['prorata']['of'])
+                        année pleine
+                    @else
+                        {{ $row['prorata']['days'] }}/{{ $row['prorata']['of'] }} j
+                    @endif
+                </td>
                 <td class="r">{{ $fmtInt($row['base']) }} €</td>
                 <td class="r">{{ $fmtInt($row['annual']) }} €</td>
                 <td class="r">{{ $fmtInt($row['cumul']) }} €</td>
+                {{-- Reste = valeur brute − cumul, calculé sur les montants ARRONDIS ci-contre pour
+                     qu'il se vérifie à l'œil (même règle que les totaux depuis l'issue #21). --}}
+                <td class="r">{{ $row['remaining'] === null ? '—' : $fmtInt(round($row['base'] / 100) * 100 - round($row['cumul'] / 100) * 100).' €' }}</td>
             </tr>
         @endforeach
     </table>
+    <p class="small">
+        Pour refaire une dotation : annuité pleine = valeur brute ÷ durée. La première année, elle
+        est réduite au prorata des jours restants (jour de mise en service compris). Quand ce prorata
+        n'est pas une année pleine, le plan dure un exercice de plus, qui reprend la part retirée la
+        première année. Le plan complet, année par année, est dans l'onglet « Plan d'amortissement »
+        de chaque bien.
+    </p>
 
     {{-- 2033-D : cadre « Déficits reportables » laissé vide en LMNP (notice 2033-NOT-SD,
          issue #19) ; seul le suivi des amortissements différés, qui n'a pas de case, est imprimé. --}}
