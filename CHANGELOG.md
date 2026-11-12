@@ -2,6 +2,24 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [2.0.1] - 2026-11-12
+
+### Amortissements vérifiables à la main
+
+- **L'annexe « Détail des immobilisations » donne de quoi refaire chaque dotation.** Pour chaque
+  actif, dans le PDF de la liasse comme sur l'écran Télédéclaration : sa date de mise en service,
+  sa durée, le prorata de sa première année en jours (par exemple 214/365) et son reste à amortir
+  à la clôture. Annuité pleine = valeur brute ÷ durée ; la première année, elle est réduite au
+  prorata ; quand ce prorata n'est pas une année pleine, le plan dure un exercice de plus, qui
+  reprend la part retirée la première année.
+- **Nouvel onglet « Plan d'amortissement » sur chaque bien**, à côté de « Composants » : le plan
+  de chaque élément (composants, travaux, mobilier, frais d'acquisition), année par année, de la
+  mise en service au terme, avec la dotation, sa déductibilité (réputée pratiquée, et donc non
+  déduite, avant le premier exercice au réel), le cumul et le reste à amortir.
+- Aucun calcul ne change : l'onglet et l'annexe reprennent les montants de la liasse, et un test
+  vérifie que leurs cumuls sont identiques, année par année et élément par élément. Demandé par
+  @cocool97 (#13)
+
 ## [2.0.0] - 2026-11-09
 
 > Version majeure : elle réunit le **coffre-fort des justificatifs** (d'abord prévu seul en
