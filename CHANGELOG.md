@@ -2,6 +2,18 @@
 
 Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Unreleased]
+
+### Interne
+
+- **Le serveur MCP annonce la version réelle de l'application.** Sa réponse à `initialize`
+  (`serverInfo.version`) lisait un numéro écrit en dur, resté à 1.0.0 depuis la première
+  version : elle lit désormais `version.json`, comme l'écran des mises à jour
+- **Le manifeste `server.json` est publié au registre MCP officiel à chaque release**, par un
+  nouveau job de `release.yml` (authentification OIDC GitHub), qui échoue si `server.json` ou
+  `version.json` ne correspond pas au tag. Jusqu'ici la publication était manuelle, et le
+  registre était resté à la 1.6.7
+
 ## [2.0.1] - 2026-11-12
 
 ### Amortissements vérifiables à la main

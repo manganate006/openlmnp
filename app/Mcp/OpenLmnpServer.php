@@ -4,14 +4,14 @@ namespace App\Mcp;
 
 use App\Models\Scopes\UnresolvedUser;
 use App\Models\User;
+use App\Services\UpdateService;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
-use Laravel\Mcp\Server\Attributes\Version;
+use Laravel\Mcp\Server\ServerContext;
 
 #[Name('OpenLMNP')]
-#[Version('1.0.0')]
 #[Instructions(<<<'MARKDOWN'
 Serveur MCP pour OpenLMNP — logiciel de comptabilité LMNP (Location Meublée Non Professionnelle).
 
@@ -99,6 +99,18 @@ class OpenLmnpServer extends Server
     protected array $resources = [];
 
     protected array $prompts = [];
+
+    /**
+     * La version annoncée dans `initialize` (serverInfo.version) est celle de
+     * l'application, lue dans version.json comme partout ailleurs. Un attribut
+     * #[Version] en dur était resté à 1.0.0 pendant toutes les releases suivantes.
+     */
+    public function createContext(): ServerContext
+    {
+        $this->version = (new UpdateService())->getCurrentVersion();
+
+        return parent::createContext();
+    }
 
     /**
      * En transport stdio (`php artisan mcp:start openlmnp`), aucune authentification

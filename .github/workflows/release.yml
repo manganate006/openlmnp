@@ -84,3 +84,38 @@ jobs:
           # Asset téléchargeable : son download_count sert de proxy d'installations
           # self-hosted (voir community-scripts/install/openlmnp-install.sh).
           gh release upload "$tag" "$asset" --repo "$GITHUB_REPOSITORY" --clobber
+
+  # Le registre MCP officiel ne lit pas server.json sur GitHub : il faut le lui publier.
+  # Sans ce job, server.json suivait bien les releases mais le registre est resté
+  # bloqué à 1.6.7 jusqu'à la 2.0.1 (ticket #30160).
+  mcp-registry:
+    runs-on: ubuntu-latest
+    needs: release
+    # Une pré-version (v2.0.0-beta.1) ne part pas au registre : c'est sa dernière
+    # entrée publiée que les clients MCP proposent.
+    if: ${{ !contains(github.event.inputs.tag || github.ref_name, '-') }}
+    permissions:
+      contents: read
+      id-token: write   # authentification OIDC sur le namespace io.github.manganate006
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - name: Vérifier que server.json et version.json suivent le tag
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"; v="${tag#v}"
+          s=$(jq -r .version server.json); a=$(jq -r .version version.json)
+          echo "tag=$v server.json=$s version.json=$a"
+          if [ "$s" != "$v" ] || [ "$a" != "$v" ]; then
+            echo "::error::server.json ($s) ou version.json ($a) ne correspond pas au tag ($v)"
+            exit 1
+          fi
+
+      - name: Publier server.json au registre MCP
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

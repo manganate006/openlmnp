@@ -71,6 +71,27 @@ it('rejects MCP requests when user has MCP disabled', function () {
         ])->assertForbidden();
 });
 
+// === SERVER INFO ===
+
+it('announces the application version from version.json in initialize', function () {
+    $expected = json_decode(file_get_contents(base_path('version.json')), true)['version'];
+
+    $this->withToken($this->token->plainTextToken)
+        ->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'initialize',
+            'params' => [
+                'protocolVersion' => '2025-06-18',
+                'capabilities' => [],
+                'clientInfo' => ['name' => 'test', 'version' => '1.0'],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('result.serverInfo.name', 'OpenLMNP')
+        ->assertJsonPath('result.serverInfo.version', $expected);
+});
+
 // === DATA ISOLATION ===
 
 it('prevents user A from seeing user B properties via MCP', function () {
