@@ -2,10 +2,8 @@
 
 namespace App\Mcp\Tools;
 
-use App\Models\Expense;
-use App\Models\Furniture;
 use App\Models\Property;
-use App\Models\PropertyWork;
+use App\Support\DocumentOwners;
 use App\Support\DocumentStorage;
 use App\Support\Vault;
 use App\Services\Ai\Analysis\DocumentFile;
@@ -21,18 +19,11 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use RuntimeException;
 
-#[Description('Attache un document justificatif (facture, reçu, devis) à une charge, un mobilier ou un poste de travaux. Trois modes d\'entrée mutuellement exclusifs : file_base64 (contenu encodé), file_path (chemin absolu sur le serveur, nécessite MCP_FILE_PATH_PREFIX), file_url (URL http/https téléchargée par le serveur). Le chemin de stockage est : documents/{user_id}/{type}/{filename}.')]
+#[Description('Attache un document justificatif (facture, reçu, devis) à une charge, un mobilier, un poste de travaux, une recette ou un bail. Trois modes d\'entrée mutuellement exclusifs : file_base64 (contenu encodé), file_path (chemin absolu sur le serveur, nécessite MCP_FILE_PATH_PREFIX), file_url (URL http/https téléchargée par le serveur). Le chemin de stockage est : documents/{user_id}/{type}/{filename}.')]
 #[IsDestructive]
 class AttachDocument extends Tool
 {
     protected string $name = 'attach_document';
-
-    /** Types de modèles supportés → classe Eloquent correspondante */
-    private const SUPPORTED_TYPES = [
-        'expense'   => Expense::class,
-        'furniture' => Furniture::class,
-        'work'      => PropertyWork::class,
-    ];
 
     /** Extensions de fichiers autorisées */
     private const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'];
@@ -69,7 +60,7 @@ class AttachDocument extends Tool
             );
         }
 
-        $typeList = implode(',', array_keys(self::SUPPORTED_TYPES));
+        $typeList = implode(',', DocumentOwners::keys());
 
         $validated = $request->validate([
             'type'          => "required|in:{$typeList}",
@@ -99,9 +90,9 @@ class AttachDocument extends Tool
         }
 
         // Resolve the polymorphic model class
-        $modelClass = self::SUPPORTED_TYPES[$validated['type']];
+        $modelClass = DocumentOwners::classFor($validated['type']);
 
-        /** @var Expense|Furniture|PropertyWork $record */
+        /** @var \Illuminate\Database\Eloquent\Model&\App\Models\Concerns\HasDocuments $record */
         $record = $modelClass::findOrFail($validated['record_id']);
 
         // Verify ownership: the record's property must belong to the authenticated user
@@ -226,8 +217,8 @@ class AttachDocument extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'type'          => $schema->string()->description('Type d\'enregistrement cible : expense, furniture, work')->required(),
-            'record_id'     => $schema->integer()->description('Identifiant de la charge, du mobilier ou du poste de travaux')->required(),
+            'type'          => $schema->string()->description('Type d\'enregistrement cible : expense, furniture, work, income, lease')->required(),
+            'record_id'     => $schema->integer()->description('Identifiant de la charge, du mobilier, du poste de travaux, de la recette ou du bail')->required(),
             'label'         => $schema->string()->description('Libellé du document (ex: Facture plombier, Reçu IKEA)')->required(),
             'file_base64'   => $schema->string()->description('Contenu du fichier encodé en base64 (PDF, JPG, PNG, WebP, HEIC — max 10 Mo). Mutuellement exclusif avec file_path et file_url.')->nullable(),
             'file_path'     => $schema->string()->description('Chemin absolu du fichier sur le serveur (nécessite MCP_FILE_PATH_PREFIX configuré). Mutuellement exclusif avec file_base64 et file_url.')->nullable(),

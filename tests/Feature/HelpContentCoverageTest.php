@@ -207,6 +207,16 @@ it('décrit des libellés réellement présents à l\'écran', function () {
             'app/Filament/Resources/Furniture/Schemas/FurnitureForm.php',
             ['une comptabilité existante', 'Dotation annuelle recopiée', 'Amortissements déjà pratiqués'],
         ],
+        // Baux : les champs du bail. Recettes : la date d'encaissement, distincte de la
+        // date qui compte.
+        'help/leases.blade.php' => [
+            'app/Filament/Resources/Leases/Schemas/LeaseForm.php',
+            ['Locataire', 'Début du bail', 'Fin du bail', 'Loyer hors charges'],
+        ],
+        'help/incomes.blade.php' => [
+            'app/Filament/Resources/Incomes/Schemas/IncomeForm.php',
+            ['Encaissé le'],
+        ],
         // Exercices : badge de reprise et action de recalcul de la chaîne.
         'help/fiscal-years.blade.php' => [
             'app/Filament/Resources/FiscalYears/Tables/FiscalYearsTable.php',

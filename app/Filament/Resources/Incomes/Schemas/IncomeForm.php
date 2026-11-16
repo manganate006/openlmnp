@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Incomes\Schemas;
 
 use App\Enums\TvaRate;
+use App\Filament\Schemas\DocumentsSection;
 use App\Helpers\TvaHelper;
 use App\Models\Income;
 use App\Models\Property;
@@ -51,8 +52,20 @@ class IncomeForm
                                 ->options(Income::sourceLabels())
                                 ->required()
                                 ->default('airbnb')
+                                ->live()
                                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Plateforme ou mode de location utilisé'),
                         ]),
+                        // Un loyer généré par un bail (issue #24) le dit, avec sa part de
+                        // charges : elle n'est pas saisissable, le montant les inclut déjà.
+                        Placeholder::make('lease_info')
+                            ->label('Bail')
+                            ->content(fn (?Income $record): string => static::leaseSummary($record))
+                            ->visible(fn (?Income $record): bool => $record?->lease_id !== null),
+                        DatePicker::make('paid_date')
+                            ->label('Encaissé le')
+                            ->displayFormat('d/m/Y')
+                            ->helperText('Pour mémoire. Aucun calcul ne la lit : la recette compte à sa date, celle de l\'échéance pour un loyer.')
+                            ->visible(fn (callable $get): bool => $get('source') === Income::SOURCE_DIRECT),
                         Grid::make(3)->schema([
                             TextInput::make('amount')
                                 ->label(fn (callable $get) => static::isPropertyTvaLiable($get('property_id')) ? 'Montant loyer TTC' : 'Montant loyer')
@@ -130,6 +143,25 @@ class IncomeForm
                             ->rows(2)
                             ->columnSpanFull(),
                     ]),
+
+                DocumentsSection::make(),
             ]);
+    }
+
+    private static function leaseSummary(?Income $record): string
+    {
+        $lease = $record?->lease;
+
+        if ($lease === null) {
+            return '';
+        }
+
+        $summary = 'Loyer du bail de ' . $lease->tenant_name . ', commencé le ' . $lease->start_date->format('d/m/Y');
+
+        if ((int) $record->charges_amount > 0) {
+            $summary .= ', dont ' . TvaHelper::formatEuros((int) $record->charges_amount) . ' de charges';
+        }
+
+        return $summary . '.';
     }
 }

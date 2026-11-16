@@ -3,13 +3,11 @@
 namespace App\Services;
 
 use App\Models\Document;
-use App\Models\Expense;
-use App\Models\Furniture;
 use App\Models\Property;
-use App\Models\PropertyWork;
 use App\Models\User;
 use App\Services\Vault\DocumentCipher;
 use App\Services\Vault\VaultException;
+use App\Support\DocumentOwners;
 use App\Support\DocumentStorage;
 use App\Support\Vault;
 use Illuminate\Support\Facades\Storage;
@@ -18,12 +16,6 @@ use ZipArchive;
 
 class DocumentExportService
 {
-    private const TYPE_MAP = [
-        Expense::class      => 'charges',
-        Furniture::class    => 'mobilier',
-        PropertyWork::class => 'travaux',
-    ];
-
     /**
      * Manifeste d'export : la liste des justificatifs et leur place dans l'archive,
      * SANS aucune clé.
@@ -50,7 +42,7 @@ class DocumentExportService
             }
 
             $docYear = $this->getDocumentYear($document);
-            $typeFolder = self::TYPE_MAP[$document->documentable_type] ?? 'autre';
+            $typeFolder = DocumentOwners::folderFor($document->documentable_type);
             $ext = pathinfo($document->file_path, PATHINFO_EXTENSION);
             $date = $document->document_date?->format('Y-m-d') ?? 'sans-date';
             $base = $date . '_' . Str::slug($document->label ?: 'justificatif');
@@ -162,7 +154,7 @@ class DocumentExportService
                 }
 
                 $docYear = $this->getDocumentYear($document);
-                $typeFolder = self::TYPE_MAP[$document->documentable_type] ?? 'autre';
+                $typeFolder = DocumentOwners::folderFor($document->documentable_type);
                 $ext = pathinfo($document->file_path, PATHINFO_EXTENSION);
                 $date = $document->document_date?->format('Y-m-d')
                     ?? $this->getParentDate($document)?->format('Y-m-d')
@@ -224,12 +216,9 @@ class DocumentExportService
         // Build a list of documentable type/id pairs
         $query = Document::query();
 
-        $typeFilter = match ($type) {
-            'expense'   => [Expense::class],
-            'furniture' => [Furniture::class],
-            'work'      => [PropertyWork::class],
-            default     => [Expense::class, Furniture::class, PropertyWork::class],
-        };
+        $typeFilter = $type !== null && DocumentOwners::classFor($type) !== null
+            ? [DocumentOwners::classFor($type)]
+            : DocumentOwners::classes();
 
         $query->whereIn('documentable_type', $typeFilter);
 
@@ -268,20 +257,8 @@ class DocumentExportService
         return $parentDate ? (string) $parentDate->year : 'sans-annee';
     }
 
-    private function getParentDate(Document $document): ?\Carbon\Carbon
+    private function getParentDate(Document $document): ?\Carbon\CarbonInterface
     {
-        $parent = $document->documentable;
-
-        if ($parent instanceof Expense) {
-            return $parent->expense_date;
-        }
-        if ($parent instanceof Furniture) {
-            return $parent->purchase_date;
-        }
-        if ($parent instanceof PropertyWork) {
-            return $parent->work_date;
-        }
-
-        return null;
+        return DocumentOwners::dateOf($document->documentable);
     }
 }

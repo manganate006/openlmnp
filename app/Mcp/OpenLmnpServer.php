@@ -45,6 +45,7 @@ class OpenLmnpServer extends Server
         Tools\ListLoans::class,
         Tools\GetLoan::class,
         Tools\GetLoanSchedule::class,
+        Tools\ListLeases::class,
         Tools\ListFiscalYears::class,
         Tools\GetFiscalYear::class,
         Tools\ListFurniture::class,

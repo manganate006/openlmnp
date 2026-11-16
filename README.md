@@ -93,7 +93,7 @@ un expert-comptable reste recommandé.
 - **Lecture IA de la liasse** dans l'assistant de reprise : le tableau 2033-C et les cases de report sont pré-remplis depuis la liasse de votre cabinet, à relire
 - **Fournisseurs d'IA au choix** : OpenRouter, Anthropic, Google, OpenAI, Mistral (justificatifs traités en Europe), ou un modèle installé chez vous, et alors rien ne sort
 - **Export CSV** : recettes, charges, télédéclaration
-- **API MCP (46 outils)** : pilotez votre comptabilité depuis un assistant IA (Claude, etc.), y compris un dossier d'indivision partagé
+- **API MCP (47 outils)** : pilotez votre comptabilité depuis un assistant IA (Claude, etc.), y compris un dossier d'indivision partagé
 - **Assistant intégré (optionnel)** : répond à vos questions d'utilisation, sans jamais donner de conseil fiscal ni toucher à vos données
 - **Nouvelles versions signalées** : dans l'application, d'après les releases GitHub (mise à jour d'une instance Docker par `docker pull`)
 

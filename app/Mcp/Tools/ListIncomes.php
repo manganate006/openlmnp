@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Models\Income;
+use App\Models\Lease;
 use App\Models\Property;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -11,7 +12,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
-#[Description('Liste les recettes locatives de l\'utilisateur avec filtres optionnels par bien, année et plateforme (airbnb, booking, abritel, direct, other). Retourne les montants en euros avec TVA, frais de plateforme et taxe de séjour.')]
+#[Description('Liste les recettes locatives de l\'utilisateur avec filtres optionnels par bien, bail, année et plateforme (airbnb, booking, abritel, direct, other). Retourne les montants en euros avec TVA, frais de plateforme et taxe de séjour ; pour un loyer généré depuis un bail, l\'identifiant du bail, la part de charges comprise dans le montant et la date d\'encaissement.')]
 #[IsReadOnly]
 class ListIncomes extends Tool
 {
@@ -22,6 +23,7 @@ class ListIncomes extends Tool
         $propertyId = $request->get('property_id');
         $year       = $request->get('year');
         $source     = $request->get('source');
+        $leaseId    = $request->get('lease_id');
 
         // Restreindre aux biens de l'utilisateur (BelongsToUserScope actif)
         if ($propertyId !== null) {
@@ -43,6 +45,11 @@ class ListIncomes extends Tool
             $query->where('source', $source);
         }
 
+        if ($leaseId !== null) {
+            // Le scope du bail passe par son bien : celui d'un autre utilisateur rend 404.
+            $query->where('lease_id', Lease::findOrFail($leaseId)->id);
+        }
+
         $incomes = $query->get();
 
         $totalAmount    = $incomes->sum('amount');
@@ -55,10 +62,13 @@ class ListIncomes extends Tool
             return [
                 'id'              => $income->id,
                 'property_id'     => $income->property_id,
+                'lease_id'        => $income->lease_id,
                 'income_date'     => $income->income_date?->toDateString(),
+                'paid_date'       => $income->paid_date?->toDateString(),
                 'source'          => $income->source,
                 'source_label'    => (Income::sourceLabels()[$income->source] ?? $income->source),
                 'amount_eur'      => $income->amount_euros,
+                'charges_amount_eur' => bcdiv((string) $income->charges_amount, '100', 2),
                 'amount_ht_eur'   => $income->amount_ht_euros,
                 'tva_rate'        => $income->tva_rate,
                 'tva_collected_eur' => $income->tva_collected_euros,
@@ -89,6 +99,7 @@ class ListIncomes extends Tool
             'property_id' => $schema->integer()->description('Filtrer par identifiant de bien (optionnel)'),
             'year'        => $schema->integer()->description('Filtrer par année fiscale, ex: 2024 (optionnel)'),
             'source'      => $schema->string()->description('Filtrer par plateforme : airbnb, booking, abritel, direct, other (optionnel)'),
+            'lease_id'    => $schema->integer()->description('Filtrer sur les loyers générés depuis un bail, par son identifiant (voir list_leases, optionnel)'),
         ];
     }
 }

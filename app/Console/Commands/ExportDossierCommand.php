@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\Csv\DossierArchive;
+use App\Support\DocumentOwners;
 use App\Support\DocumentStorage;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
@@ -57,19 +58,20 @@ class ExportDossierCommand extends Command
 
         $counts = [];
         foreach ($payload['properties'] as $property) {
-            foreach (['components', 'works', 'furniture', 'incomes', 'expenses', 'loans'] as $key) {
+            foreach (['components', 'works', 'furniture', 'leases', 'incomes', 'expenses', 'loans'] as $key) {
                 $counts[$key] = ($counts[$key] ?? 0) + count($property[$key]);
             }
         }
 
         $this->info("Dossier exporté : {$path}");
         $this->table(
-            ['Biens', 'Composants', 'Travaux', 'Mobilier', 'Recettes', 'Charges', 'Emprunts'],
+            ['Biens', 'Composants', 'Travaux', 'Mobilier', 'Baux', 'Recettes', 'Charges', 'Emprunts'],
             [[
                 count($payload['properties']),
                 $counts['components'] ?? 0,
                 $counts['works'] ?? 0,
                 $counts['furniture'] ?? 0,
+                $counts['leases'] ?? 0,
                 $counts['incomes'] ?? 0,
                 $counts['expenses'] ?? 0,
                 $counts['loans'] ?? 0,
@@ -106,11 +108,7 @@ class ExportDossierCommand extends Command
         $propertyIds = $user->properties()->withoutGlobalScopes()->pluck('id');
         $copied = 0;
 
-        $owners = [
-            \App\Models\Expense::class      => \App\Models\Expense::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->pluck('id'),
-            \App\Models\Furniture::class    => \App\Models\Furniture::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->pluck('id'),
-            \App\Models\PropertyWork::class => \App\Models\PropertyWork::withoutGlobalScopes()->whereIn('property_id', $propertyIds)->pluck('id'),
-        ];
+        $owners = DocumentOwners::ownedIds($propertyIds);
 
         foreach ($owners as $type => $ids) {
             $documents = Document::where('documentable_type', $type)

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Services\DocumentExportService;
+use App\Support\DocumentOwners;
 use App\Support\Vault;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
-#[Description('Génère un fichier ZIP contenant tous les justificatifs (factures, reçus, devis) de l\'utilisateur, organisés par année et type (charges/mobilier/travaux). Filtrage optionnel par année et/ou type. Retourne une URL de téléchargement temporaire.')]
+#[Description('Génère un fichier ZIP contenant tous les justificatifs (factures, reçus, devis) de l\'utilisateur, organisés par année et type (charges/mobilier/travaux/recettes/baux). Filtrage optionnel par année et/ou type. Retourne une URL de téléchargement temporaire.')]
 #[IsReadOnly]
 class ExportDocuments extends Tool
 {
@@ -45,8 +46,8 @@ class ExportDocuments extends Tool
             }
         }
 
-        if ($type !== null && ! in_array($type, ['expense', 'furniture', 'work'])) {
-            return Response::error('type doit être : expense, furniture ou work.');
+        if ($type !== null && DocumentOwners::classFor($type) === null) {
+            return Response::error('type doit être : ' . DocumentOwners::keyList() . '.');
         }
 
         $result = $this->exportService->exportZip(Auth::user(), $year, $type);
@@ -78,7 +79,7 @@ class ExportDocuments extends Tool
     {
         return [
             'year' => $schema->integer()->description('Filtrer par année (ex: 2025). Sans filtre : toutes les années.'),
-            'type' => $schema->string()->description('Filtrer par type : expense (charges), furniture (mobilier), work (travaux). Sans filtre : tous les types.'),
+            'type' => $schema->string()->description('Filtrer par type : expense (charges), furniture (mobilier), work (travaux), income (recettes), lease (baux). Sans filtre : tous les types.'),
         ];
     }
 }

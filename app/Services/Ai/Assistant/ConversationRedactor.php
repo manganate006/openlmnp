@@ -5,6 +5,7 @@ namespace App\Services\Ai\Assistant;
 use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Income;
+use App\Models\Lease;
 use App\Models\Loan;
 use App\Models\Property;
 use App\Models\PropertyWork;
@@ -109,6 +110,13 @@ final class ConversationRedactor
             $add($property->address, '[adresse]');
             $add($property->city, '[ville]');
             $add($property->postal_code, '[code postal]');
+        }
+
+        // Avant les voyageurs : un loyer généré par un bail porte le nom du locataire en
+        // `guest_name`, et la première étiquette posée l'emporte. Un bail saisi sans loyer
+        // généré, lui, ne le porte nulle part ailleurs.
+        foreach (Lease::query()->distinct()->pluck('tenant_name') as $tenant) {
+            $add($tenant, '[locataire]');
         }
 
         foreach (Income::query()->whereNotNull('guest_name')->distinct()->pluck('guest_name') as $guest) {

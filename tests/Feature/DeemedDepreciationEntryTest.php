@@ -131,7 +131,8 @@ it('carries the first rental date through an archive round trip', function () {
     $archive = app(DossierArchive::class);
 
     $payload = $archive->export($this->user);
-    expect($payload['schema_version'])->toBe(3)
+    // Arrivée avec le format 3, la date reste dans les formats suivants.
+    expect($payload['schema_version'])->toBeGreaterThanOrEqual(3)
         ->and($payload['properties'][0]['activity_start_date'])->toBe('2021-04-01');
 
     $target = User::factory()->create();

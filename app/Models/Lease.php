@@ -153,13 +153,22 @@ class Lease extends Model
         $other = $this->overlappingLeases()->first();
 
         if ($other !== null) {
-            throw new \RuntimeException(sprintf(
-                'Ce bail chevauche celui de %s, commencé le %s%s. Renseignez la fin du bail précédent avant d\'en saisir un nouveau.',
-                $other->tenant_name,
-                $other->startDay()->format('d/m/Y'),
-                $other->endDay() === null ? ' et toujours en cours' : ' et terminé le ' . $other->endDay()->format('d/m/Y'),
-            ));
+            throw new \RuntimeException(static::overlapMessage($other));
         }
+    }
+
+    /**
+     * Le refus de chevauchement, partagé avec la règle du formulaire : l'écran doit dire
+     * la même chose que la garde du modèle, qui reste le dernier rempart.
+     */
+    public static function overlapMessage(Lease $other): string
+    {
+        return sprintf(
+            'Ce bail chevauche celui de %s, commencé le %s%s. Renseignez la fin du bail précédent avant d\'en saisir un nouveau.',
+            $other->tenant_name,
+            $other->startDay()->format('d/m/Y'),
+            $other->endDay() === null ? ' et toujours en cours' : ' et terminé le ' . $other->endDay()->format('d/m/Y'),
+        );
     }
 
     public function property(): BelongsTo

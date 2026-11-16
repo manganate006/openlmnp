@@ -10,6 +10,7 @@ use App\Filament\Pages\Teledeclaration;
 use App\Filament\Resources\FiscalYears\FiscalYearResource;
 use App\Models\Document;
 use App\Services\DocumentExportService;
+use App\Support\DocumentOwners;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
@@ -65,11 +66,7 @@ class ListFiscalYears extends ListRecords
                         ->placeholder('Toutes les années'),
                     Select::make('type')
                         ->label('Type')
-                        ->options([
-                            'expense'   => 'Charges',
-                            'furniture' => 'Mobilier',
-                            'work'      => 'Travaux',
-                        ])
+                        ->options(DocumentOwners::labels())
                         ->placeholder('Tous les types'),
                 ])
                 ->action(function (array $data) {

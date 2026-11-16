@@ -22,6 +22,7 @@ class UpdateIncome extends Tool
         $validated = $request->validate([
             'income_id'       => 'required|integer',
             'income_date'     => 'nullable|date_format:Y-m-d',
+            'paid_date'       => 'nullable|date_format:Y-m-d',
             'amount'          => 'nullable|numeric|min:0',
             'source'          => 'nullable|in:airbnb,booking,abritel,direct,other',
             'guest_name'      => 'nullable|string|max:255',
@@ -43,6 +44,12 @@ class UpdateIncome extends Tool
 
         if (array_key_exists('income_date', $validated) && $validated['income_date'] !== null) {
             $updates['income_date'] = $validated['income_date'];
+        }
+
+        // Informative : aucun calcul ne la lit, la recette compte à `income_date`. Un null
+        // explicite l'efface, pour un encaissement saisi par erreur.
+        if (array_key_exists('paid_date', $validated)) {
+            $updates['paid_date'] = $validated['paid_date'];
         }
 
         if (array_key_exists('amount', $validated) && $validated['amount'] !== null) {
@@ -94,6 +101,7 @@ class UpdateIncome extends Tool
             'income_id'         => $income->id,
             'property_id'       => $income->property_id,
             'income_date'       => $income->income_date->toDateString(),
+            'paid_date'         => $income->paid_date?->toDateString(),
             'amount_eur'        => $income->amount_euros,
             'amount_ht_eur'     => $income->amount_ht_euros,
             'tva_collected_eur' => $income->tva_collected_euros,
@@ -113,6 +121,7 @@ class UpdateIncome extends Tool
         return [
             'income_id'       => $schema->integer()->description('Identifiant du revenu à mettre à jour')->required(),
             'income_date'     => $schema->string()->description('Date du revenu au format Y-m-d')->nullable(),
+            'paid_date'       => $schema->string()->description('Date d\'encaissement au format Y-m-d, pour mémoire : la recette compte à sa date (income_date). null l\'efface')->nullable(),
             'amount'          => $schema->number()->description('Montant TTC en euros')->nullable(),
             'source'          => $schema->string()->description('Plateforme source : airbnb, booking, abritel, direct, other')->nullable(),
             'guest_name'      => $schema->string()->description('Nom du voyageur')->nullable(),
