@@ -637,6 +637,11 @@ class Property extends Model
         return $this->hasMany(Income::class)->orderBy('income_date');
     }
 
+    public function leases(): HasMany
+    {
+        return $this->hasMany(Lease::class)->orderBy('start_date');
+    }
+
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class)->orderBy('expense_date');
