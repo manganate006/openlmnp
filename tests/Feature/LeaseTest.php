@@ -5,6 +5,8 @@ use App\Models\Lease;
 use App\Models\Property;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Bail d'une location meublée à l'année (issue #24) : le modèle et ses gardes.
@@ -162,6 +164,23 @@ it('keeps the rents of a deleted lease, without the link', function () {
         ->and($income->lease_id)->toBeNull()
         ->and($income->amount)->toBe(70000)
         ->and($income->charges_amount)->toBe(5000);
+});
+
+it('keeps the source guard of incomes after the lease migration', function () {
+    // Sous SQLite, une clé étrangère ajoutée à `incomes` ferait reconstruire la table,
+    // et la reconstruction perdrait la contrainte CHECK : une source inconnue passerait.
+    $row = [
+        'property_id' => $this->property->id,
+        'income_date' => '2025-01-05',
+        'amount' => 70000,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ];
+
+    DB::table('incomes')->insert($row + ['source' => Income::SOURCE_DIRECT]);
+
+    expect(fn () => DB::table('incomes')->insert($row + ['source' => 'unknown']))
+        ->toThrow(QueryException::class);
 });
 
 it('deletes the leases of a deleted property', function () {

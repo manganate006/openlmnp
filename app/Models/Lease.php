@@ -57,6 +57,13 @@ class Lease extends Model
         // Dernier rempart, quel que soit le chemin d'écriture (écran, MCP, import) : un
         // bail incohérent doublerait les loyers sans que rien ne le signale.
         static::saving(fn (Lease $lease) => $lease->assertValid());
+
+        // incomes.lease_id n'a pas de clé étrangère (voir la migration) : c'est ici que les
+        // loyers d'un bail supprimé perdent leur lien. Ce sont des recettes réelles, elles
+        // restent. Sans les scopes globaux, pour ne pas dépendre de l'utilisateur connecté.
+        static::deleting(fn (Lease $lease) => Income::withoutGlobalScopes()
+            ->where('lease_id', $lease->getKey())
+            ->update(['lease_id' => null]));
     }
 
     protected function casts(): array
