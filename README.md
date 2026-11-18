@@ -242,8 +242,8 @@ idée dans les [issues](https://github.com/manganate006/openlmnp/issues). Merci 
 
 OpenLMNP doit beaucoup à celles et ceux qui l'ont installé, confronté à leur propre dossier
 et nous ont dit ce qui n'allait pas : [@cocool97](https://github.com/cocool97),
-[@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), [@ovrtn](https://github.com/ovrtn)
-et [@DamienFr](https://github.com/DamienFr). Le détail de leurs contributions (correctifs,
+[@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), [@ovrtn](https://github.com/ovrtn),
+[@DamienFr](https://github.com/DamienFr) et [@srouaix](https://github.com/srouaix). Le détail de leurs contributions (correctifs,
 signalements, sécurité) est sur la page [Remerciements](https://openlmnp.fr/remerciements).
 
 ## Licence

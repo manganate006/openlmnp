@@ -4,6 +4,37 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-18
+
+### Frais d'emprunt : déduction immédiate ou étalement
+
+- **Les frais d'un emprunt se saisissent sur l'emprunt lui-même** : frais de dossier, de
+  courtage et part non restituable de la caution, avec leur date de paiement. Jusqu'ici, il
+  fallait les saisir en charge « Divers », passée au compte 65. Pensez à supprimer cette charge
+  si vous reportez les frais sur l'emprunt : ils seraient sinon déduits deux fois.
+- **Option d'étalement sur la durée du prêt** (art. 39-1-1° quater du CGI,
+  BOI-BIC-CHG-20-30-40), dans le profil. Par défaut, les frais sont déduits en une fois l'année
+  du paiement (2033-B ligne 242, compte 6272). Avec l'option, ils sont répartis en fractions
+  égales, sans prorata la première année (ligne 294, comptes 481 puis 6862 selon le plan
+  comptable en vigueur depuis 2025). L'option est globale, irrévocable pendant deux ans, et vaut
+  pour les frais payés à partir de l'année choisie.
+- **Pourquoi c'est utile** : quand la première année est déficitaire, des frais déduits en une
+  fois grossissent un déficit qui ne se reporte que sur dix ans, alors que l'amortissement
+  ramène souvent les années suivantes à zéro. Étalés, ils réduisent le résultat des années
+  bénéficiaires et laissent autant d'amortissement en réserve, sans limite de durée.
+- Le solde non encore déduit figure à l'actif du bilan simplifié, en ligne 092, **sous
+  réserve** : la notice de la 2033 ne prévoit pas de ligne dédiée.
+- Les outils MCP `get_loan` et `list_loans` exposent les frais et leur traitement, et l'export
+  de dossier passe au format 4 (les archives précédentes s'importent toujours).
+- Demandé par @srouaix (#26)
+
+### Correctifs
+
+- **La projection pluriannuelle ignorait les emprunts** : ni les intérêts, ni l'assurance
+  emprunteur n'étaient déduits des années projetées, sur la page comme dans l'outil MCP
+  `get_projection`. Ils le sont désormais, avec la quote-part du bien, ainsi que les frais
+  d'emprunt.
+
 ### Interne
 
 - **Le serveur MCP annonce la version réelle de l'application.** Sa réponse à `initialize`

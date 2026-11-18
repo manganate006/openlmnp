@@ -242,8 +242,8 @@ OpenLMNP is developed in my free time. If the tool is useful to you: ⭐ star th
 
 OpenLMNP owes a lot to the people who installed it, tried it on their own books and told
 us what was wrong: [@cocool97](https://github.com/cocool97),
-[@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), [@ovrtn](https://github.com/ovrtn)
-and [@DamienFr](https://github.com/DamienFr). Their contributions (fixes, reports, security)
+[@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), [@ovrtn](https://github.com/ovrtn),
+[@DamienFr](https://github.com/DamienFr) and [@srouaix](https://github.com/srouaix). Their contributions (fixes, reports, security)
 are listed on the [acknowledgements page](https://openlmnp.fr/remerciements) (in French).
 
 ## License
