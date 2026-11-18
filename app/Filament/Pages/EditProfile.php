@@ -24,6 +24,7 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
@@ -415,13 +416,17 @@ class EditProfile extends BaseEditProfile
                     ->helperText(
                         'Par défaut, les frais d\'emprunt (frais de dossier, courtage, part non '
                         . 'restituable d\'une caution) sont déduits en une fois l\'année du paiement. '
-                        . 'L\'étalement les répartit linéairement sur la durée de l\'emprunt. '
-                        . 'Option GLOBALE (tous vos emprunts, présents et futurs), IRRÉVOCABLE pendant '
-                        . '2 ans et reconduite tacitement ensuite : elle s\'exerce par la première '
-                        . 'inscription des frais en charges à répartir, vous ne pourrez donc pas '
-                        . 'revenir en arrière avant ce délai une fois un emprunt avec frais enregistré.'
+                        . 'L\'étalement les répartit linéairement sur la durée de chaque emprunt, ce qui '
+                        . 'sert surtout quand la première année est déficitaire. L\'option vaut pour tous '
+                        . 'vos emprunts et elle est irrévocable pendant 2 ans, puis reconduite tacitement '
+                        . '(BOI-BIC-CHG-20-30-40 § 30 à 50) : ne la désactivez pas avant ce délai.'
                     )
-                    ->live(),
+                    ->live()
+                    ->afterStateUpdated(function (bool $state, Get $get, Set $set) {
+                        if ($state && blank($get('loan_fees_spread_from'))) {
+                            $set('loan_fees_spread_from', now()->year);
+                        }
+                    }),
                 TextInput::make('loan_fees_spread_from')
                     ->label('Étaler à partir de l\'année')
                     ->numeric()
@@ -500,6 +505,12 @@ class EditProfile extends BaseEditProfile
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $data = parent::mutateFormDataBeforeFill($data);
+
+        // Interrupteur sans colonne : Filament n'applique pas les default() d'une page
+        // d'édition, il faut le déduire de l'année d'option, sinon il s'afficherait éteint
+        // et le premier enregistrement du profil effacerait l'option.
+        $data['loan_fees_spread_enabled'] = $this->getUser()->loan_fees_spread_from !== null;
+        $data['loan_fees_spread_from'] = $this->getUser()->loan_fees_spread_from;
 
         $rows = array_values((array) ($this->getUser()->co_owners ?? []));
 
@@ -911,7 +922,7 @@ class EditProfile extends BaseEditProfile
         // masqué, mais rien n'empêche de le décocher puis recocher sans ressaisir l'année).
         if (array_key_exists('loan_fees_spread_enabled', $data)) {
             $data['loan_fees_spread_from'] = $data['loan_fees_spread_enabled']
-                ? (int) ($data['loan_fees_spread_from'] ?? now()->year)
+                ? (filled($data['loan_fees_spread_from'] ?? null) ? (int) $data['loan_fees_spread_from'] : now()->year)
                 : null;
             unset($data['loan_fees_spread_enabled']);
         }
