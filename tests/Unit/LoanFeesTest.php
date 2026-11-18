@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\AccountingEntry;
+use App\Models\Income;
 use App\Models\Loan;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\DepreciationService;
 use App\Services\FiscalYearService;
 use App\Services\LoanService;
 use App\Services\TaxReturnService;
@@ -303,4 +305,146 @@ it('deducts loan charges (interest, insurance, fees) in the multi-year projectio
 
     expect($expectedLoanCharges)->toBeGreaterThan(0)
         ->and($data['rows'][0]['expenses'])->toBeGreaterThanOrEqual($expectedLoanCharges);
+});
+
+/**
+ * Issue #26 — effet déficit vs. amortissement différé, sur une chaîne de dix exercices.
+ *
+ * Deux dossiers IDENTIQUES par ailleurs (même bien, même emprunt dédié à 100 %, mêmes
+ * recettes), qui ne diffèrent QUE par le mode de déduction des 5 000 € de frais payés en
+ * N — immédiat (a) vs étalé dès N (b) — pour isoler la seule variable qui nous intéresse.
+ * Aucun loyer en N (le déficit de N n'est donc QUE les frais). À partir de N+1, un loyer net
+ * modeste (2 000 €/an) qu'un gros œuvre largement dimensionné (7 599,99 €/an, et un stock
+ * différé qui ne fait que croître derrière) absorbe INTÉGRALEMENT chaque année des deux
+ * côtés : le résultat fiscal retombe exactement à 0 de N+1 à N+10, dans les deux dossiers.
+ *
+ * Deux déficits différents mais JAMAIS imputés (puisque le résultat des années suivantes
+ * est toujours nul, donc rien à imputer dessus) :
+ *   - immédiat : le déficit de N porte les 5 000 € EN ENTIER (aucune recette pour les
+ *     absorber, et l'étalement n'existe pas) ;
+ *   - étalé : le déficit de N ne porte que LA FRACTION 2024 (250 €, 500 000 / 240 mois ×
+ *     12), le solde restant (4 750 €) est une charge à répartir, pas un déficit.
+ *
+ * L'écart ne se voit donc PAS sur `fiscal_result` (0 partout de N+1 à N+10 dans les deux
+ * dossiers) ni sur `deficit_imputed` (0 partout, rien n'étant jamais imputé) : il se loge
+ * UNIQUEMENT dans le stock `deferred_depreciation`, qui grandit plus vite côté étalé — de
+ * 250 € par an, une fraction par année N+1..N+10 (PAS N+1..N+10 inclus l'année N : la
+ * fraction de N a déjà été absorbée dans le déficit de N lui-même, calculé ci-dessus, et
+ * n'entre donc dans aucun des deux stocks différés — vérifié ci-dessous à N par l'égalité
+ * stricte des deux `deferred_depreciation`). Sur dix fractions (N+1 à N+10), l'écart vaut
+ * exactement 10 × 250 € = 2 500 €, mesuré ici au centime (250 000 centimes), ni 9 ni 11
+ * fractions — valeurs confirmées par une exécution instrumentée de ce test avant sa version
+ * finale (`deferred_depreciation` : 6 359 989 en (a), 6 609 989 en (b), à N+10).
+ */
+it('matches the deferred-depreciation gap to the number of spread fee fractions once the deficit of N absorbs the rest (issue #26)', function () {
+    $depreciationService = app(DepreciationService::class);
+    $startYear = 2024;
+    $endYear = $startYear + 10;
+
+    // (a) Déduction immédiate — dossier et utilisateur dédiés.
+    $userImmediate = User::factory()->create();
+    $propertyImmediate = feesLoanProperty($userImmediate, [
+        'acquisition_date' => "{$startYear}-01-01",
+        'rental_start_date' => "{$startYear}-01-01",
+    ]);
+    $depreciationService->generateDefaultComponents($propertyImmediate);
+    feesLoan($propertyImmediate, [
+        'duration_months' => 240, // 20 ans
+        'is_dedicated' => true,
+        'fees_amount' => 500000, // 5 000 €
+        'fees_paid_on' => "{$startYear}-01-01",
+        'start_date' => "{$startYear}-01-01",
+    ]);
+
+    // (b) Étalement dès N — dossier et utilisateur SÉPARÉS, sinon l'option globale au
+    // dossier contaminerait aussi (a).
+    $userSpread = User::factory()->create();
+    $userSpread->forceFill(['loan_fees_spread_from' => $startYear])->save();
+    $propertySpread = feesLoanProperty($userSpread, [
+        'acquisition_date' => "{$startYear}-01-01",
+        'rental_start_date' => "{$startYear}-01-01",
+    ]);
+    $depreciationService->generateDefaultComponents($propertySpread);
+    feesLoan($propertySpread, [
+        'duration_months' => 240,
+        'is_dedicated' => true,
+        'fees_amount' => 500000,
+        'fees_paid_on' => "{$startYear}-01-01",
+        'start_date' => "{$startYear}-01-01",
+    ]);
+
+    // Aucun loyer en N ; 2 000 €/an net de N+1 à N+10, des deux côtés.
+    for ($year = $startYear + 1; $year <= $endYear; $year++) {
+        foreach ([$propertyImmediate, $propertySpread] as $property) {
+            Income::create([
+                'property_id' => $property->id,
+                'income_date' => "{$year}-06-01",
+                'amount' => 200000,
+                'platform_fee' => 0,
+                'tourist_tax' => 0,
+                'source' => 'direct',
+            ]);
+        }
+    }
+
+    // La chaîne, dans l'ordre, pour chaque dossier : chaque année a besoin du
+    // `deferred_depreciation` réellement calculé et persisté l'année précédente.
+    $immediateYears = [];
+    $spreadYears = [];
+    for ($year = $startYear; $year <= $endYear; $year++) {
+        $immediateYears[$year] = app(FiscalYearService::class)->getOrCreate($userImmediate, $year);
+        $spreadYears[$year] = app(FiscalYearService::class)->getOrCreate($userSpread, $year);
+    }
+
+    // --- (a) immédiat : le déficit de N porte les 5 000 € en entier ---
+    $fyImmediateN = $immediateYears[$startYear];
+    expect((int) $fyImmediateN->fiscal_result)->toBe(-500000)
+        ->and($fyImmediateN->deficit_detail)->toHaveCount(1)
+        ->and($fyImmediateN->deficit_detail[0]['origin_year'])->toBe($startYear)
+        ->and($fyImmediateN->deficit_detail[0]['remaining'])->toBe(500000);
+
+    // N+1 à N+10 : résultat ramené à 0 par l'amortissement, donc rien à imputer sur le
+    // déficit de N, qui ne diminue pas.
+    foreach (range($startYear + 1, $endYear) as $year) {
+        expect((int) $immediateYears[$year]->fiscal_result)->toBe(0)
+            ->and((int) $immediateYears[$year]->deficit_imputed)->toBe(0);
+    }
+
+    $deficitImmediateAtN10 = collect($immediateYears[$endYear]->deficit_detail)
+        ->firstWhere('origin_year', $startYear);
+    expect($deficitImmediateAtN10['remaining'])->toBe(500000)
+        // Pas encore périmé à N+10 : le délai de dix ans n'expire qu'à N+11
+        // (CGI art. 156, I-1° ter ; BOI-BIC-DEF-20-10 § 50).
+        ->and($deficitImmediateAtN10['expired'])->toBe(0);
+
+    // --- (b) étalé : le déficit de N ne porte que la fraction 2024 (250 €) ---
+    $fySpreadN = $spreadYears[$startYear];
+    expect((int) $fySpreadN->fiscal_result)->toBe(-25000)
+        ->and($fySpreadN->deficit_detail)->toHaveCount(1)
+        ->and($fySpreadN->deficit_detail[0]['origin_year'])->toBe($startYear)
+        ->and($fySpreadN->deficit_detail[0]['remaining'])->toBe(25000);
+
+    foreach (range($startYear + 1, $endYear) as $year) {
+        expect((int) $spreadYears[$year]->fiscal_result)->toBe(0)
+            ->and((int) $spreadYears[$year]->deficit_imputed)->toBe(0);
+    }
+
+    $deficitSpreadAtN10 = collect($spreadYears[$endYear]->deficit_detail)
+        ->firstWhere('origin_year', $startYear);
+    expect($deficitSpreadAtN10['remaining'])->toBe(25000)
+        ->and($deficitSpreadAtN10['expired'])->toBe(0);
+
+    // --- Le même bien amortissable des deux côtés : à N, le stock différé est identique
+    // (la fraction 2024 des frais, qu'elle soit de 250 € ou 5 000 €, n'y entre dans aucun
+    // des deux cas — elle est tout entière dans le déficit de N ci-dessus, pas ici).
+    expect((int) $immediateYears[$startYear]->deferred_depreciation)
+        ->toBe((int) $spreadYears[$startYear]->deferred_depreciation);
+
+    // --- L'écart mesuré à N+10 : exactement dix fractions de 250 € (N+1 à N+10), jamais
+    // absorbées par aucun déficit puisque le résultat des deux dossiers est nul chaque
+    // année — elles ne peuvent donc aller que dans `deferred_depreciation`.
+    $gapAtN10 = (int) $spreadYears[$endYear]->deferred_depreciation
+        - (int) $immediateYears[$endYear]->deferred_depreciation;
+
+    expect($gapAtN10)->toBe(10 * 25000);
 });
