@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Loan;
 use App\Models\LoanPayment;
+use App\Models\Property;
 
 class LoanService
 {
@@ -99,5 +100,100 @@ class LoanService
         $quotaShare = $loan->property->quota_share;
 
         return (int) $loan->prorate((string) $total, $quotaShare);
+    }
+
+    /**
+     * Fraction des frais d'emprunt déductible au titre d'une année (art. 39-1-1° quater
+     * CGI, BOI-BIC-CHG-20-30-40).
+     *
+     * - **Déduction immédiate** (option d'étalement absente, ou frais payés avant l'année
+     *   où elle prend effet) : tout est déduit l'année du paiement, rien avant ni après.
+     * - **Étalement linéaire** (§ 70 : sans prorata temporis) : fraction annuelle =
+     *   frais × 12 / `duration_months`, la PREMIÈRE année pleine comme les suivantes — ce
+     *   n'est pas un amortissement au sens du 39-1-2° (§ 60). Les années se comptent à
+     *   partir de celle du paiement ; la DERNIÈRE fraction prend le reliquat, pour que la
+     *   somme des fractions retombe exactement sur `fees_amount` malgré la troncature
+     *   bcmath de chaque fraction.
+     *
+     * Avant quote-part : l'appelant applique `Loan::prorate()`, comme pour les intérêts
+     * et l'assurance emprunteur — jamais appliquée deux fois par ses propres appelants.
+     *
+     * @return array{deducted: string, remaining_end: string, mode: string} centimes (bcmath, non proratés)
+     */
+    public function feesForYear(Loan $loan, int $year): array
+    {
+        $fees = (string) $loan->fees_amount;
+
+        if (bccomp($fees, '0', 0) <= 0) {
+            return ['deducted' => '0', 'remaining_end' => '0', 'mode' => 'immediate'];
+        }
+
+        $paidOn = $loan->feesEffectiveDate();
+        $paymentYear = (int) $paidOn->year;
+
+        $spreadFrom = $loan->property?->user?->loan_fees_spread_from;
+        $isSpread = $spreadFrom !== null && $paymentYear >= (int) $spreadFrom;
+
+        if (! $isSpread) {
+            return [
+                'deducted' => $year === $paymentYear ? $fees : '0',
+                'remaining_end' => '0',
+                'mode' => 'immediate',
+            ];
+        }
+
+        $months = max(1, (int) $loan->duration_months);
+        $totalYears = (int) ceil($months / 12);
+        $yearIndex = $year - $paymentYear; // 0 = année de paiement
+
+        if ($yearIndex < 0 || $yearIndex >= $totalYears) {
+            return ['deducted' => '0', 'remaining_end' => '0', 'mode' => 'spread'];
+        }
+
+        // Fraction annuelle tronquée au centime : le reliquat de troncature (et celui d'une
+        // durée non multiple de 12 mois) est repris par la DERNIÈRE fraction, jamais perdu.
+        $annual = bcdiv(bcmul($fees, '12', 0), (string) $months, 0);
+        $cumulativeBefore = bcmul($annual, (string) $yearIndex, 0);
+        if (bccomp($cumulativeBefore, $fees, 0) >= 0) {
+            $cumulativeBefore = $fees;
+        }
+
+        $deducted = $yearIndex === $totalYears - 1
+            ? bcsub($fees, $cumulativeBefore, 0)
+            : $annual;
+
+        $remainingEnd = bcsub($fees, bcadd($cumulativeBefore, $deducted, 0), 0);
+
+        return ['deducted' => $deducted, 'remaining_end' => $remainingEnd, 'mode' => 'spread'];
+    }
+
+    /**
+     * Charges d'emprunt d'un bien pour une projection pluriannuelle : intérêts, assurance et
+     * frais déduits, après quote-part (`Loan::prorate()`).
+     *
+     * Partagée par `Projection` (page) et `GetProjection` (MCP), qui en dupliquaient chacun
+     * leur version avant le 2026-11-16 — et qui, en réalité, ne calculaient ni l'une ni
+     * l'autre : ni les intérêts, ni l'assurance d'un emprunt n'entraient dans leurs charges
+     * projetées, contrairement à `FiscalYearService::computeTotals()`. Les échéances d'un
+     * emprunt sont déterministes sur toute sa durée (`LoanService::generateSchedule()` les
+     * a déjà posées), donc interrogeables directement pour une année future — à la
+     * différence des recettes et charges courantes, qui n'ont pas d'échéancier et que ces
+     * deux appelants estiment par ailleurs sur la moyenne des années passées.
+     *
+     * @return int centimes, après quote-part
+     */
+    public function projectedLoanChargesForYear(Property $property, int $year): int
+    {
+        $total = 0;
+
+        foreach ($property->loans as $loan) {
+            $interest = $loan->getInterestsForYear($year);
+            $insurance = $loan->getInsuranceForYear($year);
+            $fees = (int) $this->feesForYear($loan, $year)['deducted'];
+
+            $total += (int) $loan->prorate((string) ($interest + $insurance + $fees), $property->quota_share);
+        }
+
+        return $total;
     }
 }

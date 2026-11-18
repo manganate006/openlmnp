@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Models\Expense;
 use App\Models\Property;
 use App\Services\DepreciationService;
+use App\Services\LoanService;
 use App\Support\MicroBicRules;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -19,7 +20,10 @@ class GetProjection extends Tool
 {
     protected string $name = 'get_projection';
 
-    public function __construct(private DepreciationService $depreciationService) {}
+    public function __construct(
+        private DepreciationService $depreciationService,
+        private LoanService $loanService,
+    ) {}
 
     public function handle(Request $request): Response
     {
@@ -79,6 +83,11 @@ class GetProjection extends Tool
                     $shared    = (int) ($shared / $expYears);
                 }
                 $totalExpenses += $dedicated + (int) bcmul((string) $shared, $property->quota_share, 0);
+
+                // Intérêts, assurance emprunteur et frais d'emprunt : des charges au même
+                // titre que les autres (issue #11 — jusqu'ici absents de la projection, alors
+                // que `FiscalYearService::computeTotals()` les déduit déjà du résultat réel).
+                $totalExpenses += $this->loanService->projectedLoanChargesForYear($property, $year);
             }
 
             if ($i > 0 && $incomeGrowth != 0) {

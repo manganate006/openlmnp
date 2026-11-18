@@ -258,6 +258,7 @@ class EditProfile extends BaseEditProfile
                         },
                     ]),
                 $this->getIndivisionSection($isLinkedDossier),
+                $this->getLoanFeesSpreadSection(),
                 Select::make('timezone')
                     ->label('Fuseau horaire')
                     ->options($timezones)
@@ -388,6 +389,47 @@ class EditProfile extends BaseEditProfile
                     ->hiddenLabel()
                     ->visible(fn (Get $get) => (bool) $get('is_indivision'))
                     ->content(fn (Get $get) => $this->coOwnersTotalContent($get('co_owners') ?? [])),
+            ]);
+    }
+
+    /**
+     * Section « Frais d'emprunt » : option d'étalement linéaire (art. 39-1-1° quater CGI,
+     * BOI-BIC-CHG-20-30-40 § 30-50), globale au dossier — jamais à un seul emprunt.
+     *
+     * `loan_fees_spread_from` (année, nullable) porte la colonne réelle. L'interrupteur
+     * `loan_fees_spread_enabled` est purement un confort de saisie : il n'existe dans aucune
+     * table, `mutateFormDataBeforeSave()` le traduit en `null` (déduction immédiate) ou en
+     * l'année saisie (étalement) avant l'enregistrement.
+     */
+    protected function getLoanFeesSpreadSection(): Section
+    {
+        return Section::make('Frais d\'emprunt')
+            ->icon('heroicon-o-currency-euro')
+            ->description('Déduction immédiate, ou étalement linéaire sur la durée de l\'emprunt.')
+            ->collapsible()
+            ->collapsed(fn () => $this->getUser()->loan_fees_spread_from === null)
+            ->schema([
+                Toggle::make('loan_fees_spread_enabled')
+                    ->label('Étaler les frais d\'emprunt')
+                    ->default(fn () => $this->getUser()->loan_fees_spread_from !== null)
+                    ->helperText(
+                        'Par défaut, les frais d\'emprunt (frais de dossier, courtage, part non '
+                        . 'restituable d\'une caution) sont déduits en une fois l\'année du paiement. '
+                        . 'L\'étalement les répartit linéairement sur la durée de l\'emprunt. '
+                        . 'Option GLOBALE (tous vos emprunts, présents et futurs), IRRÉVOCABLE pendant '
+                        . '2 ans et reconduite tacitement ensuite : elle s\'exerce par la première '
+                        . 'inscription des frais en charges à répartir, vous ne pourrez donc pas '
+                        . 'revenir en arrière avant ce délai une fois un emprunt avec frais enregistré.'
+                    )
+                    ->live(),
+                TextInput::make('loan_fees_spread_from')
+                    ->label('Étaler à partir de l\'année')
+                    ->numeric()
+                    ->minValue(2000)
+                    ->maxValue(2100)
+                    ->default(fn () => $this->getUser()->loan_fees_spread_from ?? now()->year)
+                    ->visible(fn (Get $get) => (bool) $get('loan_fees_spread_enabled'))
+                    ->helperText('S\'applique aux frais payés à partir du 1er janvier de cette année.'),
             ]);
     }
 
@@ -860,6 +902,18 @@ class EditProfile extends BaseEditProfile
         // visiteurs, même règle que ci-dessus.
         if (McpDemo::isDemoUser($this->getUser())) {
             unset($data['is_indivision'], $data['co_owners']);
+        }
+
+        // L'interrupteur n'est qu'un confort de saisie, jamais une colonne : désactivé, les
+        // frais d'emprunt restent en déduction immédiate (`null`). Activé, l'année saisie
+        // devient la colonne réelle — avec un repli sur l'année courante si le champ a été
+        // vidé alors que l'interrupteur reste coché (`visible()` ne déshydrate pas l'état
+        // masqué, mais rien n'empêche de le décocher puis recocher sans ressaisir l'année).
+        if (array_key_exists('loan_fees_spread_enabled', $data)) {
+            $data['loan_fees_spread_from'] = $data['loan_fees_spread_enabled']
+                ? (int) ($data['loan_fees_spread_from'] ?? now()->year)
+                : null;
+            unset($data['loan_fees_spread_enabled']);
         }
 
         // Le repeater masqué n'est pas transmis : c'est l'interrupteur qui décide. Désactivée,

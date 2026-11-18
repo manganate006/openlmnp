@@ -48,6 +48,8 @@ class ListLoans extends Tool
                 'monthly_payment_eur'   => $loan->monthly_payment_euros,
                 'insurance_monthly_eur' => $loan->insurance_monthly_euros,
                 'is_dedicated'          => $loan->is_dedicated,
+                'fees_amount_eur'       => $loan->fees_amount_euros,
+                'fees_paid_on'          => $loan->fees_paid_on?->toDateString(),
                 'total_cost_eur'        => bcdiv((string) $loan->total_cost, '100', 2),
                 'has_schedule'          => $loan->payments()->exists(),
                 'payments_count'        => $loan->payments()->count(),

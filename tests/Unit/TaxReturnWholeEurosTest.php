@@ -29,7 +29,7 @@ function centsForms(array $b, array $dotations, int $fiscal, ?array $bis = null)
 
     return [
         'form2031' => ['AB' => $b['218'], 'CB' => max($fiscal, 0), 'CC' => max(-$fiscal, 0)],
-        'form2033A' => ['014' => 0, '016' => 0, '028' => 2000049, '030' => 600049, '156' => 900049, '180' => 0, '110' => 0, '112' => 0, 'net' => 0, '044' => 0, '048' => 0, '120' => 0, '136' => 0],
+        'form2033A' => ['014' => 0, '016' => 0, '028' => 2000049, '030' => 600049, '092' => 0, '156' => 900049, '180' => 0, '110' => 0, '112' => 0, 'net' => 0, '044' => 0, '048' => 0, '120' => 0, '136' => 0],
         'form2033B' => $b + ['352' => max($fiscal, 0), '354' => max(-$fiscal, 0)],
         'form2033C' => ['categories' => $categories, 'total_brut' => 0, 'total_dotation' => 0, 'total_cumul' => 0],
         'form2033D' => ['982' => 0, '983' => 0, '984' => 0, '860' => 0, '870' => 0, 'suivi_39c' => ['ouverture' => 0, 'differes' => 0, 'repris' => 0, 'cloture' => 0]],

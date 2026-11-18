@@ -25,6 +25,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int         $monthly_payment    centimes
  * @property int         $insurance_monthly  centimes
  * @property bool        $is_dedicated       finance exclusivement le logement loué (pas de quote-part)
+ * @property int         $fees_amount        centimes - frais d'emprunt (dossier, courtage, caution non restituable)
+ * @property \Carbon\Carbon|null $fees_paid_on date effective de paiement des frais (défaut : start_date)
  */
 #[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Loan extends Model
@@ -53,6 +55,8 @@ class Loan extends Model
         'insurance_rate',
         'schedule_source',
         'is_dedicated',
+        'fees_amount',
+        'fees_paid_on',
     ];
 
     public static function insuranceTypeLabels(): array
@@ -69,7 +73,24 @@ class Loan extends Model
             'start_date'    => 'date',
             'annual_rate'   => 'decimal:3',
             'is_dedicated'  => 'boolean',
+            'fees_paid_on'  => 'date',
         ];
+    }
+
+    /**
+     * Date effective de paiement des frais d'emprunt : `fees_paid_on` si saisie,
+     * sinon la date de mise en place de l'emprunt (BOI-BIC-CHG-20-30-40 § 30-50 : l'option
+     * s'exerce par la première inscription en charges à répartir, il faut donc une date
+     * certaine même quand l'utilisateur ne l'a pas renseignée).
+     */
+    public function feesEffectiveDate(): \Carbon\Carbon
+    {
+        return $this->fees_paid_on ?? $this->start_date;
+    }
+
+    public function getFeesAmountEurosAttribute(): string
+    {
+        return bcdiv((string) $this->fees_amount, '100', 2);
     }
 
     /**

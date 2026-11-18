@@ -54,6 +54,7 @@ class AccountingEntryService
 
     public function __construct(
         private DepreciationService $depreciationService,
+        private LoanService $loanService = new LoanService(),
     ) {}
 
     /**
@@ -411,6 +412,115 @@ class AccountingEntryService
                 ]);
 
                 $pieceNum++;
+            }
+
+            // Frais d'emprunt (art. 39-1-1° quater CGI) :
+            //  - en déduction immédiate : 6272 débit / 512 crédit, à la date du paiement ;
+            //  - en étalement : 481 débit / 512 crédit À LA DATE DU PAIEMENT (l'année où les
+            //    frais entrent en charges à répartir), PUIS 6862 débit / 481 crédit au 31/12
+            //    de chaque année tant qu'il reste un solde (LoanService::feesForYear()), la
+            //    première fraction comprise — § 70 : pas de prorata temporis.
+            if ((int) $loan->fees_amount > 0) {
+                $feesInfo = $this->loanService->feesForYear($loan, $year);
+                $feesPaidOn = $loan->feesEffectiveDate();
+
+                if ($feesInfo['mode'] === 'spread' && (int) $feesPaidOn->year === $year) {
+                    $recorded = (int) $loan->prorate((string) $loan->fees_amount, $property->quota_share);
+
+                    if ($recorded > 0) {
+                        $ref = "FRA-{$pieceNum}";
+                        $label = 'Frais d\'emprunt à répartir ' . ($loan->bank_name ?? '') . ' - ' . $feesPaidOn->format('d/m/Y');
+
+                        $this->push([
+                            'fiscal_year_id' => $fiscalYear->id,
+                            'property_id'    => $property->id,
+                            'entry_date'     => $feesPaidOn,
+                            'account_code'   => '481',
+                            'label'          => $label,
+                            'debit'          => $recorded,
+                            'credit'         => 0,
+                            'piece_ref'      => $ref,
+                            'journal'        => 'OD',
+                        ]);
+
+                        $this->push([
+                            'fiscal_year_id' => $fiscalYear->id,
+                            'property_id'    => $property->id,
+                            'entry_date'     => $feesPaidOn,
+                            'account_code'   => '512',
+                            'label'          => $label,
+                            'debit'          => 0,
+                            'credit'         => $recorded,
+                            'piece_ref'      => $ref,
+                            'journal'        => 'OD',
+                        ]);
+
+                        $pieceNum++;
+                    }
+                }
+
+                $deductedProrata = (int) $loan->prorate((string) $feesInfo['deducted'], $property->quota_share);
+
+                if ($deductedProrata > 0) {
+                    $ref = "FRA-{$pieceNum}";
+
+                    if ($feesInfo['mode'] === 'immediate') {
+                        $label = 'Frais d\'emprunt ' . ($loan->bank_name ?? '') . ' - ' . $feesPaidOn->format('d/m/Y');
+
+                        $this->push([
+                            'fiscal_year_id' => $fiscalYear->id,
+                            'property_id'    => $property->id,
+                            'entry_date'     => $feesPaidOn,
+                            'account_code'   => '6272',
+                            'label'          => $label,
+                            'debit'          => $deductedProrata,
+                            'credit'         => 0,
+                            'piece_ref'      => $ref,
+                            'journal'        => 'OD',
+                        ]);
+
+                        $this->push([
+                            'fiscal_year_id' => $fiscalYear->id,
+                            'property_id'    => $property->id,
+                            'entry_date'     => $feesPaidOn,
+                            'account_code'   => '512',
+                            'label'          => $label,
+                            'debit'          => 0,
+                            'credit'         => $deductedProrata,
+                            'piece_ref'      => $ref,
+                            'journal'        => 'OD',
+                        ]);
+                    } else {
+                        $yearEnd = "{$year}-12-31";
+                        $label = 'Dotation frais d\'emprunt ' . ($loan->bank_name ?? '') . ' - ' . $year;
+
+                        $this->push([
+                            'fiscal_year_id' => $fiscalYear->id,
+                            'property_id'    => $property->id,
+                            'entry_date'     => $yearEnd,
+                            'account_code'   => '6862',
+                            'label'          => $label,
+                            'debit'          => $deductedProrata,
+                            'credit'         => 0,
+                            'piece_ref'      => $ref,
+                            'journal'        => 'OD',
+                        ]);
+
+                        $this->push([
+                            'fiscal_year_id' => $fiscalYear->id,
+                            'property_id'    => $property->id,
+                            'entry_date'     => $yearEnd,
+                            'account_code'   => '481',
+                            'label'          => $label,
+                            'debit'          => 0,
+                            'credit'         => $deductedProrata,
+                            'piece_ref'      => $ref,
+                            'journal'        => 'OD',
+                        ]);
+                    }
+
+                    $pieceNum++;
+                }
             }
         }
 

@@ -248,6 +248,24 @@ class AnalysisPreview
                 ->options(Loan::insuranceTypeLabels())
                 ->default(Loan::INSURANCE_FIXED)
                 ->required(),
+            // Les frais d'emprunt (dossier, courtage, caution) ne figurent pas dans le
+            // tableau d'amortissement : l'extraction IA ne les détecte pas. Champs laissés
+            // à 0/vide par défaut, à l'utilisateur de les compléter s'il en a payé.
+            Grid::make(2)->schema([
+                TextInput::make('fees_amount')
+                    ->label('Frais d\'emprunt')
+                    ->suffix('€')
+                    ->numeric()
+                    ->step(0.01)
+                    ->default(0)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
+                    ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Frais de dossier, courtage, part non restituable d\'une caution. Absents du tableau d\'amortissement, à ressaisir ici si vous en avez payé.'),
+                DatePicker::make('fees_paid_on')
+                    ->label('Date de paiement des frais')
+                    ->displayFormat('d/m/Y')
+                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Laissez vide pour reprendre la date d\'effet de l\'emprunt.'),
+            ]),
         ];
     }
 }

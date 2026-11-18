@@ -262,6 +262,14 @@ class Teledeclaration extends Page
                 'title' => '2033-A — Bilan simplifié',
                 'cerfa' => 'CERFA 10956',
                 'open' => false,
+                // La notice 2033 ne prévoit aucune ligne dédiée aux frais d'émission d'emprunt
+                // (compte 481) : la 092 est la case la plus proche par nature (charges
+                // constatées d'avance), retenue sous réserve, pas confirmée par une source.
+                'note' => $f2033A['092'] > 0
+                    ? 'Ligne 092 retenue sous réserve : la notice 2033 ne prévoit pas de ligne '
+                        . 'dédiée aux frais d\'émission d\'emprunt. Elle porte le solde non encore '
+                        . 'amorti de vos frais d\'emprunt étalés (compte 481).'
+                    : null,
                 'lines' => [
                     ['line' => '014', 'desc' => 'Immobilisations incorporelles (brut)', 'value' => $fmt($f2033A['014']), 'raw' => $f2033A['014']],
                     ['line' => '016', 'desc' => 'Amortissements des incorporelles', 'value' => $fmt($f2033A['016']), 'raw' => $f2033A['016']],
@@ -277,7 +285,8 @@ class Teledeclaration extends Page
                     // actif », et l'utilisateur le recopiait dans la case des amortissements.
                     ['line' => '110', 'desc' => 'Total général — colonne Brut (= 044)', 'value' => $fmt($f2033A['110']), 'raw' => $f2033A['110']],
                     ['line' => '112', 'desc' => 'Total général — colonne Amortissements (= 048)', 'value' => $fmt($f2033A['112']), 'raw' => $f2033A['112']],
-                    ['line' => '—', 'desc' => 'Total général — colonne Net, sans numéro de case (110 − 112)', 'value' => $fmt($f2033A['net']), 'raw' => $f2033A['net']],
+                    ['line' => '092', 'desc' => 'Charges constatées d\'avance (frais d\'emprunt étalés, non amortis)', 'value' => $fmt($f2033A['092']), 'raw' => $f2033A['092']],
+                    ['line' => '—', 'desc' => 'Total général — colonne Net, sans numéro de case (110 − 112 + 092)', 'value' => $fmt($f2033A['net']), 'raw' => $f2033A['net']],
                     ['line' => '120', 'desc' => 'Compte de l\'exploitant', 'value' => $fmt($f2033A['120']), 'raw' => $f2033A['120']],
                     ['line' => '136', 'desc' => 'Résultat de l\'exercice', 'value' => $fmt($f2033A['136']), 'raw' => $f2033A['136']],
                     ['line' => '156', 'desc' => 'Emprunts et dettes', 'value' => $fmt($f2033A['156']), 'raw' => $f2033A['156']],

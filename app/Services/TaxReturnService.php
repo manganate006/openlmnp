@@ -69,6 +69,7 @@ class TaxReturnService
         private FiscalYearService $fiscalYearService,
         private DepreciationService $depreciationService,
         private UpdateService $updateService = new UpdateService(),
+        private LoanService $loanService = new LoanService(),
     ) {}
 
     /** Nom de fichier proposé au téléchargement. */
@@ -322,16 +323,34 @@ class TaxReturnService
             // Quote-part sauf emprunt dédié (Loan::prorate()) : un prêt qui finance
             // EXCLUSIVEMENT le logement loué (ex : prêt travaux du studio indépendant) est
             // déduit à 100 %, jamais proratisé une seconde fois.
+            //
+            // Frais d'emprunt (art. 39-1-1° quater CGI) : le compte 6272 (déduction immédiate)
+            // est une « autre charge externe », comme l'assurance emprunteur — repère 242. Le
+            // 6862 (dotation d'étalement) est classé en charge FINANCIÈRE par le PCG — repère
+            // 294, comme les intérêts. `LoanService::feesForYear()` est l'unique source de la
+            // fraction déduite, la même que `FiscalYearService::computeTotals()`.
             $loanRows = [];
-            $retained294 = 0;
+            $retainedInterest = 0;
             $retainedInsurance = 0;
+            $retainedFeesImmediate = 0; // 6272 -> 242
+            $retainedFeesSpread = 0;    // 6862 -> 294
             foreach ($prop->loans as $loan) {
                 $interest = $loan->getInterestsForYear($year);
                 $insurance = $loan->getInsuranceForYear($year);
                 $interestRetained = (int) $loan->prorate((string) $interest, $quota);
                 $insuranceRetained = (int) $loan->prorate((string) $insurance, $quota);
-                $retained294 += $interestRetained;
+                $retainedInterest += $interestRetained;
                 $retainedInsurance += $insuranceRetained;
+
+                $feesInfo = $this->loanService->feesForYear($loan, $year);
+                $feesDeducted = (int) $feesInfo['deducted'];
+                $feesRetained = (int) $loan->prorate((string) $feesDeducted, $quota);
+
+                if ($feesInfo['mode'] === 'immediate') {
+                    $retainedFeesImmediate += $feesRetained;
+                } else {
+                    $retainedFeesSpread += $feesRetained;
+                }
 
                 $loanRows[] = [
                     'name'               => (string) ($loan->bank_name ?: 'Emprunt'),
@@ -339,15 +358,20 @@ class TaxReturnService
                     'insurance'          => $insurance,
                     'interest_retained'  => $interestRetained,
                     'insurance_retained' => $insuranceRetained,
-                    'retained'           => $interestRetained + $insuranceRetained,
+                    'fees_deducted'      => $feesDeducted,
+                    'fees_retained'      => $feesRetained,
+                    'fees_mode'          => $feesInfo['mode'],
+                    'retained'           => $interestRetained + $insuranceRetained + $feesRetained,
                 ];
             }
+
+            $retained294 = $retainedInterest + $retainedFeesSpread;
 
             // Amortissements (ligne 254) — le détail actif par actif est l'annexe des immobilisations
             $depreciation = (int) $this->depreciationService->calculateAnnualDepreciation($prop, $year)['total'];
 
             $lines['218'] += $gross;
-            $lines['242'] += $retained242 + $retainedInsurance + $fees;
+            $lines['242'] += $retained242 + $retainedInsurance + $fees + $retainedFeesImmediate;
             $lines['244'] += $retained244;
             $lines['254'] += $depreciation;
             $lines['294'] += $retained294;
@@ -372,9 +396,10 @@ class TaxReturnService
                     'retained_244'        => $retained244,
                 ],
                 'loans'           => $loanRows,
-                'loans_retained'  => $retained294 + $retainedInsurance,
-                'loans_retained_interest'  => $retained294,
+                'loans_retained'  => $retained294 + $retainedInsurance + $retainedFeesImmediate,
+                'loans_retained_interest'  => $retainedInterest,
                 'loans_retained_insurance' => $retainedInsurance,
+                'loans_retained_fees'      => $retainedFeesImmediate + $retainedFeesSpread,
                 'depreciation'    => $depreciation,
             ];
         }
@@ -670,14 +695,16 @@ class TaxReturnService
         $b['354'] = $b['372'] = max(-$fiscal, 0);
 
         $a = $forms['form2033A'];
-        foreach (['014', '016', '028', '030', '156'] as $line) {
+        foreach (['014', '016', '028', '030', '092', '156'] as $line) {
             $a[$line] = $r($a[$line]);
         }
         $a['044'] = $a['028'] + $a['014'];
         $a['048'] = $a['030'] + $a['016'];
         $a['110'] = $a['044'];
         $a['112'] = $a['048'];
-        $a['net'] = $a['180'] = $a['044'] - $a['048'];
+        // La 092 (charges constatées d'avance, frais d'emprunt étalés) s'ajoute au net : elle
+        // n'entre dans AUCUN des totaux 044/048/110/112, qui ne portent que les immobilisations.
+        $a['net'] = $a['180'] = $a['044'] - $a['048'] + $a['092'];
         $a['136'] = $b['310'];
         $a['120'] = $a['net'] - $a['136'] - $a['156'];
 
@@ -740,6 +767,7 @@ class TaxReturnService
         $incorpBrut = 0;
         $incorpAmort = 0;
         $emprunts = 0;
+        $feesRemaining = 0;
 
         foreach ($properties as $prop) {
             // Un bien loué seulement après la clôture n'est pas encore dans l'activité : ni
@@ -791,10 +819,18 @@ class TaxReturnService
             foreach ($prop->loans as $loan) {
                 $remaining = $loan->getRemainingCapitalAtEndOfYear($year);
                 $emprunts += (int) $loan->prorate((string) $remaining, $prop->quota_share);
+
+                // Frais d'emprunt étalés, part non encore amortie (solde du compte 481) : pas
+                // d'immobilisation, mais un actif réel au bilan tant que l'étalement n'est pas
+                // terminé. Aucune case dédiée sur la notice 2033 : plausible en 092 (charges
+                // constatées d'avance) — Teledeclaration le signale comme tel. SANS effet sur
+                // 120 (compte de l'exploitant), qui absorbe l'écart par différence ci-dessous :
+                // l'équation du bilan (net = 120 + 136 + 156) reste vraie par construction.
+                $feesRemaining += (int) $loan->prorate($this->loanService->feesForYear($loan, $year)['remaining_end'], $prop->quota_share);
             }
         }
 
-        $totalActif = ($corpBrut - $corpAmort) + ($incorpBrut - $incorpAmort);
+        $totalActif = ($corpBrut - $corpAmort) + ($incorpBrut - $incorpAmort) + $feesRemaining;
 
         return [
             '014' => $incorpBrut,
@@ -810,6 +846,10 @@ class TaxReturnService
             // case des amortissements. Il vit désormais sous la clé `net`, sans numéro.
             '110' => $corpBrut + $incorpBrut,
             '112' => $corpAmort + $incorpAmort,
+            // Charges constatées d'avance — solde non amorti des frais d'emprunt étalés. Vide
+            // (0) en déduction immédiate : rien n'y reste jamais, tout est sorti le jour du
+            // paiement.
+            '092' => $feesRemaining,
             'net' => $totalActif,
             // Compte de l'exploitant par différence : l'application ne porte ni trésorerie ni
             // créances, tous les flux (apport, charges payées, loyers encaissés, capital

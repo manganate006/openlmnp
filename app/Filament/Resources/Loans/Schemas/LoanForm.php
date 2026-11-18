@@ -82,6 +82,21 @@ class LoanForm
                                 ->label('Emprunt dédié à ce logement')
                                 ->helperText('Cochez si cet emprunt finance exclusivement le logement loué (ex : prêt travaux du studio indépendant). Les intérêts et l\'assurance sont alors déduits à 100 %, sans quote-part. Sinon (achat de toute la propriété, résidence principale comprise), la quote-part surface s\'applique.')
                                 ->default(false),
+                            Grid::make(2)->schema([
+                                TextInput::make('fees_amount')
+                                    ->label('Frais d\'emprunt')
+                                    ->suffix('€')
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->default(0)
+                                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
+                                    ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Frais de dossier, courtage, part non restituable d\'une caution. Déductibles, en une fois ou étalés selon votre option de dossier.'),
+                                DatePicker::make('fees_paid_on')
+                                    ->label('Date de paiement des frais')
+                                    ->displayFormat('d/m/Y')
+                                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Laissez vide pour reprendre la date de début de l\'emprunt.'),
+                            ]),
                         ]),
 
                     Step::make('Assurance emprunteur')
@@ -185,6 +200,11 @@ class LoanForm
 
                                     return $typeLabel . ' — ' . $rateDisplay;
                                 }),
+                            Placeholder::make('summary_fees')
+                                ->label('Frais d\'emprunt')
+                                ->content(fn (callable $get) => ($get('fees_amount') && (float) $get('fees_amount') > 0)
+                                    ? number_format((float) $get('fees_amount'), 2, ',', ' ') . ' € — déduction immédiate ou étalée selon l\'option choisie dans votre profil'
+                                    : 'Aucun'),
                         ]),
                 ])
                 ->columnSpanFull()

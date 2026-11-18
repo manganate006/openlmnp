@@ -152,6 +152,15 @@
             <td>Total général amortissements (112)</td><td class="r">- {{ $fmtInt($form2033A['112']) }} €</td>
             <td></td><td></td>
         </tr>
+        {{-- Frais d'emprunt étalés, part non encore amortie (solde du compte 481) : aucune
+             case dédiée sur la notice 2033, retenue sous réserve en 092 (voir la mention de
+             la télédéclaration). Nulle en déduction immédiate, ou sans option d'étalement. --}}
+        @if($form2033A['092'] > 0)
+            <tr>
+                <td>Charges constatées d'avance — frais d'emprunt étalés (092)</td><td class="r">{{ $fmtInt($form2033A['092']) }} €</td>
+                <td></td><td></td>
+            </tr>
+        @endif
         <tr class="total">
             <td><strong>Total actif net (colonne Net, sans numéro)</strong></td><td class="r"><strong>{{ $fmtInt($form2033A['net']) }} €</strong></td>
             <td><strong>Total passif (180)</strong></td><td class="r"><strong>{{ $fmtInt($form2033A['180']) }} €</strong></td>
@@ -250,13 +259,20 @@
 
         @if(count($prop['loans']) > 0)
             <table>
-                <tr><th>Emprunt</th><th class="r">Intérêts (ligne 294)</th><th class="r">Assurance emprunteur (ligne 242)</th><th class="r">Retenu ({{ $pct($prop['quota_share']) }})</th></tr>
+                <tr><th>Emprunt</th><th class="r">Intérêts (ligne 294)</th><th class="r">Assurance emprunteur (ligne 242)</th><th class="r">Frais d'emprunt</th><th class="r">Retenu ({{ $pct($prop['quota_share']) }})</th></tr>
                 @foreach($prop['loans'] as $loan)
                     <tr>
                         <td>{{ $loan['name'] }}</td>
                         <td class="r">{{ $fmt($loan['interest']) }} €</td>
                         <td class="r">{{ $fmt($loan['insurance']) }} €</td>
-                        <td class="r">{{ $fmt($loan['interest_retained']) }} € + {{ $fmt($loan['insurance_retained']) }} € = {{ $fmt($loan['retained']) }} €</td>
+                        <td class="r">
+                            @if($loan['fees_deducted'] > 0)
+                                {{ $fmt($loan['fees_deducted']) }} € (ligne {{ $loan['fees_mode'] === 'immediate' ? '242' : '294' }})
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td class="r">{{ $fmt($loan['interest_retained']) }} € + {{ $fmt($loan['insurance_retained']) }} € + {{ $fmt($loan['fees_retained']) }} € = {{ $fmt($loan['retained']) }} €</td>
                     </tr>
                 @endforeach
             </table>

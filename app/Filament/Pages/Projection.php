@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Services\BadgeService;
 use App\Services\DepreciationService;
 use App\Services\FiscalYearService;
+use App\Services\LoanService;
 use App\Support\MicroBicRules;
 use BackedEnum;
 use Filament\Pages\Page;
@@ -59,6 +60,7 @@ class Projection extends Page
         }
 
         $depService = app(DepreciationService::class);
+        $loanService = app(LoanService::class);
         $rows = [];
         $cumulativeDeferred = 0;
 
@@ -105,6 +107,11 @@ class Projection extends Page
                     $shared = (int) ($shared / $expYears);
                 }
                 $totalExpenses += $dedicated + (int) bcmul((string) $shared, $property->quota_share, 0);
+
+                // Intérêts, assurance emprunteur et frais d'emprunt : des charges au même
+                // titre que les autres (issue #11 — jusqu'ici absents de la projection, alors
+                // que `FiscalYearService::computeTotals()` les déduit déjà du résultat réel).
+                $totalExpenses += $loanService->projectedLoanChargesForYear($property, $year);
             }
 
             // Croissance composée
