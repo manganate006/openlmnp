@@ -78,6 +78,10 @@ class OpenLmnpServer extends Server
         Tools\CreateProperty::class,
         Tools\UpdateProperty::class,
 
+        // Gestion emprunts
+        Tools\CreateLoan::class,
+        Tools\UpdateLoan::class,
+
         // Suppression
         Tools\DeleteIncome::class,
         Tools\DeleteExpense::class,

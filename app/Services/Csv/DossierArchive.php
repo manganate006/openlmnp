@@ -59,8 +59,13 @@ class DossierArchive
      *     lirait que le format 3 les ignorerait en silence : l'emprunt importé perdrait ses
      *     frais, déduits ou étalés nulle part après coup — la même classe de perte muette
      *     que le format 2 pour les échéances importées.
+     * 5 — 2026-11-19 : méthode d'étalement par emprunt (`fees_spread_method`) et remboursement
+     *     anticipé (`early_repayment_date`, `early_repayment_amount`). Une version qui ne lit
+     *     que le format 4 retombe sur le défaut `linear` et aucun remboursement anticipé : un
+     *     emprunt qui avait choisi le prorata des intérêts, ou subi un remboursement
+     *     anticipé, perdrait ces deux faits sans que rien ne le signale.
      */
-    public const SCHEMA_VERSION = 4;
+    public const SCHEMA_VERSION = 5;
 
     /** Colonnes d'une échéance, pour un tableau importé (un tableau calculé se régénère). */
     private const PAYMENT_COLUMNS = [
@@ -111,6 +116,7 @@ class DossierArchive
             'bank_name', 'amount', 'annual_rate', 'duration_months', 'start_date',
             'monthly_payment', 'insurance_monthly', 'insurance_type', 'insurance_rate',
             'is_dedicated', 'schedule_source', 'fees_amount', 'fees_paid_on',
+            'fees_spread_method', 'early_repayment_date', 'early_repayment_amount',
         ],
     ];
 

@@ -32,6 +32,7 @@ class GetLoan extends Tool
         $insuranceYear    = $loan->getInsuranceForYear($currentYear);
         $remainingCapital = $loan->getRemainingCapitalAtEndOfYear($currentYear);
         $feesYear         = $this->loanService->feesForYear($loan, $currentYear);
+        $feesMethod       = $this->loanService->effectiveFeesSpreadMethod($loan);
 
         // Totaux sur toute la durée depuis les paiements si disponibles
         $totalInterests  = $loan->payments()->sum('interest_amount');
@@ -56,6 +57,13 @@ class GetLoan extends Tool
             'is_dedicated'              => $loan->is_dedicated,
             'fees_amount_eur'           => $loan->fees_amount_euros,
             'fees_paid_on'              => $loan->fees_paid_on?->toDateString(),
+            'fees_spread_method'        => $feesMethod['requested'],
+            'fees_spread_method_applied' => $feesMethod['applied'],
+            'fees_spread_method_fallback_reason' => $feesMethod['fallback']
+                ? 'Méthode « au prorata des intérêts » demandée, mais aucun tableau d\'amortissement disponible : repli sur les fractions égales.'
+                : null,
+            'early_repayment_date'      => $loan->early_repayment_date?->toDateString(),
+            'early_repayment_amount_eur' => $loan->early_repayment_amount_euros,
             'total_cost_eur'            => bcdiv((string) $loan->total_cost, '100', 2),
             'has_schedule'              => $loan->payments()->exists(),
             'payments_count'            => $loan->payments()->count(),
@@ -64,6 +72,7 @@ class GetLoan extends Tool
                 'interests_eur'             => bcdiv((string) $interestsYear, '100', 2),
                 'insurance_eur'             => bcdiv((string) $insuranceYear, '100', 2),
                 'fees_deducted_eur'         => bcdiv($feesYear['deducted'], '100', 2),
+                'fees_remaining_eur'        => bcdiv($feesYear['remaining_end'], '100', 2),
                 'fees_mode'                 => $feesYear['mode'],
                 'remaining_capital_eur'     => bcdiv((string) $remainingCapital, '100', 2),
             ],

@@ -415,3 +415,55 @@ it('still reads a format 1 archive and computes its loan schedule', function () 
 
     expect(importedLoanFor($target)->payments()->withoutGlobalScopes()->count())->toBe(240);
 });
+
+/**
+ * Lot 2 des frais d'emprunt : méthode d'étalement par emprunt et remboursement anticipé
+ * (format 5). Même exigence que pour les colonnes du format 4 : un dossier qui en portait
+ * perdrait silencieusement ces deux faits via une version qui ne lirait que le format 4.
+ */
+it('stamps the archive with schema version 5', function () {
+    expect(DossierArchive::SCHEMA_VERSION)->toBe(5)
+        ->and($this->archive->export($this->user)['schema_version'])->toBe(5);
+});
+
+it('carries fees_spread_method and the early repayment columns through the round trip', function () {
+    $loan = archiveLoan($this->property, [
+        'fees_amount' => 150000,
+        'fees_paid_on' => '2021-04-01',
+        'fees_spread_method' => Loan::FEES_METHOD_INTEREST,
+        'early_repayment_date' => '2024-01-01',
+        'early_repayment_amount' => 500000,
+    ]);
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $this->archive->export($this->user), allowForeignOwner: true);
+
+    $imported = importedLoanFor($target);
+
+    expect($imported->fees_spread_method)->toBe(Loan::FEES_METHOD_INTEREST)
+        ->and($imported->early_repayment_date->format('Y-m-d'))->toBe('2024-01-01')
+        ->and((int) $imported->early_repayment_amount)->toBe(500000)
+        // Les colonnes de frais du lot 1 voyagent toujours.
+        ->and((int) $imported->fees_amount)->toBe((int) $loan->fees_amount);
+});
+
+it('reads a format 4 archive that lacks the method and early repayment columns, defaulting to linear', function () {
+    archiveLoan($this->property, ['fees_amount' => 90000, 'fees_paid_on' => '2021-04-01']);
+    $payload = $this->archive->export($this->user);
+    $payload['schema_version'] = 4;
+    unset(
+        $payload['properties'][0]['loans'][0]['fees_spread_method'],
+        $payload['properties'][0]['loans'][0]['early_repayment_date'],
+        $payload['properties'][0]['loans'][0]['early_repayment_amount'],
+    );
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $payload, allowForeignOwner: true);
+
+    $imported = importedLoanFor($target);
+
+    expect($imported->fees_spread_method)->toBe(Loan::FEES_METHOD_LINEAR)
+        ->and($imported->early_repayment_date)->toBeNull()
+        ->and($imported->early_repayment_amount)->toBeNull()
+        ->and((int) $imported->fees_amount)->toBe(90000);
+});
