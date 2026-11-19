@@ -4,6 +4,8 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-19
+
 ### Frais d'emprunt : méthode d'étalement et remboursement anticipé
 
 - **Méthode d'étalement choisie par emprunt** (BOI-BIC-CHG-20-30-40 § 60), quand l'option
