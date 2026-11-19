@@ -105,13 +105,12 @@ class LoanForm
                                 ->required()
                                 ->visible(fn (callable $get) => (float) ($get('fees_amount') ?? 0) > 0)
                                 ->helperText(
-                                    'Ne joue QUE si vous avez choisi l\'étalement depuis votre profil (section Frais '
-                                    . 'd\'emprunt). Fractions égales : même montant chaque année (défaut, BOI-BIC-'
-                                    . 'CHG-20-30-40 § 70). Au prorata des intérêts : fraction plus grande les premières '
-                                    . 'années, qui portent plus d\'intérêts (§ 100-110, nécessite un tableau '
-                                    . 'd\'amortissement, sinon repli automatique sur les fractions égales).'
+                                    'Utile seulement si l\'étalement est activé dans votre profil. Fractions égales : '
+                                    . 'le même montant chaque année. Au prorata des intérêts : davantage les premières '
+                                    . 'années, qui portent le plus d\'intérêts (sans tableau d\'amortissement, les '
+                                    . 'fractions égales s\'appliquent).'
                                 )
-                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Méthode propre à CET emprunt : deux emprunts du même dossier peuvent en choisir des différentes.'),
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Se choisit emprunt par emprunt : deux emprunts du même dossier peuvent avoir des méthodes différentes.'),
                             Grid::make(2)->schema([
                                 DatePicker::make('early_repayment_date')
                                     ->label('Date d\'un remboursement anticipé')
