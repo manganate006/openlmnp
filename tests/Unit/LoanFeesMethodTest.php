@@ -210,7 +210,7 @@ it('makes the whole remaining fees balance deductible the year of a full early r
     expect($sum)->toBe(100000);
 });
 
-it('accelerates only the proportional share of the balance on a partial early repayment, and re-spreads the rest', function () {
+it('accelerates only the proportional share of the balance on a partial early repayment, the repayment year included in the re-spread', function () {
     $this->user->forceFill(['loan_fees_spread_from' => 2024])->save();
     $loan = earlyRepaymentLoan($this->user);
 
@@ -222,23 +222,73 @@ it('accelerates only the proportional share of the balance on a partial early re
     }
 
     // Solde avant remboursement = 70 000. Part accélérée = 70 000 × 2 000 / 4 000 = 35 000.
+    // Reste à ré-étaler : 35 000, sur les 7 années 2027 À 2033 INCLUSES (§ 130 : l'année du
+    // remboursement est la première du ré-étalement, pas la suivante) : 35 000 / 7 = 5 000
+    // exactement. L'année 2027 cumule donc la part accélérée ET sa propre fraction de
+    // ré-étalement : 35 000 + 5 000 = 40 000.
     expect($this->loanService->feesForYear($loan, 2027))
-        ->toBe(['deducted' => '35000', 'remaining_end' => '35000', 'mode' => 'spread']);
+        ->toBe(['deducted' => '40000', 'remaining_end' => '30000', 'mode' => 'spread']);
 
-    // Reste 35 000, ré-étalé sur les 6 années restantes (2028 à 2033) à parts égales :
-    // 35 000 / 6 = 5 833,33... tronqué à 5 833, la dernière année absorbant le reliquat
-    // (35 000 − 5 × 5 833 = 5 835).
-    foreach ([2028, 2029, 2030, 2031, 2032] as $year) {
-        expect((int) $this->loanService->feesForYear($loan, $year)['deducted'])->toBe(5833);
+    foreach ([2028, 2029, 2030, 2031, 2032, 2033] as $year) {
+        expect((int) $this->loanService->feesForYear($loan, $year)['deducted'])->toBe(5000);
     }
     expect($this->loanService->feesForYear($loan, 2033))
-        ->toBe(['deducted' => '5835', 'remaining_end' => '0', 'mode' => 'spread']);
+        ->toBe(['deducted' => '5000', 'remaining_end' => '0', 'mode' => 'spread']);
 
     $sum = 0;
     for ($year = 2024; $year <= 2033; $year++) {
         $sum += (int) $this->loanService->feesForYear($loan, $year)['deducted'];
     }
     expect($sum)->toBe(100000);
+});
+
+/**
+ * Exemple chiffré LITTÉRAL de BOI-BIC-CHG-20-30-40 § 130 : prêt de 15 000 000 €, 12 ans,
+ * frais de 90 000 € étalés linéairement (7 500 €/an). Après quatre fractions (30 000 €
+ * déduits, 60 000 € restants), un tiers du capital (5 000 000 € sur 15 000 000 € restant dû)
+ * est remboursé par anticipation en année 5. Déduction supplémentaire = 20 000 € (un tiers
+ * des 60 000 € restants) ; le reste (40 000 €) est ré-étalé sur les 8 années restantes — 5 À
+ * 12 INCLUSES, pas 6 à 12 — soit 5 000 €/an. Année 5 = 20 000 + 5 000 = 25 000 €.
+ */
+it('replicates the literal BOI-BIC-CHG-20-30-40 paragraph 130 example, year by year, in cents', function () {
+    $this->user->forceFill(['loan_fees_spread_from' => 2024])->save();
+
+    $property = methodLoanProperty($this->user);
+    $loan = methodLoan($property, [
+        'amount' => 1500000000, // 15 000 000 €
+        'duration_months' => 144, // 12 ans
+        'fees_amount' => 9000000, // 90 000 €
+        'fees_paid_on' => '2024-01-01',
+        // Aucune échéance créée : le capital restant dû avant le remboursement anticipé
+        // retombe donc sur le capital initial (15 000 000 €), comme le BOFiP le pose.
+    ]);
+    $loan->forceFill(['early_repayment_date' => '2028-01-01', 'early_repayment_amount' => 500000000])->save(); // 5 000 000 €
+
+    expect($loan->capitalOutstandingBefore($loan->early_repayment_date))->toBe(1500000000);
+
+    $expectedByYear = [
+        2024 => 750000,  // 7 500 €
+        2025 => 750000,
+        2026 => 750000,
+        2027 => 750000,
+        2028 => 2500000, // 25 000 € = 20 000 € accélérés + 5 000 € de ré-étalement
+        2029 => 500000,  // 5 000 €
+        2030 => 500000,
+        2031 => 500000,
+        2032 => 500000,
+        2033 => 500000,
+        2034 => 500000,
+        2035 => 500000,
+    ];
+
+    $sum = 0;
+    foreach ($expectedByYear as $year => $expected) {
+        $deducted = (int) $this->loanService->feesForYear($loan, $year)['deducted'];
+        expect($deducted)->toBe($expected, "année {$year}");
+        $sum += $deducted;
+    }
+
+    expect($sum)->toBe(9000000); // 90 000 €, à l'euro (centime) près
 });
 
 it('leaves the fees deduction untouched when the early repayment happened before the spread took effect', function () {

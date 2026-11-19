@@ -121,11 +121,15 @@ class LoanService
      *   DERNIÈRE fraction prend le reliquat, pour que la somme retombe exactement sur
      *   `fees_amount` malgré la troncature bcmath de chaque fraction.
      * - **Remboursement anticipé** (§ 120-130, seulement en étalement) : le solde non
-     *   encore déduit à la date du remboursement devient déductible au prorata du capital
-     *   remboursé par anticipation (solde × capital remboursé / capital restant dû avant le
-     *   remboursement) ; le reste continue d'être étalé sur la durée restante, selon la même
-     *   méthode. Un remboursement total (capital remboursé ≥ capital restant dû) rend donc
-     *   tout le solde déductible l'année du remboursement.
+     *   encore déduit AU DÉBUT de l'année du remboursement devient déductible au prorata du
+     *   capital remboursé par anticipation (solde × capital remboursé / capital restant dû
+     *   avant le remboursement) ; le reste est ré-étalé sur la durée restante, SELON LA MÊME
+     *   MÉTHODE, et L'ANNÉE DU REMBOURSEMENT EST LA PREMIÈRE DE CE RÉ-ÉTALEMENT (exemple
+     *   chiffré du § 130, vérifié : prêt de 12 ans, frais étalés dès l'année 1, remboursement
+     *   du tiers du capital en année 5 — le ré-étalement porte sur les années 5 à 12 (8
+     *   années), pas 6 à 12 ; l'année 5 cumule donc la part accélérée et sa propre fraction de
+     *   ré-étalement). Un remboursement total (capital remboursé ≥ capital restant dû) rend
+     *   donc tout le solde déductible l'année même du remboursement, sans rien à ré-étaler.
      *
      * Avant quote-part : l'appelant applique `Loan::prorate()`, comme pour les intérêts
      * et l'assurance emprunteur — jamais appliquée deux fois par ses propres appelants.
@@ -217,37 +221,33 @@ class LoanService
         }
 
         $remainingAfterAccelerated = bcsub($balanceBeforeRepay, $accelerated, 0);
-        $remainingDurationYears = $finalYear - $repayYear;
 
-        if ($remainingDurationYears <= 0 || bccomp($remainingAfterAccelerated, '0', 0) <= 0) {
-            // Rien à ré-étaler sur des années restantes : tout est absorbé l'année du
-            // remboursement (c'est systématiquement le cas d'un remboursement total, et
-            // aussi d'un remboursement partiel survenant la dernière année prévue).
-            if ($year === $repayYear) {
-                return ['deducted' => $balanceBeforeRepay, 'remaining_end' => '0', 'mode' => 'spread'];
-            }
-
-            return ['deducted' => '0', 'remaining_end' => '0', 'mode' => 'spread'];
-        }
-
-        if ($year === $repayYear) {
-            return ['deducted' => $accelerated, 'remaining_end' => $remainingAfterAccelerated, 'mode' => 'spread'];
-        }
-
-        // Ré-étalement du solde sur les années restantes du prêt, avec la même méthode —
-        // à défaut de tableau d'amortissement, `spreadFractions()` retombe déjà sur linear.
+        // Ré-étalement du reste sur les années restantes du prêt, L'ANNÉE DU REMBOURSEMENT
+        // COMPRISE (exemple chiffré du § 130 : prêt de 12 ans, frais étalés dès l'année 1,
+        // remboursement du tiers du capital en année 5 — le ré-étalement porte sur les
+        // années 5 à 12, soit 8 années, PAS 7, et l'année 5 cumule donc la part accélérée
+        // ET sa propre fraction de ré-étalement). `spreadFractions()` retombe déjà sur
+        // linear à défaut de tableau d'amortissement.
+        $remainingDurationYears = $finalYear - $repayYear + 1;
         $postFractions = $this->spreadFractions(
             $remainingAfterAccelerated,
-            $repayYear + 1,
+            $repayYear,
             $remainingDurationYears,
             $remainingDurationYears * 12,
             $method,
             $schedule,
         );
 
+        if ($year === $repayYear) {
+            $deducted = bcadd($accelerated, $postFractions[$repayYear], 0);
+            $remainingEnd = bcsub($remainingAfterAccelerated, $postFractions[$repayYear], 0);
+
+            return ['deducted' => $deducted, 'remaining_end' => $remainingEnd, 'mode' => 'spread'];
+        }
+
         $deducted = $postFractions[$year] ?? '0';
         $cumulativePost = '0';
-        for ($y = $repayYear + 1; $y <= $year; $y++) {
+        for ($y = $repayYear; $y <= $year; $y++) {
             $cumulativePost = bcadd($cumulativePost, $postFractions[$y] ?? '0', 0);
         }
         $remainingEnd = bcsub($remainingAfterAccelerated, $cumulativePost, 0);

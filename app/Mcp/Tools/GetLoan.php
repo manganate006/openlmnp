@@ -60,7 +60,7 @@ class GetLoan extends Tool
             'fees_spread_method'        => $feesMethod['requested'],
             'fees_spread_method_applied' => $feesMethod['applied'],
             'fees_spread_method_fallback_reason' => $feesMethod['fallback']
-                ? 'Méthode « au prorata des intérêts » demandée, mais aucun tableau d\'amortissement disponible : repli sur les fractions égales.'
+                ? 'Méthode au prorata des intérêts demandée, mais aucun tableau d\'amortissement disponible : repli sur les fractions égales.'
                 : null,
             'early_repayment_date'      => $loan->early_repayment_date?->toDateString(),
             'early_repayment_amount_eur' => $loan->early_repayment_amount_euros,

@@ -8,14 +8,14 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 
 - **Méthode d'étalement choisie par emprunt** (BOI-BIC-CHG-20-30-40 § 60), quand l'option
   d'étalement du profil s'applique : fractions annuelles égales (défaut, inchangé) ou étalement
-  au prorata des intérêts courus de chaque année (§ 100-110) — la fraction est alors plus grande
+  au prorata des intérêts courus de chaque année (§ 100-110), avec une fraction alors plus grande
   les premières années, qui portent plus d'intérêts. Cette seconde méthode suppose un tableau
   d'amortissement ; sans lui, repli automatique sur les fractions égales, signalé par l'outil MCP
   `get_loan`.
 - **Remboursement anticipé** (§ 120-130) : saisissez sa date et le capital remboursé sur
   l'emprunt. Le solde des frais pas encore déduits devient alors déductible au prorata du
-  capital remboursé par rapport au capital restant dû avant le remboursement — un remboursement
-  intégral rend donc tout le solde déductible l'année même du remboursement. Le reste, s'il y en
+  capital remboursé par rapport au capital restant dû avant le remboursement (un remboursement
+  intégral rend donc tout le solde déductible l'année même du remboursement). Le reste, s'il y en
   a, continue d'être étalé sur la durée restante.
 - **Deux nouveaux outils MCP** : `create_loan` (crée un emprunt et génère son tableau
   d'amortissement théorique) et `update_loan` (mise à jour partielle, qui régénère le tableau

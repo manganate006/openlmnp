@@ -105,11 +105,11 @@ class LoanForm
                                 ->required()
                                 ->visible(fn (callable $get) => (float) ($get('fees_amount') ?? 0) > 0)
                                 ->helperText(
-                                    'Ne joue QUE si vous avez choisi l\'étalement depuis votre profil (section « Frais '
-                                    . 'd\'emprunt »). Fractions égales : même montant chaque année (défaut, BOI-BIC-'
+                                    'Ne joue QUE si vous avez choisi l\'étalement depuis votre profil (section Frais '
+                                    . 'd\'emprunt). Fractions égales : même montant chaque année (défaut, BOI-BIC-'
                                     . 'CHG-20-30-40 § 70). Au prorata des intérêts : fraction plus grande les premières '
-                                    . 'années, qui portent plus d\'intérêts (§ 100-110) — nécessite un tableau '
-                                    . 'd\'amortissement, sinon repli automatique sur les fractions égales.'
+                                    . 'années, qui portent plus d\'intérêts (§ 100-110, nécessite un tableau '
+                                    . 'd\'amortissement, sinon repli automatique sur les fractions égales).'
                                 )
                                 ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Méthode propre à CET emprunt : deux emprunts du même dossier peuvent en choisir des différentes.'),
                             Grid::make(2)->schema([
@@ -240,17 +240,17 @@ class LoanForm
                                     }
 
                                     $labels = Loan::feesSpreadMethodLabels();
-                                    $method = $labels[$get('fees_spread_method') ?? Loan::FEES_METHOD_LINEAR] ?? '—';
+                                    $method = $labels[$get('fees_spread_method') ?? Loan::FEES_METHOD_LINEAR] ?? '-';
 
                                     return number_format((float) $get('fees_amount'), 2, ',', ' ')
-                                        . ' € — déduction immédiate ou étalée selon l\'option choisie dans votre profil'
+                                        . ' € : déduction immédiate ou étalée selon l\'option choisie dans votre profil'
                                         . ' (méthode si étalement : ' . $method . ')';
                                 }),
                             Placeholder::make('summary_early_repayment')
                                 ->label('Remboursement anticipé')
                                 ->content(fn (callable $get) => filled($get('early_repayment_date'))
                                     ? \Carbon\Carbon::parse($get('early_repayment_date'))->format('d/m/Y')
-                                        . ($get('early_repayment_amount') ? ' — ' . number_format((float) $get('early_repayment_amount'), 2, ',', ' ') . ' €' : '')
+                                        . ($get('early_repayment_amount') ? ' (' . number_format((float) $get('early_repayment_amount'), 2, ',', ' ') . ' €)' : '')
                                     : 'Aucun'),
                         ]),
                 ])

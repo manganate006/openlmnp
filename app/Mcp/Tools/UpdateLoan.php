@@ -12,7 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
-#[Description('Met à jour les champs d\'un emprunt existant. Seuls les champs fournis sont modifiés (mise à jour partielle). Les montants (amount, monthly_payment, insurance_monthly, fees_amount, early_repayment_amount) sont en euros. Si amount, annual_rate, duration_months, start_date ou les champs d\'assurance changent, le tableau d\'amortissement théorique est régénéré automatiquement — sauf si l\'emprunt porte un tableau importé depuis la banque, protégé (voir compute_loan_schedule pour l\'écraser volontairement).')]
+#[Description('Met à jour les champs d\'un emprunt existant. Seuls les champs fournis sont modifiés (mise à jour partielle). Les montants (amount, monthly_payment, insurance_monthly, fees_amount, early_repayment_amount) sont en euros. Si amount, annual_rate, duration_months, start_date ou les champs d\'assurance changent, le tableau d\'amortissement théorique est régénéré automatiquement, sauf si l\'emprunt porte un tableau importé depuis la banque (protégé, voir compute_loan_schedule pour l\'écraser volontairement).')]
 #[IsDestructive]
 #[IsIdempotent]
 class UpdateLoan extends Tool
