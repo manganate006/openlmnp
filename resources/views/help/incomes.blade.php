@@ -6,7 +6,8 @@
     <ul>
         <li data-icon="&#x1F4B0;"><strong>Montant</strong> &mdash; Le montant <strong>brut</strong> payé par le voyageur, avant la commission de la plateforme (TTC pour un bien assujetti à la TVA)</li>
         <li data-icon="&#x1F4B3;"><strong>Commission plateforme</strong> &mdash; Ce que la plateforme a retenu sur ce loyer, tel qu'indiqué sur votre relevé. Le net encaissé est calculé tout seul</li>
-        <li data-icon="&#x1F4C5;"><strong>Date</strong> &mdash; Date d'encaissement du loyer</li>
+        <li data-icon="&#x1F4C5;"><strong>Date</strong> : la date à laquelle la recette compte. Pour un loyer généré depuis un bail, c'est celle de son échéance</li>
+        <li data-icon="&#x2705;"><strong>Encaissé le</strong> : pour une recette en direct, le jour où l'argent est arrivé. Pour mémoire, aucun calcul ne le lit</li>
         <li data-icon="&#x1F3E0;"><strong>Bien</strong> &mdash; Le bien concerné par cette recette</li>
         <li data-icon="&#x1F4CE;"><strong>Justificatif</strong> &mdash; Joignez le relevé ou la facture plateforme</li>
     </ul>

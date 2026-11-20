@@ -11,7 +11,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
-#[Description('Retourne le détail complet d\'une recette locative par son identifiant : montants TTC/HT, TVA, frais de plateforme, taxe de séjour, informations de réservation et du voyageur.')]
+#[Description('Retourne le détail complet d\'une recette locative par son identifiant : montants TTC/HT, TVA, frais de plateforme, taxe de séjour, informations de réservation et du voyageur ; pour un loyer généré depuis un bail, l\'identifiant du bail, la part de charges comprise dans le montant et la date d\'encaissement.')]
 #[IsReadOnly]
 class GetIncome extends Tool
 {
@@ -28,10 +28,13 @@ class GetIncome extends Tool
             'id'                => $income->id,
             'property_id'       => $income->property_id,
             'property_name'     => $property->name,
+            'lease_id'          => $income->lease_id,
             'income_date'       => $income->income_date?->toDateString(),
+            'paid_date'         => $income->paid_date?->toDateString(),
             'source'            => $income->source,
             'source_label'      => (Income::sourceLabels()[$income->source] ?? $income->source),
             'amount_eur'        => $income->amount_euros,
+            'charges_amount_eur' => bcdiv((string) $income->charges_amount, '100', 2),
             'amount_ht_eur'     => $income->amount_ht_euros,
             'tva_rate'          => $income->tva_rate,
             'tva_collected_eur' => $income->tva_collected_euros,

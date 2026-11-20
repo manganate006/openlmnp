@@ -39,6 +39,7 @@ class HelpContentRegistry
     private static array $resources = [
         'filament.admin.resources.properties' => ['view' => 'properties', 'title' => 'Biens immobiliers'],
         'filament.admin.resources.incomes' => ['view' => 'incomes', 'title' => 'Recettes'],
+        'filament.admin.resources.leases' => ['view' => 'leases', 'title' => 'Baux'],
         'filament.admin.resources.expenses' => ['view' => 'expenses', 'title' => 'Charges'],
         'filament.admin.resources.loans' => ['view' => 'loans', 'title' => 'Emprunts'],
         'filament.admin.resources.furniture' => ['view' => 'furniture', 'title' => 'Mobilier'],
@@ -156,6 +157,11 @@ class HelpContentRegistry
             'Dois-je saisir les loyers avant ou après commission ?',
             'Où saisir la taxe de séjour ?',
             'Comment importer mes recettes Airbnb ?',
+        ],
+        'filament.admin.resources.leases' => [
+            'Pourquoi les mois d\'entrée et de sortie ne sont-ils pas générés ?',
+            'Les charges comptent-elles dans mes recettes ?',
+            'Que faire quand le locataire part ?',
         ],
         'filament.admin.resources.expenses' => [
             'Où saisir une facture d\'assurance ?',

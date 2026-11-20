@@ -22,8 +22,11 @@ class Income extends Model
 
     protected $fillable = [
         'property_id',
+        'lease_id',
         'income_date',
+        'paid_date',
         'amount',
+        'charges_amount',
         'tva_rate',
         'amount_ht',
         'tva_collected',
@@ -50,6 +53,7 @@ class Income extends Model
     {
         return [
             'income_date'   => 'date',
+            'paid_date'     => 'date',
             'checkin_date'  => 'date',
             'checkout_date' => 'date',
         ];
@@ -89,5 +93,11 @@ class Income extends Model
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);
+    }
+
+    /** Le bail dont ce loyer a été généré, ou null pour une recette saisie à la main. */
+    public function lease(): BelongsTo
+    {
+        return $this->belongsTo(Lease::class);
     }
 }

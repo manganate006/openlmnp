@@ -4,6 +4,36 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 
 ## [Unreleased]
 
+### Baux de location meublée à l'année
+
+- **Nouvel écran « Baux »**, dans Mes biens. Pour une location à l'année, le bail se saisit une
+  fois : locataire, dates, loyer hors charges, charges (au forfait ou en provisions) et jour
+  d'échéance. L'action **Générer les loyers** crée ensuite les loyers d'une année, un par mois
+  civil plein, datés de l'échéance, après un aperçu qui dit ce qui sera créé. La relancer ne
+  crée pas de doublon et ne touche pas un loyer corrigé à la main (#24).
+- **Les mois d'entrée et de sortie ne sont pas générés** : leur montant dépend de ce que prévoit
+  le bail (jours réels, base de 30 jours, mois entier dû). L'aperçu les nomme, ils se saisissent
+  à la main.
+- **Chaque loyer est une recette ordinaire, charges comprises**, comme le déclare un loueur en
+  meublé (ligne 218 du 2033-B) ; les dépenses réelles restent dans Charges. Le loyer garde sa
+  part de charges, le bail dont il vient et une date d'encaissement facultative, pour mémoire :
+  aucun calcul ne la lit. Son taux de TVA est celui du bien.
+- Deux baux d'un même bien ne peuvent pas se chevaucher, et le bail porte ses propres
+  justificatifs (bail signé, état des lieux). L'assistant masque le nom du locataire, comme
+  celui d'un voyageur.
+- **API MCP** : nouvel outil `list_leases` (49 outils). `list_incomes` se filtre par bail, et
+  avec `get_income` donne le bail, la part de charges et la date d'encaissement d'un loyer ;
+  `update_income` pose ou efface cette date.
+- **L'archive du dossier passe au format 6** : elle emporte les baux et le lien de chaque loyer
+  à son bail. Une archive des formats précédents se relit toujours ; une version antérieure
+  refuse le format 6 au lieu de perdre les baux en silence.
+
+### Interne
+
+- Les modèles qui portent des justificatifs (charges, mobilier, travaux, recettes, baux) sont
+  déclarés à un seul endroit, `App\Support\DocumentOwners`, au lieu de six listes recopiées
+  dans l'export, le coffre-fort et les outils MCP
+
 ## [2.2.1] - 2026-11-20
 
 ### Sécurité du déploiement : l'administrateur se crée au démarrage

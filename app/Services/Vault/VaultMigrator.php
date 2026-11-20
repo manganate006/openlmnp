@@ -3,12 +3,10 @@
 namespace App\Services\Vault;
 
 use App\Models\Document;
-use App\Models\Expense;
-use App\Models\Furniture;
 use App\Models\Property;
-use App\Models\PropertyWork;
 use App\Models\User;
 use App\Support\AiStagingUpload;
+use App\Support\DocumentOwners;
 use App\Support\ImportUpload;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -184,11 +182,7 @@ class VaultMigrator
             ->pluck('photo_path')
             ->all();
 
-        foreach ([Expense::class, Furniture::class, PropertyWork::class] as $modelClass) {
-            $ownedIds = $modelClass::withoutGlobalScopes()
-                ->whereIn('property_id', $propertyIds)
-                ->pluck('id');
-
+        foreach (DocumentOwners::ownedIds($propertyIds) as $modelClass => $ownedIds) {
             if ($ownedIds->isEmpty()) {
                 continue;
             }

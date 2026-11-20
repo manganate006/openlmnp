@@ -3,6 +3,7 @@
 use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Income;
+use App\Models\Lease;
 use App\Models\Loan;
 use App\Models\Property;
 use App\Models\PropertyComponent;
@@ -10,6 +11,7 @@ use App\Models\PropertyWork;
 use App\Models\User;
 use App\Services\Csv\DossierArchive;
 use App\Services\DepreciationService;
+use App\Services\LeaseRentService;
 use App\Support\DocumentStorage;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -421,11 +423,6 @@ it('still reads a format 1 archive and computes its loan schedule', function () 
  * (format 5). Même exigence que pour les colonnes du format 4 : un dossier qui en portait
  * perdrait silencieusement ces deux faits via une version qui ne lirait que le format 4.
  */
-it('stamps the archive with schema version 5', function () {
-    expect(DossierArchive::SCHEMA_VERSION)->toBe(5)
-        ->and($this->archive->export($this->user)['schema_version'])->toBe(5);
-});
-
 it('carries fees_spread_method and the early repayment columns through the round trip', function () {
     $loan = archiveLoan($this->property, [
         'fees_amount' => 150000,
@@ -466,4 +463,97 @@ it('reads a format 4 archive that lacks the method and early repayment columns, 
         ->and($imported->early_repayment_date)->toBeNull()
         ->and($imported->early_repayment_amount)->toBeNull()
         ->and((int) $imported->fees_amount)->toBe(90000);
+});
+
+/**
+ * Baux (format 6) : un bail voyage avec ses loyers, et chaque loyer retrouve le sien à
+ * l'import. Une version qui ne lirait que le format 5 perdrait les baux en silence.
+ */
+it('stamps the archive with schema version 6', function () {
+    expect(DossierArchive::SCHEMA_VERSION)->toBe(6)
+        ->and($this->archive->export($this->user)['schema_version'])->toBe(6);
+});
+
+/** Un bail d'un an et ses douze loyers, dont le premier encaissé quatre jours après l'échéance. */
+function archiveLease(Property $property): Lease
+{
+    $lease = Lease::create([
+        'property_id'    => $property->id,
+        'tenant_name'    => 'Camille Martin',
+        'start_date'     => '2025-01-01',
+        'end_date'       => '2025-12-31',
+        'rent_amount'    => 65000,
+        'charges_amount' => 5000,
+        'charges_mode'   => Lease::CHARGES_PROVISIONS,
+        'due_day'        => 5,
+        'notes'          => 'Bail meublé, un an',
+    ]);
+
+    app(LeaseRentService::class)->generate($lease, 2025);
+
+    Income::withoutGlobalScopes()->where('lease_id', $lease->id)->orderBy('income_date')->first()
+        ->forceFill(['paid_date' => '2025-01-09'])->save();
+
+    return $lease;
+}
+
+/** @return \Illuminate\Support\Collection<int, int> */
+function archivedPropertyIds(User $user)
+{
+    return Property::withoutGlobalScopes()->where('user_id', $user->id)->pluck('id');
+}
+
+it('carries a lease and the link to its rents through the round trip', function () {
+    archiveLease($this->property);
+    $first = $this->archive->export($this->user);
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $counts = $this->archive->import($target, $first, allowForeignOwner: true);
+    $second = $this->archive->export($target);
+
+    unset($first['exported_at'], $first['owner'], $second['exported_at'], $second['owner']);
+
+    // Les loyers doivent pointer vers le bail RECRÉÉ, pas vers l'identifiant d'origine.
+    $lease = Lease::withoutGlobalScopes()->whereIn('property_id', archivedPropertyIds($target))->sole();
+    $rents = Income::withoutGlobalScopes()->where('lease_id', $lease->id)->orderBy('income_date')->get();
+
+    expect($second)->toEqual($first)
+        ->and($counts['leases'])->toBe(1)
+        ->and($rents)->toHaveCount(12)
+        ->and($rents->first()->paid_date->toDateString())->toBe('2025-01-09')
+        ->and($rents->first()->charges_amount)->toBe(5000);
+});
+
+it('still reads a format 5 archive, which knew neither leases nor charges', function () {
+    $payload = $this->archive->export($this->user);
+    $payload['schema_version'] = 5;
+    unset($payload['properties'][0]['leases']);
+
+    foreach ($payload['properties'][0]['incomes'] as $i => $income) {
+        unset($payload['properties'][0]['incomes'][$i]['lease_index'],
+            $payload['properties'][0]['incomes'][$i]['charges_amount'],
+            $payload['properties'][0]['incomes'][$i]['paid_date']);
+    }
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $counts = $this->archive->import($target, $payload, allowForeignOwner: true);
+    $income = Income::withoutGlobalScopes()->whereIn('property_id', archivedPropertyIds($target))->sole();
+
+    expect($counts['leases'])->toBe(0)
+        ->and($income->lease_id)->toBeNull()
+        ->and($income->charges_amount)->toBe(0)
+        ->and($income->paid_date)->toBeNull();
+});
+
+it('refuses a rent that points to a lease the archive does not carry, and writes nothing', function () {
+    archiveLease($this->property);
+    $payload = $this->archive->export($this->user);
+    $payload['properties'][0]['leases'] = [];
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+
+    expect(fn () => $this->archive->import($target, $payload, allowForeignOwner: true))
+        ->toThrow(RuntimeException::class, 'désigne le bail n° 0');
+
+    expect(archivedPropertyIds($target))->toBeEmpty();
 });

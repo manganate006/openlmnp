@@ -5,6 +5,7 @@ namespace App\Services\Csv;
 use App\Models\Expense;
 use App\Models\Furniture;
 use App\Models\Income;
+use App\Models\Lease;
 use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Services\LoanService;
@@ -64,8 +65,12 @@ class DossierArchive
      *     que le format 4 retombe sur le défaut `linear` et aucun remboursement anticipé : un
      *     emprunt qui avait choisi le prorata des intérêts, ou subi un remboursement
      *     anticipé, perdrait ces deux faits sans que rien ne le signale.
+     * 6 - 2026-11-20 : les baux (`leases`), et sur chaque recette la part de charges
+     *     qu'elle comprend (`charges_amount`), sa date d'encaissement (`paid_date`) et le
+     *     bail qui l'a générée (`lease_index`). Une version qui ne lit que le format 5
+     *     perdrait les baux en silence, et leurs loyers ne s'y rattacheraient plus.
      */
-    public const SCHEMA_VERSION = 5;
+    public const SCHEMA_VERSION = 6;
 
     /** Colonnes d'une échéance, pour un tableau importé (un tableau calculé se régénère). */
     private const PAYMENT_COLUMNS = [
@@ -104,9 +109,14 @@ class DossierArchive
             'is_dedicated', 'is_second_hand', 'annual_depreciation', 'depreciation_source',
             'opening_accumulated_depreciation', 'opening_accumulated_year',
         ],
+        'leases' => [
+            'tenant_name', 'start_date', 'end_date', 'rent_amount', 'charges_amount',
+            'charges_mode', 'due_day', 'notes',
+        ],
         'incomes' => [
-            'income_date', 'amount', 'tva_rate', 'platform_fee', 'tourist_tax', 'source',
-            'reservation_ref', 'guest_name', 'checkin_date', 'checkout_date', 'notes',
+            'income_date', 'paid_date', 'amount', 'charges_amount', 'tva_rate', 'platform_fee',
+            'tourist_tax', 'source', 'reservation_ref', 'guest_name', 'checkin_date',
+            'checkout_date', 'notes',
         ],
         'expenses' => [
             'expense_date', 'amount', 'tva_rate', 'category', 'description',
@@ -134,6 +144,7 @@ class DossierArchive
                 'components' => fn ($q) => $q->withoutGlobalScopes()->reorder()->orderBy('sort_order')->orderBy('id'),
                 'works' => fn ($q) => $q->withoutGlobalScopes()->reorder()->orderBy('id'),
                 'furniture' => fn ($q) => $q->withoutGlobalScopes()->reorder()->orderBy('id'),
+                'leases' => fn ($q) => $q->withoutGlobalScopes()->reorder()->orderBy('id'),
                 'incomes' => fn ($q) => $q->withoutGlobalScopes()->reorder()->orderBy('id'),
                 'expenses' => fn ($q) => $q->withoutGlobalScopes()->reorder()->orderBy('id'),
                 'loans' => fn ($q) => $q->withoutGlobalScopes()->reorder()->orderBy('id'),
@@ -151,7 +162,12 @@ class DossierArchive
                 'components' => $p->components->map(fn ($c) => $this->pick($c, self::COLUMNS['components']))->values()->all(),
                 'works'      => $p->works->map(fn ($w) => $this->pick($w, self::COLUMNS['works']))->values()->all(),
                 'furniture'  => $p->furniture->map(fn ($f) => $this->pick($f, self::COLUMNS['furniture']))->values()->all(),
-                'incomes'    => $p->incomes->map(fn ($i) => $this->pick($i, self::COLUMNS['incomes']))->values()->all(),
+                'leases'     => $p->leases->map(fn ($l) => $this->pick($l, self::COLUMNS['leases']))->values()->all(),
+                // Un loyer désigne son bail par sa position dans la liste du bien, jamais
+                // par son identifiant : celui-ci change d'une instance à l'autre.
+                'incomes'    => $p->incomes->map(fn (Income $i) => $this->pick($i, self::COLUMNS['incomes']) + [
+                    'lease_index' => $this->leaseIndex($p, $i),
+                ])->values()->all(),
                 'expenses'   => $p->expenses->map(fn ($e) => $this->pick($e, self::COLUMNS['expenses']))->values()->all(),
                 'loans'      => $p->loans->map(fn (Loan $l) => $this->pick($l, self::COLUMNS['loans']) + ($l->hasImportedSchedule()
                     ? ['payments' => $l->payments()->withoutGlobalScopes()->reorder()->orderBy('month_number')->get()
@@ -165,7 +181,7 @@ class DossierArchive
      * Recrée le dossier décrit par l'archive sur le compte indiqué.
      *
      * @param  array<string, mixed>  $payload
-     * @return array{properties: int, components: int, works: int, furniture: int, incomes: int, expenses: int, loans: int}
+     * @return array{properties: int, components: int, works: int, furniture: int, leases: int, incomes: int, expenses: int, loans: int}
      *
      * @throws \RuntimeException archive illisible, version inconnue, ou appartenance en défaut
      */
@@ -201,7 +217,7 @@ class DossierArchive
         }
 
         $counts = array_fill_keys(
-            ['properties', 'components', 'works', 'furniture', 'incomes', 'expenses', 'loans'],
+            ['properties', 'components', 'works', 'furniture', 'leases', 'incomes', 'expenses', 'loans'],
             0,
         );
 
@@ -228,8 +244,18 @@ class DossierArchive
                     $counts['furniture']++;
                 }
 
+                // Les baux avant les recettes : un loyer se rattache au sien par sa position.
+                $leaseIds = [];
+
+                foreach ($row['leases'] ?? [] as $child) {
+                    $leaseIds[] = $this->write(Lease::class, $property, $child, self::COLUMNS['leases'])->id;
+                    $counts['leases']++;
+                }
+
                 foreach ($row['incomes'] ?? [] as $child) {
-                    $this->write(Income::class, $property, $child, self::COLUMNS['incomes']);
+                    $this->write(Income::class, $property, $child, self::COLUMNS['incomes'], [
+                        'lease_id' => $this->leaseId($child, $leaseIds, $property),
+                    ]);
                     $counts['incomes']++;
                 }
 
@@ -257,9 +283,53 @@ class DossierArchive
      * silence par le `$fillable` rendrait l'aller-retour non identique — sans lever la
      * moindre erreur.
      */
-    private function write(string $model, Property $property, array $row, array $columns): Model
+    private function write(string $model, Property $property, array $row, array $columns, array $links = []): Model
     {
-        return $model::forceCreate(['property_id' => $property->id] + $this->only($row, $columns));
+        return $model::forceCreate(['property_id' => $property->id] + $links + $this->only($row, $columns));
+    }
+
+    /**
+     * Position, dans la liste du bien, du bail qui a généré la recette.
+     *
+     * Un loyer déplacé à la main vers un autre bien garde un bail qui n'est pas dans la
+     * liste : il sort de l'archive sans lien plutôt que de la rendre illisible à l'import.
+     */
+    private function leaseIndex(Property $property, Income $income): ?int
+    {
+        if ($income->lease_id === null) {
+            return null;
+        }
+
+        $index = $property->leases->search(fn (Lease $lease) => $lease->id === $income->lease_id);
+
+        return $index === false ? null : $index;
+    }
+
+    /**
+     * Le bail d'une recette, retrouvé par sa position dans la liste du bien.
+     *
+     * Une position qui ne désigne aucun bail n'est pas ignorée : rattacher le loyer à rien
+     * le ferait passer pour une recette saisie à la main, et le bail le regénérerait.
+     *
+     * @param  list<int>  $leaseIds
+     */
+    private function leaseId(array $income, array $leaseIds, Property $property): ?int
+    {
+        $index = $income['lease_index'] ?? null;
+
+        if ($index === null) {
+            return null;
+        }
+
+        if (! is_int($index) || ! isset($leaseIds[$index])) {
+            throw new \RuntimeException(sprintf(
+                'Archive invalide : une recette du bien « %s » désigne le bail n° %s, que l\'archive ne contient pas.',
+                $property->name,
+                is_scalar($index) ? (string) $index : '?',
+            ));
+        }
+
+        return $leaseIds[$index];
     }
 
     /**

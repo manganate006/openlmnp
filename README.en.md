@@ -93,7 +93,7 @@ ownership...), a chartered accountant is still recommended.
 - **AI reading of the tax return** in the takeover wizard: the 2033-C table and carry-over boxes are pre-filled from your accountant's return, for you to review
 - **AI provider of your choice**: OpenRouter, Anthropic, Google, OpenAI, Mistral (receipts processed in Europe), or a model running on your own machine, and then nothing leaves it
 - **CSV export**: income, expenses, filing lines
-- **MCP API (48 tools)**: drive your accounting from an AI assistant (Claude, etc.), shared joint-ownership files included
+- **MCP API (49 tools)**: drive your accounting from an AI assistant (Claude, etc.), shared joint-ownership files included
 - **Built-in assistant (optional)**: answers your questions about using the software, never gives tax advice and never touches your data
 - **New versions flagged**: in the app, based on GitHub releases (a Docker instance updates with `docker pull`)
 

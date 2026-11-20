@@ -32,6 +32,7 @@ use App\Filament\Resources\Expenses\ExpenseResource;
 use App\Filament\Resources\FiscalYears\FiscalYearResource;
 use App\Filament\Resources\Furniture\FurnitureResource;
 use App\Filament\Resources\Incomes\IncomeResource;
+use App\Filament\Resources\Leases\LeaseResource;
 use App\Filament\Resources\Loans\LoanResource;
 use App\Filament\Resources\Properties\PropertyResource;
 use App\Filament\Resources\PropertyWorks\PropertyWorkResource;
@@ -51,6 +52,7 @@ function allUserPages(): array
         'Properties' => PropertyResource::class,
         'Incomes' => IncomeResource::class,
         'Expenses' => ExpenseResource::class,
+        'Leases' => LeaseResource::class,
         'Loans' => LoanResource::class,
         'Furniture' => FurnitureResource::class,
         'PropertyWorks' => PropertyWorkResource::class,
