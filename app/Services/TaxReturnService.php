@@ -69,6 +69,7 @@ class TaxReturnService
         private FiscalYearService $fiscalYearService,
         private DepreciationService $depreciationService,
         private UpdateService $updateService = new UpdateService(),
+        private LoanService $loanService = new LoanService(),
     ) {}
 
     /** Nom de fichier proposé au téléchargement. */
@@ -147,10 +148,11 @@ class TaxReturnService
         $data['form2033A'] = $this->compute2033A($fiscalYear, $properties, $year, $data['form2033B']['310']);
 
         // Contrôles sur les CENTIMES (un écart d'un centime y reste visible), formulaires
-        // imprimés à l'EURO : voir `wholeEuros()`.
-        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties, $data['form2031bis']);
+        // imprimés à l'EURO : voir `wholeEuros()`. Les contrôles citent les montants imprimés.
+        $printed = $this->wholeEuros($data);
+        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties, $data['form2031bis'], $printed);
 
-        return array_merge($data, $this->wholeEuros($data));
+        return array_merge($data, $printed);
     }
 
     /**
@@ -322,16 +324,34 @@ class TaxReturnService
             // Quote-part sauf emprunt dédié (Loan::prorate()) : un prêt qui finance
             // EXCLUSIVEMENT le logement loué (ex : prêt travaux du studio indépendant) est
             // déduit à 100 %, jamais proratisé une seconde fois.
+            //
+            // Frais d'emprunt (art. 39-1-1° quater CGI) : le compte 6272 (déduction immédiate)
+            // est une « autre charge externe », comme l'assurance emprunteur — repère 242. Le
+            // 6862 (dotation d'étalement) est classé en charge FINANCIÈRE par le PCG — repère
+            // 294, comme les intérêts. `LoanService::feesForYear()` est l'unique source de la
+            // fraction déduite, la même que `FiscalYearService::computeTotals()`.
             $loanRows = [];
-            $retained294 = 0;
+            $retainedInterest = 0;
             $retainedInsurance = 0;
+            $retainedFeesImmediate = 0; // 6272 -> 242
+            $retainedFeesSpread = 0;    // 6862 -> 294
             foreach ($prop->loans as $loan) {
                 $interest = $loan->getInterestsForYear($year);
                 $insurance = $loan->getInsuranceForYear($year);
                 $interestRetained = (int) $loan->prorate((string) $interest, $quota);
                 $insuranceRetained = (int) $loan->prorate((string) $insurance, $quota);
-                $retained294 += $interestRetained;
+                $retainedInterest += $interestRetained;
                 $retainedInsurance += $insuranceRetained;
+
+                $feesInfo = $this->loanService->feesForYear($loan, $year);
+                $feesDeducted = (int) $feesInfo['deducted'];
+                $feesRetained = (int) $loan->prorate((string) $feesDeducted, $quota);
+
+                if ($feesInfo['mode'] === 'immediate') {
+                    $retainedFeesImmediate += $feesRetained;
+                } else {
+                    $retainedFeesSpread += $feesRetained;
+                }
 
                 $loanRows[] = [
                     'name'               => (string) ($loan->bank_name ?: 'Emprunt'),
@@ -339,15 +359,20 @@ class TaxReturnService
                     'insurance'          => $insurance,
                     'interest_retained'  => $interestRetained,
                     'insurance_retained' => $insuranceRetained,
-                    'retained'           => $interestRetained + $insuranceRetained,
+                    'fees_deducted'      => $feesDeducted,
+                    'fees_retained'      => $feesRetained,
+                    'fees_mode'          => $feesInfo['mode'],
+                    'retained'           => $interestRetained + $insuranceRetained + $feesRetained,
                 ];
             }
+
+            $retained294 = $retainedInterest + $retainedFeesSpread;
 
             // Amortissements (ligne 254) — le détail actif par actif est l'annexe des immobilisations
             $depreciation = (int) $this->depreciationService->calculateAnnualDepreciation($prop, $year)['total'];
 
             $lines['218'] += $gross;
-            $lines['242'] += $retained242 + $retainedInsurance + $fees;
+            $lines['242'] += $retained242 + $retainedInsurance + $fees + $retainedFeesImmediate;
             $lines['244'] += $retained244;
             $lines['254'] += $depreciation;
             $lines['294'] += $retained294;
@@ -372,9 +397,10 @@ class TaxReturnService
                     'retained_244'        => $retained244,
                 ],
                 'loans'           => $loanRows,
-                'loans_retained'  => $retained294 + $retainedInsurance,
-                'loans_retained_interest'  => $retained294,
+                'loans_retained'  => $retained294 + $retainedInsurance + $retainedFeesImmediate,
+                'loans_retained_interest'  => $retainedInterest,
                 'loans_retained_insurance' => $retainedInsurance,
+                'loans_retained_fees'      => $retainedFeesImmediate + $retainedFeesSpread,
                 'depreciation'    => $depreciation,
             ];
         }
@@ -418,20 +444,29 @@ class TaxReturnService
      * — `!=` lâche dans la vue PDF, `===` strict dans la page Filament — deux écrans qui
      * pouvaient donc, à terme, dire l'inverse l'un de l'autre sur la même liasse.
      *
+     * Le VERDICT se calcule sur les centimes (un écart d'un centime y reste visible), mais un
+     * contrôle vérifié CITE le montant imprimé : `$printed` est la sortie de `wholeEuros()`.
+     * Arrondir la somme des centimes pouvait afficher un euro de plus que la ligne de la
+     * liasse juste au-dessus — 11 353 € contre 11 352 € sur la 254 de la démo 2025, deux
+     * dotations à ,40 € (OP 2815). La liasse fait foi. Les messages d'ÉCART gardent les
+     * centimes : `wholeEuros()` impose 572 = 254 et 136 = 310, si bien que les montants
+     * imprimés y seraient identiques et ne montreraient plus l'écart signalé.
+     *
      * @param  \Illuminate\Support\Collection<int, Property>|array<int, Property>  $properties
      * @return list<array{id: string, status: string, message: string, delta: int}>
      */
-    public function checks(array $form2033A, array $form2033B, array $form2033C, $properties, ?array $form2031bis = null): array
+    public function checks(array $form2033A, array $form2033B, array $form2033C, $properties, ?array $form2031bis = null, ?array $printed = null): array
     {
         $checks = [
-            $this->checkDotation($form2033B, $form2033C),
-            $this->checkImmobilisations($form2033A, $form2033C, $properties),
-            $this->checkResultat($form2033B),
-            $this->checkBilan($form2033A, $form2033B),
+            $this->checkDotation($form2033B, $form2033C, $printed['form2033C']['total_dotation'] ?? null),
+            $this->checkImmobilisations($form2033A, $form2033C, $properties, $printed['form2033A']['044'] ?? null),
+            $this->checkResultat($form2033B, isset($printed['form2033B'])
+                ? $printed['form2033B']['352'] - $printed['form2033B']['354'] : null),
+            $this->checkBilan($form2033A, $form2033B, $printed['form2033B']['310'] ?? null),
         ];
 
         if ($form2031bis !== null) {
-            $checks[] = $this->checkIndivision($form2031bis);
+            $checks[] = $this->checkIndivision($form2031bis, $printed['form2031bis']['result'] ?? null);
         }
 
         return $checks;
@@ -447,7 +482,7 @@ class TaxReturnService
      *
      * @return array{id: string, status: string, message: string, delta: int}
      */
-    private function checkResultat(array $form2033B): array
+    private function checkResultat(array $form2033B, ?int $printedResult = null): array
     {
         $rebuilt = $form2033B['310'] + $form2033B['318'] - $form2033B['350'];
         $declared = $form2033B['352'] - $form2033B['354'];
@@ -458,7 +493,7 @@ class TaxReturnService
                 'id' => 'resultat',
                 'status' => self::CHECK_OK,
                 'message' => 'Cohérence vérifiée : 310 + 318 − 350 = résultat fiscal ('
-                    . self::euros($declared) . ').',
+                    . self::euros($printedResult ?? $declared) . ').',
                 'delta' => 0,
             ];
         }
@@ -482,7 +517,7 @@ class TaxReturnService
      *
      * @return array{id: string, status: string, message: string, delta: int}
      */
-    private function checkBilan(array $form2033A, array $form2033B): array
+    private function checkBilan(array $form2033A, array $form2033B, ?int $printed310 = null): array
     {
         $bilan = (int) $form2033A['136'];
         $resultat = (int) $form2033B['310'];
@@ -492,7 +527,7 @@ class TaxReturnService
             'id' => 'bilan',
             'status' => $delta === 0 ? self::CHECK_OK : self::CHECK_ERROR,
             'message' => $delta === 0
-                ? 'Cohérence vérifiée : case 136 du 2033-A = ligne 310 du 2033-B (' . self::euros($resultat) . ').'
+                ? 'Cohérence vérifiée : case 136 du 2033-A = ligne 310 du 2033-B (' . self::euros($printed310 ?? $resultat) . ').'
                 : 'Écart : case 136 du 2033-A (' . self::euros($bilan) . ') ≠ ligne 310 du 2033-B (' . self::euros($resultat) . ').',
             'delta' => $delta,
         ];
@@ -503,7 +538,7 @@ class TaxReturnService
      *
      * @return array{id: string, status: string, message: string, delta: int}
      */
-    private function checkDotation(array $form2033B, array $form2033C): array
+    private function checkDotation(array $form2033B, array $form2033C, ?int $printed254 = null): array
     {
         $dotation = (int) $form2033C['total_dotation'];
         $resultat = (int) ($form2033B['254'] ?? 0);
@@ -514,7 +549,7 @@ class TaxReturnService
                 'id' => 'dotation',
                 'status' => self::CHECK_OK,
                 'message' => 'Cohérence vérifiée : ligne 572 = ligne 254 du 2033-B ('
-                    . self::euros($dotation) . ').',
+                    . self::euros($printed254 ?? $dotation) . ').',
                 'delta' => 0,
             ];
         }
@@ -549,7 +584,7 @@ class TaxReturnService
      *
      * @return array{id: string, status: string, message: string, delta: int}
      */
-    private function checkImmobilisations(array $form2033A, array $form2033C, $properties): array
+    private function checkImmobilisations(array $form2033A, array $form2033C, $properties, ?int $printed044 = null): array
     {
         $bilan = (int) $form2033A['044'];
         $tableau = (int) $form2033C['total_brut'];
@@ -565,7 +600,7 @@ class TaxReturnService
                 'id' => 'immobilisations',
                 'status' => self::CHECK_OK,
                 'message' => 'Cohérence vérifiée : case 044 du 2033-A = case 496 du 2033-C ('
-                    . self::euros($bilan) . ').',
+                    . self::euros($printed044 ?? $bilan) . ').',
                 'delta' => $delta,
             ];
         }
@@ -617,7 +652,7 @@ class TaxReturnService
      *  - 2031, 2042-C-PRO et répartition 2031 bis reprennent 352/354 ; le suivi des
      *    amortissements différés (2033-D) reprend 318 et 350.
      *
-     * Les contrôles de `checks()` tournent AVANT, sur les centimes.
+     * Les contrôles de `checks()` jugent sur les centimes, et citent les montants rendus ici.
      *
      * @param  array<string, mixed>  $forms  form2031, form2033A, form2033B, form2033C, form2033D, form2042, form2031bis
      * @return array<string, mixed>
@@ -670,14 +705,16 @@ class TaxReturnService
         $b['354'] = $b['372'] = max(-$fiscal, 0);
 
         $a = $forms['form2033A'];
-        foreach (['014', '016', '028', '030', '156'] as $line) {
+        foreach (['014', '016', '028', '030', '092', '156'] as $line) {
             $a[$line] = $r($a[$line]);
         }
         $a['044'] = $a['028'] + $a['014'];
         $a['048'] = $a['030'] + $a['016'];
         $a['110'] = $a['044'];
         $a['112'] = $a['048'];
-        $a['net'] = $a['180'] = $a['044'] - $a['048'];
+        // La 092 (charges constatées d'avance, frais d'emprunt étalés) s'ajoute au net : elle
+        // n'entre dans AUCUN des totaux 044/048/110/112, qui ne portent que les immobilisations.
+        $a['net'] = $a['180'] = $a['044'] - $a['048'] + $a['092'];
         $a['136'] = $b['310'];
         $a['120'] = $a['net'] - $a['136'] - $a['156'];
 
@@ -740,6 +777,7 @@ class TaxReturnService
         $incorpBrut = 0;
         $incorpAmort = 0;
         $emprunts = 0;
+        $feesRemaining = 0;
 
         foreach ($properties as $prop) {
             // Un bien loué seulement après la clôture n'est pas encore dans l'activité : ni
@@ -791,10 +829,18 @@ class TaxReturnService
             foreach ($prop->loans as $loan) {
                 $remaining = $loan->getRemainingCapitalAtEndOfYear($year);
                 $emprunts += (int) $loan->prorate((string) $remaining, $prop->quota_share);
+
+                // Frais d'emprunt étalés, part non encore amortie (solde du compte 481) : pas
+                // d'immobilisation, mais un actif réel au bilan tant que l'étalement n'est pas
+                // terminé. Aucune case dédiée sur la notice 2033 : plausible en 092 (charges
+                // constatées d'avance) — Teledeclaration le signale comme tel. SANS effet sur
+                // 120 (compte de l'exploitant), qui absorbe l'écart par différence ci-dessous :
+                // l'équation du bilan (net = 120 + 136 + 156) reste vraie par construction.
+                $feesRemaining += (int) $loan->prorate($this->loanService->feesForYear($loan, $year)['remaining_end'], $prop->quota_share);
             }
         }
 
-        $totalActif = ($corpBrut - $corpAmort) + ($incorpBrut - $incorpAmort);
+        $totalActif = ($corpBrut - $corpAmort) + ($incorpBrut - $incorpAmort) + $feesRemaining;
 
         return [
             '014' => $incorpBrut,
@@ -810,6 +856,10 @@ class TaxReturnService
             // case des amortissements. Il vit désormais sous la clé `net`, sans numéro.
             '110' => $corpBrut + $incorpBrut,
             '112' => $corpAmort + $incorpAmort,
+            // Charges constatées d'avance — solde non amorti des frais d'emprunt étalés. Vide
+            // (0) en déduction immédiate : rien n'y reste jamais, tout est sorti le jour du
+            // paiement.
+            '092' => $feesRemaining,
             'net' => $totalActif,
             // Compte de l'exploitant par différence : l'application ne porte ni trésorerie ni
             // créances, tous les flux (apport, charges payées, loyers encaissés, capital
@@ -1171,7 +1221,7 @@ class TaxReturnService
      * naissance manquantes sont permises : elles ne sont demandées QUE pour remplir la case
      * « identité » de la 2031 bis-SD à la main, jamais utilisées dans un calcul.
      */
-    private function checkIndivision(array $form2031bis): array
+    private function checkIndivision(array $form2031bis, ?int $printedResult = null): array
     {
         if (! $form2031bis['complete']) {
             return [
@@ -1223,7 +1273,7 @@ class TaxReturnService
             'id' => 'indivision',
             'status' => self::CHECK_OK,
             'message' => 'Répartition entre indivisaires : les quotes-parts totalisent 100 %, '
-                . 'et leur somme égale le résultat de la 2031-SD (' . self::euros($form2031bis['result']) . ').',
+                . 'et leur somme égale le résultat de la 2031-SD (' . self::euros($printedResult ?? $form2031bis['result']) . ').',
             'delta' => 0,
         ];
     }

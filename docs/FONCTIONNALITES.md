@@ -104,6 +104,11 @@ Par défaut, une instance OpenLMNP est mono-utilisateur : l'inscription se refer
 premier compte existe. Deux autres modes sont possibles (`ALLOW_REGISTRATION`) — ouverte en
 permanence, ou **sur invitation seulement**.
 
+Sur une instance joignable depuis Internet, le compte administrateur se crée de préférence au
+déploiement (`OPENLMNP_ADMIN_EMAIL` et `OPENLMNP_ADMIN_PASSWORD`, voir
+[INSTALLATION.md](INSTALLATION.md#déploiement-sur-un-paas-coolify-dokploy-easypanel)) : tant
+qu'aucun compte n'existe, le premier visiteur de `/register` en deviendrait l'administrateur.
+
 En mode `invite`, personne ne peut créer de compte de sa propre initiative. L'administrateur
 émet un lien nominatif depuis *Administration → Invitations*, ou en ligne de commande :
 

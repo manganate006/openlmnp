@@ -4,7 +4,12 @@
 # Coolify remplit lui-même les variables SERVICE_* (domaine, certificat, proxy).
 #
 # Dokploy / Easypanel / Portainer : le même fichier fonctionne en retirant la ligne
-# SERVICE_URL_OPENLMNP_8000 et en réglant APP_URL sur l'URL publique de l'instance.
+# SERVICE_URL_OPENLMNP_8000, en réglant APP_URL sur l'URL publique de l'instance et
+# OPENLMNP_ADMIN_PASSWORD sur un mot de passe généré.
+#
+# Connexion : l'adresse saisie dans OPENLMNP_ADMIN_EMAIL, et le mot de passe que Coolify
+# affiche dans SERVICE_PASSWORD_ADMIN (onglet Environment Variables). À changer ensuite
+# depuis le profil.
 #
 # documentation: https://github.com/manganate006/openlmnp/blob/main/docs/INSTALLATION.md
 # slogan: Comptabilité LMNP au réel : amortissements, liasse fiscale 2031 et FEC, auto-hébergés.
@@ -24,8 +29,14 @@ services:
       # SERVICE_FQDN_) : les liens des e-mails et les URL signées de réinitialisation
       # de mot de passe en dépendent.
       - APP_URL=${SERVICE_URL_OPENLMNP}
-      # `auto` : l'inscription se referme d'elle-même une fois le premier compte créé.
-      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-auto}
+      # Administrateur créé au premier démarrage. Une instance en ligne ne doit pas
+      # laisser /register ouvert : le premier visiteur en deviendrait l'administrateur.
+      # Sans effet une fois un compte créé (le mot de passe n'est jamais réécrit).
+      - OPENLMNP_ADMIN_EMAIL=${OPENLMNP_ADMIN_EMAIL:?}
+      - OPENLMNP_ADMIN_PASSWORD=${SERVICE_PASSWORD_ADMIN}
+      # Inscription publique fermée : les comptes suivants passent par une invitation
+      # (`invite`) ou par la ligne de commande.
+      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
       # Le proxy du PaaS vit sur le réseau Docker, déjà couvert par les plages privées
       # ci-dessous. Réduisez à l'adresse exacte du proxy pour durcir l'installation.
       - TRUSTED_PROXIES=${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1,::1}

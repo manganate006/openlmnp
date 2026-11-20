@@ -492,6 +492,19 @@ class OnboardingWizard extends Page implements HasForms
                             ->label('Emprunt dédié à ce logement')
                             ->helperText('Cochez s\'il finance exclusivement le logement loué (déduit à 100 %, sans quote-part).')
                             ->default(false),
+                        Grid::make(2)->schema([
+                            TextInput::make('loan_fees_amount')
+                                ->label('Frais d\'emprunt')
+                                ->suffix('€')
+                                ->numeric()
+                                ->step(0.01)
+                                ->default(0)
+                                ->hint('Frais de dossier, courtage, part non restituable d\'une caution.'),
+                            DatePicker::make('loan_fees_paid_on')
+                                ->label('Date de paiement des frais')
+                                ->displayFormat('d/m/Y')
+                                ->hint('Vide = date de début de l\'emprunt'),
+                        ]),
                     ]),
 
                 Section::make('Assurance emprunteur')
@@ -657,6 +670,8 @@ class OnboardingWizard extends Page implements HasForms
                 'insurance_monthly' => (int) round(((float) ($data['loan_insurance_monthly'] ?? 0)) * 100),
                 'insurance_rate' => (float) ($data['loan_insurance_rate'] ?? 0),
                 'is_dedicated' => (bool) ($data['loan_is_dedicated'] ?? false),
+                'fees_amount' => (int) round(((float) ($data['loan_fees_amount'] ?? 0)) * 100),
+                'fees_paid_on' => $data['loan_fees_paid_on'] ?? null,
             ]);
 
             app(LoanService::class)->generateSchedule($loan);

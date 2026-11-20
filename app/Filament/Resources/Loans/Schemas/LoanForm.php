@@ -82,6 +82,52 @@ class LoanForm
                                 ->label('Emprunt dédié à ce logement')
                                 ->helperText('Cochez si cet emprunt finance exclusivement le logement loué (ex : prêt travaux du studio indépendant). Les intérêts et l\'assurance sont alors déduits à 100 %, sans quote-part. Sinon (achat de toute la propriété, résidence principale comprise), la quote-part surface s\'applique.')
                                 ->default(false),
+                            Grid::make(2)->schema([
+                                TextInput::make('fees_amount')
+                                    ->label('Frais d\'emprunt')
+                                    ->suffix('€')
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->default(0)
+                                    ->live()
+                                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0')
+                                    ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
+                                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Frais de dossier, courtage, part non restituable d\'une caution. Déductibles, en une fois ou étalés selon votre option de dossier.'),
+                                DatePicker::make('fees_paid_on')
+                                    ->label('Date de paiement des frais')
+                                    ->displayFormat('d/m/Y')
+                                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Laissez vide pour reprendre la date de début de l\'emprunt.'),
+                            ]),
+                            Select::make('fees_spread_method')
+                                ->label('Méthode d\'étalement des frais')
+                                ->options(Loan::feesSpreadMethodLabels())
+                                ->default(Loan::FEES_METHOD_LINEAR)
+                                ->required()
+                                ->visible(fn (callable $get) => (float) ($get('fees_amount') ?? 0) > 0)
+                                ->helperText(
+                                    'Utile seulement si l\'étalement est activé dans votre profil. Fractions égales : '
+                                    . 'le même montant chaque année. Au prorata des intérêts : davantage les premières '
+                                    . 'années, qui portent le plus d\'intérêts (sans tableau d\'amortissement, les '
+                                    . 'fractions égales s\'appliquent).'
+                                )
+                                ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Se choisit emprunt par emprunt : deux emprunts du même dossier peuvent avoir des méthodes différentes.'),
+                            Grid::make(2)->schema([
+                                DatePicker::make('early_repayment_date')
+                                    ->label('Date d\'un remboursement anticipé')
+                                    ->displayFormat('d/m/Y')
+                                    ->live()
+                                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Laissez vide si l\'emprunt suit son échéancier normal.'),
+                                TextInput::make('early_repayment_amount')
+                                    ->label('Capital remboursé par anticipation')
+                                    ->suffix('€')
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : null)
+                                    ->dehydrateStateUsing(fn ($state) => filled($state) ? (int) round(((float) $state) * 100) : null)
+                                    ->visible(fn (callable $get) => filled($get('early_repayment_date')))
+                                    ->required(fn (callable $get) => filled($get('early_repayment_date')))
+                                    ->hintIcon('heroicon-o-question-mark-circle', tooltip: 'Total du capital restant dû pour un remboursement intégral, ou le seul montant versé pour un remboursement partiel.'),
+                            ]),
                         ]),
 
                     Step::make('Assurance emprunteur')
@@ -185,6 +231,26 @@ class LoanForm
 
                                     return $typeLabel . ' — ' . $rateDisplay;
                                 }),
+                            Placeholder::make('summary_fees')
+                                ->label('Frais d\'emprunt')
+                                ->content(function (callable $get) {
+                                    if (! $get('fees_amount') || (float) $get('fees_amount') <= 0) {
+                                        return 'Aucun';
+                                    }
+
+                                    $labels = Loan::feesSpreadMethodLabels();
+                                    $method = $labels[$get('fees_spread_method') ?? Loan::FEES_METHOD_LINEAR] ?? '-';
+
+                                    return number_format((float) $get('fees_amount'), 2, ',', ' ')
+                                        . ' € : déduction immédiate ou étalée selon l\'option choisie dans votre profil'
+                                        . ' (méthode si étalement : ' . $method . ')';
+                                }),
+                            Placeholder::make('summary_early_repayment')
+                                ->label('Remboursement anticipé')
+                                ->content(fn (callable $get) => filled($get('early_repayment_date'))
+                                    ? \Carbon\Carbon::parse($get('early_repayment_date'))->format('d/m/Y')
+                                        . ($get('early_repayment_amount') ? ' (' . number_format((float) $get('early_repayment_amount'), 2, ',', ' ') . ' €)' : '')
+                                    : 'Aucun'),
                         ]),
                 ])
                 ->columnSpanFull()

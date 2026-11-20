@@ -25,6 +25,7 @@ class FiscalYearService
     public function __construct(
         private DepreciationService $depreciationService,
         private AccountingEntryService $accountingEntryService,
+        private LoanService $loanService = new LoanService(),
     ) {}
 
     /**
@@ -152,6 +153,15 @@ class FiscalYearService
                     ->sum('insurance_amount');
                 $insuranceProrata = $loan->prorate((string) $yearlyInsurance, $property->quota_share);
                 $totalExpenses = bcadd($totalExpenses, $insuranceProrata, 0);
+
+                // Frais d'emprunt (art. 39-1-1° quater CGI) : la fraction déduite cette
+                // année — en totalité en déduction immédiate, une fraction linéaire en
+                // étalement (LoanService::feesForYear()). C'est une « autre charge »,
+                // jamais un amortissement : elle s'ajoute ici, PAS à $totalDepreciation
+                // plus bas, et échappe donc au plafonnement de l'art. 39 C.
+                $yearlyFees = $this->loanService->feesForYear($loan, $year)['deducted'];
+                $feesProrata = $loan->prorate($yearlyFees, $property->quota_share);
+                $totalExpenses = bcadd($totalExpenses, $feesProrata, 0);
             }
         }
 

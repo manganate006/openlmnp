@@ -25,6 +25,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int         $monthly_payment    centimes
  * @property int         $insurance_monthly  centimes
  * @property bool        $is_dedicated       finance exclusivement le logement loué (pas de quote-part)
+ * @property int         $fees_amount        centimes - frais d'emprunt (dossier, courtage, caution non restituable)
+ * @property \Carbon\Carbon|null $fees_paid_on date effective de paiement des frais (défaut : start_date)
+ * @property string      $fees_spread_method méthode d'étalement PAR EMPRUNT : linear (défaut) ou interest
+ * @property \Carbon\Carbon|null $early_repayment_date   date d'un remboursement anticipé, le cas échéant
+ * @property int|null    $early_repayment_amount centimes - capital remboursé par anticipation à cette date
  */
 #[ScopedBy([BelongsToUserThroughPropertyScope::class])]
 class Loan extends Model
@@ -40,6 +45,12 @@ class Loan extends Model
     /** Échéances réelles de la banque : à ne jamais écraser sans confirmation. */
     public const SCHEDULE_IMPORTED = 'imported';
 
+    /** Étalement en fractions annuelles égales, sans prorata temporis (BOI-BIC-CHG-20-30-40 § 70). */
+    public const FEES_METHOD_LINEAR = 'linear';
+
+    /** Étalement proratisé sur les intérêts courus de chaque année (§ 100-110). */
+    public const FEES_METHOD_INTEREST = 'interest';
+
     protected $fillable = [
         'property_id',
         'bank_name',
@@ -53,6 +64,11 @@ class Loan extends Model
         'insurance_rate',
         'schedule_source',
         'is_dedicated',
+        'fees_amount',
+        'fees_paid_on',
+        'fees_spread_method',
+        'early_repayment_date',
+        'early_repayment_amount',
     ];
 
     public static function insuranceTypeLabels(): array
@@ -63,13 +79,46 @@ class Loan extends Model
         ];
     }
 
+    public static function feesSpreadMethodLabels(): array
+    {
+        return [
+            self::FEES_METHOD_LINEAR => 'Fractions annuelles égales',
+            self::FEES_METHOD_INTEREST => 'Au prorata des intérêts courus',
+        ];
+    }
+
     protected function casts(): array
     {
         return [
             'start_date'    => 'date',
             'annual_rate'   => 'decimal:3',
             'is_dedicated'  => 'boolean',
+            'fees_paid_on'  => 'date',
+            'early_repayment_date' => 'date',
         ];
+    }
+
+    /**
+     * Date effective de paiement des frais d'emprunt : `fees_paid_on` si saisie,
+     * sinon la date de mise en place de l'emprunt (BOI-BIC-CHG-20-30-40 § 30-50 : l'option
+     * s'exerce par la première inscription en charges à répartir, il faut donc une date
+     * certaine même quand l'utilisateur ne l'a pas renseignée).
+     */
+    public function feesEffectiveDate(): \Carbon\Carbon
+    {
+        return $this->fees_paid_on ?? $this->start_date;
+    }
+
+    public function getFeesAmountEurosAttribute(): string
+    {
+        return bcdiv((string) $this->fees_amount, '100', 2);
+    }
+
+    public function getEarlyRepaymentAmountEurosAttribute(): ?string
+    {
+        return $this->early_repayment_amount === null
+            ? null
+            : bcdiv((string) $this->early_repayment_amount, '100', 2);
     }
 
     /**
@@ -202,6 +251,24 @@ class Loan extends Model
         $lastPayment = $this->payments()
             ->reorder()
             ->whereYear('payment_date', '<=', $year)
+            ->orderByDesc('payment_date')
+            ->orderByDesc('month_number')
+            ->first();
+
+        return $lastPayment?->remaining_capital ?? $this->amount;
+    }
+
+    /**
+     * Capital restant dû juste AVANT une date donnée — utilisé pour le remboursement
+     * anticipé des frais d'emprunt (BOI-BIC-CHG-20-30-40 § 120-130) : la dernière échéance
+     * strictement antérieure à la date, ou le capital initial si elle précède la toute
+     * première échéance (ou si l'emprunt ne porte encore aucun tableau).
+     */
+    public function capitalOutstandingBefore(\Carbon\Carbon $date): int
+    {
+        $lastPayment = $this->payments()
+            ->reorder()
+            ->where('payment_date', '<', $date->toDateString())
             ->orderByDesc('payment_date')
             ->orderByDesc('month_number')
             ->first();

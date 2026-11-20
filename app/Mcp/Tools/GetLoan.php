@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Models\Loan;
 use App\Models\Property;
+use App\Services\LoanService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -11,11 +12,13 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
-#[Description('Retourne le détail complet d\'un emprunt immobilier avec un résumé financier : capital, taux, durée, mensualité, assurance, coût total, intérêts et assurances de l\'année courante.')]
+#[Description('Retourne le détail complet d\'un emprunt immobilier avec un résumé financier : capital, taux, durée, mensualité, assurance, frais d\'emprunt, coût total, intérêts et assurances de l\'année courante.')]
 #[IsReadOnly]
 class GetLoan extends Tool
 {
     protected string $name = 'get_loan';
+
+    public function __construct(private LoanService $loanService) {}
 
     public function handle(Request $request): Response
     {
@@ -28,6 +31,8 @@ class GetLoan extends Tool
         $interestsYear    = $loan->getInterestsForYear($currentYear);
         $insuranceYear    = $loan->getInsuranceForYear($currentYear);
         $remainingCapital = $loan->getRemainingCapitalAtEndOfYear($currentYear);
+        $feesYear         = $this->loanService->feesForYear($loan, $currentYear);
+        $feesMethod       = $this->loanService->effectiveFeesSpreadMethod($loan);
 
         // Totaux sur toute la durée depuis les paiements si disponibles
         $totalInterests  = $loan->payments()->sum('interest_amount');
@@ -50,6 +55,15 @@ class GetLoan extends Tool
             'insurance_type'            => $loan->insurance_type ?? null,
             'insurance_rate'            => $loan->insurance_rate ?? null,
             'is_dedicated'              => $loan->is_dedicated,
+            'fees_amount_eur'           => $loan->fees_amount_euros,
+            'fees_paid_on'              => $loan->fees_paid_on?->toDateString(),
+            'fees_spread_method'        => $feesMethod['requested'],
+            'fees_spread_method_applied' => $feesMethod['applied'],
+            'fees_spread_method_fallback_reason' => $feesMethod['fallback']
+                ? 'Méthode au prorata des intérêts demandée, mais aucun tableau d\'amortissement disponible : repli sur les fractions égales.'
+                : null,
+            'early_repayment_date'      => $loan->early_repayment_date?->toDateString(),
+            'early_repayment_amount_eur' => $loan->early_repayment_amount_euros,
             'total_cost_eur'            => bcdiv((string) $loan->total_cost, '100', 2),
             'has_schedule'              => $loan->payments()->exists(),
             'payments_count'            => $loan->payments()->count(),
@@ -57,6 +71,9 @@ class GetLoan extends Tool
                 'year'                      => $currentYear,
                 'interests_eur'             => bcdiv((string) $interestsYear, '100', 2),
                 'insurance_eur'             => bcdiv((string) $insuranceYear, '100', 2),
+                'fees_deducted_eur'         => bcdiv($feesYear['deducted'], '100', 2),
+                'fees_remaining_eur'        => bcdiv($feesYear['remaining_end'], '100', 2),
+                'fees_mode'                 => $feesYear['mode'],
                 'remaining_capital_eur'     => bcdiv((string) $remainingCapital, '100', 2),
             ],
             'summary_all_time'          => [

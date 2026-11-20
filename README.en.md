@@ -93,7 +93,7 @@ ownership...), a chartered accountant is still recommended.
 - **AI reading of the tax return** in the takeover wizard: the 2033-C table and carry-over boxes are pre-filled from your accountant's return, for you to review
 - **AI provider of your choice**: OpenRouter, Anthropic, Google, OpenAI, Mistral (receipts processed in Europe), or a model running on your own machine, and then nothing leaves it
 - **CSV export**: income, expenses, filing lines
-- **MCP API (47 tools)**: drive your accounting from an AI assistant (Claude, etc.), shared joint-ownership files included
+- **MCP API (49 tools)**: drive your accounting from an AI assistant (Claude, etc.), shared joint-ownership files included
 - **Built-in assistant (optional)**: answers your questions about using the software, never gives tax advice and never touches your data
 - **New versions flagged**: in the app, based on GitHub releases (a Docker instance updates with `docker pull`)
 
@@ -201,6 +201,7 @@ documents. Main variables:
 | `TRUSTED_HOSTS` | Other host names accepted when `APP_URL` holds a domain (IP, aliases), comma-separated (otherwise error 400) | empty |
 | `APP_LOCALE` | Language | `fr` |
 | `ALLOW_REGISTRATION` | Registration: `auto` (until first account), `true` (always), `false` (never), `invite` (by an administrator's invitation) | `auto` |
+| `OPENLMNP_ADMIN_EMAIL` / `OPENLMNP_ADMIN_PASSWORD` | Creates the administrator on the container's first start; use it on any public instance (otherwise the first visitor of `/register` becomes admin) | empty |
 | `AI_ENABLED` / `AI_PROVIDER` | AI features and provider (`openrouter`, `anthropic`, `gemini`, `mistral`, `openai`, `local`); see [the guide](docs/INSTALLATION.md#intelligence-artificielle-optionnel) | `false` / `auto` |
 | `DOCUMENTS_VAULT_ENABLED` | Offers the receipt vault (each user turns it on or not) | `true` |
 | `LINKED_DOSSIERS_ENABLED` | Linked files, shared between co-owners | `false` |
@@ -242,8 +243,8 @@ OpenLMNP is developed in my free time. If the tool is useful to you: ⭐ star th
 
 OpenLMNP owes a lot to the people who installed it, tried it on their own books and told
 us what was wrong: [@cocool97](https://github.com/cocool97),
-[@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), [@ovrtn](https://github.com/ovrtn)
-and [@DamienFr](https://github.com/DamienFr). Their contributions (fixes, reports, security)
+[@ptitzgeg-on-git](https://github.com/ptitzgeg-on-git), [@ovrtn](https://github.com/ovrtn),
+[@DamienFr](https://github.com/DamienFr) and [@srouaix](https://github.com/srouaix). Their contributions (fixes, reports, security)
 are listed on the [acknowledgements page](https://openlmnp.fr/remerciements) (in French).
 
 ## License

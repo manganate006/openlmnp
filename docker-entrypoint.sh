@@ -233,6 +233,14 @@ fi
 # écrit au `docker build` serait invisible (même piège que database/ → /database-dist).
 as_app /usr/local/bin/php artisan ai:build-help-index 2>/dev/null || echo "[entrypoint] ai:build-help-index ignoré"
 
+# Administrateur de déploiement (Easypanel, Dokploy, Coolify…) : sans lui, une
+# instance publique laisse /register au premier venu, qui devient administrateur.
+# Sans effet dès qu'un compte existe ; le mot de passe reste dans l'environnement
+# du processus (ni .env, ni argument, ni journal).
+if [ -n "${OPENLMNP_ADMIN_EMAIL-}" ] && [ -n "${OPENLMNP_ADMIN_PASSWORD-}" ]; then
+    php artisan openlmnp:create-admin || echo "[entrypoint] création de l'administrateur en échec (voir ci-dessus)"
+fi
+
 # Token MCP démo public (idempotent ; no-op si MCP_DEMO_ENABLED=false)
 as_app /usr/local/bin/php artisan openlmnp:mcp-demo-token 2>/dev/null || echo "[entrypoint] mcp-demo-token ignoré"
 

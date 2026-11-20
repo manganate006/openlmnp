@@ -475,6 +475,7 @@ class DocumentAnalysisService
         $loan = Loan::create($this->only($values, [
             'property_id', 'bank_name', 'amount', 'annual_rate', 'duration_months',
             'start_date', 'monthly_payment', 'insurance_monthly', 'insurance_type', 'insurance_rate',
+            'fees_amount', 'fees_paid_on',
         ]));
 
         $rows = collect($values['rows'] ?? $result->rows);

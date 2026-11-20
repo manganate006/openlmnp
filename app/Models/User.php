@@ -32,7 +32,7 @@ use Laravel\Sanctum\HasApiTokens;
 // (promotion au paiement) — jamais par un `update()` de formulaire, sans quoi
 // n'importe qui pourrait s'auto-déclarer « membre » (quota 0 mais aussi hors
 // statistiques d'abonnés) ou, pire, un compte membre s'auto-promouvoir `standard`.
-#[Fillable(['name', 'email', 'password', 'siren', 'is_indivision', 'co_owners', 'is_admin', 'linked_dossier_quota', 'nav_mode', 'timezone', 'onboarding_dismissed_at', 'whats_new_dismissed_version', 'mcp_enabled', 'is_demo', 'demo_expires_at', 'feedback_prompted_at', 'feedback_answered_at', 'demo_reminders_seen', 'demo_seed', 'demo_email', 'demo_email_consent_at', 'demo_newsletter_at', 'demo_extended_at', 'demo_claim_token', 'demo_promoted_at', 'demo_seed_choice', 'ai_api_key', 'ai_consented_at', 'ai_data_access', 'ai_model_documents', 'ai_model_chat'])]
+#[Fillable(['name', 'email', 'password', 'siren', 'is_indivision', 'co_owners', 'loan_fees_spread_from', 'is_admin', 'linked_dossier_quota', 'nav_mode', 'timezone', 'onboarding_dismissed_at', 'whats_new_dismissed_version', 'mcp_enabled', 'is_demo', 'demo_expires_at', 'feedback_prompted_at', 'feedback_answered_at', 'demo_reminders_seen', 'demo_seed', 'demo_email', 'demo_email_consent_at', 'demo_newsletter_at', 'demo_extended_at', 'demo_claim_token', 'demo_promoted_at', 'demo_seed_choice', 'ai_api_key', 'ai_consented_at', 'ai_data_access', 'ai_model_documents', 'ai_model_chat'])]
 #[Hidden(['password', 'remember_token', 'ai_api_key'])]
 class User extends Authenticatable implements FilamentUser
 {

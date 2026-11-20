@@ -714,11 +714,11 @@ it('garde le nombre d\'outils annoncé en phase avec le serveur', function () {
     $fichiers = glob(app_path('Mcp/Tools/*.php'));
 
     expect($declares)->toHaveCount(count($fichiers))
-        ->and($declares)->toHaveCount(47);
+        ->and($declares)->toHaveCount(49);
 
     // La documentation publique annonce le même nombre.
     foreach (['README.md', 'README.en.md'] as $doc) {
-        expect(file_get_contents(base_path($doc)))->toContain('47');
+        expect(file_get_contents(base_path($doc)))->toContain('49');
     }
 });
 

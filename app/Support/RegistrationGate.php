@@ -63,12 +63,18 @@ class RegistrationGate
      */
     private static function noRealAccountYet(): bool
     {
-        return rescue(
-            fn () => User::query()
-                ->where(fn ($q) => $q->where('is_demo', false)->orWhereNull('is_demo'))
-                ->doesntExist(),
-            true,
-            false,
-        );
+        return rescue(fn () => ! self::realAccountExists(), true, false);
+    }
+
+    /**
+     * Un compte réel (hors sandbox démo) existe-t-il ? Partagé avec
+     * `openlmnp:create-admin`, qui ne crée l'administrateur de déploiement
+     * que tant que la porte « auto » serait encore ouverte.
+     */
+    public static function realAccountExists(): bool
+    {
+        return User::query()
+            ->where(fn ($q) => $q->where('is_demo', false)->orWhereNull('is_demo'))
+            ->exists();
     }
 }

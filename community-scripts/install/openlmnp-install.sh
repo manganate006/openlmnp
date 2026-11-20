@@ -92,7 +92,6 @@ msg_ok "Registration left open for the first account only"
 chown -R www-data:www-data /opt/openlmnp
 chmod -R 775 /opt/openlmnp/storage /opt/openlmnp/database /opt/openlmnp/bootstrap/cache
 chmod 640 /opt/openlmnp/.env
-chmod 600 /opt/openlmnp/admin_credentials.txt
 
 msg_info "Configuring Nginx"
 $STD apt install -y nginx

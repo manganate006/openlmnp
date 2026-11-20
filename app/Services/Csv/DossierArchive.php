@@ -56,12 +56,21 @@ class DossierArchive
      *     pratiqués des années au micro-BIC : le cumul (030) changerait sans rien signaler.
      *     Même format : l'année couverte par un cumul repris (`opening_accumulated_year`), qui
      *     manquait — sans elle, l'import recomptait les années déjà dans le cumul.
-     * 4 (2026-11-16) : les baux (`leases`), et sur chaque recette la part de charges
+     * 4 — 2026-11-16 : frais d'emprunt (`fees_amount`, `fees_paid_on`). Une version qui ne
+     *     lirait que le format 3 les ignorerait en silence : l'emprunt importé perdrait ses
+     *     frais, déduits ou étalés nulle part après coup — la même classe de perte muette
+     *     que le format 2 pour les échéances importées.
+     * 5 — 2026-11-19 : méthode d'étalement par emprunt (`fees_spread_method`) et remboursement
+     *     anticipé (`early_repayment_date`, `early_repayment_amount`). Une version qui ne lit
+     *     que le format 4 retombe sur le défaut `linear` et aucun remboursement anticipé : un
+     *     emprunt qui avait choisi le prorata des intérêts, ou subi un remboursement
+     *     anticipé, perdrait ces deux faits sans que rien ne le signale.
+     * 6 - 2026-11-20 : les baux (`leases`), et sur chaque recette la part de charges
      *     qu'elle comprend (`charges_amount`), sa date d'encaissement (`paid_date`) et le
-     *     bail qui l'a générée (`lease_index`). Une version qui ne lit que le format 3
+     *     bail qui l'a générée (`lease_index`). Une version qui ne lit que le format 5
      *     perdrait les baux en silence, et leurs loyers ne s'y rattacheraient plus.
      */
-    public const SCHEMA_VERSION = 4;
+    public const SCHEMA_VERSION = 6;
 
     /** Colonnes d'une échéance, pour un tableau importé (un tableau calculé se régénère). */
     private const PAYMENT_COLUMNS = [
@@ -116,7 +125,8 @@ class DossierArchive
         'loans' => [
             'bank_name', 'amount', 'annual_rate', 'duration_months', 'start_date',
             'monthly_payment', 'insurance_monthly', 'insurance_type', 'insurance_rate',
-            'is_dedicated', 'schedule_source',
+            'is_dedicated', 'schedule_source', 'fees_amount', 'fees_paid_on',
+            'fees_spread_method', 'early_repayment_date', 'early_repayment_amount',
         ],
     ];
 

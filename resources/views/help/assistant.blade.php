@@ -18,6 +18,9 @@
     </ul>
     <p>Le nom, l'adresse et la date et le lieu de naissance de chaque indivisaire sont demandés sur la 2031 bis. Le numéro fiscal (13 chiffres) y est facultatif. Désactiver l'interrupteur efface la liste des indivisaires.</p>
 
+    <h3>Frais d'emprunt</h3>
+    <p>Par défaut, les frais de dossier, de courtage ou la part non restituable d'une caution sont déduits <strong>en une fois</strong> l'année de leur paiement. La rubrique <strong>« Frais d'emprunt »</strong> permet d'opter pour un <strong>étalement linéaire</strong> sur la durée de chaque prêt (art. 39-1-1° quater du CGI). L'option s'applique aux frais payés à partir de l'année choisie, sur <strong>tous vos emprunts</strong> ; elle est <strong>irrévocable pendant deux ans</strong> une fois exercée (première inscription de frais en charges à répartir).</p>
+
     <h3>Supprimer mon compte</h3>
     <p>Dans Mon profil, le bouton <strong>« Supprimer mon compte »</strong> efface définitivement et irréversiblement vos biens, exercices fiscaux, recettes, charges, amortissements, travaux, mobilier, emprunts, justificatifs (y compris ceux du coffre-fort) et jetons MCP. La confirmation demande votre mot de passe actuel et la ressaisie de votre adresse e-mail.</p>
     <ul>

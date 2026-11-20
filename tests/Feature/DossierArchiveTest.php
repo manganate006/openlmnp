@@ -418,6 +418,62 @@ it('still reads a format 1 archive and computes its loan schedule', function () 
     expect(importedLoanFor($target)->payments()->withoutGlobalScopes()->count())->toBe(240);
 });
 
+/**
+ * Lot 2 des frais d'emprunt : méthode d'étalement par emprunt et remboursement anticipé
+ * (format 5). Même exigence que pour les colonnes du format 4 : un dossier qui en portait
+ * perdrait silencieusement ces deux faits via une version qui ne lirait que le format 4.
+ */
+it('carries fees_spread_method and the early repayment columns through the round trip', function () {
+    $loan = archiveLoan($this->property, [
+        'fees_amount' => 150000,
+        'fees_paid_on' => '2021-04-01',
+        'fees_spread_method' => Loan::FEES_METHOD_INTEREST,
+        'early_repayment_date' => '2024-01-01',
+        'early_repayment_amount' => 500000,
+    ]);
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $this->archive->export($this->user), allowForeignOwner: true);
+
+    $imported = importedLoanFor($target);
+
+    expect($imported->fees_spread_method)->toBe(Loan::FEES_METHOD_INTEREST)
+        ->and($imported->early_repayment_date->format('Y-m-d'))->toBe('2024-01-01')
+        ->and((int) $imported->early_repayment_amount)->toBe(500000)
+        // Les colonnes de frais du lot 1 voyagent toujours.
+        ->and((int) $imported->fees_amount)->toBe((int) $loan->fees_amount);
+});
+
+it('reads a format 4 archive that lacks the method and early repayment columns, defaulting to linear', function () {
+    archiveLoan($this->property, ['fees_amount' => 90000, 'fees_paid_on' => '2021-04-01']);
+    $payload = $this->archive->export($this->user);
+    $payload['schema_version'] = 4;
+    unset(
+        $payload['properties'][0]['loans'][0]['fees_spread_method'],
+        $payload['properties'][0]['loans'][0]['early_repayment_date'],
+        $payload['properties'][0]['loans'][0]['early_repayment_amount'],
+    );
+
+    $target = User::factory()->create(['email' => 'cible@example.test']);
+    $this->archive->import($target, $payload, allowForeignOwner: true);
+
+    $imported = importedLoanFor($target);
+
+    expect($imported->fees_spread_method)->toBe(Loan::FEES_METHOD_LINEAR)
+        ->and($imported->early_repayment_date)->toBeNull()
+        ->and($imported->early_repayment_amount)->toBeNull()
+        ->and((int) $imported->fees_amount)->toBe(90000);
+});
+
+/**
+ * Baux (format 6) : un bail voyage avec ses loyers, et chaque loyer retrouve le sien à
+ * l'import. Une version qui ne lirait que le format 5 perdrait les baux en silence.
+ */
+it('stamps the archive with schema version 6', function () {
+    expect(DossierArchive::SCHEMA_VERSION)->toBe(6)
+        ->and($this->archive->export($this->user)['schema_version'])->toBe(6);
+});
+
 /** Un bail d'un an et ses douze loyers, dont le premier encaissé quatre jours après l'échéance. */
 function archiveLease(Property $property): Lease
 {
@@ -468,9 +524,9 @@ it('carries a lease and the link to its rents through the round trip', function 
         ->and($rents->first()->charges_amount)->toBe(5000);
 });
 
-it('still reads a format 3 archive, which knew neither leases nor charges', function () {
+it('still reads a format 5 archive, which knew neither leases nor charges', function () {
     $payload = $this->archive->export($this->user);
-    $payload['schema_version'] = 3;
+    $payload['schema_version'] = 5;
     unset($payload['properties'][0]['leases']);
 
     foreach ($payload['properties'][0]['incomes'] as $i => $income) {

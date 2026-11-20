@@ -21,18 +21,101 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 - Deux baux d'un même bien ne peuvent pas se chevaucher, et le bail porte ses propres
   justificatifs (bail signé, état des lieux). L'assistant masque le nom du locataire, comme
   celui d'un voyageur.
-- **API MCP** : nouvel outil `list_leases` (47 outils). `list_incomes` se filtre par bail, et
+- **API MCP** : nouvel outil `list_leases` (49 outils). `list_incomes` se filtre par bail, et
   avec `get_income` donne le bail, la part de charges et la date d'encaissement d'un loyer ;
   `update_income` pose ou efface cette date.
-- **L'archive du dossier passe au format 4** : elle emporte les baux et le lien de chaque loyer
-  à son bail. Une archive au format 3 se relit toujours ; une version antérieure refuse le
-  format 4 au lieu de perdre les baux en silence.
+- **L'archive du dossier passe au format 6** : elle emporte les baux et le lien de chaque loyer
+  à son bail. Une archive des formats précédents se relit toujours ; une version antérieure
+  refuse le format 6 au lieu de perdre les baux en silence.
 
 ### Interne
 
 - Les modèles qui portent des justificatifs (charges, mobilier, travaux, recettes, baux) sont
   déclarés à un seul endroit, `App\Support\DocumentOwners`, au lieu de six listes recopiées
   dans l'export, le coffre-fort et les outils MCP
+
+## [2.2.1] - 2026-11-20
+
+### Sécurité du déploiement : l'administrateur se crée au démarrage
+
+- **Nouvelles variables `OPENLMNP_ADMIN_EMAIL` et `OPENLMNP_ADMIN_PASSWORD`** (et
+  `OPENLMNP_ADMIN_NAME`, facultative) : le conteneur crée ce compte administrateur au premier
+  démarrage, avant de servir la moindre requête. Sur une instance publique, `/register` ouvert
+  laissait jusqu'ici le premier visiteur devenir administrateur entre le déploiement et
+  l'inscription du propriétaire. La création n'a lieu que sur une base sans compte : un mot de
+  passe changé ensuite n'est jamais réécrit. Signalé par la relecture du modèle Easypanel.
+- La même opération existe en ligne de commande : `php artisan openlmnp:create-admin` (lit les
+  mêmes variables, jamais d'argument visible dans `ps`).
+- **`docker-compose.coolify.yml`** crée désormais l'administrateur (mot de passe généré par
+  Coolify dans `SERVICE_PASSWORD_ADMIN`) et ferme l'inscription par défaut
+  (`ALLOW_REGISTRATION=false`).
+- Script d'installation community-scripts : retrait d'un `chmod` sur un fichier
+  `admin_credentials.txt` que le script ne crée plus.
+
+### Corrections
+
+- **Télédéclaration : les contrôles de cohérence citent désormais le montant imprimé sur la
+  liasse.** Ils travaillaient sur les montants en centimes et arrondissaient leur total, alors que
+  la liasse additionne des lignes déjà arrondies à l'euro : sur l'exercice 2025 de la démo, le
+  contrôle annonçait 11 353 € pour une ligne 254 imprimée à 11 352 € (et −2 618 € contre −2 617 €
+  en ligne 310). Le verdict reste calculé au centime ; seul le montant affiché change. L'aide de
+  l'écran Télédéclaration le précise.
+- Signaux de cycle de vie : les catégories de charges manquantes sont aussi fournies en libellés
+  français (`expense_categories_missing_labels`), pour les e-mails qui les citent.
+
+## [2.2.0] - 2026-11-19
+
+### Frais d'emprunt : méthode d'étalement et remboursement anticipé
+
+- **Méthode d'étalement choisie par emprunt** (BOI-BIC-CHG-20-30-40 § 60), quand l'option
+  d'étalement du profil s'applique : fractions annuelles égales (défaut, inchangé) ou étalement
+  au prorata des intérêts courus de chaque année (§ 100-110), avec une fraction alors plus grande
+  les premières années, qui portent plus d'intérêts. Cette seconde méthode suppose un tableau
+  d'amortissement ; sans lui, repli automatique sur les fractions égales, signalé par l'outil MCP
+  `get_loan`.
+- **Remboursement anticipé** (§ 120-130) : saisissez sa date et le capital remboursé sur
+  l'emprunt. Le solde des frais pas encore déduits devient alors déductible au prorata du
+  capital remboursé par rapport au capital restant dû avant le remboursement (un remboursement
+  intégral rend donc tout le solde déductible l'année même du remboursement). Le reste, s'il y en
+  a, continue d'être étalé sur la durée restante.
+- **Deux nouveaux outils MCP** : `create_loan` (crée un emprunt et génère son tableau
+  d'amortissement théorique) et `update_loan` (mise à jour partielle, qui régénère le tableau
+  seulement si un champ d'amortissement change et que le tableau n'est pas importé de la
+  banque).
+- L'export de dossier passe au format 5 (les archives précédentes s'importent toujours).
+
+## [2.1.0] - 2026-11-18
+
+### Frais d'emprunt : déduction immédiate ou étalement
+
+- **Les frais d'un emprunt se saisissent sur l'emprunt lui-même** : frais de dossier, de
+  courtage et part non restituable de la caution, avec leur date de paiement. Jusqu'ici, il
+  fallait les saisir en charge « Divers », passée au compte 65. Pensez à supprimer cette charge
+  si vous reportez les frais sur l'emprunt : ils seraient sinon déduits deux fois.
+- **Option d'étalement sur la durée du prêt** (art. 39-1-1° quater du CGI,
+  BOI-BIC-CHG-20-30-40), dans le profil. Par défaut, les frais sont déduits en une fois l'année
+  du paiement (2033-B ligne 242, compte 6272). Avec l'option, ils sont répartis en fractions
+  égales, sans prorata la première année (ligne 294, comptes 481 puis 6862 selon le plan
+  comptable en vigueur depuis 2025). L'option est globale, irrévocable pendant deux ans, et vaut
+  pour les frais payés à partir de l'année choisie.
+- **Pourquoi c'est utile** : quand la première année est déficitaire, des frais déduits en une
+  fois grossissent un déficit qui ne se reporte que sur dix ans, alors que l'amortissement
+  ramène souvent les années suivantes à zéro. Étalés, ils réduisent le résultat des années
+  bénéficiaires et laissent autant d'amortissement en réserve, sans limite de durée.
+- Le solde non encore déduit figure à l'actif du bilan simplifié, en ligne 092, **sous
+  réserve** : la notice de la 2033 ne prévoit pas de ligne dédiée.
+- Les outils MCP `get_loan` et `list_loans` exposent les frais et leur traitement, et l'export
+  de dossier passe au format 4 (les archives précédentes s'importent toujours).
+- Demandé par @srouaix (#26)
+
+### Correctifs
+
+- **La projection pluriannuelle ignorait les emprunts** : ni les intérêts, ni l'assurance
+  emprunteur n'étaient déduits des années projetées, sur la page comme dans l'outil MCP
+  `get_projection`. Ils le sont désormais, avec la quote-part du bien, ainsi que les frais
+  d'emprunt.
+
+### Interne
 
 - **Le serveur MCP annonce la version réelle de l'application.** Sa réponse à `initialize`
   (`serverInfo.version`) lisait un numéro écrit en dur, resté à 1.0.0 depuis la première
