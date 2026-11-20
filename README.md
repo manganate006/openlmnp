@@ -201,6 +201,7 @@ documents fiscaux. Variables principales :
 | `TRUSTED_HOSTS` | Autres noms d'hôte acceptés quand `APP_URL` porte un domaine (IP, alias), séparés par des virgules (sinon erreur 400) | vide |
 | `APP_LOCALE` | Langue | `fr` |
 | `ALLOW_REGISTRATION` | Inscription : `auto` (jusqu'au premier compte), `true` (toujours), `false` (jamais), `invite` (sur invitation d'un administrateur) | `auto` |
+| `OPENLMNP_ADMIN_EMAIL` / `OPENLMNP_ADMIN_PASSWORD` | Crée l'administrateur au premier démarrage du conteneur, à utiliser sur une instance en ligne (sinon le premier visiteur de `/register` le devient) | vide |
 | `AI_ENABLED` / `AI_PROVIDER` | Fonctions d'IA et fournisseur (`openrouter`, `anthropic`, `gemini`, `mistral`, `openai`, `local`) ; voir [le guide](docs/INSTALLATION.md#intelligence-artificielle-optionnel) | `false` / `auto` |
 | `DOCUMENTS_VAULT_ENABLED` | Propose le coffre-fort des justificatifs (chaque utilisateur l'active ou non) | `true` |
 | `LINKED_DOSSIERS_ENABLED` | Dossiers liés, partagés entre indivisaires | `false` |

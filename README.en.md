@@ -201,6 +201,7 @@ documents. Main variables:
 | `TRUSTED_HOSTS` | Other host names accepted when `APP_URL` holds a domain (IP, aliases), comma-separated (otherwise error 400) | empty |
 | `APP_LOCALE` | Language | `fr` |
 | `ALLOW_REGISTRATION` | Registration: `auto` (until first account), `true` (always), `false` (never), `invite` (by an administrator's invitation) | `auto` |
+| `OPENLMNP_ADMIN_EMAIL` / `OPENLMNP_ADMIN_PASSWORD` | Creates the administrator on the container's first start; use it on any public instance (otherwise the first visitor of `/register` becomes admin) | empty |
 | `AI_ENABLED` / `AI_PROVIDER` | AI features and provider (`openrouter`, `anthropic`, `gemini`, `mistral`, `openai`, `local`); see [the guide](docs/INSTALLATION.md#intelligence-artificielle-optionnel) | `false` / `auto` |
 | `DOCUMENTS_VAULT_ENABLED` | Offers the receipt vault (each user turns it on or not) | `true` |
 | `LINKED_DOSSIERS_ENABLED` | Linked files, shared between co-owners | `false` |

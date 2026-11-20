@@ -125,10 +125,23 @@ reverse proxy, l'application n'expose que son port interne `8000`.
 Les variables `SERVICE_URL_*` sont remplies par Coolify au premier déploiement : rien
 d'autre à régler pour obtenir un domaine en HTTPS.
 
-**Dokploy, Easypanel, Portainer** — le même fichier convient en retirant la ligne
-`SERVICE_URL_OPENLMNP_8000` et en réglant `APP_URL` sur l'URL publique de l'instance.
+Renseignez `OPENLMNP_ADMIN_EMAIL` : Coolify génère le mot de passe dans
+`SERVICE_PASSWORD_ADMIN`, visible dans l'onglet *Environment Variables*.
 
-Trois points de vigilance, communs à toutes ces plateformes :
+**Dokploy, Easypanel, Portainer** — le même fichier convient en retirant la ligne
+`SERVICE_URL_OPENLMNP_8000`, en réglant `APP_URL` sur l'URL publique de l'instance et
+`OPENLMNP_ADMIN_PASSWORD` sur un mot de passe généré. Les modèles du catalogue Easypanel et
+Dokploy le font pour vous.
+
+Quatre points de vigilance, communs à toutes ces plateformes :
+
+- **Créez l'administrateur au déploiement.** Une instance en ligne dont `/register` est
+  ouvert appartient au premier visiteur : le premier compte créé devient administrateur.
+  Avec `OPENLMNP_ADMIN_EMAIL` et `OPENLMNP_ADMIN_PASSWORD`, le conteneur crée ce compte au
+  premier démarrage, avant d'accepter la moindre requête, et le fichier ferme l'inscription
+  (`ALLOW_REGISTRATION=false`). Changez ensuite le mot de passe depuis votre profil : il
+  n'est jamais réécrit au redémarrage suivant, la création n'ayant lieu que sur une base
+  sans compte.
 
 - **`APP_URL` doit porter le schéma** (`https://votre-domaine`, pas `votre-domaine`) :
   les liens de réinitialisation de mot de passe et les e-mails en sont construits.
@@ -141,7 +154,10 @@ Trois points de vigilance, communs à toutes ces plateformes :
 ## Comptes et connexion
 
 Au premier accès, créez votre compte sur **`/register`** : le **premier compte devient
-automatiquement administrateur**. La page d'inscription **se referme ensuite toute
+automatiquement administrateur**. Sur une instance joignable depuis Internet, faites-le
+plutôt créer au déploiement par `OPENLMNP_ADMIN_EMAIL` et `OPENLMNP_ADMIN_PASSWORD`
+(voir [Déploiement sur un PaaS](#déploiement-sur-un-paas-coolify-dokploy-easypanel)) :
+sinon, entre le démarrage et votre inscription, n'importe qui peut prendre la place. La page d'inscription **se referme ensuite toute
 seule** — par défaut (`ALLOW_REGISTRATION=auto`), une instance est prévue pour un seul
 utilisateur, personne d'autre ne peut s'inscrire.
 
@@ -516,6 +532,7 @@ L'image utilise le fichier `.env.docker` fourni. Les variables non sensibles uti
 | `DB_DATABASE` | Chemin du fichier SQLite | `/var/www/html/database/database.sqlite` |
 | `LOG_LEVEL` | Niveau de journalisation | `warning` |
 | `ALLOW_REGISTRATION` | Inscription publique : `auto` = ouverte jusqu'au premier compte, `invite` = sur invitation seulement, `true` = toujours, `false` = jamais | `auto` |
+| `OPENLMNP_ADMIN_EMAIL` / `OPENLMNP_ADMIN_PASSWORD` | Crée ce compte administrateur au premier démarrage du conteneur, tant qu'aucun compte n'existe (8 caractères minimum ; `OPENLMNP_ADMIN_NAME` facultatif). Sans effet ensuite | *(vide)* |
 | `INVITATION_TTL_DAYS` | Durée de validité d'une invitation, en jours (mode `invite`) | `14` |
 | `MAIL_MAILER` | `log` (aucun envoi) ou `smtp` + variables `MAIL_*` (voir [Emails](#emails-optionnel)) | `log` |
 | `PROVISION_TOKEN` | Active l'API de création de comptes `POST /api/admin/users` (automatisations avancées). Vide = API désactivée (404) | *(vide)* |

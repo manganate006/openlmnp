@@ -4,6 +4,22 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 
 ## [Unreleased]
 
+### Sécurité du déploiement : l'administrateur se crée au démarrage
+
+- **Nouvelles variables `OPENLMNP_ADMIN_EMAIL` et `OPENLMNP_ADMIN_PASSWORD`** (et
+  `OPENLMNP_ADMIN_NAME`, facultative) : le conteneur crée ce compte administrateur au premier
+  démarrage, avant de servir la moindre requête. Sur une instance publique, `/register` ouvert
+  laissait jusqu'ici le premier visiteur devenir administrateur entre le déploiement et
+  l'inscription du propriétaire. La création n'a lieu que sur une base sans compte : un mot de
+  passe changé ensuite n'est jamais réécrit. Signalé par la relecture du modèle Easypanel.
+- La même opération existe en ligne de commande : `php artisan openlmnp:create-admin` (lit les
+  mêmes variables, jamais d'argument visible dans `ps`).
+- **`docker-compose.coolify.yml`** crée désormais l'administrateur (mot de passe généré par
+  Coolify dans `SERVICE_PASSWORD_ADMIN`) et ferme l'inscription par défaut
+  (`ALLOW_REGISTRATION=false`).
+- Script d'installation community-scripts : retrait d'un `chmod` sur un fichier
+  `admin_credentials.txt` que le script ne crée plus.
+
 ## [2.2.0] - 2026-11-19
 
 ### Frais d'emprunt : méthode d'étalement et remboursement anticipé

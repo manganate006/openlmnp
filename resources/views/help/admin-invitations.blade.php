@@ -34,6 +34,6 @@
     </ul>
 
     <div class="ctx-warning">
-        <strong>Sur une instance vierge, le premier compte devient administrateur.</strong> C'est vrai quel que soit le mode d'inscription : si vous invitez quelqu'un avant d'avoir créé votre propre compte, c'est cette personne qui administrera l'instance.
+        <strong>Sur une instance vierge, le premier compte devient administrateur.</strong> C'est vrai quel que soit le mode d'inscription : si vous invitez quelqu'un avant d'avoir créé votre propre compte, c'est cette personne qui administrera l'instance. Sur une instance en ligne, le plus sûr est de faire créer votre compte au déploiement, avec les variables <code>OPENLMNP_ADMIN_EMAIL</code> et <code>OPENLMNP_ADMIN_PASSWORD</code> du conteneur Docker (voir le guide d'installation).
     </div>
 </div>
