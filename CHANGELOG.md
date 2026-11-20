@@ -4,6 +4,8 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-11-20
+
 ### Sécurité du déploiement : l'administrateur se crée au démarrage
 
 - **Nouvelles variables `OPENLMNP_ADMIN_EMAIL` et `OPENLMNP_ADMIN_PASSWORD`** (et
@@ -19,6 +21,17 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   (`ALLOW_REGISTRATION=false`).
 - Script d'installation community-scripts : retrait d'un `chmod` sur un fichier
   `admin_credentials.txt` que le script ne crée plus.
+
+### Corrections
+
+- **Télédéclaration : les contrôles de cohérence citent désormais le montant imprimé sur la
+  liasse.** Ils travaillaient sur les montants en centimes et arrondissaient leur total, alors que
+  la liasse additionne des lignes déjà arrondies à l'euro : sur l'exercice 2025 de la démo, le
+  contrôle annonçait 11 353 € pour une ligne 254 imprimée à 11 352 € (et −2 618 € contre −2 617 €
+  en ligne 310). Le verdict reste calculé au centime ; seul le montant affiché change. L'aide de
+  l'écran Télédéclaration le précise.
+- Signaux de cycle de vie : les catégories de charges manquantes sont aussi fournies en libellés
+  français (`expense_categories_missing_labels`), pour les e-mails qui les citent.
 
 ## [2.2.0] - 2026-11-19
 
