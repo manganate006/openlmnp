@@ -139,16 +139,20 @@ class Teledeclaration extends Page
         $form2042 = $tax->compute2042($fy);
         $form2031bis = $tax->compute2031bis($fy, $user);
 
-        // Contrôles sur les centimes, AVANT l'arrondi : un écart d'un centime y reste visible.
-        $checks = $tax->checks($form2033A, $form2033B, $form2033C, $properties, $form2031bis);
-
         // Les montants se télédéclarent en euros entiers (issue #21) : chaque ligne arrondie,
         // chaque total recalculé sur les lignes arrondies, comme dans le PDF.
+        $printed = $tax->wholeEuros(compact('form2031', 'form2033A', 'form2033B', 'form2033C', 'form2033D', 'form2042', 'form2031bis'));
+
+        // Contrôles jugés sur les centimes, AVANT l'arrondi (un écart d'un centime y reste
+        // visible), mais qui citent les montants IMPRIMÉS : sinon 254 = 11 352 € dans la
+        // 2033-B et 11 353 € dans le contrôle juste en dessous (OP 2815).
+        $checks = $tax->checks($form2033A, $form2033B, $form2033C, $properties, $form2031bis, $printed);
+
         [
             'form2031' => $form2031, 'form2033A' => $form2033A, 'form2033B' => $form2033B,
             'form2033C' => $form2033C, 'form2033D' => $form2033D, 'form2042' => $form2042,
             'form2031bis' => $form2031bis,
-        ] = $tax->wholeEuros(compact('form2031', 'form2033A', 'form2033B', 'form2033C', 'form2033D', 'form2042', 'form2031bis'));
+        ] = $printed;
 
         return [
             'fiscal_year' => $fy,

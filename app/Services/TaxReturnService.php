@@ -148,10 +148,11 @@ class TaxReturnService
         $data['form2033A'] = $this->compute2033A($fiscalYear, $properties, $year, $data['form2033B']['310']);
 
         // Contrôles sur les CENTIMES (un écart d'un centime y reste visible), formulaires
-        // imprimés à l'EURO : voir `wholeEuros()`.
-        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties, $data['form2031bis']);
+        // imprimés à l'EURO : voir `wholeEuros()`. Les contrôles citent les montants imprimés.
+        $printed = $this->wholeEuros($data);
+        $data['checks'] = $this->checks($data['form2033A'], $data['form2033B'], $data['form2033C'], $properties, $data['form2031bis'], $printed);
 
-        return array_merge($data, $this->wholeEuros($data));
+        return array_merge($data, $printed);
     }
 
     /**
@@ -443,20 +444,29 @@ class TaxReturnService
      * — `!=` lâche dans la vue PDF, `===` strict dans la page Filament — deux écrans qui
      * pouvaient donc, à terme, dire l'inverse l'un de l'autre sur la même liasse.
      *
+     * Le VERDICT se calcule sur les centimes (un écart d'un centime y reste visible), mais un
+     * contrôle vérifié CITE le montant imprimé : `$printed` est la sortie de `wholeEuros()`.
+     * Arrondir la somme des centimes pouvait afficher un euro de plus que la ligne de la
+     * liasse juste au-dessus — 11 353 € contre 11 352 € sur la 254 de la démo 2025, deux
+     * dotations à ,40 € (OP 2815). La liasse fait foi. Les messages d'ÉCART gardent les
+     * centimes : `wholeEuros()` impose 572 = 254 et 136 = 310, si bien que les montants
+     * imprimés y seraient identiques et ne montreraient plus l'écart signalé.
+     *
      * @param  \Illuminate\Support\Collection<int, Property>|array<int, Property>  $properties
      * @return list<array{id: string, status: string, message: string, delta: int}>
      */
-    public function checks(array $form2033A, array $form2033B, array $form2033C, $properties, ?array $form2031bis = null): array
+    public function checks(array $form2033A, array $form2033B, array $form2033C, $properties, ?array $form2031bis = null, ?array $printed = null): array
     {
         $checks = [
-            $this->checkDotation($form2033B, $form2033C),
-            $this->checkImmobilisations($form2033A, $form2033C, $properties),
-            $this->checkResultat($form2033B),
-            $this->checkBilan($form2033A, $form2033B),
+            $this->checkDotation($form2033B, $form2033C, $printed['form2033C']['total_dotation'] ?? null),
+            $this->checkImmobilisations($form2033A, $form2033C, $properties, $printed['form2033A']['044'] ?? null),
+            $this->checkResultat($form2033B, isset($printed['form2033B'])
+                ? $printed['form2033B']['352'] - $printed['form2033B']['354'] : null),
+            $this->checkBilan($form2033A, $form2033B, $printed['form2033B']['310'] ?? null),
         ];
 
         if ($form2031bis !== null) {
-            $checks[] = $this->checkIndivision($form2031bis);
+            $checks[] = $this->checkIndivision($form2031bis, $printed['form2031bis']['result'] ?? null);
         }
 
         return $checks;
@@ -472,7 +482,7 @@ class TaxReturnService
      *
      * @return array{id: string, status: string, message: string, delta: int}
      */
-    private function checkResultat(array $form2033B): array
+    private function checkResultat(array $form2033B, ?int $printedResult = null): array
     {
         $rebuilt = $form2033B['310'] + $form2033B['318'] - $form2033B['350'];
         $declared = $form2033B['352'] - $form2033B['354'];
@@ -483,7 +493,7 @@ class TaxReturnService
                 'id' => 'resultat',
                 'status' => self::CHECK_OK,
                 'message' => 'Cohérence vérifiée : 310 + 318 − 350 = résultat fiscal ('
-                    . self::euros($declared) . ').',
+                    . self::euros($printedResult ?? $declared) . ').',
                 'delta' => 0,
             ];
         }
@@ -507,7 +517,7 @@ class TaxReturnService
      *
      * @return array{id: string, status: string, message: string, delta: int}
      */
-    private function checkBilan(array $form2033A, array $form2033B): array
+    private function checkBilan(array $form2033A, array $form2033B, ?int $printed310 = null): array
     {
         $bilan = (int) $form2033A['136'];
         $resultat = (int) $form2033B['310'];
@@ -517,7 +527,7 @@ class TaxReturnService
             'id' => 'bilan',
             'status' => $delta === 0 ? self::CHECK_OK : self::CHECK_ERROR,
             'message' => $delta === 0
-                ? 'Cohérence vérifiée : case 136 du 2033-A = ligne 310 du 2033-B (' . self::euros($resultat) . ').'
+                ? 'Cohérence vérifiée : case 136 du 2033-A = ligne 310 du 2033-B (' . self::euros($printed310 ?? $resultat) . ').'
                 : 'Écart : case 136 du 2033-A (' . self::euros($bilan) . ') ≠ ligne 310 du 2033-B (' . self::euros($resultat) . ').',
             'delta' => $delta,
         ];
@@ -528,7 +538,7 @@ class TaxReturnService
      *
      * @return array{id: string, status: string, message: string, delta: int}
      */
-    private function checkDotation(array $form2033B, array $form2033C): array
+    private function checkDotation(array $form2033B, array $form2033C, ?int $printed254 = null): array
     {
         $dotation = (int) $form2033C['total_dotation'];
         $resultat = (int) ($form2033B['254'] ?? 0);
@@ -539,7 +549,7 @@ class TaxReturnService
                 'id' => 'dotation',
                 'status' => self::CHECK_OK,
                 'message' => 'Cohérence vérifiée : ligne 572 = ligne 254 du 2033-B ('
-                    . self::euros($dotation) . ').',
+                    . self::euros($printed254 ?? $dotation) . ').',
                 'delta' => 0,
             ];
         }
@@ -574,7 +584,7 @@ class TaxReturnService
      *
      * @return array{id: string, status: string, message: string, delta: int}
      */
-    private function checkImmobilisations(array $form2033A, array $form2033C, $properties): array
+    private function checkImmobilisations(array $form2033A, array $form2033C, $properties, ?int $printed044 = null): array
     {
         $bilan = (int) $form2033A['044'];
         $tableau = (int) $form2033C['total_brut'];
@@ -590,7 +600,7 @@ class TaxReturnService
                 'id' => 'immobilisations',
                 'status' => self::CHECK_OK,
                 'message' => 'Cohérence vérifiée : case 044 du 2033-A = case 496 du 2033-C ('
-                    . self::euros($bilan) . ').',
+                    . self::euros($printed044 ?? $bilan) . ').',
                 'delta' => $delta,
             ];
         }
@@ -642,7 +652,7 @@ class TaxReturnService
      *  - 2031, 2042-C-PRO et répartition 2031 bis reprennent 352/354 ; le suivi des
      *    amortissements différés (2033-D) reprend 318 et 350.
      *
-     * Les contrôles de `checks()` tournent AVANT, sur les centimes.
+     * Les contrôles de `checks()` jugent sur les centimes, et citent les montants rendus ici.
      *
      * @param  array<string, mixed>  $forms  form2031, form2033A, form2033B, form2033C, form2033D, form2042, form2031bis
      * @return array<string, mixed>
@@ -1211,7 +1221,7 @@ class TaxReturnService
      * naissance manquantes sont permises : elles ne sont demandées QUE pour remplir la case
      * « identité » de la 2031 bis-SD à la main, jamais utilisées dans un calcul.
      */
-    private function checkIndivision(array $form2031bis): array
+    private function checkIndivision(array $form2031bis, ?int $printedResult = null): array
     {
         if (! $form2031bis['complete']) {
             return [
@@ -1263,7 +1273,7 @@ class TaxReturnService
             'id' => 'indivision',
             'status' => self::CHECK_OK,
             'message' => 'Répartition entre indivisaires : les quotes-parts totalisent 100 %, '
-                . 'et leur somme égale le résultat de la 2031-SD (' . self::euros($form2031bis['result']) . ').',
+                . 'et leur somme égale le résultat de la 2031-SD (' . self::euros($printedResult ?? $form2031bis['result']) . ').',
             'delta' => 0,
         ];
     }
