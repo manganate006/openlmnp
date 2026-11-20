@@ -304,3 +304,42 @@ it('ne renvoie jamais un montant dans les categories manquantes', function () {
             ->and($categorie)->not->toMatch('/[0-9]/');
     }
 });
+
+it('donne aussi les categories manquantes en libelles francais, pour les e-mails (OP 1145)', function () {
+    // Le signal ne portait que les CODES (`property_tax`, `insurance`…), et l'e-mail a7 les
+    // affichait tels quels : « Catégories sans aucune ligne cette année : property_tax, … ».
+    // Les codes restent (les regles de la vitrine les lisent), les libelles s'y ajoutent.
+    $user = User::factory()->create(['email' => 'libelles@example.com']);
+    $property = signalsProperty($user);
+    Expense::create([
+        'property_id' => $property->id, 'expense_date' => '2025-03-10',
+        'amount' => 120000, 'category' => 'property_tax', 'description' => 'Taxe fonciere',
+    ]);
+
+    $signal = $this->getJson('/api/admin/lifecycle-signals?emails[]=libelles@example.com&year=2025', signalsHeaders())
+        ->assertOk()->json('signals.0');
+
+    $codes = $signal['expense_categories_missing'];
+    $labels = $signal['expense_categories_missing_labels'];
+
+    expect($codes)->toContain('insurance')->and($codes)->not->toContain('property_tax')
+        // Un libelle par code, dans le meme ordre.
+        ->and($labels)->toHaveCount(count($codes))
+        ->and($labels[array_search('insurance', $codes, true)])->toBe('Assurance')
+        ->and($labels)->toContain('Énergie (élec, gaz, eau)')
+        ->and($labels)->not->toContain('Taxe foncière');
+
+    foreach ($labels as $label) {
+        // Ni code anglais, ni emoji d'interface, ni chiffre.
+        expect($label)->not->toBeIn(array_keys(Expense::categoryLabels()))
+            ->and($label)->toMatch('/^\p{Lu}/u')
+            ->and($label)->not->toMatch('/[0-9]/');
+    }
+
+    // Toutes les categories ont un libelle : un code ajoute sans libelle retomberait sur
+    // lui-meme et repartirait en anglais dans l'e-mail.
+    $tous = $this->getJson('/api/admin/lifecycle-signals?emails[]=libelles@example.com&year=2030', signalsHeaders())
+        ->assertOk()->json('signals.0.expense_categories_missing_labels');
+    expect($tous)->toHaveCount(count(Expense::categoryLabels()))
+        ->and(array_intersect($tous, array_keys(Expense::categoryLabels())))->toBe([]);
+});

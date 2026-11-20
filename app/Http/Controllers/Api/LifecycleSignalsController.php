@@ -137,7 +137,16 @@ class LifecycleSignalsController extends Controller
             // Categories de charges SANS aucune ligne sur l'exercice. Ce sont
             // des libelles, jamais des montants : de quoi dire « il manque la
             // taxe fonciere » sans rien reveler du dossier.
-            'expense_categories_missing' => $this->missingExpenseCategories($propertyIds, $year),
+            //
+            // Deux formes du même signal. Les CODES (`property_tax`…) servent aux règles de la
+            // vitrine (`str_contains(…, 'property_tax')`, comptage des virgules) et ne doivent
+            // pas bouger. Les LIBELLÉS sont ce qu'un e-mail affiche : jusqu'au 2026-11-20 seule
+            // la liste des codes existait, et l'e-mail a7 aurait écrit « Catégories sans aucune
+            // ligne cette année : property_tax, insurance… » (OP 1145). ⚠️ Un libellé peut
+            // contenir une virgule (« Énergie (élec, gaz, eau) ») : ne jamais compter les
+            // virgules de cette liste-ci, c'est la liste des codes qui sert aux règles.
+            'expense_categories_missing' => $missing = $this->missingExpenseCategories($propertyIds, $year),
+            'expense_categories_missing_labels' => self::categoryLabelsFor($missing),
 
             // user_badges est le seul journal de jalons DATÉ du produit : il rend
             // faisables des déclencheurs qu'on croirait exiger une migration.
@@ -157,9 +166,10 @@ class LifecycleSignalsController extends Controller
     /**
      * Catégories de charges restées vides sur l'exercice.
      *
-     * Renvoie des LIBELLÉS, pas des montants : l'appelant doit pouvoir écrire
-     * « il manque la taxe foncière » sans jamais connaître un chiffre du
-     * dossier. C'est la limite que s'impose tout cet endpoint.
+     * Renvoie des CODES de catégorie, jamais des montants : l'appelant doit pouvoir
+     * écrire « il manque la taxe foncière » sans jamais connaître un chiffre du
+     * dossier. C'est la limite que s'impose tout cet endpoint. Le texte à afficher
+     * vient de `categoryLabelsFor()` (signal `expense_categories_missing_labels`).
      *
      * @return list<string>
      */
@@ -190,6 +200,24 @@ class LifecycleSignalsController extends Controller
             ->all();
 
         return array_values(array_diff(array_keys(Expense::categoryLabels()), $presentes));
+    }
+
+    /**
+     * Libellés français des catégories, sans l'émoji d'interface de `Expense::categoryLabels()`
+     * (« 🏛️ Taxe foncière » → « Taxe foncière ») : c'est du texte d'e-mail, pas un menu.
+     * Dérivés de la même table, pour ne jamais diverger des libellés de l'écran des charges.
+     *
+     * @param  list<string>  $codes
+     * @return list<string>
+     */
+    private static function categoryLabelsFor(array $codes): array
+    {
+        $labels = Expense::categoryLabels();
+
+        return array_values(array_map(
+            static fn (string $code): string => trim((string) preg_replace('/^[^\p{L}]+/u', '', $labels[$code] ?? $code)),
+            $codes,
+        ));
     }
 
     /**
