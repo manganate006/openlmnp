@@ -12,6 +12,7 @@ décrites ici sont incluses dans le logiciel libre, sans limitation.
 - [Travaux et mobilier](#travaux-et-mobilier)
 - [Emprunts](#emprunts)
 - [Recettes et import CSV Airbnb / Booking](#recettes-et-import-csv-airbnb--booking)
+- [Baux de location à l'année](#baux-de-location-à-lannée)
 - [Charges et pièces justificatives](#charges-et-pièces-justificatives)
 - [Coffre-fort des justificatifs](#coffre-fort-des-justificatifs-chiffrement-par-phrase-de-passe)
 - [Estimation de la valeur vénale (données DVF)](#estimation-de-la-valeur-vénale-données-dvf)
@@ -177,6 +178,25 @@ seul logement loué.
   - gestion du **format de nombres européen** (virgule décimale)
   - **détection des doublons** pour éviter les réimports
   - prise en compte des montants négatifs (remboursements, ajustements)
+
+## Baux de location à l'année
+
+Pour une location meublée à l'année, l'écran **Baux** (*Mes biens*, hors mode simple) évite
+de saisir le loyer douze fois.
+
+- **Le bail se saisit une fois** : locataire, début, fin (vide tant qu'il court), loyer hors
+  charges, charges au forfait ou en provisions, jour d'échéance. Deux baux d'un même bien ne
+  peuvent pas se chevaucher, et le bail porte ses propres justificatifs (bail signé, état des
+  lieux)
+- **Générer les loyers** crée ceux d'une année civile, après un aperçu : un loyer par mois
+  complet, daté de l'échéance (un 29, 30 ou 31 tombe le dernier jour des mois plus courts).
+  Les mois d'entrée et de sortie ne sont **pas** générés, leur montant dépend du bail : l'aperçu
+  les nomme et ils se saisissent à la main. Relancer ne crée pas de doublon et ne touche pas un
+  loyer corrigé à la main ; un exercice clôturé est refusé
+- **Chaque loyer est une recette ordinaire, charges comprises** (ligne 218 du 2033-B) ; les
+  dépenses réelles restent dans *Charges*. La part de charges et une date d'encaissement
+  facultative sont gardées sur la recette, pour mémoire seulement : aucun calcul ne les lit
+- **MCP** : outil `list_leases`, et `list_incomes` se filtre par bail
 
 ## Charges et pièces justificatives
 
