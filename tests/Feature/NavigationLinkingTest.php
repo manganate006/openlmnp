@@ -116,7 +116,7 @@ function noMenuPages(): array
 /** Pages hidden in Simple mode via isHiddenInSimpleMode(). */
 function hiddenInSimpleMode(): array
 {
-    return ['AnnualImportWizard', 'DepreciationEditor', 'PropertyWorks', 'Furniture'];
+    return ['AnnualImportWizard', 'DepreciationEditor', 'PropertyWorks', 'Furniture', 'Leases'];
 }
 
 /** Pages with conditional navigation (need specific data to appear). */

@@ -36,7 +36,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
 });
 
-it('n\'expose que les 16 outils de lecture de l\'allowlist', function () {
+it('n\'expose que les 17 outils de lecture de l\'allowlist', function () {
     expect($this->bridge->allowed())->toBe([
         'list_properties', 'get_property',
         'list_fiscal_years', 'get_fiscal_year',
@@ -44,6 +44,7 @@ it('n\'expose que les 16 outils de lecture de l\'allowlist', function () {
         'list_expenses', 'list_incomes',
         'list_loans', 'get_loan',
         'list_furniture', 'list_property_works', 'list_property_components',
+        'list_leases',
         'list_categories',
         'compare_micro_bic', 'get_simulation',
     ]);

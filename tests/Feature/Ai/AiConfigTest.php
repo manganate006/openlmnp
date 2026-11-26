@@ -40,7 +40,7 @@ function boucleDePropagation(): string
 // Allowlist d'outils de l'assistant
 // =============================================================================
 
-it('verrouille l\'allowlist de l\'assistant aux 16 outils de lecture et de simulation', function () {
+it('verrouille l\'allowlist de l\'assistant aux 17 outils de lecture et de simulation', function () {
     $attendu = [
         'list_properties', 'get_property',
         'list_fiscal_years', 'get_fiscal_year',
@@ -48,6 +48,7 @@ it('verrouille l\'allowlist de l\'assistant aux 16 outils de lecture et de simul
         'list_expenses', 'list_incomes',
         'list_loans', 'get_loan',
         'list_furniture', 'list_property_works', 'list_property_components',
+        'list_leases',
         'list_categories',
         'compare_micro_bic', 'get_simulation',
     ];
@@ -58,7 +59,7 @@ it('verrouille l\'allowlist de l\'assistant aux 16 outils de lecture et de simul
     sort($actuel);
 
     expect($actuel)->toBe($attendu)
-        ->and($actuel)->toHaveCount(16);
+        ->and($actuel)->toHaveCount(17);
 });
 
 it('garde l\'allowlist de l\'assistant en sous-ensemble strict de l\'allowlist démo', function () {

@@ -20,8 +20,10 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   aucun calcul ne la lit. Son taux de TVA est celui du bien.
 - Deux baux d'un même bien ne peuvent pas se chevaucher, et le bail porte ses propres
   justificatifs (bail signé, état des lieux). L'assistant masque le nom du locataire, comme
-  celui d'un voyageur.
-- **API MCP** : nouvel outil `list_leases` (49 outils). `list_incomes` se filtre par bail, et
+  celui d'un voyageur. L'écran n'apparaît pas en mode simple, pensé pour la location courte
+  durée.
+- **API MCP** : nouvel outil `list_leases` (49 outils), ouvert aussi au jeton de démonstration
+  et à l'assistant, qui peuvent donc lire les baux. `list_incomes` se filtre par bail, et
   avec `get_income` donne le bail, la part de charges et la date d'encaissement d'un loyer ;
   `update_income` pose ou efface cette date.
 - **L'archive du dossier passe au format 6** : elle emporte les baux et le lien de chaque loyer

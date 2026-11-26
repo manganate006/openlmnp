@@ -41,6 +41,12 @@ class LeaseResource extends Resource
     // « Leases » passe avant « Loans ».
     protected static ?int $navigationSort = 5;
 
+    // Le mode simple vise la location courte durée : le bail à l'année n'y a pas sa place.
+    protected static function isHiddenInSimpleMode(): bool
+    {
+        return true;
+    }
+
     protected static function getGuidedNavigationGroup(): string
     {
         return 'Mise en route';

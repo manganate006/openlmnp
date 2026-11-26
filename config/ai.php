@@ -438,6 +438,7 @@ return [
         'list_expenses', 'list_incomes',
         'list_loans', 'get_loan',
         'list_furniture', 'list_property_works', 'list_property_components',
+        'list_leases',
         'list_categories',
         // Simulation (aucune écriture)
         'compare_micro_bic', 'get_simulation',

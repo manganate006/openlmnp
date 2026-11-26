@@ -51,6 +51,7 @@ return [
             'list_loans', 'get_loan', 'get_loan_schedule',
             'list_fiscal_years', 'get_fiscal_year',
             'list_furniture', 'list_property_works', 'list_property_components',
+            'list_leases',
             'get_onboarding_status', 'get_dashboard_summary',
             'list_categories',
             // Calcul & simulation (aucune écriture)

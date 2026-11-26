@@ -179,7 +179,7 @@ it('transmet les définitions d\'outils au modèle', function () {
 
         return in_array('list_properties', $noms, true)
             && ! in_array('create_expense', $noms, true)
-            && count($noms) === 16;
+            && count($noms) === 17;
     });
 });
 

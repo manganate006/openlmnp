@@ -150,14 +150,14 @@ it('does not restrict a real (non-demo) user when demo mode is on', function () 
     expect(Expense::withoutGlobalScopes()->where('property_id', $property->id)->count())->toBe(1);
 });
 
-// === VERROU ANTI-FUITE : l'allowlist reste exactement les 23 outils lecture/calcul ===
+// === VERROU ANTI-FUITE : l'allowlist reste exactement les 24 outils lecture/calcul ===
 
-it('locks the demo allowlist to exactly the 23 read/compute tools', function () {
+it('locks the demo allowlist to exactly the 24 read/compute tools', function () {
     $expected = [
         'list_properties', 'get_property', 'list_incomes', 'get_income',
         'list_expenses', 'get_expense', 'list_loans', 'get_loan', 'get_loan_schedule',
         'list_fiscal_years', 'get_fiscal_year', 'list_furniture', 'list_property_works',
-        'list_property_components', 'get_onboarding_status', 'get_dashboard_summary',
+        'list_property_components', 'list_leases', 'get_onboarding_status', 'get_dashboard_summary',
         'list_categories', 'compute_depreciation', 'compute_fiscal_year', 'compute_tva',
         'compare_micro_bic', 'get_projection', 'get_simulation',
     ];
@@ -168,7 +168,7 @@ it('locks the demo allowlist to exactly the 23 read/compute tools', function () 
     sort($actual);
 
     expect($actual)->toBe($expected);
-    expect($actual)->toHaveCount(23);
+    expect($actual)->toHaveCount(24);
 });
 
 // === COMMANDE DE PROVISIONING : token déterministe & stable ===
