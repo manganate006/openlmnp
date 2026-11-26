@@ -4,6 +4,8 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-11-26
+
 ### Baux de location meublée à l'année
 
 - **Nouvel écran « Baux »**, dans Mes biens. Pour une location à l'année, le bail se saisit une
