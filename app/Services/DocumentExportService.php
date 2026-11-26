@@ -204,6 +204,27 @@ class DocumentExportService
         return ['path' => $zipPath, 'count' => $count];
     }
 
+    /**
+     * Années des justificatifs datés de l'utilisateur, de la plus récente à la plus ancienne,
+     * pour le filtre de l'export.
+     *
+     * Même périmètre que l'export lui-même (`getDocuments()`) : la table `documents` ne
+     * porte pas d'utilisateur, et la lire telle quelle proposait les années des autres
+     * comptes.
+     *
+     * @return list<string>
+     */
+    public function documentYears(User $user): array
+    {
+        return $this->getDocuments($user, null, null)
+            ->filter(fn (Document $document) => $document->document_date !== null)
+            ->map(fn (Document $document) => (string) $document->document_date->year)
+            ->unique()
+            ->sortDesc()
+            ->values()
+            ->all();
+    }
+
     private function getDocuments(User $user, ?int $year, ?string $type): \Illuminate\Support\Collection
     {
         // Get all property IDs belonging to the user

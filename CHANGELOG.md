@@ -30,6 +30,12 @@ Toutes les évolutions notables d'OpenLMNP. Format inspiré de [Keep a Changelog
   à son bail. Une archive des formats précédents se relit toujours ; une version antérieure
   refuse le format 6 au lieu de perdre les baux en silence.
 
+### Corrections
+
+- **Export des justificatifs** (Exercices fiscaux) : le filtre « Année » proposait aussi les
+  années des justificatifs des autres comptes de l'instance. Il ne lit plus que les vôtres
+  (signalé par @ptitzgeg-on-git).
+
 ### Interne
 
 - Les modèles qui portent des justificatifs (charges, mobilier, travaux, recettes, baux) sont

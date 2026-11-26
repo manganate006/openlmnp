@@ -8,7 +8,6 @@ use App\Filament\Pages\RepriseDossier;
 use App\Filament\Pages\Simulator;
 use App\Filament\Pages\Teledeclaration;
 use App\Filament\Resources\FiscalYears\FiscalYearResource;
-use App\Models\Document;
 use App\Services\DocumentExportService;
 use App\Support\DocumentOwners;
 use Filament\Actions\Action;
@@ -16,7 +15,6 @@ use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Facades\DB;
 
 class ListFiscalYears extends ListRecords
 {
@@ -24,16 +22,11 @@ class ListFiscalYears extends ListRecords
 
     private function getDocumentYears(): array
     {
-        $years = DB::table('documents')
-            ->selectRaw('DISTINCT strftime("%Y", document_date) as year')
-            ->whereNotNull('document_date')
-            ->orderByDesc('year')
-            ->pluck('year')
-            ->filter()
-            ->mapWithKeys(fn ($y) => [$y => $y])
-            ->toArray();
+        $years = app(DocumentExportService::class)->documentYears(auth()->user());
 
-        return $years ?: [(string) date('Y') => (string) date('Y')];
+        return $years !== []
+            ? array_combine($years, $years)
+            : [(string) date('Y') => (string) date('Y')];
     }
 
     protected function getHeaderActions(): array
